@@ -1,3 +1,8 @@
+<?php
+    define('ROOT_DIR', str_replace('\\', '/', __DIR__));
+    
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 

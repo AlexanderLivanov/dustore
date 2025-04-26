@@ -1,3 +1,12 @@
+<?php
+require_once(ROOT_DIR . '/swad/config.php');
+require_once(ROOT_DIR . '/swad/controllers/user.php');
+
+$curr_user = new User();
+
+// $curr_user->createUser("leo", "admin@admin.com", "123");
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -107,7 +116,7 @@
         <div class="section right-section">
             <div class="buttons-right">
                 <button class="button">0</button>
-                <button class="button">User - 100₽</button>
+                <button class="button"><?= $curr_user->getUsername(1); ?> - 100₽</button>
             </div>
         </div>
     </div>
