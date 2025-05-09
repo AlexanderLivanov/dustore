@@ -5,8 +5,6 @@ require_once(ROOT_DIR . '/swad/controllers/user.php');
 
 $curr_user = new User();
 $db = new Database();
-
-// $curr_user->createUser("leo", "admin@admin.com", "123");
 ?>
 
 <!DOCTYPE html>
@@ -15,94 +13,15 @@ $db = new Database();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap');
-
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-left: 15px;
-            padding-right: 15px;
-            height: 80px;
-            background-color: #14041d;
-            backdrop-filter: blur(1px);
-            /* position: sticky; */
-            top: 0;
-            z-index: 10;
-            /* background-color: white; */
-
-        }
-
-        .section {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .left-section,
-        .right-section {
-            justify-content: center;
-        }
-
-        .buttons-left,
-        .buttons-right {
-            display: flex;
-            gap: 10px;
-        }
-
-        .button {
-            padding: 10px;
-            background-color: white;
-            color: #14041d;
-            border: none;
-            cursor: pointer;
-            box-shadow: 5px 5px 10px rgba(255, 255, 255, 1);
-            font-family: 'Tiny5', 'Gill Sans';
-            transition: all .2s;
-
-        }
-
-        .button:hover {
-            background-color: #c32178;
-            color: white;
-            font-family: 'Tiny5', 'Gill Sans';
-            transition: all .2s;
-            font-size: 12pt;
-            padding: 10px;
-            border: none;
-        }
-
-        .image img {
-            width: auto;
-            padding: 4px;
-            height: 55px;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 1);
-            transition: all .2s;
-            border-radius: 5px;
-        }
-
-        .image img:hover {
-            width: auto;
-            padding: 10px;
-            height: 55px;
-            transition: all .2s;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 1);
-            filter: contrast(200%);
-        }
-    </style>
+    <link rel="stylesheet" href="swad/css/header.css">
 </head>
 
 <body>
     <div class="header">
         <div class="section left-section">
+            <div>
+                <button id="burger" class="button" style="padding: 0;"><svg height="48" id="svg8" version="1.1" viewBox="0 0 12.7 12.7" width="48" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg"><g id="layer1" transform="translate(0,-284.29998)"><path d="m 2.8222223,287.1222 v 1.41111 h 7.0555558 v -1.41111 z m 0,2.82222 v 1.41112 h 7.0555558 v -1.41112 z m 0,2.82223 v 1.41111 h 7.0555558 v -1.41111 z" id="rect4487" style="opacity:1;vector-effect:none;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.07055555;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"/></g></svg></button>
+            </div>
             <div class="buttons-left">
                 <button class="button">Игры</button>
                 <button class="button">Приложения</button>
@@ -119,11 +38,11 @@ $db = new Database();
             <div class="buttons-right">
                 <button class="button">0</button>
                 <button class="button" onclick="location.href='/login'">
-                    <?php if(empty($_SESSION['telegram_id'])){
-                        echo("Войти в аккаунт");
-                        }else{
-                            echo($curr_user->getUsername($_SESSION['telegram_id'])." - 100₽");
-                        }
+                    <?php if (empty($_SESSION['telegram_id'])) {
+                        echo ("Войти в аккаунт");
+                    } else {
+                        echo ($curr_user->getUsername($_SESSION['telegram_id']) . " - 100₽");
+                    }
                     ?>
                 </button>
             </div>
