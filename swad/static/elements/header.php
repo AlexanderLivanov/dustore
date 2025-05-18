@@ -87,6 +87,24 @@ $db = new Database();
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById('burger').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.querySelector('.buttons-left').classList.toggle('active');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.buttons-left') && !e.target.closest('#burger')) {
+                document.querySelector('.buttons-left').classList.remove('active');
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.querySelector('.buttons-left').classList.remove('active');
+            }
+        });
+    </script>
 </body>
 
 </html>

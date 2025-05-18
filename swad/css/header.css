@@ -85,22 +85,34 @@ body {
     filter: contrast(200%);
 }
 
-#burger {
-    visibility: hidden;
-}
-
 
 @media screen and (width < 900px) {
-    .buttons-left,
-    .buttons-right {
-            display: flex;
-            gap: 5px;   
+    .buttons-left {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        flex-direction: column;
+        width: 200px;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .buttons-left.active {
+        display: flex;
+    }
+
+    #burger {
+        display: block;
     }
 
     .image img {
         width: auto;
         padding: 2px;
-        height: 35px;
+        margin-left: 5px;
+        margin-right: 5px;
+        height: 50px;
         box-shadow: 0 0 10px rgba(255, 255, 255, 1);
         transition: all .2s;
         border-radius: 5px;
@@ -108,18 +120,29 @@ body {
 
     .image img:hover {
         width: auto;
+        margin-left: 5px;
         padding: 3px;
-        height: 35px;
+        margin-right:5px;
+        height: 49px;
         transition: all .2s;
         box-shadow: 0 0 20px rgba(255, 255, 255, 1);
         filter: contrast(200%);
     }
+}
 
-    .buttons-left {
-        visibility: hidden;
-    }
-
+@media (min-width: 900px) {
     #burger {
-        visibility: visible;
+        display: none !important;
     }
+}
+
+.left-section {
+    position: relative;
+    gap: 12px;
+}
+
+.buttons-left .button {
+    width: 100%;
+    text-align: left;
+    padding: 12px !important;
 }

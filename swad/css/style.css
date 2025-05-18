@@ -52,3 +52,20 @@
     font-size: 25pt;
     border: none;
 }
+
+@media screen and (width < 900px) {
+    #game-search-input {
+        font-family: 'Tiny5', 'Gill Sans';
+        font-size: 18pt;
+        width: 90%;
+        margin-bottom: 10px;
+        height: 40px;
+        box-shadow: 5px 5px 10px rgba(255, 255, 255, 1);
+        outline: none;
+        border: 0;
+    }
+    
+    #game-search-input::before {
+        transition: background-color 0.3s ease, width 0.3s ease;   
+    }
+}

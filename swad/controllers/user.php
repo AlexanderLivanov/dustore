@@ -31,15 +31,17 @@ class User
         return $result ? $result['telegram_username'] : null;
     }
 
-    public function updateUsername($id, $newUsername)
-    {
-        $query = 'UPDATE ' . $this->table . ' SET username = :username WHERE id = :id';
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':username', $newUsername);
-        $stmt->bindParam(':id', $id);
 
-        return $stmt->execute();
-    }
+// TODO: сделать для возможности изменения юзернейма
+    // public function updateUsername($data, )
+    // {
+    //     $query = 'UPDATE ' . $this->table . ' SET username = :username WHERE id = :id';
+    //     $stmt = $this->db->prepare($query);
+    //     $stmt->bindParam(':username', $newUsername);
+    //     $stmt->bindParam(':id', $id);
+
+    //     return $stmt->execute();
+    // }
 
     public function createUser($username, $email, $password)
     {
@@ -70,6 +72,4 @@ class User
     //     $_SESSION['user_id'] = $user['id'];
     //     $_SESSION['username'] = $username;
     // }
-
-    public function update
 }
