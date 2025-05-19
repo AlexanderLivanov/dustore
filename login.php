@@ -20,102 +20,7 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход/Регистрация</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
-
-        body {
-            background: #f0f2f5;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            margin: 1rem;
-        }
-
-        .toggle-container {
-            display: flex;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .toggle-btn {
-            flex: 1;
-            padding: 1rem;
-            border: none;
-            background: none;
-            cursor: pointer;
-            font-size: 1.1rem;
-            color: #666;
-            transition: all 0.3s;
-        }
-
-        .toggle-btn.active {
-            color: #1877f2;
-            border-bottom: 2px solid #1877f2;
-        }
-
-        .form-container {
-            display: none;
-        }
-
-        .form-container.active {
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-
-        button[type="submit"] {
-            width: 100%;
-            padding: 12px;
-            background: #1877f2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.3s;
-        }
-
-        button[type="submit"]:hover {
-            background: #166fe5;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                margin: 1rem;
-                padding: 1.5rem;
-            }
-
-            .toggle-btn {
-                font-size: 1rem;
-                padding: 0.8rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="swad/css/login.css">
 </head>
 
 <body>
@@ -148,13 +53,11 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
 
     <script>
         function showForm(formType) {
-            // Переключение кнопок
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
 
-            // Переключение форм
             document.getElementById('loginForm').classList.remove('active');
             document.getElementById('registerForm').classList.remove('active');
             document.getElementById(formType + 'Form').classList.add('active');
