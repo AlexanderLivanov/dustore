@@ -1,3 +1,31 @@
+<?php
+    session_start();
+    require_once('../swad/config.php');
+    require_once('../swad/controllers/organization.php');
+    require_once('../swad/controllers/user.php');
+
+    $curr_user = new User();
+    $db = new Database();
+
+    if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
+        echo ("<script>window.location.replace('../login');</script>");
+    }
+
+    $user_id = $db->Select(
+    "SELECT id FROM `users`
+                    WHERE `telegram_id` = :id",
+    [
+        'id' => $_SESSION['telegram_id']
+    ]);
+
+    $user_orgs = $db->Select(
+    "SELECT name FROM `organizations`
+                        WHERE `owner_id` = :id",
+    [
+        'id' => $user_id[0][0]
+    ]);
+?>
+
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -118,17 +146,21 @@
     <div class="console-container">
         <h1 class="title">Выберите студию</h1>
 
+        <?php foreach($user_orgs as $org): ?>
         <ul class="studio-list">
             <li class="studio-item">
                 <i class="material-icons studio-icon">business</i>
-                <span class="studio-name"><?= 123 ?></span>
+                <span class="studio-name"><?= $org[0] ?></span>
             </li>
         </ul>
+        <?php endforeach; ?>
 
+        <?php if(count($user_orgs) < 1): ?>
         <div class="empty-state">
             <i class="material-icons" style="font-size: 48px; margin-bottom: 16px;">business</i>
             <p>У вас пока нет ни одной студии</p>
         </div>
+        <?php endif; ?>
 
 
         <button class="button" onclick="location.href='regorg'">

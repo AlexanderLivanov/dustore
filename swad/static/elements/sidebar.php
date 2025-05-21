@@ -6,7 +6,12 @@ require_once(ROOT_DIR . '/swad/controllers/user.php');
 
 $curr_user = new User();
 $db = new Database();
+
+if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
+    echo ("<script>window.location.replace('../login');</script>");
+}
 ?>
+
 <ul id="slide-out" class="side-nav fixed z-depth-4">
     <li style="line-height: 36px;">
         <div class="userView">
