@@ -15,15 +15,6 @@
 
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
-    <?php
-        if ($curr_user->checkAuth()){
-            echo("<pre>");
-            print_r($curr_user->checkAuth());
-            echo("</pre>");
-        }
-    // echo "Добро пожаловать, пользователь #{$curr_user['telegram_id']}!";
-
-    ?>
     <div class="main-container">
         <div class="search-field-container">
             <h1 id="game-search-header">Let's play!</h1>

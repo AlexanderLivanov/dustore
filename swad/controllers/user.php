@@ -66,7 +66,7 @@ class User
     {
         if (!isset($_COOKIE['auth_token'])) {
             // header('HTTP/1.1 401 Unauthorized');
-            exit('Требуется авторизация');
+            return 1;
         }
 
         $telegram_id = validateToken($_COOKIE['auth_token']);
@@ -74,7 +74,7 @@ class User
         if (!$telegram_id) {
             setcookie('auth_token', '', time() - 3600, '/');
             // header('HTTP/1.1 403 Forbidden');
-            exit('Недействительный токен');
+            return 2;
         }
 
         // get user info from DB
@@ -85,9 +85,9 @@ class User
 
         if (!$user) {
             // header('HTTP/1.1 404 Not Found');
-            exit('Пользователь не найден');
+            return 3;
         }
 
-        return $user;
+        return 0;
     }
 }

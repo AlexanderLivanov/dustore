@@ -1,5 +1,14 @@
+<?php
+session_start();
+require_once('../constants.php');
+require_once(ROOT_DIR . '/swad/config.php');
+require_once(ROOT_DIR . '/swad/controllers/user.php');
+
+$curr_user = new User();
+$db = new Database();
+?>
 <ul id="slide-out" class="side-nav fixed z-depth-4">
-    <li>
+    <li style="line-height: 36px;">
         <div class="userView">
             <div class="background">
                 <!-- Баннер в профиле -->
@@ -7,7 +16,7 @@
             </div>
             <img class="circle" src="assets/img/avatar04.png">
             <span class="white-text">Добро пожаловать,</span>
-            <span class="white-text">user!</span>
+            <span class="white-text"><?= $curr_user->getUsername($_SESSION['telegram_id']); ?></span>
         </div>
     </li>
 
@@ -43,8 +52,8 @@
                 <a class="collapsible-header">Объявления<i class="material-icons pink-item">campaign</i></a>
                 <div class="collapsible-body" style="padding: 0 2rem;">
                     <ul>
-                        <li><a href="addannoun">Add New</a></li>
-                        <li><a href="allannoun">All Announcements</a></li>
+                        <li><a href="addannoun">Создать новое</a></li>
+                        <li><a href="allannoun">Все</a></li>
                     </ul>
                 </div>
             </li>

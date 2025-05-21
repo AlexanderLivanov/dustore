@@ -1,42 +1,51 @@
 <?php
-    // (c) 19.05.2025 Alexander Livanov
-    require_once('../swad/controllers/organization.php');
-    require_once('../swad/config.php');
-    session_start();
+// (c) 19.05.2025 Alexander Livanov
+require_once('../swad/config.php');
+require_once('../swad/controllers/user.php');
+require_once('../swad/controllers/organization.php');
 
-    $database = new Database();
-    $pdo = $database->connect();
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = :telegram_id");
-    $stmt->execute([':telegram_id' => $_SESSION['id']]);
-    $user = $stmt->fetch();
+session_start();
 
-    if (!$user) {
-        die("Пользователь с telegram_id = {$_SESSION['id']} не найден!");
-    }
+$curr_user = new User();
+if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
+    echo ("<script>window.location.replace('login');</script>");
+}
 
-    if (empty($_SESSION['logged-in'])) {
+$database = new Database();
+$pdo = $database->connect();
+$telegram_id = $_SESSION['telegram_id'];
+$stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = :telegram_id");
+$stmt->execute([':telegram_id' => $_SESSION['telegram_id']]);
+$user = $stmt->fetch();
+
+if (!$user) {
+    die("Пользователь с telegram_id = {$_SESSION['telegram_id']} не найден!");
+}
+
+if (empty($_SESSION['logged-in'])) {
     die(header('Location: login'));
 }
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = :telegram_id");
-    $stmt->execute([':telegram_id' => $_SESSION['id']]);
+    $stmt->execute([':telegram_id' => $_SESSION['telegram_id']]);
 
     if (!$stmt->fetch()) {
         throw new Exception("Пользователь не найден. Нельзя создать организацию.");
     }
     try {
-        $pdo = new PDO('mysql:host=localhost;dbname=dustore', 'root', '');
+        $pdo = new Database();
 
         $org = new Organization(
             $_POST['org_name'],
             $user['id'],
-            explode(',', $_POST['members'])
+            $_POST['description']
         );
 
-        if ($org->save($pdo)) {
+        if ($org->save($pdo->connect())) {
             $success = "Студия создана! Сейчас вы будете перенаправлены в консоль разработчика!";
+            echo ("<script>window.location.replace('/devs/');</script>");
         }
     } catch (Exception $e) {
         $error = "Ошибка: " . $e->getMessage();
@@ -120,28 +129,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 id="org_name"
                 name="org_name"
                 required
-                placeholder="Введите название (только буквы и цифры)">
+                placeholder="Введите название (только буквы и цифры), до 20 символов"
+                maxlength="20">
         </div>
 
         <div class="form-group">
-            <label for="members">ID сотрудников (через запятую):</label>
-            <input type="text"
-                id="members"
-                name="members"
-                placeholder="Пример: 123,456,789">
+            <label for="description">Описание студии:</label>
+            <textarea type="text"
+                id="description"
+                name="description"
+                required
+                placeholder="Введите описание, до 500 символов"
+                maxlength="500" style="height: 100px;"></textarea>
         </div>
 
         <button type="submit">🚀 Создать студию</button>
     </form>
 
-    <div style="margin-top: 2rem; color: #666;">
-        <h3>Инструкция:</h3>
-        <ul>
-            <li>Название должно содержать только английские буквы, цифры и дефисы</li>
-            <li>ID сотрудников можно найти в их профилях</li>
-            <li>После создания вы получите доступ к конфигурационному файлу</li>
-        </ul>
-    </div>
 </body>
 
 </html>

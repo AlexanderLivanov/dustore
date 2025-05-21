@@ -45,7 +45,7 @@ class Database {
     }
 
     // Execute Statement
-    private function executeStatement($statement = "", $parameters = [])
+    public function executeStatement($statement = "", $parameters = [])
     {
         try {
             $stmt = $this->connect()->prepare($statement);

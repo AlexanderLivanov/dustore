@@ -16,8 +16,8 @@ require_once('swad/controllers/user.php');
 
 <body>
     <?php
-    if (empty($_SESSION['logged-in'])) {
-        die(header('Location: login'));
+    if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
+        echo("<script>window.location.replace('login');</script>");
     }
 
     $user_data = $db->Select(
@@ -80,7 +80,7 @@ require_once('swad/controllers/user.php');
                         <p>Username: <a href="https://t.me/<?= $telegramUsername ?>">@<?= $telegramUsername ?></a></p>
                     <?php endif; ?>
                     <p>Тип учётной записи: <?= $curr_user->printUserPrivileges($telegramID); ?></p>
-                    <p><a href="/devs/">Вход в консоль для разработчиков</a></p>
+                    <p><a href="/devs/select">Вход в консоль для разработчиков</a></p>
                 </div>
             </div>
         </div>

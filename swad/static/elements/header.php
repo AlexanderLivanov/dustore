@@ -80,7 +80,7 @@ $db = new Database();
                     <?php if (empty($_SESSION['telegram_id'])) {
                         echo ("Войти в аккаунт");
                     } else {
-                        echo ($curr_user->getUsername($_SESSION['telegram_id']) . " - 100₽");
+                        echo ($curr_user->getUsername($_SESSION['telegram_id']) . " - 0₽");
                     }
                     ?>
                 </button>

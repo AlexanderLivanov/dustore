@@ -1,17 +1,19 @@
 <?php
+$pdo = new Database();
+
 class Organization
 {
     private $id;
     private $name;
     private $ownerId;
-    private $members;
+    private $description;
     private $configPath;
 
-    public function __construct($name, $ownerId, $members = [])
+    public function __construct($name, $ownerId, $description)
     {
         $this->name = $this->sanitizeName($name);
         $this->ownerId = $ownerId;
-        $this->members = $members;
+        $this->description = $description;
     }
 
     private function sanitizeName($name)
@@ -20,23 +22,21 @@ class Organization
         return substr($cleaned, 0, 50);
     }
 
-    public function save($pdo)
+    public function save(PDO $pdo)
     {
         try {
-            // Создаем папку и файл
             $this->createOrganizationFolder();
 
-            // Сохраняем в БД
             $stmt = $pdo->prepare("
                 INSERT INTO organizations 
-                (name, owner_id, members, config_path) 
-                VALUES (:name, :owner_id, :members, :config_path)
+                (name, owner_id, description, config_path) 
+                VALUES (:name, :owner_id, :description, :config_path)
             ");
 
             $stmt->execute([
                 ':name' => $this->name,
                 ':owner_id' => $this->ownerId,
-                ':members' => json_encode($this->members),
+                ':description' => $this->description,
                 ':config_path' => $this->configPath
             ]);
 
@@ -68,7 +68,7 @@ class Organization
         $configData = [
             'created_at' => date('Y-m-d H:i:s'),
             'id' => $this->ownerId,
-            'members' => $this->members
+            'description' => $this->description
         ];
 
         if (file_put_contents(
