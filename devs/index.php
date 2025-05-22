@@ -30,11 +30,13 @@ if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
 </head>
 
 <body>
-  <?php require_once('../swad/static/elements/sidebar.php'); ?>
+  <?php require_once('../swad/static/elements/sidebar.php'); 
+  ?>
   <main>
     <section class="content">
       <div class="page-announce valign-wrapper"><a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only"><i class="material-icons">menu</i></a>
-        <h1 class="page-announce-text valign"><?= 'Студия ' . $user_orgs[0][1] ?></h1>
+        <h1 class="page-announce-text valign"><?= 'Студия ' . $curr_user_org[0]['organization_name']; ?></h1>
+        <h6 class="page-announce-text valign" style="color: white;"><?= ' '.$curr_user->printUserPrivileges($curr_user->getRoleName($curr_user->getUserRole($_SESSION['id'])));?></h6>
       </div>
       <!-- Stat Boxes -->
       <div class="row">
@@ -45,11 +47,11 @@ if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
               <h3><?= 0 ?></h3>
               <p>Сотрудники</p>
               <?php
-                if ($curr_user->userHasRole($_SESSION['id'], $user_org[0][0], 'owner')) {
-                  echo ("true");
-                }
+              // if ($curr_user->userHasRole($_SESSION['id'], $user_org[0][0], 'owner')) {
+              //   echo ("true");
+              // }
 
-                // $curr_user->addUserToOrganization($_SESSION['id'], 2, $user_org[0][0], 1);
+              // $curr_user->addUserToOrganization($_SESSION['id'], 2, $user_org[0][0], 1);
               ?>
             </div>
             <div class="icon">

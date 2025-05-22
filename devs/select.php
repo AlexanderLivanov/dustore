@@ -11,26 +11,9 @@ if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
     echo ("<script>window.location.replace('../login');</script>");
 }
 
-$user_id = $db->Select(
-    "SELECT id FROM `users`
-                    WHERE `telegram_id` = :id",
-    [
-        'id' => $_SESSION['telegram_id']
-    ]
-);
-$user_orgs = $db->Select(
-    "SELECT 
-                    o.name AS organization_name,
-                    r.name AS user_role,
-                    uo.status 
-                FROM user_organization uo
-                JOIN organizations o ON o.id = uo.organization_id
-                JOIN roles r ON r.id = uo.role_id
-                WHERE uo.user_id = :id ORDER BY status DESC;",
-    [
-        'id' => $user_id[0][0]
-    ]
-);
+$user_id = $curr_user->getID($_SESSION['telegram_id']);
+
+$user_orgs = $curr_user->getUserOrgs($_SESSION['id']);
 ?>
 
 <!DOCTYPE html>
@@ -158,16 +141,16 @@ $user_orgs = $db->Select(
                 <?php if ($org['status'] == 'pending'): ?>
                     <li class="studio-item" style="cursor: not-allowed;">
                         <i class="material-icons studio-icon">schedule</i>
-                        <span class="studio-name"><?= $org[0] ?><i style="color: crimson; font-size: 11pt;"> На проверке...</i></span>
+                        <span class="studio-name"><?= $org['organization_name'] ?><i style="color: crimson; font-size: 11pt;"> На проверке...</i></span>
                         <br>
                     </li>
                 <?php endif;
 
                 if ($org['status'] == 'active'): ?>
-                <li class="studio-item" onclick="location.href='index?s=<?= $org[0] ?>'">
+                <li class="studio-item" onclick="location.href='index?s=<?= $org['organization_id'] ?>'">
                     <i class="material-icons studio-icon">business</i>
 
-                    <span class="studio-name"><?= $org[0] ?></span>
+                    <span class="studio-name"><?= $org['organization_name'] ?></span>
                     <br>
                     <span style="color: #5f6368; margin: 5px; padding: 5px;"><?= $curr_user->printUserPrivileges($org['user_role']) ?></span>
                 </li>

@@ -64,7 +64,7 @@ class User
             SELECT `role_id` FROM user_organization WHERE user_id = ?
         ");
         $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->fetch(PDO::FETCH_ASSOC)['role_id'];
     }
 
     public function getRoleName($role_id){
@@ -72,7 +72,7 @@ class User
             SELECT `name` FROM roles WHERE id = ?
         ");
         $stmt->execute([$role_id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->fetch(PDO::FETCH_ASSOC)['name'];
     }
 
     public function userHasRole($userId, $organizationId, $requiredRole)
@@ -134,5 +134,22 @@ class User
 
         // TODO: сделать систему уведомлений
         // $this->sendNotification($userId, "You've been added to organization");
+    }
+
+    public function getUserOrgs($user_id, $limit="100")
+    {
+        $stmt = $this->db->prepare(
+            "SELECT     
+                            o.id AS organization_id,
+                            o.name AS organization_name,
+                            r.name AS user_role,
+                            uo.status 
+                        FROM user_organization uo
+                        JOIN organizations o ON o.id = uo.organization_id
+                        JOIN roles r ON r.id = uo.role_id
+                        WHERE uo.user_id = :id ORDER BY status DESC LIMIT $limit;");
+        $stmt->execute(['id' => $user_id]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

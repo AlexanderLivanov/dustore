@@ -30,24 +30,16 @@ if (empty($_SESSION['logged-in'])) {
     die(header('Location: login'));
 }
 
-// Получаем последнюю зарегистрированную пользователем организацию.
-// Это необходимо чтобы работал скрипт регистрации организации.
-$stmt = $pdo->prepare("SELECT id FROM organizations WHERE owner_id = :owner_id ORDER BY id DESC");
-$stmt->execute(['owner_id' => $user['id']]);
-$last_registered_user_org = $stmt->fetch()[0];
-// И заодно просим роль пользователя
-$curr_user_role['role_id'] = $curr_user->getUserRole($user['id']);
 
+// просим роль пользователя
+// $curr_user_role['role_id'] = $curr_user->getUserRole($user['id']);
+// print_r($curr_user->getUserRole($user['id']));
 
 // POST запрос на регистрацию
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = :telegram_id");
-    $stmt->execute([':telegram_id' => $_SESSION['telegram_id']]);
-
-    if (!$stmt->fetch()) {
-        throw new Exception("Пользователь не найден. Нельзя создать организацию.");
-    }
     try {
+        $pdo->beginTransaction();
+
         $org = new Organization(
             $_POST['org_name'],
             $user['id'],
@@ -55,13 +47,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         if ($org->save($pdo)) {
-            $success = "Студия создана! Сейчас вы будете перенаправлены в консоль разработчика!";
-            // Пишем в БД что теперь эта организация принадлежит этому юзеру. Статус: pending
-            $stmt = $pdo->prepare("INSERT INTO user_organization (user_id, organization_id, role_id, status) VALUES (:user_id, :org_id, :role_id, 'pending');");
-            $stmt->execute(['user_id' => $user['id'], 'org_id' => $last_registered_user_org, 'role_id' => $curr_user_role['role_id']['role_id']]);
-            echo ("<script>window.location.replace('/devs/?c=". $last_registered_user_org ."');</script>");
+            $newOrgId = $pdo->lastInsertId();
+
+            $stmt = $pdo->prepare("
+                INSERT INTO user_organization 
+                (user_id, organization_id, role_id, status) 
+                VALUES (:user_id, :org_id, :role_id, 'pending')
+            ");
+            $stmt->execute([
+                'user_id' => $user['id'],
+                'org_id' => $newOrgId,
+                'role_id' => 2
+            ]);
+
+            $pdo->commit();
+            header("Location: /devs/?c=" . $newOrgId);
+            exit;
         }
     } catch (Exception $e) {
+        $pdo->rollBack();
         $error = "Ошибка: " . $e->getMessage();
     }
 }
