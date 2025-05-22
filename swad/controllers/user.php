@@ -4,8 +4,10 @@ require_once('jwt.php');
 
 class User
 {
-    private $db;
-    private $table = 'users';
+    // 22.05.2025: Сделал эти поля публичными, иначе другие классы не могут обращаться к БД
+    // (да, я не умю наследовать классы) (c) Alexander Livanov
+    public $db;
+    public $table = 'users';
 
     public function __construct()
     {
@@ -38,33 +40,42 @@ class User
     public function printUserPrivileges($role){
         switch($role){
             case 'creator':
-                echo "Создатель";
+                echo "Создатель этого мира";
                 break;
             case 'user':
-                echo "Пользователь";
+                echo "Обычный ользователь";
                 break;
             case 'employee':
-                echo "Сотрудник";
+                echo "Сотрудник в студии";
                 break;
             case 'owner':
-                echo "Владелец";
+                echo "Владелец студии";
                 break;
             case 'moder':
-                echo "Модератор";
+                echo "Модератор платформы";
                 break;
             case 'admin':
-                echo "Администратор";
+                echo "Администратор платформы";
+                break;
             default:
                 echo "Неверный идентификатор";
         }
     }
 
-    public function getUserRole($id){
-        $stmt = $this->db->prepare("
-            SELECT `role_id` FROM user_organization WHERE user_id = ?
-        ");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC)['role_id'];
+    public function getUserRole($id, $type){
+        if($type == "in_company"){
+            $stmt = $this->db->prepare("
+                SELECT `role_id` FROM user_organization WHERE user_id = ?
+            ");
+            $stmt->execute([$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC)['role_id'];
+        }else if($type == "global"){
+            $stmt = $this->db->prepare("
+                SELECT `global_role` FROM users WHERE id = ?
+            ");
+            $stmt->execute([$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC)['global_role'];
+        }
     }
 
     public function getRoleName($role_id){
@@ -149,6 +160,27 @@ class User
                         JOIN roles r ON r.id = uo.role_id
                         WHERE uo.user_id = :id ORDER BY status DESC LIMIT $limit;");
         $stmt->execute(['id' => $user_id]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+class Moderator extends User 
+{
+    public function getAllPendingOrgs(){
+        $stmt = $this->db->prepare(
+            "SELECT     
+                            o.id AS organization_id,
+                            o.name AS organization_name,
+                            o.created_at AS created_at
+                            r.name AS user_role,
+                            uo.status 
+                        FROM user_organization uo
+                        JOIN organizations o ON o.id = uo.organization_id
+                        JOIN roles r ON r.id = uo.role_id
+                        WHERE status = 'pending' ORDER BY created_at DESC;"
+        );
+        $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

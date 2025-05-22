@@ -59,8 +59,8 @@ function userAuthentication($db, $auth_data)
         // User not found, so create it
         $id = $db->Insert(
             "INSERT INTO `users`
-                (`first_name`, `last_name`, `telegram_id`, `telegram_username`, `profile_picture`, `auth_date`)
-                    values (:first_name, :last_name, :telegram_id, :telegram_username, :profile_picture, :auth_date)",
+                (`first_name`, `last_name`, `telegram_id`, `telegram_username`, `profile_picture`, `auth_date`, `global_role`)
+                    values (:first_name, :last_name, :telegram_id, :telegram_username, :profile_picture, :auth_date, 0)",
             [
                 'first_name'        => $auth_data['first_name'],
                 'last_name'         => $auth_data['last_name'],

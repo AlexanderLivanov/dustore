@@ -13,25 +13,60 @@
 </head>
 
 <body>
-  <?php require_once('../swad/static/elements/sidebar.php'); ?>
+  <?php 
+    require_once('../swad/static/elements/sidebar.php');
+  ?>
 
   <main>
     <section class="content">
-
+      <?php
+      echo $curr_user->getUserRole($_SESSION['id'], "in_company");
+      ?>
+      <div class="page-announce valign-wrapper"><a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only"><i class="material-icons">menu</i></a>
+        <h1 class="page-announce-text valign">// Новые студии, требующие проверки</h1>
+      </div>
+      <div id="posttable" class="container">
+        <table class="responsive-table striped hover centered" id="names-table">
+          <thead>
+            <tr>
+              <th>Название:</th>
+              <th>Дата регистрации:</th>
+              <th>ID студии:</th>
+              <th>Ссылка на VK-группу:</th>
+              <th>ID владельца, @username:</th>
+              <th>Действия:</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a>MeredithPalmer</a></td>
+              <td><a>2017-03-30</a></td>
+              <td><a>1000016</a></td>
+              <td><a>Ticking Time Bags</a></td>
+              <td><a>Ticking Time Bags</a></td>
+              <td>
+                <div class="btn-toolbar">
+                  <a href="#">
+                    <button class="btn green" type="submit">
+                      <i class="material-icons">done</i>
+                    </button>
+                  </a>
+                  <a href="#">
+                    <button class="btn red" type="submit">
+                      <i class="material-icons">remove</i>
+                    </button>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
     </section>
   </main>
-  <footer class="page-footer">
-    <div class="footer-copyright">
-      <div class="container">
-        © 2017 Farooq Designs. All rights reserved.
-      </div>
-    </div>
-  </footer>
+  <?php require_once('footer.php'); ?>
 
-  <!-- So this is basically a hack, until I come up with a better solution. autocomplete is overridden
-    in the materialize js file & I don't want that.
-    -->
-  <!-- Yo dawg, I heard you like hacks. So I hacked your hack. (moved the sidenav js up so it actually works) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
   <script>

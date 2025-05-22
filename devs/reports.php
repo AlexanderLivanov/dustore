@@ -60,13 +60,7 @@
       </div>
     </section>
   </main>
-  <footer class="page-footer">
-    <div class="footer-copyright">
-      <div class="container">
-        © 2017 Farooq Designs. All rights reserved.
-      </div>
-    </div>
-  </footer>
+  <?php require_once('footer.php'); ?>
 
   <!-- So this is basically a hack, until I come up with a better solution. autocomplete is overridden
     in the materialize js file & I don't want that.

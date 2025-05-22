@@ -32,7 +32,7 @@ $db = new Database();
     <section class="content">
       <div class="page-announce valign-wrapper"><a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only"><i class="material-icons">menu</i></a>
         <h1 class="page-announce-text valign"><?= 'Студия ' . $curr_user_org[0]['organization_name']; ?></h1>
-        <h6 class="page-announce-text valign" style="color: white;"><?= ' '.$curr_user->printUserPrivileges($curr_user->getRoleName($curr_user->getUserRole($_SESSION['id'])));?></h6>
+        <h6 class="page-announce-text valign" style="color: white;"><?= ' '.$curr_user->printUserPrivileges($curr_user->getRoleName($curr_user->getUserRole($_SESSION['id'], "in_company")));?></h6>
       </div>
       <!-- Stat Boxes -->
       <div class="row">
@@ -133,13 +133,7 @@ $db = new Database();
       </div>
     </section>
   </main>
-  <footer class="page-footer">
-    <div class="footer-copyright">
-      <div class="container">
-        &copy; 2024-2025 Dust Studio
-      </div>
-    </div>
-  </footer>
+  <?php require_once('footer.php'); ?>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
