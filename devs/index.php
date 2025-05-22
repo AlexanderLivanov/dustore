@@ -1,18 +1,10 @@
 <?php
-session_start();
-
 require_once('../constants.php');
 require_once(ROOT_DIR . '/swad/config.php');
 require_once(ROOT_DIR . '/swad/controllers/user.php');
 
 $curr_user = new User();
 $db = new Database();
-
-
-if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
-  echo ("<script>window.location.replace('../login');</script>");
-  exit;
-}
 ?>
 
 <!DOCTYPE html>
@@ -30,7 +22,11 @@ if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
 </head>
 
 <body>
-  <?php require_once('../swad/static/elements/sidebar.php'); 
+  <?php require_once('../swad/static/elements/sidebar.php');
+  if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
+    echo ("<script>window.location.replace('../login');</script>");
+    exit;
+  }
   ?>
   <main>
     <section class="content">

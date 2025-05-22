@@ -30,11 +30,6 @@ if (empty($_SESSION['logged-in'])) {
     die(header('Location: login'));
 }
 
-
-// просим роль пользователя
-// $curr_user_role['role_id'] = $curr_user->getUserRole($user['id']);
-// print_r($curr_user->getUserRole($user['id']));
-
 // POST запрос на регистрацию
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -61,7 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $pdo->commit();
-            header("Location: /devs/?c=" . $newOrgId);
+            $_SESSION['studio_id'] = $newOrgId;
+            header("Location: /devs/");
             exit;
         }
     } catch (Exception $e) {

@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once('../constants.php');
 require_once(ROOT_DIR . '/swad/config.php');
 require_once(ROOT_DIR . '/swad/controllers/user.php');
@@ -11,8 +12,19 @@ if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
 }
 
 $curr_user_org = $curr_user->getUserOrgs($_SESSION['id'], 1);
-if(empty($curr_user_org) or empty($_GET['s'])){
-    echo ("<script>window.location.replace('select');</script>");
+if (empty($curr_user_org) or empty($_SESSION['studio_id'])) {
+    header('Location: select');
+    exit();
+}
+
+if ($curr_user_org[0]['status'] != 'active') {
+    header('Location: select');
+    exit();
+}
+
+if (empty($_SESSION['studio_id'])) {
+    header('Location: select');
+    exit();
 }
 ?>
 

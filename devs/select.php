@@ -147,13 +147,18 @@ $user_orgs = $curr_user->getUserOrgs($_SESSION['id']);
                 <?php endif;
 
                 if ($org['status'] == 'active'): ?>
-                <li class="studio-item" onclick="location.href='index?s=<?= $org['organization_id'] ?>'">
-                    <i class="material-icons studio-icon">business</i>
-
-                    <span class="studio-name"><?= $org['organization_name'] ?></span>
-                    <br>
-                    <span style="color: #5f6368; margin: 5px; padding: 5px;"><?= $curr_user->printUserPrivileges($org['user_role']) ?></span>
-                </li>
+                    <li class="studio-item">
+                        <form action="set_studio.php" method="post" style="all: unset;">
+                            <input type="hidden" name="studio_id" value="<?= $org['organization_id'] ?>">
+                            <button type="submit" style="all: unset; width: 100%; cursor: pointer;">
+                                <i class="material-icons studio-icon">business</i>
+                                <span class="studio-name"><?= $org['organization_name'] ?></span>
+                                <span style="color: #5f6368; margin: 5px; padding: 5px;">
+                                    <?= $curr_user->printUserPrivileges($org['user_role']) ?>
+                                </span>
+                            </button>
+                        </form>
+                    </li>
                 <?php endif; ?>
             </ul>
         <?php endforeach; ?>
@@ -164,7 +169,6 @@ $user_orgs = $curr_user->getUserOrgs($_SESSION['id']);
                 <p>У вас пока нет ни одной студии</p>
             </div>
         <?php endif; ?>
-
 
         <button class="button" onclick="location.href='regorg'">
             <i class="material-icons">add</i>
