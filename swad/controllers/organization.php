@@ -7,13 +7,17 @@ class Organization
     private $name;
     private $ownerId;
     private $description;
+    private $vk_link;
+    private $tg_link;
     private $configPath;
 
-    public function __construct($name, $ownerId, $description)
+    public function __construct($name, $ownerId, $description, $vk_link, $tg_link)
     {
         $this->name = $this->sanitizeName($name);
         $this->ownerId = $ownerId;
         $this->description = $description;
+        $this->vk_link = $this->filterLink($vk_link);
+        $this->tg_link = $this->filterLink($tg_link);
     }
 
     private function sanitizeName($name)
@@ -22,22 +26,29 @@ class Organization
         return substr($cleaned, 0, 50);
     }
 
+    private function filterLink($input)
+    {
+        return preg_replace('/[^@_a-zA-Z]/', '', (string)$input);
+    }
+
     public function save(PDO $pdo)
     {
         try {
-            $this->createOrganizationFolder();
+            // $this->createOrganizationFolder();
 
             $stmt = $pdo->prepare("
                 INSERT INTO organizations 
-                (name, owner_id, description, config_path) 
-                VALUES (:name, :owner_id, :description, :config_path)
+                (name, owner_id, description, config_path, vk_link, tg_link) 
+                VALUES (:name, :owner_id, :description, :config_path, :vk_link, :tg_link)
             ");
 
             $stmt->execute([
                 ':name' => $this->name,
                 ':owner_id' => $this->ownerId,
                 ':description' => $this->description,
-                ':config_path' => $this->configPath
+                ':config_path' => "",
+                ':vk_link' => $this->vk_link,
+                ':tg_link' => $this->tg_link
             ]);
 
             $this->id = $pdo->lastInsertId();

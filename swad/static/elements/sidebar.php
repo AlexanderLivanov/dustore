@@ -50,8 +50,8 @@ if (empty($_SESSION['studio_id'])) {
     <li><a href="staff"><i class="material-icons pink-item">groups</i>Сотрудники</a></li>
     <li><a href="feedback"><i class="material-icons pink-item">note_add</i>Отзывы</a></li>
 
+    <?php if ($curr_user->getUserRole($_SESSION['id'], "global") == -1): ?>
     <li><a class="subheader">Для администраторов</a></li>
-
     <li class="no-padding">
         <ul class="collapsible collapsible-accordion">
             <li>
@@ -67,14 +67,16 @@ if (empty($_SESSION['studio_id'])) {
             </li>
         </ul>
     </li>
-
+    <?php endif; ?>
     <li class="no-padding">
         <ul class="collapsible collapsible-accordion">
             <li>
                 <a class="collapsible-header">Объявления<i class="material-icons pink-item">campaign</i></a>
                 <div class="collapsible-body" style="padding: 0 2rem;">
                     <ul>
-                        <li><a href="addannoun">Создать новое</a></li>
+                        <?php if ($curr_user->getUserRole($_SESSION['id'], "global") == -1): ?>
+                            <li><a href="addannoun">Создать новое</a></li>
+                        <?php endif; ?>
                         <li><a href="allannoun">Все</a></li>
                     </ul>
                 </div>

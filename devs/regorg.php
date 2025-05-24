@@ -30,6 +30,7 @@ if (empty($_SESSION['logged-in'])) {
     die(header('Location: login'));
 }
 
+
 // POST запрос на регистрацию
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -38,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $org = new Organization(
             $_POST['org_name'],
             $user['id'],
-            $_POST['description']
+            $_POST['description'],
+            $_POST['vk_link'],
+            $_POST['tg_link']
         );
 
         if ($org->save($pdo)) {
@@ -46,13 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare("
                 INSERT INTO user_organization 
-                (user_id, organization_id, role_id, status) 
-                VALUES (:user_id, :org_id, :role_id, 'pending')
+                (user_id, organization_id, role_id, status, vk_link, tg_link) 
+                VALUES (:user_id, :org_id, :role_id, 'pending', :vk_link, :tg_link)
             ");
             $stmt->execute([
                 'user_id' => $user['id'],
                 'org_id' => $newOrgId,
-                'role_id' => 2
+                'role_id' => 2,
+                ':vk_link' => $_POST['vk_link'],
+                ':tg_link' => $_POST['tg_link']
             ]);
 
             $pdo->commit();
@@ -126,10 +131,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 
 <body>
-    <h1>Регистрация студии</h1>
+    <h1 style="text-align: center;">Dustore.Devs</h1>
+    <h2 style="text-align: center;">Регистрация студии</h2>
 
     <?php if (isset($error)): ?>
-        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+        <div class=" alert alert-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <?php if (isset($success)): ?>
@@ -137,6 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="POST">
+        <h3>Основная информация:</h3>
         <div class="form-group">
             <label for="org_name">Название студии:</label>
             <input type="text"
@@ -155,6 +162,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 required
                 placeholder="Введите описание, до 500 символов"
                 maxlength="500" style="height: 100px;"></textarea>
+        </div>
+        <i style="color: #333;">Скоро будет возможность добавлять картинки</i>
+        <p>&nbsp;</p>
+        <h3>Следующие поля необходимы для модерации</h3>
+        <div class="form-group">
+            <label for="org_name">Ссылка на ВК группу вашей студии:</label>
+            <input type="text"
+                id="vk_link"
+                name="vk_link"
+                required
+                placeholder="Например, crazyprojectslab или dgscorp"
+                maxlength="20">
+        </div>
+
+        <div class="form-group">
+            <label for="org_name">Ссылка на Telegram канал:</label>
+            <input type="text"
+                id="tg_link"
+                name="tg_link"
+                required
+                placeholder="Например, dustore_official"
+                maxlength="20">
         </div>
 
         <button type="submit">🚀 Создать студию</button>

@@ -13,8 +13,12 @@
 </head>
 
 <body>
-  <?php require_once('../swad/static/elements/sidebar.php'); ?>
-
+  <?php require_once('../swad/static/elements/sidebar.php');
+  if ($curr_user->getUserRole($_SESSION['id'], "global") != -1) {
+    header('Location: select');
+    exit();
+  }
+  ?>
   <main>
     <section class="content">
       <div class="page-announce valign-wrapper"><a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only"><i class="material-icons">menu</i></a>

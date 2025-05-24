@@ -13,8 +13,12 @@
 </head>
 
 <body>
-  <?php require_once('../swad/static/elements/sidebar.php'); ?>
-
+  <?php require_once('../swad/static/elements/sidebar.php');
+  if ($curr_user->getUserRole($_SESSION['id'], "global") != -1) {
+    header('Location: select');
+    exit();
+  }
+  ?>
   <main>
     <section class="content">
       <div class="page-announce valign-wrapper"><a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only"><i class="material-icons">menu</i></a>
@@ -62,10 +66,6 @@
   </main>
   <?php require_once('footer.php'); ?>
 
-  <!-- So this is basically a hack, until I come up with a better solution. autocomplete is overridden
-    in the materialize js file & I don't want that.
-    -->
-  <!-- Yo dawg, I heard you like hacks. So I hacked your hack. (moved the sidenav js up so it actually works) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
   <script>
