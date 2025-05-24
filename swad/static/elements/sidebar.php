@@ -28,6 +28,8 @@ if (empty($_SESSION['studio_id'])) {
 }
 ?>
 
+<?php require_once('swad/controllers/ymcounter.php'); ?>
+
 <ul id="slide-out" class="side-nav fixed z-depth-4">
     <li style="line-height: 36px;">
         <div class="userView">
@@ -51,22 +53,22 @@ if (empty($_SESSION['studio_id'])) {
     <li><a href="feedback"><i class="material-icons pink-item">note_add</i>Отзывы</a></li>
 
     <?php if ($curr_user->getUserRole($_SESSION['id'], "global") == -1): ?>
-    <li><a class="subheader">Для администраторов</a></li>
-    <li class="no-padding">
-        <ul class="collapsible collapsible-accordion">
-            <li>
-                <a class="collapsible-header">Администрирование<i class="material-icons pink-item">shield</i></a>
-                <div class="collapsible-body" style="padding: 0 2rem;">
-                    <ul>
-                        <li><a href="userdetails">Поиск пользователя</a></li>
-                        <li><a href="recentusers">Новые пользователи</a></li>
-                        <li><a href="recentorgs">Новые организации</a></li>
-                        <li><a href="reports">Репорты</a></li>
-                    </ul>
-                </div>
-            </li>
-        </ul>
-    </li>
+        <li><a class="subheader">Для администраторов</a></li>
+        <li class="no-padding">
+            <ul class="collapsible collapsible-accordion">
+                <li>
+                    <a class="collapsible-header">Администрирование<i class="material-icons pink-item">shield</i></a>
+                    <div class="collapsible-body" style="padding: 0 2rem;">
+                        <ul>
+                            <li><a href="userdetails">Поиск пользователя</a></li>
+                            <li><a href="recentusers">Новые пользователи</a></li>
+                            <li><a href="recentorgs">Новые организации</a></li>
+                            <li><a href="reports">Репорты</a></li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </li>
     <?php endif; ?>
     <li class="no-padding">
         <ul class="collapsible collapsible-accordion">

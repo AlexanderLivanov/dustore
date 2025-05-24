@@ -8,7 +8,7 @@ if (isset($_SESSION['logged-in']) && $_SESSION['logged-in'] == TRUE) {
 
 if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
     define('BOT_USERNAME', 'dustore_auth_bot');
-}else if ($_SERVER['HTTP_HOST'] == '127.0.0.1') {
+} else if ($_SERVER['HTTP_HOST'] == '127.0.0.1') {
     define('BOT_USERNAME', 'dustore_auth_local_bot');
 }
 ?>
@@ -21,8 +21,8 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход/Регистрация</title>
     <link rel="stylesheet" href="swad/css/login.css">
+    <?php require_once('swad/controllers/ymcounter.php'); ?>
 </head>
-
 <body>
     <div class="container">
         <div class="toggle-container">

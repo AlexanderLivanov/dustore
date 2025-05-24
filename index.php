@@ -5,12 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dustore - Главная</title>
-    <link rel="shortcut icon" href="swad/static/img/logo.svg" type="image/x-icon">
-    <meta name="theme-color" content="#14041d">
-    <meta name="description" content="Dustore.ru - новая игровая платформа! Скачивайте новинки инди-разработчиков.">
-    <meta name="robots" content="index,follow">
-    <meta name="generator" content="SWAD Framework">
-    <meta name="google" content="notranslate">
+    <?php require_once('swad/controllers/ymcounter.php'); ?>
 </head>
 
 <body>
