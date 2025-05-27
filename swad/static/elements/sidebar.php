@@ -56,7 +56,7 @@ if (empty($_SESSION['studio_id'])) {
         <div class="divider"></div>
     </li>
     <li><a class="subheader">Проекты</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">add</i>Создать новый</a></li>
+    <li><a href="new"><i class="material-icons pink-item">add</i>Создать новый</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">group</i>Исполнители</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">list_alt</i>Задачи</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">reviews</i>Отзывы</a></li>
