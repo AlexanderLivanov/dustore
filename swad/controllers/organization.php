@@ -28,7 +28,8 @@ class Organization
 
     private function filterLink($input)
     {
-        return preg_replace('/[^@_a-zA-Z]/', '', (string)$input);
+        $pattern = '#^https://(vk\.com|t\.me)/[a-zA-Z0-9_.-]{3,30}$#i';
+        return preg_match($pattern, (string)$input) ? (string)$input : '';
     }
 
     public function save(PDO $pdo)

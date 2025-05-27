@@ -9,7 +9,7 @@ session_start();
 // Проверяем авторизован ли пользователь
 $curr_user = new User();
 if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
-    echo ("<script>window.location.replace('login');</script>");
+    echo ("<script>window.location.replace('../login');</script>");
     exit;
 }
 
@@ -27,7 +27,7 @@ if (!$user) {
 
 // Еще раз проверям авторизацию (хз зачем)
 if (empty($_SESSION['logged-in'])) {
-    die(header('Location: login'));
+    die(header('Location: ../login'));
 }
 
 
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
             $_SESSION['studio_id'] = $newOrgId;
-            header("Location: /devs/");
+            header("Location: /devs/select");
             exit;
         }
     } catch (Exception $e) {
@@ -172,8 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 id="vk_link"
                 name="vk_link"
                 required
-                placeholder="Например, crazyprojectslab или dgscorp"
-                maxlength="20">
+                placeholder="Обязательно с https://vk.com/. Например, https://vk.com/dgscorp"
+                maxlength="50">
         </div>
 
         <div class="form-group">
@@ -182,8 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 id="tg_link"
                 name="tg_link"
                 required
-                placeholder="Например, dustore_official"
-                maxlength="20">
+                placeholder="Обязательно с https://t.me/. Например, https://t.me/dustore_official"
+                maxlength="50">
         </div>
 
         <button type="submit">🚀 Создать студию</button>

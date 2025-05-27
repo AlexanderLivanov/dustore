@@ -160,7 +160,17 @@ $user_orgs = $curr_user->getUserOrgs($_SESSION['id']);
                         </form>
                     </li>
                 <?php endif; ?>
+
+                <?php if ($org['status'] == 'suspended'): ?>
+                    <li class="studio-item" style="cursor: not-allowed;">
+                        <i class="material-icons studio-icon">error</i>
+                        <span class="studio-name"><?= $org['organization_name'] ?><i style="color: crimson; font-size: 11pt;"> Приостановлено</i></span>
+                        <br>
+                    </li>
+                <?php endif; ?>
             </ul>
+
+            <p style="color: #5f6368;">Вы не можете зарегистрировать больше одной студии!</p>
         <?php endforeach; ?>
 
         <?php if (count($user_orgs) < 1): ?>
@@ -168,12 +178,12 @@ $user_orgs = $curr_user->getUserOrgs($_SESSION['id']);
                 <i class="material-icons" style="font-size: 48px; margin-bottom: 16px;">business</i>
                 <p>У вас пока нет ни одной студии</p>
             </div>
-        <?php endif; ?>
 
-        <button class="button" onclick="location.href='regorg'">
-            <i class="material-icons">add</i>
-            Зарегистрировать новую студию
-        </button>
+            <button class="button" onclick="location.href='regorg'">
+                <i class="material-icons">add</i>
+                Зарегистрировать новую студию
+            </button>
+        <?php endif; ?>
     </div>
 </body>
 
