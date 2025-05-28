@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once('swad/static/elements/header.php');
 require_once('swad/controllers/time.php');
 require_once('swad/controllers/user.php');

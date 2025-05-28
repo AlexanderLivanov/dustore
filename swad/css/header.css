@@ -6,6 +6,11 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap');
 
+@font-face {
+    font-family: 'PixelizerBold';
+    src: url('PixelizerBold.ttf');
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -53,29 +58,30 @@ body {
     border: none;
     cursor: pointer;
     box-shadow: 5px 5px 10px rgba(255, 255, 255, 1);
-    font-family: 'Tiny5', 'Gill Sans';
+    font-family: 'PixelizerBold', 'Gill Sans';
     transition: all .2s;
 }
 
 .footer {
     background-color: #c32178;
-    font-family: 'Tiny5', 'Gill Sans';
     padding: 10px;
     color: white;
     font-size: 18pt;
+    font-family: 'PixelizerBold', ' Gill Sans';
     text-align: center;
 }
 
 .footer a {
     color: white;
     font-size: 18pt;
+    font-family: 'PixelizerBold', ' Gill Sans';
     text-align: center;
 }
 
 .button:hover {
     background-color: #c32178;
     color: white;
-    font-family: 'Tiny5', 'Gill Sans';
+    font-family: 'PixelizerBold', 'Gill Sans';
     transition: all .2s;
     font-size: 12pt;
     padding: 10px;
@@ -93,10 +99,9 @@ body {
 
 .image img:hover {
     width: auto;
-    padding: 10px;
+    padding: 3px;
     height: 55px;
     transition: all .2s;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 1);
     filter: contrast(200%);
 }
 
