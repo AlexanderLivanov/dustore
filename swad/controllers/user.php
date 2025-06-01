@@ -101,10 +101,11 @@ class User
         return $stmt->fetchColumn() > 0;
     }
 
+    // This checkAuth() function will be deprecated soon! Use auth($token) instead
+    // (c) 01.06.2025 Alexander Livanov
     public function checkAuth()
     {
-        if (!isset($_COOKIE['auth_token'])) {
-            // header('HTTP/1.1 401 Unauthorized');
+        if (empty($_COOKIE['auth_token'])) {
             return 1;
         }
 
@@ -127,6 +128,7 @@ class User
             return 3;
         }
 
+        $_SESSION['auth_token'] = $_COOKIE['auth_token'];
         return 0;
     }
 

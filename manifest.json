@@ -1,12 +1,12 @@
 {
-    "name": "Dustore",
+    "name": "Dustore - российская игровая платформа",
     "short_name": "Dustore",
     "description": "Dustore - российская игровая платформа",
     "start_url": "/",
     "version": "1",
     "lang": "ru-RU",
-    "theme_color": "#21ac50",
-    "background_color": "#21ac50",
+    "theme_color": "#74155d",
+    "background_color": "#74155d",
     "display": "standalone",
     "display_override": [
         "window-controls-overlay"
@@ -16,7 +16,7 @@
         {
             "purpose": "any",
             "src": "/swad/static/img/logo.svg",
-            "sizes": "1024x1024",
+            "sizes": "1071x1013",
             "type": "image/png"
         }
     ],
@@ -27,7 +27,7 @@
             "icons": [
                 {
                     "src": "/swad/static/img/logo.svg",
-                    "sizes": "1024x1024",
+                    "sizes": "1071x1013",
                     "type": "image/png"
                 }
             ]
@@ -36,7 +36,7 @@
     "screenshots": [
         {
             "src": "/swad/static/img/logo.png",
-            "sizes": "2310x1866",
+            "sizes": "3000x864",
             "type": "image/png",
             "form_factor": "wide"
         }

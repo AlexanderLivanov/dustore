@@ -5,6 +5,8 @@ require_once(ROOT_DIR . '/swad/controllers/user.php');
 
 $curr_user = new User();
 $db = new Database();
+
+$curr_user->checkAuth();
 ?>
 
 <!DOCTYPE html>

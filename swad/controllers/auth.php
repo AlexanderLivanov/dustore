@@ -54,25 +54,26 @@ function checkTelegramAuthorization($auth_data)
 // User authentication - function
 function userAuthentication($db, $auth_data)
 {
-    function createNewUser($db, $auth_data)
+    function createNewUser($db, $auth_data, $token)
     {
         // User not found, so create it
         $id = $db->Insert(
             "INSERT INTO `users`
-                (`first_name`, `last_name`, `telegram_id`, `telegram_username`, `profile_picture`, `auth_date`, `global_role`)
-                    values (:first_name, :last_name, :telegram_id, :telegram_username, :profile_picture, :auth_date, 0)",
+                (`first_name`, `last_name`, `telegram_id`, `telegram_username`, `telegram_token`, `profile_picture`, `auth_date`, `global_role`)
+                    values (:first_name, :last_name, :telegram_id, :telegram_username, :telegram_token, :profile_picture, :auth_date, 0)",
             [
                 'first_name'        => $auth_data['first_name'],
                 'last_name'         => $auth_data['last_name'],
                 'telegram_id'       => $auth_data['id'],
                 'telegram_username' => $auth_data['username'],
                 'profile_picture'   => $auth_data['photo_url'],
-                'auth_date'         => $auth_data['auth_date']
+                'auth_date'         => $auth_data['auth_date'],
+                'telegram_token'    => $token
             ]
         );
     }
 
-    function updateExistedUser($db, $auth_data)
+    function updateExistedUser($db, $auth_data, $token)
     {
         // User found, so update it
         $db->Update(
@@ -80,6 +81,7 @@ function userAuthentication($db, $auth_data)
                 SET `first_name`        = :first_name,
                     `last_name`         = :last_name,
                     `telegram_username` = :telegram_username,
+                    `telegram_token`    = :telegram_token,
                     `profile_picture`   = :profile_picture,
                     `auth_date`         = :auth_date
                         WHERE `telegram_id` = :telegram_id",
@@ -89,7 +91,8 @@ function userAuthentication($db, $auth_data)
                 'telegram_username' => $auth_data['username'],
                 'profile_picture'   => $auth_data['photo_url'],
                 'auth_date'         => $auth_data['auth_date'],
-                'telegram_id'       => $auth_data['id']
+                'telegram_id'       => $auth_data['id'],
+                'telegram_token'    => $token
             ]
         );
     }
@@ -115,15 +118,20 @@ function userAuthentication($db, $auth_data)
         }
     }
 
+
+    $_SESSION['id'] = $auth_data['id'];
+    $token = authUser($auth_data['id']);
+    if(!empty($_COOKIE['auth_token'])){
+        $token = $_COOKIE['auth_token'];
+    }
+
     if (checkUserExists($db, $auth_data) == TRUE) {
-        updateExistedUser($db, $auth_data);
+        updateExistedUser($db, $auth_data, $token);
     } else {
-        createNewUser($db, $auth_data);
+        createNewUser($db, $auth_data, $token);
     }
 
     // Create logged in user session
-    $_SESSION['id'] = $auth_data['id'];
-    $token = authUser($auth_data['id']);
     $_SESSION = [
         'logged-in' => TRUE,
         'telegram_id' => $auth_data['id'],
@@ -136,7 +144,6 @@ try {
 
     userAuthentication($db, $auth_data);
 } catch (Exception $e) {
-    // Display errors
     die($e->getMessage());
 }
 

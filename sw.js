@@ -1,8 +1,7 @@
 const CACHE_NAME = "pwa-version-1";
 
 const assets = [
-  "/manifest.json",
-  "index.php"
+  "*"
 ];
 
 self.addEventListener("install", (evt) => {

@@ -48,9 +48,9 @@ function authUser($telegram_id)
     setcookie('auth_token', $token, [
         'expires' => time() + TOKEN_EXPIRE,
         'path' => '/',
-        'secure' => true,
+        'secure' => ($_SERVER['HTTP_HOST'] != '127.0.0.1'), // На localhost без HTTPS
         'httponly' => true,
-        'samesite' => 'Strict'
+        'samesite' => 'Lax' // Для кросс-доменных запросов
     ]);
     return $token;
 }
