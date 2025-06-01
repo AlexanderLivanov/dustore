@@ -356,11 +356,11 @@
         <section class="hero">
             <div class="container">
                 <div class="hero-content">
-                    <h1>Dustore — Ваша игровая вселенная</h1>
+                    <h1>DUSTORE — ваша игровая вселенная</h1>
                     <p>Платформа, где разработчики создают, а игроки открывают для себя уникальные игровые миры. Присоединяйтесь к сообществу инноваторов и геймеров!</p>
                     <div class="hero-buttons">
-                        <a href="/register" class="btn">Начать разработку</a>
-                        <a href="/games" class="btn btn-secondary">Исследовать игры</a>
+                        <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
+                        <a href="/games" class="btn btn-secondary">Хочу играть в игры!</a>
                     </div>
                     <div class="hero-image floating">
                         <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

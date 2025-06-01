@@ -61,15 +61,15 @@ $db = new Database();
                     </svg></button>
             </div>
             <div class="buttons-left">
-                <button class="button" onclick="location.href='/'">Игры</button>
-                <button class="button">Приложения</button>
-                <button class="button">Ассеты</button>
-                <button class="button">О платформе</button>
+                <button class="button" onclick="location.href='/games'">Игры</button>
+                <button class="button disabled-btn tooltip">Приложения<span class="tooltiptext">Скоро</span></button>
+                <button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>
+                <button class="button" onclick="location.href='/about'">О платформе</button>
             </div>
         </div>
         <div class="section center-section">
             <div class="image">
-                <img src="/swad/static/img/logo_low.png" alt="">
+                <img src="/swad/static/img/logo_low.png" alt="" onclick="location.href='/'">
             </div>
         </div>
         <div class="section right-section">
