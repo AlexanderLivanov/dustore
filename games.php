@@ -346,7 +346,7 @@
 
                 <div class="games-grid">
                     <!-- Игра 1 -->
-                    <div class="game-card">
+                    <div class="game-card" onclick="window.location.replace('testgame');">
                         <div class="game-image">
                             <img src="https://via.placeholder.com/400x225/74155d/ffffff?text=Super+Game" alt="Super Game">
                             <div class="game-badge">Новинка</div>
