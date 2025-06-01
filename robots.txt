@@ -1,2 +1,6 @@
-Disallow:
-/swad/
+User-agent: *
+Allow: /
+Disallow: /swad/*
+Disallow: /devs/*
+Sitemap: https://dustore.ru/sitemap.xml
+Host: dustore.ru
