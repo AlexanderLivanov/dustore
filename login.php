@@ -33,7 +33,7 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
         <form id="loginForm" class="form-container active">
             Мы за современый и безопасный подход к созданию аккаунтов. Вы можете войти через Telegram и использовать этот аккаунт для всех сервисов в экосистеме DustEcoSystem (DES)
             <div class="form-group" style="text-align: center; margin-top: 35px;">
-                <script async src="https://telegram.org/js/telegram-widget.js" data-telegram-login="<?= BOT_USERNAME ?>" data-size="large" data-auth-url="swad/controllers/auth.php"></script>
+                <script async src="https://telegram.org/js/telegram-widget.js" data-telegram-login="<?= BOT_USERNAME ?>" data-size="large" data-auth-url="swadf2/controllers/tg_auth.php"></script>
             </div>
         </form>
 
