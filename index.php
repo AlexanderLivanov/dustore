@@ -14,11 +14,6 @@
 
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
-    <?php 
-    print_r($_SESSION);
-    print_r($_COOKIE);
-    ?>
-
     <main>
         <section class="hero">
             <div class="container">

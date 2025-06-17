@@ -121,9 +121,6 @@ function userAuthentication($db, $auth_data)
 
     $_SESSION['id'] = $auth_data['id'];
     $token = authUser($auth_data['id']);
-    if(!empty($_COOKIE['auth_token'])){
-        $token = $_COOKIE['auth_token'];
-    }
 
     if (checkUserExists($db, $auth_data) == TRUE) {
         updateExistedUser($db, $auth_data, $token);
@@ -137,6 +134,8 @@ function userAuthentication($db, $auth_data)
         'telegram_id' => $auth_data['id'],
         'auth_token' => $token
     ];
+
+    setcookie('auth_token', $token, time() + 86400 * 30, '/', '', true, true);
 }
 
 try {
