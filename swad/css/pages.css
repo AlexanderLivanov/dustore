@@ -225,7 +225,7 @@ p {
 
 /* Секция как это работает */
 .how-it-works {
-    background-color: var(--gradient2);
+    background: var(--gradient);
 }
 
 .steps {
@@ -337,4 +337,307 @@ p {
 
 .delay-3 {
     animation-delay: 1.5s;
+}
+
+
+/* 18.06.2025 (c) Alexander Livanov */
+/* About page */
+:root {
+    --primary: #c32178;
+    --secondary: #74155d;
+    --dark: #14041d;
+    --light: #f8f9fa;
+    --gradient: linear-gradient(180deg, #14041d, #400c4a, #74155d, #c32178);
+    --gradient2: linear-gradient(180deg, #c32178, #14041d, #400c4a, #c32178);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--gradient);
+    color: var(--light);
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+section {
+    padding: 80px 0;
+}
+
+h1,
+h2,
+h3 {
+    font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+h1 {
+    font-size: 3.5rem;
+}
+
+h2 {
+    font-size: 2.5rem;
+    text-align: center;
+    position: relative;
+    margin-bottom: 60px;
+}
+
+h2:after {
+    content: "";
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 2px;
+}
+
+p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 30px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background: #e62e8a;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(195, 33, 120, 0.3);
+}
+
+.about-hero {
+    background: var(--gradient);
+    padding: 180px 0 100px;
+    text-align: center;
+}
+
+.about-hero h1 {
+    font-size: 4rem;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.about-hero p {
+    font-size: 1.3rem;
+    margin-bottom: 40px;
+}
+
+.mission {
+    background: var(--dark);
+    text-align: center;
+}
+
+.mission-statement {
+    font-size: 1.5rem;
+    font-style: italic;
+    color: var(--primary);
+    margin-bottom: 40px;
+}
+
+.team {
+    background: var(--dark);
+    text-align: center;
+}
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px;
+    margin-top: 50px;
+}
+
+.team-member {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 30px;
+    transition: transform 0.3s ease;
+}
+
+.team-member:hover {
+    transform: translateY(-10px);
+    background: rgba(195, 33, 120, 0.1);
+}
+
+.team-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 auto 20px;
+    border: 3px solid var(--primary);
+}
+
+.team-name {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.team-role {
+    color: var(--primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.team-link {
+    color: var(--primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.links {
+    vertical-align: middle;
+}
+
+.values {
+    background: var(--dark);
+    text-align: center;
+}
+
+.values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    margin-top: 50px;
+}
+
+.value-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 40px 30px;
+    transition: transform 0.3s ease;
+}
+
+.value-card:hover {
+    transform: translateY(-10px);
+    background: rgba(195, 33, 120, 0.1);
+}
+
+.value-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    color: var(--primary);
+}
+
+.value-title {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+.timeline {
+    background: var(--gradient);
+    position: relative;
+    padding: 80px 0;
+}
+
+.timeline-item {
+    display: flex;
+    margin-bottom: 50px;
+    position: relative;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-date {
+    flex: 0 0 150px;
+    text-align: right;
+    padding-right: 30px;
+    position: relative;
+}
+
+.timeline-date:after {
+    content: "";
+    position: absolute;
+    right: -10px;
+    top: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 3px solid var(--dark);
+}
+
+.timeline-content {
+    flex: 1;
+    padding-left: 30px;
+    border-left: 2px solid var(--primary);
+    padding-bottom: 30px;
+}
+
+.timeline-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+
+    h2 {
+        font-size: 2rem;
+    }
+
+    .about-hero {
+        padding: 120px 0 60px;
+    }
+
+    .about-hero h1 {
+        font-size: 3rem;
+    }
+
+    .timeline-item {
+        flex-direction: column;
+    }
+
+    .timeline-date {
+        text-align: left;
+        padding-right: 0;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .timeline-date:after {
+        right: auto;
+        left: -10px;
+        top: auto;
+        bottom: -11px;
+    }
+
+    .timeline-content {
+        border-left: none;
+        padding-left: 0;
+    }
 }

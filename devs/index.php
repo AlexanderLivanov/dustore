@@ -24,7 +24,7 @@ $db = new Database();
 <body>
   <?php require_once('../swad/static/elements/sidebar.php');
   if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
-    echo ("<script>window.location.replace('../login');</script>");
+    echo ("window.location.replace('/login');");
     exit;
   }
   ?>

@@ -1,9 +1,11 @@
 <?php
 session_start();
 
-// // When the user is logged in, go to the user page
+// When the user is logged in, go to the user page
 if (isset($_SESSION['logged-in']) && $_SESSION['logged-in'] == TRUE) {
-    die(header('Location: /me'));
+    $redirect_url = $_SESSION['redirect_url'] ?? '/me';
+    unset($_SESSION['redirect_url']);
+    die(header('Location: ' . $redirect_url));
 }
 
 
@@ -17,8 +19,6 @@ $db = new Database;
 // TOKENS FOR TG BOTS (GLOBAL and LOCAL)
 define('BOT_TOKEN', '7993358429:AAH3EfKtSW7oqyN1fVWBAQsD6ehKZViF1do');
 define('LOCAL_BOT_TOKEN', '8111791435:AAHs41kdMZ0PBkm2lt0lNavG9vI9xCiJ_FA');
-
-
 
 if (!isset($_GET['hash'])) {
     die('Telegram hash not found');
@@ -146,5 +146,6 @@ try {
     die($e->getMessage());
 }
 
-die(header('Location: /me'));
-
+$redirect_url = $_SESSION['redirect_url'] ?? '/me';
+unset($_SESSION['redirect_url']);
+die(header('Location: ' . $_SERVER['HTTP_REFERER']));

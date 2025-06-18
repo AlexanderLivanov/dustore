@@ -18,8 +18,9 @@ require_once('swad/controllers/user.php');
 
 <body>
     <?php
-    if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
-        echo ("<script>window.location.replace('login');</script>");
+    if (!isset($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
+        echo ("window.location.replace('/login');");
+        exit;
     }
 
     $user_data = $db->Select(
