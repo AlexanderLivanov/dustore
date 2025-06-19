@@ -88,7 +88,7 @@
 
                         <h2>Трейлер</h2>
                         <div class="trailer-container">
-                            <iframe src="https://vk.com/video_ext.php?oid=-218097832&id=456239059&hash=6f708c0c955ece67" width="640" height="360" frameborder="0" allowfullscreen="1" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
+                            <iframe src="https://leonardo.osnova.io/d45f6fbd-7ac8-5015-aad5-a9a69fe5d0cb/-/format/mp4/#t=0.1" width="640" height="360" frameborder="0" allowfullscreen="1" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
                         </div>
 
                         <h2>Скриншоты</h2>
