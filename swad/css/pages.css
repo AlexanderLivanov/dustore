@@ -511,6 +511,7 @@ p {
     color: var(--primary);
     margin-bottom: 15px;
     font-weight: 600;
+    text-decoration: none;
 }
 
 .links {

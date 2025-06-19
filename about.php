@@ -37,20 +37,43 @@
                 <h2>Команда DUSTORE</h2>
                 <p>Наша команда состоит из энтузиастов игровой индустрии, которые верят в потенциал независимой разработки</p>
 
-                <h1>Dust Games</h1>
+                <h1>Dust Games
+                    <a href="https://vk.com/dgscorp" class="team-link">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#ffffff"
+                            stroke-width="1"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M14 19h-4a8 8 0 0 1 -8 -8v-5h4v5a4 4 0 0 0 4 4h0v-9h4v4.5l.03 0a4.531 4.531 0 0 0 3.97 -4.496h4l-.342 1.711a6.858 6.858 0 0 1 -3.658 4.789h0a5.34 5.34 0 0 1 3.566 4.111l.434 2.389h0h-4a4.531 4.531 0 0 0 -3.97 -4.496v4.5z" />
+                        </svg>
+                    </a>
+                    <a href="https://t.me/dgscorp" class="team-link">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#ffffff"
+                            stroke-width="1"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" />
+                        </svg>
+                    </a>
+                </h1>
                 <div class="team-grid">
                     <div class="team-member">
-                        <img src="https://via.placeholder.com/150/c32178/ffffff?text=Алексей" alt="Алексей" class="team-avatar">
-                        <h3 class="team-name">Алексей</h3>
+                        <img src="swad/static/img/team/esh_dgscorp.webp" alt="Эш :)" class="team-avatar">
+                        <h3 class="team-name">Эш</h3>
                         <p class="team-role">Основатель & CEO</p>
                         <p>Идейный вдохновитель проекта, отвечает за стратегическое развитие платформы</p>
-                    </div>
-
-                    <div class="team-member">
-                        <img src="https://via.placeholder.com/150/74155d/ffffff?text=Мария" alt="Мария" class="team-avatar">
-                        <h3 class="team-name">Мария</h3>
-                        <p class="team-role">CTO</p>
-                        <p>Руководит технической реализацией проекта и развитием инфраструктуры</p>
+                        <a class="team-link" href="https://t.me/dgscorp">https://t.me/dgscorp</a>
                     </div>
                 </div>
                 <div style="margin-top: 50px;"></div>
@@ -89,6 +112,12 @@
                 </div>
                 <div style="margin-top: 50px;"></div>
             </div>
+
+            <h1>Партнёры</h1>
+            <p>Тут могли бы быть вы</p>
+            <!-- <marquee behavior="alternate">
+                <img src="/swad/static/img/team/alexanderpartikevich_cplrus.webp" alt="" class="team-avatar">
+            </marquee> -->
         </section>
 
         <section class="values">
