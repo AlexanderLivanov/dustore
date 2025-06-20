@@ -63,7 +63,7 @@ require_once('swad/controllers/user.php');
         <div class="tabs">
             <button class="tab-button active" onclick="switchTab(event, 'profile')">Профиль</button>
             <button class="tab-button" onclick="switchTab(event, 'security')">Безопасность</button>
-            <button class="tab-button" onclick="switchTab(event, 'activity')">Активность</button>
+            <button class="tab-button" onclick="switchTab(event, 'activity')">Для разработчиков</button>
         </div>
 
         <div id="profile" class="tab-content active">
@@ -86,7 +86,6 @@ require_once('swad/controllers/user.php');
                         <p>Username: <a href="https://t.me/<?= $telegramUsername ?>">@<?= $telegramUsername ?></a></p>
                     <?php endif; ?>
                     <p>Тип учётной записи: <?= $curr_user->printUserPrivileges($curr_user->getRoleName($curr_user->getUserRole($_SESSION['id'], "global"))); ?></p>
-                    <p><a href="/devs/select">Вход в консоль для разработчиков</a></p>
                 </div>
             </div>
         </div>
@@ -94,8 +93,14 @@ require_once('swad/controllers/user.php');
         <div id="security" class="tab-content">
             <div class="info-grid">
                 <div class="info-card">
-                    <h3>Безопасность аккаунта</h3>
-                    <!-- <p>Двухфакторная аутентификация: отключена</p> -->
+                    <h3>Безопасность</h3>
+                    <p>
+                        <input type="checkbox" name="" id="" disabled>Вход по ключевой фразе (passphrase)
+                        <br>
+                        <i>Включите, чтобы у вас был доступ к аккаунту без входа через Телеграм</i>
+                        <br>
+                        <b style="color: brown;">Эта функция пока не работает</b>
+                    </p>
                 </div>
             </div>
         </div>
@@ -103,8 +108,10 @@ require_once('swad/controllers/user.php');
         <div id="activity" class="tab-content">
             <div class="info-grid">
                 <div class="info-card">
-                    <h3>Последние действия</h3>
-                    <p>Нет последних действий</p>
+                    <h3>Если у вас есть аккаунт разработчика:</h3>
+                    <p><a href="/devs/select">Вход в консоль для разработчиков</a></p>
+                    <h3>Если у вас ещё нет аккаунта разработчика:</h3>
+                    <p><a href="/finance">Ознакомьтесь с тарифами</a></p>
                 </div>
             </div>
         </div>

@@ -29,9 +29,9 @@ body {
     padding: 0 20px;
 }
 
-/* section {
+section {
     padding: 80px 0;
-} */
+}
 
 h1,
 h2,
@@ -160,6 +160,7 @@ p {
 .platform {
     background: linear-gradient(var(--primary), var(--dark));
     position: relative;
+    padding-top: 50px;
 }
 
 .platform-grid {
@@ -370,9 +371,9 @@ body {
     padding: 0 20px;
 }
 
-section {
+/* section {
     padding: 80px 0;
-}
+} */
 
 h1,
 h2,
@@ -650,7 +651,7 @@ p {
     position: relative;
     overflow: hidden;
     height: 500px;
-    margin-bottom: 40px;
+    /* padding-bottom: 40px; */
 }
 
 .slider-container {

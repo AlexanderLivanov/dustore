@@ -15,64 +15,6 @@
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
     <main>
-        <section class="slider-section">
-            <div class="slider-container">
-                <div class="slider-track">
-                    <!-- Слайд 1 - Популярная игра -->
-                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
-                        <div class="slide-overlay"></div>
-                        <div class="slide-content">
-                            <h2>Cyber Odyssey - Игра месяца!</h2>
-                            <p>Погрузитесь в мир киберпанка с новой игрой от Pixel Dream Studios. Скидка 20% в течение этой недели!</p>
-                            <a href="/game/cyber-odyssey" class="btn">Узнать больше</a>
-                        </div>
-                    </div>
-
-                    <!-- Слайд 2 - Новости платформы -->
-                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=1351&q=80');">
-                        <div class="slide-overlay"></div>
-                        <div class="slide-content">
-                            <h2>Новая система достижений!</h2>
-                            <p>Зарабатывайте уникальные награды и повышайте свой статус в сообществе Dustore.</p>
-                            <a href="/news/achievements" class="btn">Подробнее о системе</a>
-                        </div>
-                    </div>
-
-                    <!-- Слайд 3 - Подписка -->
-                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
-                        <div class="slide-overlay"></div>
-                        <div class="slide-content">
-                            <h2>Dustore Premium подписка</h2>
-                            <p>Полный доступ к каталогу игр за фиксированную цену. Первый месяц всего за 99₽!</p>
-                            <a href="/subscription" class="btn">Попробовать Premium</a>
-                        </div>
-                    </div>
-
-                    <!-- Слайд 4 - Инструменты для разработчиков -->
-                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1542751110-97427bbecf20?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
-                        <div class="slide-overlay"></div>
-                        <div class="slide-content">
-                            <h2>HuRMa - Панель для разработчиков</h2>
-                            <p>Новые инструменты для управления играми и аналитики теперь доступны всем разработчикам.</p>
-                            <a href="/devs" class="btn">Начать разработку</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="slider-arrows">
-                    <div class="slider-arrow prev">❮</div>
-                    <div class="slider-arrow next">❯</div>
-                </div>
-
-                <div class="slider-nav">
-                    <div class="slider-dot active"></div>
-                    <div class="slider-dot"></div>
-                    <div class="slider-dot"></div>
-                    <div class="slider-dot"></div>
-                </div>
-            </div>
-        </section>
-        
         <section class="hero">
             <div class="container">
                 <div class="hero-content">
@@ -181,6 +123,60 @@
                             </g>
                         </svg>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slider-section" style="padding: 0">
+            <div class="slider-container">
+                <div class="slider-track">
+                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
+                        <div class="slide-overlay"></div>
+                        <div class="slide-content">
+                            <h2>1 июля открывается Программа Предварительной Оценки!</h2>
+                            <p>Получите возможность бесплатно зарегистрировать студию и первый проект</p>
+                            <a href="https://github.com/AlexanderLivanov/dustore-docs/wiki/Программа-Предварительной-Оценки" target="_blank" class="btn">Узнать больше</a>
+                        </div>
+                    </div>
+
+                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=1351&q=80');">
+                        <div class="slide-overlay"></div>
+                        <div class="slide-content">
+                            <h2>1 августа выйдет первая версия платформы</h2>
+                            <p>Загрузите свои проекты до 1 августа по Программе Предварительной Оценки и получите уникальные бейджи!</p>
+                            <a href="https://github.com/AlexanderLivanov/dustore-docs/wiki/Программа-Предварительной-Оценки" target="_blank" class="btn">Подробнее</a>
+                        </div>
+                    </div>
+
+                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
+                        <div class="slide-overlay"></div>
+                        <div class="slide-content">
+                            <h2>Dustore Premium подписка</h2>
+                            <p>Доступ ко всем играм играм по меньшей цене</p>
+                            <a href="/finance" class="btn">Исследовать цены</a>
+                        </div>
+                    </div>
+
+                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1542751110-97427bbecf20?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
+                        <div class="slide-overlay"></div>
+                        <div class="slide-content">
+                            <h2>HuRMa - Панель для разработчиков</h2>
+                            <p>Новые инструменты для управления играми и аналитики теперь доступны всем разработчикам.</p>
+                            <a href="/devs" class="btn">Начать разработку</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slider-arrows">
+                    <div class="slider-arrow prev">❮</div>
+                    <div class="slider-arrow next">❯</div>
+                </div>
+
+                <div class="slider-nav">
+                    <div class="slider-dot active"></div>
+                    <div class="slider-dot"></div>
+                    <div class="slider-dot"></div>
+                    <div class="slider-dot"></div>
                 </div>
             </div>
         </section>
