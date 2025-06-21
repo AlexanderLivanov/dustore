@@ -19,15 +19,15 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход/Регистрация</title>
+    <title>Вход</title>
     <link rel="stylesheet" href="swad/css/login.css">
     <?php require_once('swad/controllers/ymcounter.php'); ?>
 </head>
 <body>
     <div class="container">
         <div class="toggle-container">
-            <button class="toggle-btn active" onclick="showForm('login')">Войти</button>
-            <!-- <button class="toggle-btn" onclick="showForm('register')">Создать аккаунт</button> -->
+            <button class="toggle-btn active" onclick="showForm('login')">Войти через Telegram</button>
+            <button class="toggle-btn" onclick="showForm('register')">Войти по ключевой фразе</button>
         </div>
 
         <form id="loginForm" class="form-container active">
@@ -38,16 +38,15 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
         </form>
 
         <form id="registerForm" class="form-container">
+            <p style="color: brown;">Вход по ключевой фразе не работает в альфа-версии Платформы. Пользуйтесь входом через Telegram</p>
+            <br>
             <div class="form-group">
-                <input type="text" placeholder="Имя" required>
+                <input type="text" placeholder="Имя пользователя" required disabled>
             </div>
             <div class="form-group">
-                <input type="email" placeholder="Email" required>
+                <input type="password" placeholder="Passphrase" required disabled>
             </div>
-            <div class="form-group">
-                <input type="password" placeholder="Пароль" required>
-            </div>
-            <button type="submit">Зарегистрироваться</button>
+            <button type="submit" disabled>Войти</button>
         </form>
     </div>
 

@@ -44,6 +44,7 @@ $curr_user->checkAuth();
     <link rel="stylesheet" href="swad/css/header.css">
     <link rel="shortcut icon" href="../img/logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="/swad/css/style.css">
+    <link rel="stylesheet" href="/swad/css/notifications.css">
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <meta name="theme-color" content="#14041d">
     <meta name="description" content="Dustore.ru - новая игровая платформа! Скачивайте новинки инди-разработчиков.">
@@ -53,6 +54,14 @@ $curr_user->checkAuth();
 </head>
 
 <body>
+    <div class="top-banner" id="top-banner">
+        <div class="banner-content">
+            <div class="banner-text">
+                ⚠️ Важное уведомление! С 1 июля по 1 августа Платформа работает в тестовом режиме. Возможны перебои в работе сервиса.
+            </div>
+            <button class="close-banner" id="close-banner">&times;</button>
+        </div>
+    </div>
     <div class="header">
         <div class="section left-section">
             <div>
@@ -104,6 +113,33 @@ $curr_user->checkAuth();
             if (window.innerWidth > 768) {
                 document.querySelector('.buttons-left').classList.remove('active');
             }
+        });
+    </script>
+    <script>
+        // Обработка закрытия баннера
+        document.addEventListener('DOMContentLoaded', function() {
+            const banner = document.getElementById('top-banner');
+            const closeBtn = document.getElementById('close-banner');
+
+            // Проверяем, закрывал ли пользователь баннер ранее
+            if (localStorage.getItem('bannerClosed') === 'true') {
+                banner.style.display = 'none';
+                return;
+            }
+
+            // Обработчик закрытия
+            closeBtn.addEventListener('click', function() {
+                // Анимация закрытия
+                banner.style.animation = 'slideUp 0.5s forwards';
+
+                // После анимации скрываем элемент
+                setTimeout(() => {
+                    banner.style.display = 'none';
+                }, 500);
+
+                // Сохраняем состояние в localStorage
+                localStorage.setItem('bannerClosed', 'true');
+            });
         });
     </script>
 </body>

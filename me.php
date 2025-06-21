@@ -19,7 +19,7 @@ require_once('swad/controllers/user.php');
 <body>
     <?php
     if (!isset($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
-        echo ("window.location.replace('/login');");
+        echo ("<script>window.location.replace('/login');</script>");
         exit;
     }
 

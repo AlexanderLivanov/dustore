@@ -69,3 +69,74 @@
         transition: background-color 0.3s ease, width 0.3s ease;   
     }
 }
+
+/* 21.06.2025 (c) Alexander Livanov */
+/* Стили для верхнего баннера */
+.top-banner {
+    position: relative;
+    background: linear-gradient(90deg, #ff5722, #e91e63, #9c27b0);
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 14px;
+    z-index: 10001;
+    /* Выше хедера */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.banner-content {
+    max-width: 1200px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.banner-text {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.close-banner {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-left: 15px;
+    transition: background 0.3s;
+}
+
+.close-banner:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* Анимация закрытия */
+@keyframes slideUp {
+    to {
+        max-height: 0;
+        padding: 0;
+        opacity: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .top-banner {
+        font-size: 12px;
+        padding: 8px 15px;
+    }
+
+    .close-banner {
+        width: 20px;
+        height: 20px;
+    }
+}
