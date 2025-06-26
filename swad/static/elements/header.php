@@ -47,6 +47,9 @@ $curr_user->checkAuth();
     <link rel="stylesheet" href="/swad/css/style.css">
     <link rel="stylesheet" href="/swad/css/notifications.css">
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Status Bar">
     <meta name="theme-color" content="#14041d">
     <meta name="description" content="Dustore.ru - новая игровая платформа! Скачивайте новинки инди-разработчиков.">
     <meta name="robots" content="index,follow">
