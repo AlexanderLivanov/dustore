@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap');
 
-* {
+/* * {
     ::-webkit-scrollbar {
             display: none;
         }
-}
+} */
 
 .main-container {
     height: 100vh;
