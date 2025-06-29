@@ -157,6 +157,8 @@ class User
         // $this->sendNotification($userId, "You've been added to organization");
     }
 
+
+    // 29.06.2025 (c) Alexander Livanov: function getUserOrgs will be deprecated soon. Use getUO() instead;
     public function getUserOrgs($user_id, $limit="100")
     {
         $stmt = $this->db->prepare(
@@ -175,18 +177,28 @@ class User
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getUO($user_id, $limit="100"){
+        $stmt = $this->db->prepare(
+            "SELECT * FROM studios WHERE owner_id = :id ORDER BY status DESC LIMIT $limit;"
+        );
+        $stmt->execute(['id' => $user_id]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getOrgData($org_id){
         $stmt = $this->db->prepare(
-            "SELECT * FROM organizations WHERE id = :id LIMIT 1;"
+            "SELECT * FROM studios WHERE id = :id LIMIT 1;"
         );
         $stmt->execute(['id' => $org_id]);
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function getOrgInfo($org_id){
+    public function getOrgInfo($org_id)
+    {
         $stmt = $this->db->prepare(
-            "SELECT * FROM user_organization WHERE organization_id = :id LIMIT 1;"
+            "SELECT * FROM studios WHERE id = :id LIMIT 1;"
         );
         $stmt->execute(['id' => $org_id]);
 

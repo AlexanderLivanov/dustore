@@ -77,7 +77,7 @@ require_once('swad/controllers/user.php');
                     <?php if (!is_null($telegramUsername)): ?>
                         <p>Username: <a href="https://t.me/<?= $telegramUsername ?>">@<?= $telegramUsername ?></a></p>
                     <?php endif; ?>
-                    <p>Тип учётной записи: <?= $curr_user->printUserPrivileges($curr_user->getRoleName($curr_user->getUserRole($user_data['id'], "global"))); ?></p>
+                    <p>Тип учётной записи: <?= $curr_user->printUserPrivileges($curr_user->getRoleName($curr_user->getUserRole($user_data['telegram_id'], "global"))); ?></p>
                 </div>
             </div>
         </div>

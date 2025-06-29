@@ -13,8 +13,8 @@ if ($curr_user->checkAuth() > 0) {
 
 $user_id = $curr_user->getID($_SESSION['telegram_id']);
 
-$user_orgs = $curr_user->getUserOrgs($user_id);
-
+// $user_orgs = $curr_user->getUserOrgs($user_id);
+$user_orgs = $curr_user->getUO($user_id);
 ?>
 
 <!DOCTYPE html>
@@ -38,7 +38,7 @@ $user_orgs = $curr_user->getUserOrgs($user_id);
                 <?php if ($org['status'] == 'pending'): ?>
                     <li class="studio-item" style="cursor: not-allowed;">
                         <i class="material-icons studio-icon">schedule</i>
-                        <span class="studio-name"><?= $org['organization_name'] ?><i style="color: crimson; font-size: 11pt;"> На проверке...</i></span>
+                        <span class="studio-name"><?= $org['name'] ?><i style="color: crimson; font-size: 11pt;"> На проверке...</i></span>
                         <br>
                     </li>
                 <?php endif;
@@ -46,12 +46,13 @@ $user_orgs = $curr_user->getUserOrgs($user_id);
                 if ($org['status'] == 'active'): ?>
                     <li class="studio-item">
                         <form action="set_studio.php" method="post" style="all: unset;">
-                            <input type="hidden" name="studio_id" value="<?= $org['organization_id'] ?>">
+                            <input type="hidden" name="studio_id" value="<?= $org['id'] ?>">
                             <button type="submit" style="all: unset; width: 100%; cursor: pointer;">
                                 <i class="material-icons studio-icon">business</i>
-                                <span class="studio-name"><?= $org['organization_name'] ?></span>
+                                <span class="studio-name"><?= $org['name'] ?></span>
                                 <span style="color: #5f6368; margin: 5px; padding: 5px;">
-                                    <?= $curr_user->printUserPrivileges($org['user_role']) ?>
+                                    <!-- TODO: исправить это -->
+                                    <!-- <?= $curr_user->printUserPrivileges($org['user_role']) ?> -->
                                 </span>
                             </button>
                         </form>
@@ -61,7 +62,7 @@ $user_orgs = $curr_user->getUserOrgs($user_id);
                 <?php if ($org['status'] == 'suspended'): ?>
                     <li class="studio-item" style="cursor: not-allowed;">
                         <i class="material-icons studio-icon">error</i>
-                        <span class="studio-name"><?= $org['organization_name'] ?><i style="color: crimson; font-size: 11pt;"> Приостановлено по причине: <?= $org['ban_reason'] ?></i></span>
+                        <span class="studio-name"><?= $org['name'] ?><i style="color: crimson; font-size: 11pt;"> Приостановлено по причине: <?= $org['ban_reason'] ?></i></span>
                         <br>
                     </li>
                 <?php endif; ?>

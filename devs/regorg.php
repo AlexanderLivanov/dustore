@@ -1,194 +1,380 @@
 <?php
-// (c) 19.05.2025 Alexander Livanov
+session_start();
 require_once('../swad/config.php');
 require_once('../swad/controllers/user.php');
-require_once('../swad/controllers/organization.php');
 
-session_start();
-
-// Проверяем авторизован ли пользователь
 $curr_user = new User();
-if (empty($_SESSION['logged-in']) or $curr_user->checkAuth() > 0) {
-    echo ("<script>window.location.replace('../login');</script>");
+$db = new Database();
+$conn = $db->connect();
+
+if ($curr_user->checkAuth() > 0) {
+    echo "<script>window.location.replace('/login');</script>";
     exit;
 }
 
-// Подключаемся и получаем id текущего пользователя (Обычный ID, а не telegram_id!)
-$database = new Database();
-$pdo = $database->connect();
-$telegram_id = $_SESSION['telegram_id'];
-$stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = :telegram_id");
-$stmt->execute([':telegram_id' => $_SESSION['telegram_id']]);
-$user = $stmt->fetch();
+$user_data = $_SESSION['USERDATA'];
+$userId = $user_data['id'];
+$error;
+$success;
 
-if (!$user) {
-    die("Пользователь с telegram_id = {$_SESSION['telegram_id']} не найден!");
+// Проверка количества студий (исправленная)
+$studios = $db->Select("SELECT id FROM studios WHERE owner_id = ?", [$userId]);
+if (count($studios) >= 1) {
+    $error = "Вы уже зарегистрировали студию. У одного пользователя может быть только одна студия.";
 }
 
-// Еще раз проверям авторизацию (хз зачем)
-if (empty($_SESSION['logged-in'])) {
-    die(header('Location: ../login'));
-}
+// Обработка отправки формы
+if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
+    if (count($studios) >= 1) {
+        $error = "Вы уже зарегистрировали студию. У одного пользователя может быть только одна студия.";
+        echo("<script>alert(". $error .");</script>");
+    }
+    // Сбор данных из формы
+    $name = $_POST['org_name'] ?? '';
+    $description = $_POST['description'] ?? '';
+    $website = $_POST['website'] ?? null;
+    $country = $_POST['country'] ?? null;
+    $city = $_POST['city'] ?? null;
+    $vkLink = $_POST['vk_link'] ?? '';
+    $tgLink = $_POST['tg_link'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $foundationDate = $_POST['foundation_year'] ?? null;
+    $teamSize = $_POST['team_size'] ?? null;
+    $specialization = $_POST['specialization'] ?? null;
+    $preAlpha = isset($_POST['pre_alpha']) ? 1 : 0;
 
+    // Исправление значения для специализации
+    if ($specialization === 'soft') {
+        $specialization = 'software';
+    }
 
-// POST запрос на регистрацию
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $pdo->beginTransaction();
-
-        $org = new Organization(
-            $_POST['org_name'],
-            $user['id'],
-            $_POST['description'],
-            $_POST['vk_link'],
-            $_POST['tg_link']
-        );
-
-        if ($org->save($pdo)) {
-            $newOrgId = $pdo->lastInsertId();
-
-            $stmt = $pdo->prepare("
-                INSERT INTO user_organization 
-                (user_id, organization_id, role_id, status, vk_link, tg_link) 
-                VALUES (:user_id, :org_id, :role_id, 'pending', :vk_link, :tg_link)
-            ");
-            $stmt->execute([
-                'user_id' => $user['id'],
-                'org_id' => $newOrgId,
-                'role_id' => 2,
-                ':vk_link' => $_POST['vk_link'],
-                ':tg_link' => $_POST['tg_link']
-            ]);
-
-            $pdo->commit();
-            $_SESSION['studio_id'] = $newOrgId;
-            header("Location: /devs/select");
-            exit;
+    // Валидация обязательных полей
+    if (empty($name) || empty($description) || empty($vkLink) || empty($tgLink) || empty($email)) {
+        $error = "Пожалуйста, заполните все обязательные поля";
+    } else {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = "Некорректный формат email";
         }
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        $error = "Ошибка: " . $e->getMessage();
+        $urls = [$vkLink, $tgLink, $website];
+        foreach ($urls as $url) {
+            if ($url && !filter_var($url, FILTER_VALIDATE_URL)) {
+                $error = "Некорректный URL: $url";
+                break;
+            }
+        }
+        try {
+            // Подготовка данных для вставки
+            $data = [
+                'status' => 'pending',
+                'ban_reason' => '',
+                'name' => $name,
+                'owner_id' => $userId,
+                'description' => $description,
+                'vk_link' => $vkLink,
+                'tg_link' => $tgLink,
+                'website' => $website,
+                'country' => $country,
+                'city' => $city,
+                'contact_email' => $email,
+                'foundation_date' => $foundationDate,
+                'team_size' => $teamSize,
+                'specialization' => $specialization,
+                'pre_alpha_program' => $preAlpha
+            ];
+
+            // Формирование SQL-запроса
+            $columns = implode(', ', array_keys($data));
+            $placeholders = implode(', ', array_fill(0, count($data), '?'));
+            $sql = "INSERT INTO studios ($columns) VALUES ($placeholders)";
+
+            $db->Insert($sql, array_values($data));
+            $studioId = $db->Insert($sql, array_values($data));
+            $telegramId = $user_data['telegram_id'] ?? null;
+            $staffData = [
+                'telegram_id' => $telegramId,
+                'org_id' => $studioId,
+                'created' => date('Y-m-d H:i:s'),
+                'role' => '2' 
+            ];
+
+            $staffColumns = implode(', ', array_keys($staffData));
+            $staffPlaceholders = implode(', ', array_fill(0, count($staffData), '?'));
+            $staffSql = "INSERT INTO staff ($staffColumns) VALUES ($staffPlaceholders)";
+
+            // Выполняем запрос
+            $db->Insert($staffSql, array_values($staffData));
+
+            // Редирект при успехе
+            echo "<script>window.location.replace('/devs/select');</script>";
+            exit;
+        } catch (Exception $e) {
+            $error = "Ошибка при создании студии: " . $e->getMessage();
+        }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="ru">
 
 <head>
     <meta charset="UTF-8">
-    <title>Создать студию</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-
-        input[type="text"],
-        textarea {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        button {
-            background: #2196F3;
-            color: white;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .alert {
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 4px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dustore.Devs | Регистрация студии</title>
+    <link rel="stylesheet" href="/swad/css/regorg.css">
+    <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
 </head>
 
 <body>
-    <h1 style="text-align: center;">Dustore.Devs</h1>
-    <h2 style="text-align: center;">Регистрация студии</h2>
-
-    <?php if (isset($error)): ?>
-        <div class=" alert alert-error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <?php if (isset($success)): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-    <?php endif; ?>
-
-    <form method="POST">
-        <h3>Основная информация:</h3>
-        <div class="form-group">
-            <label for="org_name">Название студии:</label>
-            <input type="text"
-                id="org_name"
-                name="org_name"
-                required
-                placeholder="Введите название (только буквы и цифры), до 20 символов"
-                maxlength="20">
+    <div class="container">
+        <div class="page-header">
+            <h1>Регистрация студии</h1>
+            <p>Создайте свою студию на Dustore.Devs и получите доступ к экосистеме для инди-разработчиков</p>
         </div>
 
-        <div class="form-group">
-            <label for="description">Описание студии:</label>
-            <textarea type="text"
-                id="description"
-                name="description"
-                required
-                placeholder="Введите описание, до 500 символов"
-                maxlength="500" style="height: 100px;"></textarea>
-        </div>
-        <i style="color: #333;">Скоро будет возможность добавлять картинки</i>
-        <p>&nbsp;</p>
-        <h3>Следующие поля необходимы для модерации</h3>
-        <div class="form-group">
-            <label for="org_name">Ссылка на ВК группу вашей студии:</label>
-            <input type="text"
-                id="vk_link"
-                name="vk_link"
-                required
-                placeholder="Обязательно с https://vk.com/. Например, https://vk.com/dgscorp"
-                maxlength="50">
-        </div>
+        <div class="registration-container">
+            <?php if (isset($error)): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
 
-        <div class="form-group">
-            <label for="org_name">Ссылка на Telegram канал:</label>
-            <input type="text"
-                id="tg_link"
-                name="tg_link"
-                required
-                placeholder="Обязательно с https://t.me/. Например, https://t.me/dustore_official"
-                maxlength="50">
+            <?php if (isset($success)): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+
+            <form method="POST">
+                <div class="form-grid">
+                    <div class="form-section">
+                        <h3><span class="icon">🏢</span> Основная информация</h3>
+
+                        <div class="form-group">
+                            <label for="org_name" class="required">Название студии</label>
+                            <input type="text" id="org_name" name="org_name" required
+                                placeholder="Введите название (только буквы и цифры)"
+                                maxlength="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description" class="required">Описание студии</label>
+                            <textarea id="description" name="description" required
+                                placeholder="Расскажите о вашей студии, её истории и проектах"
+                                maxlength="1500"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="website">Веб-сайт (если есть)</label>
+                            <input type="url" id="website" name="website"
+                                placeholder="https://ваша-студия.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="country">Страна</label>
+                            <select id="country" name="country">
+                                <option value="">Выберите страну</option>
+                                <option value="ru">Россия</option>
+                                <option value="by">Беларусь</option>
+                                <option value="kz">Казахстан</option>
+                                <option value="other">Другая</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="city">Город</label>
+                            <input type="text" id="city" name="city"
+                                placeholder="Введите ваш город">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><span class="icon">🔗</span> Ссылки и контакты</h3>
+                        <h4 style="text-decoration: underline;">Внимание! Для прохождения модерации необходимо подтвердить права на владение студией. Для этого в ВК сообществе и Telegram-канале вашей студии создайте пост со следующим содержанием:</h4>
+                        <br>
+                        <div class="al" style="border-left: 2px solid #c32178; padding: 5px;">
+                            <i>Студия "<Ваша студия>" теперь есть на новой игровой платформе Dustore.Ru и скоро добавит свои проекты!</i>
+                        </div>
+                        <br>
+                        <div class="form-group">
+                            <label for="vk_link" class="required">Ссылка на ВК группу</label>
+                            <input type="url" id="vk_link" name="vk_link" required
+                                placeholder="https://vk.com/ваша_группа"
+                                maxlength="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tg_link" class="required">Ссылка на Telegram канал</label>
+                            <input type="url" id="tg_link" name="tg_link" required
+                                placeholder="https://t.me/ваш_канал"
+                                maxlength="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email" class="required">Контактный email</label>
+                            <h6>Этот почтовый адрес будет опубликован на платформе, чтобы с вами могли связаться игроки и администрация платформы</h6>
+                            <br>
+                            <input type="email" id="email" name="email"
+                                placeholder="contact@ваша-студия.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><span class="icon">⚙️</span> Настройки студии</h3>
+
+                        <div class="form-group">
+                            <label for="foundation_year">Дата основания</label>
+                            <h6>
+                                Например: 15.02.2025
+                            </h6>
+                            <br>
+                            <input type="date" id="foundation_year" name="foundation_year">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="team_size">Размер команды</label>
+                            <select id="team_size" name="team_size">
+                                <option value="">Выберите размер команды</option>
+                                <option value="1">1 человек (инди-разработчик)</option>
+                                <option value="2-5">2-5 человек</option>
+                                <option value="6-10">6-10 человек</option>
+                                <option value="11-20">11-20 человек</option>
+                                <option value="20+">Более 20 человек</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="specialization">Специализация</label>
+                            <select id="specialization" name="specialization">
+                                <option value="">Выберите специализацию</option>
+                                <option value="mobile">Мобильные игры</option>
+                                <option value="pc">PC игры</option>
+                                <option value="console">Консольные игры</option>
+                                <option value="vr">VR/AR игры</option>
+                                <option value="soft">Разработка приложений</option>
+                                <option value="all">Разные платформы</option>
+                            </select>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="pre_alpha" name="pre_alpha" value="1">
+                            <label for="pre_alpha">Хочу участвовать в Программе Предварительной Оценки (ППО)</label>
+                        </div>
+                        <p class="form-note">Участники ППО получают бесплатную регистрацию студтии, первой игры, уникальные бейджи и приоритетную техническую поддержку</p>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="terms" name="terms" value="1" required>
+                            <label for="terms" class="required">Согласен с <a href="/oferta" style="color: #14041d;">условиями использования</a></label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><span class="icon">💳</span> Платежная информация</h3>
+
+                        <div class="form-group">
+                            <label for="payment_type">Тип оплаты</label>
+                            <select id="payment_type" name="payment_type" disabled>
+                                <option value="">Выберите тип оплаты</option>
+                                <option value="bank">Счёт в банке</option>
+                            </select>
+                        </div>
+
+                        <!-- <div class="form-group">
+                            <label for="bank_name">Название банка</label>
+                            <input type="text" id="bank_name" name="bank_name"
+                                placeholder="Введите название банка">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="account_number">Номер счета</label>
+                            <input type="text" id="account_number" name="account_number"
+                                placeholder="Введите номер счета">
+                        </div> -->
+
+                        <div class="form-group">
+                            <label for="tax_id">ИНН</label>
+                            <input type="text" id="tax_id" name="tax_id"
+                                placeholder="Введите налоговый номер" disabled>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="payment_agent">Платёжный агрегатор</label>
+                            <select id="payment_agent" name="payment_agent" disabled>
+                                <option value="">Выберите свой сервис</option>
+                                <option value="...">...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="payment_token">Токен для оплаты</label>
+                            <input type="text" id="payment_token" name="payment_token"
+                                placeholder="Токен для оплаты можно получить у платёжного агрегатора" disabled>
+                        </div>
+
+                        <!-- <div class="form-group">
+                            <label for="billing_address">Платежный адрес</label>
+                            <textarea id="billing_address" name="billing_address"
+                                placeholder="Введите полный платежный адрес"></textarea>
+                        </div> -->
+
+                        <h4 style="text-decoration: underline;">Возможность создания платёжного профиля будет доступна после завершения Программы Предварительной Оценки</h4>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="form-submit" style="background-color: green;">
+                        <span>🚀 Создать студию</span>
+                    </button>
+                </div>
+                <div class="form-actions" onclick="window.location.replace('/me');">
+                    <button type="submit" class="form-submit" style="background-color: red;">
+                        <span>❌ Я передумал, верните меня обратно</span>
+                    </button>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <button type="submit">🚀 Создать студию</button>
-    </form>
+    <script>
+        // Валидация формы
+        document.querySelector('form').addEventListener('submit', function(e) {
+            let isValid = true;
 
+            // Проверка обязательных полей
+            const requiredFields = document.querySelectorAll('[required]');
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.style.borderColor = '#dc3545';
+                } else {
+                    field.style.borderColor = '';
+                }
+            });
+
+            // Проверка согласия с условиями
+            const terms = document.getElementById('terms');
+            if (!terms.checked) {
+                isValid = false;
+                terms.parentElement.style.color = '#dc3545';
+            } else {
+                terms.parentElement.style.color = '';
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Пожалуйста, заполните все обязательные поля и примите условия использования');
+            }
+        });
+
+        // Подсветка полей при фокусе
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#c32178';
+                this.style.backgroundColor = 'rgba(255, 255, 255, 0.12)';
+            });
+
+            input.addEventListener('blur', function() {
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+            });
+        });
+    </script>
 </body>
 
 </html>

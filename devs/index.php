@@ -29,7 +29,7 @@ $db = new Database();
     exit;
   }
 
-  $curr_user_org_data = $curr_user->getOrgData($_SESSION['studio_id'])
+  $curr_user_org_data = $curr_user->getOrgData($_SESSION['studio_id']);
   ?>
   <main>
     <section class="content">
