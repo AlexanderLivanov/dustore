@@ -11,10 +11,11 @@ if ($curr_user->checkAuth() > 0) {
     echo ("<script>window.location.replace('../login');</script>");
 }
 
-$user_id = $curr_user->getID($_SESSION['telegram_id']);
+$user_id = $curr_user->getID($curr_user->auth());
 
 // $user_orgs = $curr_user->getUserOrgs($user_id);
 $user_orgs = $curr_user->getUO($user_id);
+// print_r($user_orgs);
 ?>
 
 <!DOCTYPE html>

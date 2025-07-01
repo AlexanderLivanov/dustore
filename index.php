@@ -326,7 +326,7 @@
                     </div>
                     <div class="platform-card">
                         <h3>Нет единого сообщества</h3>
-                        <p>Да, есть куча каналов и пабликов в соцсетях, но мы хотим чего-то большего. Мы хотим сделать "общую крышу", под которой смогут уместиться все.
+                        <p>Да, есть куча каналов и пабликов в соцсетях, но мы хотим чего-то большего. Мы хотим сделать классное место, где захочется быть каждому.
                         </p>
                     </div>
                     <div class="platform-card">
@@ -336,7 +336,7 @@
                     </div>
                     <div class="platform-card">
                         <h3>Желание создать "своё"</h3>
-                        <p>Уже есть VK Play, но мы нацелены в первую очередь на инди-разработчиков и небольшие студии, так как им нужна наибольшая помощь. 
+                        <p>Уже есть VK Play, но мы нацелены в первую очередь на инди-разработчиков и небольшие студии, так как им нужна наибольшая помощь.
                             Мы не пытаемся конкурировать с VK, так как у них попросту другая философия.
                         </p>
                     </div>
@@ -360,26 +360,26 @@
                         <p>С полным списком фич вы можете ознакомиться на специальной странице...
                         </p>
                     </div>
-                    
+
                 </div>
             </div>
         </section>
 
         <?php
-            require_once('swad/config.php');
-            $db = new Database();
-            $conn = $db->connect();
-            $sql = "SELECT 
+        require_once('swad/config.php');
+        $db = new Database();
+        $conn = $db->connect();
+        $sql = "SELECT 
             (SELECT COUNT(*) FROM user_organization) AS count_user_organization,
             (SELECT COUNT(*) FROM users) AS count_users,
             (SELECT COUNT(*) FROM games) AS count_games";
 
-            $result = $conn->query($sql);
-            $row = $result->fetchAll();
+        $result = $conn->query($sql);
+        $row = $result->fetchAll();
 
-            $count_user_organization = $row[0]['count_user_organization'];
-            $count_users = $row[0]['count_users'];
-            $count_games = $row[0]['count_games'];
+        $count_user_organization = $row[0]['count_user_organization'];
+        $count_users = $row[0]['count_users'];
+        $count_games = $row[0]['count_games'];
         ?>
         <!-- Статистика -->
         <section class="stats">

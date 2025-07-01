@@ -14,101 +14,103 @@ if ($curr_user->checkAuth() > 0) {
 
 $user_data = $_SESSION['USERDATA'];
 $userId = $user_data['id'];
-$error;
-$success;
+$error = null; // Инициализация переменных
+$success = null;
 
-// Проверка количества студий (исправленная)
+if (empty($_SESSION['form_token'])) {
+    $_SESSION['form_token'] = bin2hex(random_bytes(32));
+}
+$form_token = $_SESSION['form_token'];
+
 $studios = $db->Select("SELECT id FROM studios WHERE owner_id = ?", [$userId]);
 if (count($studios) >= 1) {
     $error = "Вы уже зарегистрировали студию. У одного пользователя может быть только одна студия.";
 }
 
-// Обработка отправки формы
 if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
-    if (count($studios) >= 1) {
+    if (!isset($_POST['token']) || $_POST['token'] !== $form_token) {
+        $error = "Ошибка безопасности. Пожалуйста, отправьте форму снова.";
+    } elseif (count($db->Select("SELECT id FROM studios WHERE owner_id = ?", [$userId])) >= 1) {
         $error = "Вы уже зарегистрировали студию. У одного пользователя может быть только одна студия.";
-        echo("<script>alert(". $error .");</script>");
-    }
-    // Сбор данных из формы
-    $name = $_POST['org_name'] ?? '';
-    $description = $_POST['description'] ?? '';
-    $website = $_POST['website'] ?? null;
-    $country = $_POST['country'] ?? null;
-    $city = $_POST['city'] ?? null;
-    $vkLink = $_POST['vk_link'] ?? '';
-    $tgLink = $_POST['tg_link'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $foundationDate = $_POST['foundation_year'] ?? null;
-    $teamSize = $_POST['team_size'] ?? null;
-    $specialization = $_POST['specialization'] ?? null;
-    $preAlpha = isset($_POST['pre_alpha']) ? 1 : 0;
-
-    // Исправление значения для специализации
-    if ($specialization === 'soft') {
-        $specialization = 'software';
-    }
-
-    // Валидация обязательных полей
-    if (empty($name) || empty($description) || empty($vkLink) || empty($tgLink) || empty($email)) {
-        $error = "Пожалуйста, заполните все обязательные поля";
     } else {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = "Некорректный формат email";
+        $name = $_POST['org_name'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $website = $_POST['website'] ?? null;
+        $country = $_POST['country'] ?? null;
+        $city = $_POST['city'] ?? null;
+        $vkLink = $_POST['vk_link'] ?? '';
+        $tgLink = $_POST['tg_link'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $foundationDate = $_POST['foundation_year'] ?? null;
+        $teamSize = $_POST['team_size'] ?? null;
+        $specialization = $_POST['specialization'] ?? null;
+        $preAlpha = isset($_POST['pre_alpha']) ? 1 : 0;
+
+        if ($specialization === 'soft') {
+            $specialization = 'software';
         }
-        $urls = [$vkLink, $tgLink, $website];
-        foreach ($urls as $url) {
-            if ($url && !filter_var($url, FILTER_VALIDATE_URL)) {
-                $error = "Некорректный URL: $url";
-                break;
+
+        if (empty($name) || empty($description) || empty($vkLink) || empty($tgLink) || empty($email)) {
+            $error = "Пожалуйста, заполните все обязательные поля";
+        } else {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = "Некорректный формат email";
             }
-        }
-        try {
-            // Подготовка данных для вставки
-            $data = [
-                'status' => 'pending',
-                'ban_reason' => '',
-                'name' => $name,
-                'owner_id' => $userId,
-                'description' => $description,
-                'vk_link' => $vkLink,
-                'tg_link' => $tgLink,
-                'website' => $website,
-                'country' => $country,
-                'city' => $city,
-                'contact_email' => $email,
-                'foundation_date' => $foundationDate,
-                'team_size' => $teamSize,
-                'specialization' => $specialization,
-                'pre_alpha_program' => $preAlpha
-            ];
+            $urls = [$vkLink, $tgLink, $website];
+            foreach ($urls as $url) {
+                if ($url && !filter_var($url, FILTER_VALIDATE_URL)) {
+                    $error = "Некорректный URL: $url";
+                    break;
+                }
+            }
 
-            // Формирование SQL-запроса
-            $columns = implode(', ', array_keys($data));
-            $placeholders = implode(', ', array_fill(0, count($data), '?'));
-            $sql = "INSERT INTO studios ($columns) VALUES ($placeholders)";
+            if (empty($error)) {
+                try {
+                    $data = [
+                        'status' => 'pending',
+                        'ban_reason' => '',
+                        'name' => $name,
+                        'owner_id' => $userId,
+                        'description' => $description,
+                        'vk_link' => $vkLink,
+                        'tg_link' => $tgLink,
+                        'website' => $website,
+                        'country' => $country,
+                        'city' => $city,
+                        'contact_email' => $email,
+                        'foundation_date' => $foundationDate,
+                        'team_size' => $teamSize,
+                        'specialization' => $specialization,
+                        'pre_alpha_program' => $preAlpha
+                    ];
 
-            $db->Insert($sql, array_values($data));
-            $studioId = $db->Insert($sql, array_values($data));
-            $telegramId = $user_data['telegram_id'] ?? null;
-            $staffData = [
-                'telegram_id' => $telegramId,
-                'org_id' => $studioId,
-                'created' => date('Y-m-d H:i:s'),
-                'role' => '2' 
-            ];
+                    $columns = implode(', ', array_keys($data));
+                    $placeholders = implode(', ', array_fill(0, count($data), '?'));
+                    $sql = "INSERT INTO studios ($columns) VALUES ($placeholders)";
 
-            $staffColumns = implode(', ', array_keys($staffData));
-            $staffPlaceholders = implode(', ', array_fill(0, count($staffData), '?'));
-            $staffSql = "INSERT INTO staff ($staffColumns) VALUES ($staffPlaceholders)";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->execute(array_values($data));
+                    $studioId = $conn->lastInsertId();
 
-            // Выполняем запрос
-            $db->Insert($staffSql, array_values($staffData));
+                    $staffData = [
+                        'telegram_id' => $user_data['telegram_id'] ?? null,
+                        'org_id' => $studioId,
+                        'created' => date('Y-m-d H:i:s'),
+                        'role' => 'Владелец'
+                    ];
 
-            // Редирект при успехе
-            echo "<script>window.location.replace('/devs/select');</script>";
-            exit;
-        } catch (Exception $e) {
-            $error = "Ошибка при создании студии: " . $e->getMessage();
+                    $staffColumns = implode(', ', array_keys($staffData));
+                    $staffPlaceholders = implode(', ', array_fill(0, count($staffData), '?'));
+                    $staffSql = "INSERT INTO staff ($staffColumns) VALUES ($staffPlaceholders)";
+                    $db->Insert($staffSql, array_values($staffData));
+
+                    unset($_SESSION['form_token']);
+                    echo "<script>window.location.replace('/devs/select');</script>";
+                    exit;
+                } catch (Exception $e) {
+                    $error = "Ошибка при создании студии: " . $e->getMessage();
+                }
+            }
         }
     }
 }
@@ -142,6 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
             <?php endif; ?>
 
             <form method="POST">
+                <input type="hidden" name="token" value="<?= htmlspecialchars($form_token) ?>">
                 <div class="form-grid">
                     <div class="form-section">
                         <h3><span class="icon">🏢</span> Основная информация</h3>
@@ -247,7 +250,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
                                 <option value="pc">PC игры</option>
                                 <option value="console">Консольные игры</option>
                                 <option value="vr">VR/AR игры</option>
-                                <option value="soft">Разработка приложений</option>
+                                <option value="software">Разработка приложений</option>
                                 <option value="all">Разные платформы</option>
                             </select>
                         </div>
@@ -322,7 +325,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
                     </button>
                 </div>
                 <div class="form-actions" onclick="window.location.replace('/me');">
-                    <button type="submit" class="form-submit" style="background-color: red;">
+                    <button type="button" class="form-submit" style="background-color: red;">
                         <span>❌ Я передумал, верните меня обратно</span>
                     </button>
                 </div>
