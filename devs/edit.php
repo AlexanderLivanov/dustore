@@ -118,7 +118,7 @@ $curr_user = new User();
       }
 
       $cover_filename = "cover." . $file_extension;
-      $cover_path = "/swad/usercontent/{$org_info['name']}/{$project_name}/{$cover_filename}";
+      $cover_path = "/swad/usercontent/{$org_info['name']}/{$project_name}/cover.{$file_extension}";
       $full_path = ROOT_DIR . $cover_path;
 
       if (!move_uploaded_file($_FILES['cover-art']['tmp_name'], $full_path)) {
@@ -153,7 +153,7 @@ $curr_user = new User();
       $stmt->bindParam(':id', $project_id);
       $stmt->execute();
 
-      echo ("<script>window.location.replace('edit?id=" . $project_id . "');</script>");
+      // echo ("<script>window.location.replace('edit?id=" . $project_id . "');</script>");
       exit();
     } catch (PDOException $e) {
       $error_message = "Ошибка при обновлении проекта: " . $e->getMessage();
