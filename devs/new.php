@@ -73,7 +73,7 @@ $curr_user = new User();
       }
 
       $file_extension = pathinfo($_FILES['cover-art']['name'], PATHINFO_EXTENSION);
-      $cover_filename = "cover." . $file_extension;
+      $cover_filename = "cover.jpg";
       $cover_path = "/swad/usercontent/{$studio_name}/{$project_name}/{$cover_filename}";
       $full_path = ROOT_DIR . $cover_path;
 

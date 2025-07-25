@@ -93,7 +93,7 @@ $curr_user = new User();
     // Обработка загрузки новой обложки
     $cover_path = $project_info['path_to_cover'];
     if (!empty($_FILES['cover-art']['name'])) {
-      $upload_dir = ROOT_DIR . "/swad/usercontent/{$org_info['name']}/{$project_name}/";
+      $upload_dir = "../swad/usercontent/{$org_info['name']}/{$project_name}/";
 
       if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
@@ -105,7 +105,7 @@ $curr_user = new User();
       }
 
       $file_extension = pathinfo($_FILES['cover-art']['name'], PATHINFO_EXTENSION);
-      $cover_filename = "cover." . $file_extension;
+      $cover_filename = "cover.jpg";
       $cover_path = "/swad/usercontent/{$org_info['name']}/{$project_name}/{$cover_filename}";
       $full_path = ROOT_DIR . $cover_path;
 
