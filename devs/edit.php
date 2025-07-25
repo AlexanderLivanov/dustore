@@ -90,29 +90,47 @@ $curr_user = new User();
     $release_date = $_POST['release-date'];
     $game_website = $_POST['website'];
 
-    // Обработка загрузки новой обложки
     $cover_path = $project_info['path_to_cover'];
-    if (!empty($_FILES['cover-art']['name'])) {
+    if (!empty($_FILES['cover-art']['name']) && $_FILES['cover-art']['error'] == UPLOAD_ERR_OK) {
       $upload_dir = "../swad/usercontent/{$org_info['name']}/{$project_name}/";
 
       if (!file_exists($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        if (!mkdir($upload_dir, 0775, true)) {
+          error_log("Failed to create directory: $upload_dir");
+          die("Ошибка создания директории для обложки");
+        }
+        chown($upload_dir, 'www-data');
+        chgrp($upload_dir, 'www-data');
       }
 
-      // Удаляем старую обложку, если она существует
-      if (!empty($cover_path) && file_exists(ROOT_DIR . $cover_path)) {
-        unlink(ROOT_DIR . $cover_path);
+      $existing_covers = glob(ROOT_DIR . $cover_path . "cover.*");
+      foreach ($existing_covers as $old_cover) {
+        if (file_exists($old_cover)) {
+          unlink($old_cover);
+        }
       }
 
-      $file_extension = pathinfo($_FILES['cover-art']['name'], PATHINFO_EXTENSION);
-      $cover_filename = "cover.jpg";
+      $file_extension = strtolower(pathinfo($_FILES['cover-art']['name'], PATHINFO_EXTENSION));
+
+      $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      if (!in_array($file_extension, $allowed_extensions)) {
+        die("Неподдерживаемый формат изображения: $file_extension");
+      }
+
+      $cover_filename = "cover." . $file_extension;
       $cover_path = "/swad/usercontent/{$org_info['name']}/{$project_name}/{$cover_filename}";
       $full_path = ROOT_DIR . $cover_path;
 
-      move_uploaded_file($_FILES['cover-art']['tmp_name'], $full_path);
+      if (!move_uploaded_file($_FILES['cover-art']['tmp_name'], $full_path)) {
+        error_log("Failed to move uploaded file to: $full_path");
+        die("Ошибка сохранения обложки");
+      }
+
+      chmod($full_path, 0664);
+      chown($full_path, 'www-data');
+      chgrp($full_path, 'www-data');
     }
 
-    // Обновление данных в базе
     $sql = "UPDATE games SET 
           name = :name, 
           genre = :genre, 
