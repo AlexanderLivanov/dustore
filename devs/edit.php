@@ -1,12 +1,213 @@
 <?php
+require_once('../swad/static/elements/sidebar.php');
 require_once('../swad/config.php');
 require_once('../swad/controllers/user.php');
 require_once('../swad/controllers/organization.php');
 
 $db = new Database();
 $curr_user = new User();
-?>
+$curr_user->checkAuth();
 
+// Получаем ID проекта из URL
+$project_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+// Получаем информацию о проекте
+$project_info = [];
+if ($project_id > 0) {
+    $stmt = $db->connect()->prepare("SELECT * FROM games WHERE id = ? AND developer = ?");
+    $stmt->execute([$project_id, $_SESSION['STUDIODATA']['id']]);
+    $project_info = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Если проект не найден
+if (empty($project_info)) {
+    echo ("<script>window.location.replace('projects');</script>");
+    exit();
+}
+
+// Обработка формы редактирования
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Обработка основных полей
+    $project_name = preg_replace("/[^A-Za-zА-Яа-яёЁ0-9-_! ]/", '', $_POST['project-name']);
+    $genre = $_POST['genre'];
+    $description = $_POST['description'];
+    $platforms = implode(',', $_POST['platform'] ?? []);
+    $release_date = $_POST['release-date'];
+    $game_website = $_POST['website'];
+    $trailer_url = $_POST['trailer'];
+    $rating_count = (int)$_POST['rating_count'];
+    $languages = $_POST['languages'];
+    $age_rating = $_POST['age_rating'];
+    $price = (float)$_POST['price'];
+    $in_subscription = isset($_POST['in_subscription']) ? 1 : 0;
+    
+    // Обработка особенностей
+    $features = [];
+    if (isset($_POST['feature_icon'])) {
+        for ($i = 0; $i < count($_POST['feature_icon']); $i++) {
+            if (!empty($_POST['feature_title'][$i])) {
+                $features[] = [
+                    'icon' => $_POST['feature_icon'][$i],
+                    'title' => $_POST['feature_title'][$i],
+                    'description' => $_POST['feature_description'][$i]
+                ];
+            }
+        }
+    }
+    $features_json = json_encode($features);
+    
+    // Обработка системных требований
+    $requirements = [];
+    if (isset($_POST['req_label'])) {
+        for ($i = 0; $i < count($_POST['req_label']); $i++) {
+            if (!empty($_POST['req_value'][$i])) {
+                $requirements[] = [
+                    'label' => $_POST['req_label'][$i],
+                    'value' => $_POST['req_value'][$i]
+                ];
+            }
+        }
+    }
+    $requirements_json = json_encode($requirements);
+    
+    // Обработка изображений
+    $cover_path = $project_info['path_to_cover'];
+    $banner_url = $project_info['banner_url'];
+    $screenshots = json_decode($project_info['screenshots'] ?? '[]', true) ?: [];
+    
+    // Функция для обработки загрузки изображений
+    function handleImageUpload($file, $name, $project_name, $org_name, $existing_path, $type) {
+        global $project_info;
+        
+        if (!empty($file['name']) && $file['error'] == UPLOAD_ERR_OK) {
+            $upload_dir = ROOT_DIR . "/swad/usercontent/{$org_name}/{$project_name}/";
+            
+            if (!file_exists($upload_dir)) {
+                if (!mkdir($upload_dir, 0775, true)) {
+                    error_log("Failed to create directory: $upload_dir");
+                    return $existing_path;
+                }
+            }
+            
+            $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            
+            if (!in_array($file_extension, $allowed_extensions)) {
+                return $existing_path;
+            }
+            
+            // Удаляем старый файл
+            if (!empty($existing_path) && file_exists(ROOT_DIR . $existing_path)) {
+                unlink(ROOT_DIR . $existing_path);
+            }
+            
+            $filename = "{$type}.{$file_extension}";
+            $relative_path = "/swad/usercontent/{$org_name}/{$project_name}/{$filename}";
+            $full_path = ROOT_DIR . $relative_path;
+            
+            if (move_uploaded_file($file['tmp_name'], $full_path)) {
+                chmod($full_path, 0664);
+                return $relative_path;
+            }
+        }
+        return $existing_path;
+    }
+    
+    $org_info = $curr_user->getOrgData($_SESSION['studio_id']);
+    $org_name = $org_info['name'];
+    
+    // Обработка обложки
+    $cover_path = handleImageUpload($_FILES['cover-art'], 'cover', $project_name, $org_name, $cover_path, 'cover');
+    
+    // Обработка баннера
+    $banner_url = handleImageUpload($_FILES['banner'], 'banner', $project_name, $org_name, $banner_url, 'banner');
+    
+    // Обработка скриншотов
+    $new_screenshots = [];
+    
+    // Сохраняем существующие скриншоты
+    foreach ($screenshots as $screenshot) {
+        if (isset($_POST['existing_screenshot'][$screenshot['id']])) {
+            $new_screenshots[] = $screenshot;
+        }
+    }
+    
+    // Добавляем новые скриншоты
+    if (!empty($_FILES['screenshots']['name'][0])) {
+        foreach ($_FILES['screenshots']['tmp_name'] as $index => $tmp_name) {
+            if ($_FILES['screenshots']['error'][$index] == UPLOAD_ERR_OK) {
+                $file = [
+                    'name' => $_FILES['screenshots']['name'][$index],
+                    'type' => $_FILES['screenshots']['type'][$index],
+                    'tmp_name' => $tmp_name,
+                    'error' => $_FILES['screenshots']['error'][$index],
+                    'size' => $_FILES['screenshots']['size'][$index]
+                ];
+                
+                $screenshot_id = uniqid();
+                $screenshot_path = handleImageUpload($file, "screenshot_{$screenshot_id}", $project_name, $org_name, '', "screenshot_{$screenshot_id}");
+                
+                if ($screenshot_path) {
+                    $new_screenshots[] = [
+                        'id' => $screenshot_id,
+                        'path' => $screenshot_path
+                    ];
+                }
+            }
+        }
+    }
+    $screenshots_json = json_encode($new_screenshots);
+    
+    // Обновление данных в базе
+    $sql = "UPDATE games SET 
+            name = :name, 
+            genre = :genre, 
+            description = :description, 
+            platforms = :platforms, 
+            release_date = :release_date, 
+            path_to_cover = :cover_path, 
+            game_website = :website,
+            banner_url = :banner_url,
+            trailer_url = :trailer_url,
+            rating_count = :rating_count,
+            features = :features,
+            screenshots = :screenshots,
+            requirements = :requirements,
+            languages = :languages,
+            age_rating = :age_rating,
+            price = :price,
+            in_subscription = :in_subscription
+            WHERE id = :id";
+
+    try {
+        $stmt = $db->connect()->prepare($sql);
+        $stmt->bindParam(':name', $project_name);
+        $stmt->bindParam(':genre', $genre);
+        $stmt->bindParam(':description', $description);
+        $stmt->bindParam(':platforms', $platforms);
+        $stmt->bindParam(':release_date', $release_date);
+        $stmt->bindParam(':cover_path', $cover_path);
+        $stmt->bindParam(':website', $game_website);
+        $stmt->bindParam(':banner_url', $banner_url);
+        $stmt->bindParam(':trailer_url', $trailer_url);
+        $stmt->bindParam(':rating_count', $rating_count);
+        $stmt->bindParam(':features', $features_json);
+        $stmt->bindParam(':screenshots', $screenshots_json);
+        $stmt->bindParam(':requirements', $requirements_json);
+        $stmt->bindParam(':languages', $languages);
+        $stmt->bindParam(':age_rating', $age_rating);
+        $stmt->bindParam(':price', $price);
+        $stmt->bindParam(':in_subscription', $in_subscription);
+        $stmt->bindParam(':id', $project_id);
+        $stmt->execute();
+
+        echo ("<script>window.location.replace('edit?id=" . $project_id . "&success=1');</script>");
+        exit();
+    } catch (PDOException $e) {
+        $error_message = "Ошибка при обновлении проекта: " . $e->getMessage();
+    }
+}
+?>
 <!DOCTYPE html>
 <html>
 
@@ -27,11 +228,66 @@ $curr_user = new User();
       border: 1px dashed #ddd;
       padding: 10px;
       border-radius: 4px;
+      position: relative;
     }
 
-    .cover-preview {
+    .preview-image {
       max-width: 100%;
       max-height: 200px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .screenshots-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .screenshot-preview {
+      width: 100px;
+      height: 100px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .delete-screenshot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .dynamic-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .remove-section {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      cursor: pointer;
+      color: #f44336;
+    }
+
+    .add-section-btn {
+      margin-top: 10px;
     }
 
     .alert {
@@ -55,111 +311,6 @@ $curr_user = new User();
 </head>
 
 <body>
-  <?php require_once('../swad/static/elements/sidebar.php');
-  $org_info = $curr_user->getOrgData($_SESSION['studio_id']);
-
-  // Проверка прав пользователя
-  if ($_SESSION['USERDATA']['global_role'] != -1 && $_SESSION['USERDATA']['global_role'] < 2) {
-    echo ("<script>alert('У вас нет прав на использование этой функции');</script>");
-    exit();
-  }
-
-  // Получаем ID проекта из URL
-  $project_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-
-  // Получаем информацию о проекте
-  $project_info = [];
-  if ($project_id > 0) {
-    $stmt = $db->connect()->prepare("SELECT * FROM games WHERE id = ? AND developer = ?");
-    $stmt->execute([$project_id, $_SESSION['STUDIODATA']['id']]);
-    $project_info = $stmt->fetch(PDO::FETCH_ASSOC);
-  }
-
-  // Если проект не найден
-  if (empty($project_info)) {
-    echo ("<script>window.location.replace('projects');</script>");
-    exit();
-  }
-
-  // Обработка формы редактирования
-  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $project_name = preg_replace("/[^A-Za-zА-Яа-яёЁ0-9-_! ]/", '', $_POST['project-name']);
-    $genre = $_POST['genre'];
-    $description = $_POST['description'];
-    $platforms = implode(',', $_POST['platform'] ?? []);
-    $release_date = $_POST['release-date'];
-    $game_website = $_POST['website'];
-
-    $cover_path = $project_info['path_to_cover'];
-    if (!empty($_FILES['cover-art']['name']) && $_FILES['cover-art']['error'] == UPLOAD_ERR_OK) {
-      $upload_dir = "../swad/usercontent/{$org_info['name']}/{$project_name}/";
-
-      if (!file_exists($upload_dir)) {
-        if (!mkdir($upload_dir, 0775, true)) {
-          error_log("Failed to create directory: $upload_dir");
-          die("Ошибка создания директории для обложки");
-        }
-        chown($upload_dir, 'www-data');
-        chgrp($upload_dir, 'www-data');
-      }
-
-      $existing_covers = glob(ROOT_DIR . $cover_path . "cover.*");
-      foreach ($existing_covers as $old_cover) {
-        if (file_exists($old_cover)) {
-          unlink($old_cover);
-        }
-      }
-
-      $file_extension = strtolower(pathinfo($_FILES['cover-art']['name'], PATHINFO_EXTENSION));
-
-      $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      if (!in_array($file_extension, $allowed_extensions)) {
-        die("Неподдерживаемый формат изображения: $file_extension");
-      }
-
-      $cover_filename = "cover." . $file_extension;
-      $cover_path = "/swad/usercontent/{$org_info['name']}/{$project_name}/cover.{$file_extension}";
-      $full_path = ROOT_DIR . $cover_path;
-
-      if (!move_uploaded_file($_FILES['cover-art']['tmp_name'], $full_path)) {
-        error_log("Failed to move uploaded file to: $full_path");
-        die("Ошибка сохранения обложки");
-      }
-
-      chmod($full_path, 0664);
-      chown($full_path, 'www-data');
-      chgrp($full_path, 'www-data');
-    }
-
-    $sql = "UPDATE games SET 
-          name = :name, 
-          genre = :genre, 
-          description = :description, 
-          platforms = :platforms, 
-          release_date = :release_date, 
-          path_to_cover = :cover_path, 
-          game_website = :website 
-          WHERE id = :id";
-
-    try {
-      $stmt = $db->connect()->prepare($sql);
-      $stmt->bindParam(':name', $project_name);
-      $stmt->bindParam(':genre', $genre);
-      $stmt->bindParam(':description', $description);
-      $stmt->bindParam(':platforms', $platforms);
-      $stmt->bindParam(':release_date', $release_date);
-      $stmt->bindParam(':cover_path', $cover_path);
-      $stmt->bindParam(':website', $game_website);
-      $stmt->bindParam(':id', $project_id);
-      $stmt->execute();
-
-      echo ("<script>window.location.replace('edit?id=" . $project_id . "');</script>");
-      exit();
-    } catch (PDOException $e) {
-      $error_message = "Ошибка при обновлении проекта: " . $e->getMessage();
-    }
-  }
-  ?>
   <main>
     <section class="content">
       <div class="page-announce valign-wrapper">
@@ -216,6 +367,36 @@ $curr_user = new User();
                   value="<?= htmlspecialchars($project_info['game_website']) ?>" required>
                 <label>Вебсайт проекта</label>
               </div>
+
+              <div class="input-field">
+                <input type="url" name="trailer"
+                  value="<?= htmlspecialchars($project_info['trailer_url']) ?>">
+                <label>Ссылка на трейлер</label>
+              </div>
+
+              <div class="input-field">
+                <input type="text" name="languages"
+                  value="<?= htmlspecialchars($project_info['languages']) ?>">
+                <label>Языки (через запятую)</label>
+              </div>
+
+              <div class="input-field">
+                <input type="text" name="age_rating"
+                  value="<?= htmlspecialchars($project_info['age_rating']) ?>">
+                <label>Возрастной рейтинг</label>
+              </div>
+
+              <div class="input-field">
+                <input type="number" name="price" step="0.01"
+                  value="<?= htmlspecialchars($project_info['price']) ?>" min="0">
+                <label>Цена (₽)</label>
+              </div>
+
+              <p>
+                <input type="checkbox" name="in_subscription" id="in_subscription" 
+                  <?= $project_info['in_subscription'] ? 'checked' : '' ?>>
+                <label for="in_subscription">Доступен по подписке</label>
+              </p>
             </div>
 
             <div class="col s12 m6">
@@ -228,13 +409,49 @@ $curr_user = new User();
                   <input class="file-path" type="text">
                 </div>
               </div>
-
               <div class="preview-container">
                 <?php if (!empty($project_info['path_to_cover'])): ?>
-                  <img src="<?= $project_info['path_to_cover'] ?>" class="cover-preview">
+                  <img src="<?= $project_info['path_to_cover'] ?>" class="preview-image">
                 <?php else: ?>
                   <p>Текущая обложка не загружена</p>
                 <?php endif; ?>
+              </div>
+
+              <div class="file-field input-field">
+                <div class="btn">
+                  <span>Баннер</span>
+                  <input type="file" name="banner" accept="image/*">
+                </div>
+                <div class="file-path-wrapper">
+                  <input class="file-path" type="text">
+                </div>
+              </div>
+              <div class="preview-container">
+                <?php if (!empty($project_info['banner_url'])): ?>
+                  <img src="<?= $project_info['banner_url'] ?>" class="preview-image">
+                <?php else: ?>
+                  <p>Текущий баннер не загружен</p>
+                <?php endif; ?>
+              </div>
+
+              <div class="file-field input-field">
+                <div class="btn">
+                  <span>Скриншоты</span>
+                  <input type="file" name="screenshots[]" multiple accept="image/*">
+                </div>
+                <div class="file-path-wrapper">
+                  <input class="file-path" type="text">
+                </div>
+              </div>
+              <div class="screenshots-preview" id="screenshots-preview">
+                <?php
+                $screenshots = json_decode($project_info['screenshots'] ?? '[]', true) ?: [];
+                foreach ($screenshots as $screenshot): ?>
+                  <div class="screenshot-preview" style="background-image: url('<?= $screenshot['path'] ?>')">
+                    <input type="hidden" name="existing_screenshot[<?= $screenshot['id'] ?>]" value="1">
+                    <div class="delete-screenshot" onclick="deleteScreenshot(this)">×</div>
+                  </div>
+                <?php endforeach; ?>
               </div>
             </div>
           </div>
@@ -272,6 +489,58 @@ $curr_user = new User();
           </div>
 
           <div class="row">
+            <div class="col s12">
+              <h5>Особенности игры</h5>
+              <div id="features-container">
+                <?php
+                $features = json_decode($project_info['features'] ?? '[]', true) ?: [];
+                foreach ($features as $index => $feature): ?>
+                  <div class="dynamic-section">
+                    <span class="remove-section" onclick="removeSection(this)">×</span>
+                    <div class="input-field">
+                      <input type="text" name="feature_icon[]" value="<?= htmlspecialchars($feature['icon']) ?>" required>
+                      <label>Иконка (эмодзи)</label>
+                    </div>
+                    <div class="input-field">
+                      <input type="text" name="feature_title[]" value="<?= htmlspecialchars($feature['title']) ?>" required>
+                      <label>Заголовок</label>
+                    </div>
+                    <div class="input-field">
+                      <textarea name="feature_description[]" class="materialize-textarea"><?= htmlspecialchars($feature['description']) ?></textarea>
+                      <label>Описание</label>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+              <button type="button" class="btn add-section-btn" onclick="addFeature()">Добавить особенность</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col s12">
+              <h5>Системные требования</h5>
+              <div id="requirements-container">
+                <?php
+                $requirements = json_decode($project_info['requirements'] ?? '[]', true) ?: [];
+                foreach ($requirements as $index => $requirement): ?>
+                  <div class="dynamic-section">
+                    <span class="remove-section" onclick="removeSection(this)">×</span>
+                    <div class="input-field">
+                      <input type="text" name="req_label[]" value="<?= htmlspecialchars($requirement['label']) ?>" required>
+                      <label>Название требования</label>
+                    </div>
+                    <div class="input-field">
+                      <input type="text" name="req_value[]" value="<?= htmlspecialchars($requirement['value']) ?>" required>
+                      <label>Значение</label>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+              <button type="button" class="btn add-section-btn" onclick="addRequirement()">Добавить требование</button>
+            </div>
+          </div>
+
+          <div class="row">
             <div class="col s12 center-align">
               <button class="btn waves-effect waves-light" type="submit">
                 <i class="material-icons left">save</i> Сохранить изменения
@@ -291,25 +560,73 @@ $curr_user = new User();
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
   <script>
     $(document).ready(function() {
-      $('.datepicker').pickadate({
-        selectMonths: true,
-        selectYears: 15,
-        format: 'yyyy-mm-dd'
-      });
-
       $('select').material_select();
-
-      // Предпросмотр обложки
+      
+      // Предпросмотр изображений
       $('input[type="file"]').change(function(e) {
-        if (this.files && this.files[0]) {
-          var reader = new FileReader();
+        const input = this;
+        const container = $(input).closest('.file-field').next('.preview-container');
+        
+        if (input.files && input.files[0]) {
+          const reader = new FileReader();
           reader.onload = function(e) {
-            $('.preview-container').html('<img src="' + e.target.result + '" class="cover-preview">');
+            container.html('<img src="' + e.target.result + '" class="preview-image">');
           }
-          reader.readAsDataURL(this.files[0]);
+          reader.readAsDataURL(input.files[0]);
         }
       });
     });
+
+    // Управление скриншотами
+    function deleteScreenshot(element) {
+      $(element).closest('.screenshot-preview').remove();
+    }
+
+    // Управление динамическими секциями
+    function removeSection(element) {
+      $(element).closest('.dynamic-section').remove();
+    }
+
+    function addFeature() {
+      const container = $('#features-container');
+      const newFeature = $(`
+        <div class="dynamic-section">
+          <span class="remove-section" onclick="removeSection(this)">×</span>
+          <div class="input-field">
+            <input type="text" name="feature_icon[]" required>
+            <label>Иконка (эмодзи)</label>
+          </div>
+          <div class="input-field">
+            <input type="text" name="feature_title[]" required>
+            <label>Заголовок</label>
+          </div>
+          <div class="input-field">
+            <textarea name="feature_description[]" class="materialize-textarea"></textarea>
+            <label>Описание</label>
+          </div>
+        </div>
+      `);
+      container.append(newFeature);
+      $('textarea').trigger('autoresize');
+    }
+
+    function addRequirement() {
+      const container = $('#requirements-container');
+      const newRequirement = $(`
+        <div class="dynamic-section">
+          <span class="remove-section" onclick="removeSection(this)">×</span>
+          <div class="input-field">
+            <input type="text" name="req_label[]" required>
+            <label>Название требования</label>
+          </div>
+          <div class="input-field">
+            <input type="text" name="req_value[]" required>
+            <label>Значение</label>
+          </div>
+        </div>
+      `);
+      container.append(newRequirement);
+    }
   </script>
 </body>
 
