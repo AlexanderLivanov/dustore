@@ -48,6 +48,7 @@ $platforms = !empty($game['platforms']) ? explode(',', $game['platforms']) : [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dustore - <?= htmlspecialchars($game['name']) ?></title>
     <link rel="stylesheet" href="/swad/css/gamepage.css">
+    <!-- TODO: GAME's icon -->
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <style>
         .lightbox {

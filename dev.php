@@ -21,6 +21,8 @@ if (!$studio) {
     <title>Dustore - <?= $studio['name'] ?></title>
     <script type="text/javascript" src="https://vk.com/js/api/openapi.js?168"></script>
     <link rel="stylesheet" href="/swad/css/devpage.css">
+    <!-- TODO: STUDIO's icon -->
+    <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
 </head>
 
 <body>
