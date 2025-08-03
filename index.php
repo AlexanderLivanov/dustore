@@ -133,17 +133,17 @@
                     <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
                         <div class="slide-overlay"></div>
                         <div class="slide-content">
-                            <h2>1 июля открывается Программа Предварительной Оценки!</h2>
-                            <p>Если вы разработчик, то вы можете получить возможность бесплатно зарегистрировать свою студию и первый проект</p>
-                            <a href="https://github.com/AlexanderLivanov/dustore-docs/wiki/Программа-Предварительной-Оценки" target="_blank" class="btn">Узнать больше</a>
+                            <h2>3 июля состоится презентация проекта!</h2>
+                            <p>Мы расскажем обо всех наших преимуществах и сделаем полный обзор Платформы</p>
+                            <a href="https://t.me/dustore_official" target="_blank" class="btn">Следить за новостями</a>
                         </div>
                     </div>
 
                     <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=1351&q=80');">
                         <div class="slide-overlay"></div>
                         <div class="slide-content">
-                            <h2>1 августа выйдет первая бета-версия платформы</h2>
-                            <p>Загрузите свои проекты до 1 августа по Программе Предварительной Оценки и получите уникальные бейджи!</p>
+                            <h2>С 1 августа проходит первое бета-тестирование платформы</h2>
+                            <p>Загрузите свои проекты до 3 сентября и получите уникальные бейджи!</p>
                             <a href="https://github.com/AlexanderLivanov/dustore-docs/wiki/Программа-Предварительной-Оценки" target="_blank" class="btn">Подробнее</a>
                         </div>
                     </div>
