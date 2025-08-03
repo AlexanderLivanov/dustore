@@ -8,4 +8,15 @@
     <p>DUSTORE (Dust Store) является собственностью Dust Studio.</p>
     <!-- SemVer spec: status-global.design.tech#patch -->
     <p>Версия платформы: prealpha-1.6.9#9</p>
+
+    <div class="version-info">
+        <?php
+        // Подключаем информацию о версии
+        require_once 'version.php';
+        ?>
+        Dustore v<?= $versionInfo['version'] ?>
+        (<?= $versionInfo['branch'] ?>@<?= $versionInfo['commit'] ?>)
+        <br>
+        Последнее обновление: <?= $versionInfo['last_updated'] ?>
+    </div>
 </div>
