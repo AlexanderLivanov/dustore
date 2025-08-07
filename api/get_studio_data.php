@@ -19,14 +19,18 @@ $studio_id = intval($_GET['studio_id']);
 $db = new Database();
 $pdo = $db->connect();
 
-// Получаем список игр студии
-$stmt = $pdo->prepare("SELECT id, name, description FROM games WHERE studio_id = :studio_id");
-$stmt->execute(['studio_id' => $studio_id]);
-$games = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Получаем данные студии
+$stmt = $pdo->prepare("SELECT id, name, contact_email FROM studios WHERE id = :id");
+$stmt->execute(['id' => $studio_id]);
+$studio = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if ($games !== false) {
-    echo json_encode($games);
+if ($studio) {
+    echo json_encode([
+        'id' => $studio['id'],
+        'name' => $studio['name'],
+        'email' => $studio['contact_email']
+    ]);
 } else {
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to fetch games']);
+    http_response_code(404);
+    echo json_encode(['error' => 'Studio not found']);
 }
