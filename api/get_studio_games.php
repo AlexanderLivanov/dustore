@@ -20,7 +20,7 @@ $db = new Database();
 $pdo = $db->connect();
 
 // Получаем данные студии
-$stmt = $pdo->prepare("SELECT * FROM games WHERE developer_id = :id");
+$stmt = $pdo->prepare("SELECT * FROM games WHERE developer = :id");
 $stmt->execute(['id' => $studio_id]);
 $studio = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -28,7 +28,7 @@ if ($studio) {
     echo json_encode([
         'id' => $studio['id'],
         'name' => $studio['name'],
-        'email' => $studio['contact_email']
+        'status' => $studio['status']
     ]);
 } else {
     http_response_code(404);
