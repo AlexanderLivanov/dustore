@@ -1,11 +1,4 @@
-<?php session_start();
-    $access_granted = $_COOKIE['site_access'] ?? null === "1";
-
-    if (!$access_granted) {
-        include 'maintenance.php';
-        exit;
-    }
-?>
+<?php session_start(); ?>
 <!DOCTYPE html>
 <html lang="ru">
 
