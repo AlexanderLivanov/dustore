@@ -92,8 +92,9 @@ $curr_user = new User();
     $website = $_POST['website'];
     $avatar_link = filter_var($_POST['avatar_link'], FILTER_SANITIZE_URL);
     $banner_link = filter_var($_POST['banner_link'], FILTER_SANITIZE_URL);
-    $vk_public_id = preg_replace("/[^A-Za-z0-9_]/", '', $_POST['vk_public_id']);
-    $tiker = substr(preg_replace("/[^A-Za-z0-9]/", '', $_POST['tiker']), 0, 10);
+    $vk_public_id = preg_replace("/[^0-9_]/", '', $_POST['vk_public_id']);
+    $tg_studio_id = preg_replace("/[^0-9_-]/", '', $_POST['tg_studio_id']);
+    $tiker = substr(preg_replace("/[^A-Za-z]/", '', $_POST['tiker']), 0, 10);
     $country = substr($_POST['country'], 0, 16);
     $city = substr($_POST['city'], 0, 32);
     $contact_email = filter_var($_POST['contact_email'], FILTER_SANITIZE_EMAIL);
@@ -109,6 +110,7 @@ $curr_user = new User();
             avatar_link = :avatar_link,
             banner_link = :banner_link,
             vk_public_id = :vk_public_id,
+            tg_studio_id = :tg_studio_id,
             tiker = :tiker,
             country = :country,
             city = :city,
@@ -127,6 +129,7 @@ $curr_user = new User();
       $stmt->bindParam(':avatar_link', $avatar_link);
       $stmt->bindParam(':banner_link', $banner_link);
       $stmt->bindParam(':vk_public_id', $vk_public_id);
+      $stmt->bindParam(':tg_studio_id', $tg_studio_id);
       $stmt->bindParam(':tiker', $tiker);
       $stmt->bindParam(':country', $country);
       $stmt->bindParam(':city', $city);
@@ -193,6 +196,12 @@ $curr_user = new User();
                 <input type="text" name="vk_public_id"
                   value="<?= htmlspecialchars($studio_info['vk_public_id']) ?>" minlength="7" maxlength="16">
                 <label for="vk_public_id">ID VK сообщества</label>
+              </div>
+
+              <div class="input-field">
+                <input type="text" name="tg_studio_id"
+                  value="<?= htmlspecialchars($studio_info['tg_studio_id']) ?>" minlength="7" maxlength="16">
+                <label for="tg_studio_id">ID Telegram чата студии</label>
               </div>
 
               <div class="input-field">

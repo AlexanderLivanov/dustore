@@ -36,7 +36,7 @@
     $stmt = $db->connect()->prepare("UPDATE users SET global_role = 2 WHERE id = (SELECT owner_id FROM studios WHERE id = ?)");
     $stmt->execute([$org_id]);
 
-    send_message($tg_id, "Ваша студия была подтверждена. Благодарим за регистрацию на нашей платформе! ❤");
+    send_private_message($tg_id, "Ваша студия была подтверждена. Благодарим за регистрацию на нашей платформе! ❤");
     echo ("<script>alert('Студия успешно подтверждена!'); window.location.href = 'recentorgs';</script>");
     exit();
   }
@@ -49,7 +49,7 @@
     $stmt = $db->connect()->prepare("UPDATE studios SET status = 'suspended', ban_reason = ? WHERE id = ?");
     $stmt->execute([$reason, $org_id]);
 
-    send_message($tg_id, "Ваша заявка на регистрацию студии была отклонена. Причина отклонения: " . trim($_GET['reject_reason']) . ". Вы можете изменить вашу заявку на странице https://dustore.ru/devs/regorg и отправить её заново!");
+    send_private_message($tg_id, "Ваша заявка на регистрацию студии была отклонена. Причина отклонения: " . trim($_GET['reject_reason']) . ". Вы можете изменить вашу заявку на странице https://dustore.ru/devs/regorg и отправить её заново!");
     echo ("<script>alert('Студия отклонена!'); window.location.href = 'recentorgs';</script>");
     exit();
   }
