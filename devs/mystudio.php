@@ -117,7 +117,7 @@ $curr_user = new User();
     $hashed_token = '';
 
     if (!empty($api_token)) {
-      $hashed_token = password_hash($api_token, PASSWORD_DEFAULT);
+      $hashed_token = hash('sha256', $api_token);
       $update_api_token = true;
     }
 
