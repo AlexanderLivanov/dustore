@@ -11,6 +11,7 @@ $curr_user->checkAuth();
 
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -76,15 +77,15 @@ $curr_user->checkAuth();
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
                 <button class="button disabled-btn tooltip">Приложения<span class="tooltiptext">Скоро</span></button>
-                <button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>
+                <button class="button" onclick="location.href='https:\/\/media.dustore.ru'">Медиа</button>
                 <button class="button" onclick="location.href='/about'">О платформе</button>
                 <button class="button" onclick="location.href='/finance'">Финансы</button>
             </div>
         </div>
         <div class="section center-section">
             <div class="image">
-                <img src="/swad/static/img/logo_low.png" alt="" onclick="location.href='/'">
-                <!-- <img src="/swad/static/img/logo_new_neon.png" alt="" onclick="location.href='/'"> -->
+                <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
+                <img src="/swad/static/img/logo_new.png" alt="" onclick="location.href='/'">
             </div>
         </div>
         <div class="section right-section">

@@ -91,16 +91,14 @@ body {
 .image img {
     width: auto;
     padding: 4px;
-    height: 55px;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 1);
+    height: 130px;
     transition: all .2s;
-    border-radius: 5px;
 }
 
 .image img:hover {
     width: auto;
     padding: 3px;
-    height: 55px;
+    height: 110px;
     transition: all .2s;
     filter: contrast(200%);
 }
