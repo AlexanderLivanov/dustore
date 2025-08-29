@@ -171,16 +171,7 @@ class User
     public function getUserOrgs($user_id, $limit="100")
     {
         $stmt = $this->db->prepare(
-            "SELECT     
-                            o.id AS organization_id,
-                            o.name AS organization_name,
-                            r.name AS user_role,
-                            uo.status,
-                            uo.ban_reason
-                        FROM user_organization uo
-                        JOIN organizations o ON o.id = uo.organization_id
-                        JOIN roles r ON r.id = uo.role_id
-                        WHERE uo.user_id = :id ORDER BY status DESC LIMIT $limit;");
+            "SELECT * WHERE owner_id = :id ORDER BY status DESC LIMIT $limit;");
         $stmt->execute(['id' => $user_id]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

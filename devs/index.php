@@ -2,9 +2,11 @@
 require_once('../constants.php');
 require_once(ROOT_DIR . '/swad/config.php');
 require_once(ROOT_DIR . '/swad/controllers/user.php');
+require_once('../swad/controllers/organization.php');
 
 $curr_user = new User();
 $db = new Database();
+$org = new Organization();
 ?>
 
 <!DOCTYPE html>
@@ -28,9 +30,11 @@ $db = new Database();
     echo ("window.location.replace('/login');");
     exit;
   }
-  
+
   $curr_user_org_data = $curr_user->getOrgData($_SESSION['studio_id']);
   $_SESSION['STUDIODATA'] = $curr_user_org_data;
+
+  
   ?>
   <main>
     <section class="content">
@@ -44,7 +48,8 @@ $db = new Database();
           <!-- small box -->
           <div class="small-box bg-aqua">
             <div class="inner">
-              <h3><?= 0 ?></h3>
+              <?= print_r($org->getAllStaff(5)) ?>
+              <h3><?= print_r($curr_user_org_data['id']) ?></h3>
               <p>Сотрудники</p>
             </div>
             <div class="icon">
