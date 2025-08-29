@@ -251,7 +251,7 @@ h2:after {
     align-items: flex-start;
     gap: 10px;
     padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
 }
 
@@ -265,7 +265,7 @@ h2:after {
 }
 
 .review-card {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     padding: 20px;
     margin-bottom: 20px;
@@ -291,7 +291,7 @@ h2:after {
 }
 
 .system-requirements {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     padding: 25px;
     margin-top: 30px;
@@ -321,7 +321,7 @@ h2:after {
 }
 
 .purchase-section {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
     padding: 25px;
     text-align: center;
@@ -345,7 +345,7 @@ h2:after {
     gap: 15px;
     margin: 20px 0;
     padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
 }
 

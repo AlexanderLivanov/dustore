@@ -78,6 +78,14 @@ body {
     text-align: center;
 }
 
+.footer-p {
+    color: white;
+    font-size: 12pt;
+    font-family: 'PixelizerBold', ' Gill Sans';
+    text-align: center;
+}
+
+
 .button:hover {
     background-color: #c32178;
     color: white;

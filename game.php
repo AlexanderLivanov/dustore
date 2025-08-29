@@ -223,7 +223,7 @@ $platforms = !empty($game['platforms']) ? explode(',', $game['platforms']) : [];
                         </button>
 
                         <!-- Дополнительная информация -->
-                        <div style="background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
                             <h3>Информация о игре</h3>
                             <div style="margin-top: 15px;">
                                 <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
