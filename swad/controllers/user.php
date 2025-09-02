@@ -38,7 +38,6 @@ class User
 
     // 01.09.2025 (c) Alexander Livanov - new 
 
-    // Добавьте этот метод в класс User
     public function getUserByUsername($username)
     {
         try {
@@ -316,6 +315,22 @@ class User
             error_log("Error verifying passphrase: " . $e->getMessage());
             return false;
         }
+    }
+
+    // 02.09.2025
+    // Добавьте этот метод в класс User
+    public function logout()
+    {
+        // Уничтожаем сессию
+        session_unset();
+        session_destroy();
+
+        // Удаляем куку auth_token
+        setcookie('auth_token', '', time() - 3600, '/');
+
+        // Перенаправляем на главную
+        header('Location: /');
+        exit;
     }
 }
 

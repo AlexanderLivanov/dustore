@@ -305,6 +305,15 @@ if (isset($_SESSION['USERDATA']['passphrase'])) {
                         </div>
                     </div>
                 </div>
+
+                <div class="info-card">
+                    <h3>Завершение сеанса</h3>
+                    <p>Выход из аккаунта прекратит доступ к вашему профилю на этом устройстве. Для повторного входа потребуется снова авторизоваться через Telegram или использовать passphrase.</p>
+
+                    <form action="swad/controllers/logout.php" method="POST" onsubmit="return confirmLogout()">
+                        <button type="submit" class="btn-logout">Выйти из аккаунта</button>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -384,6 +393,10 @@ if (isset($_SESSION['USERDATA']['passphrase'])) {
                 });
             }
         });
+
+        function confirmLogout() {
+            return confirm('Вы уверены, что хотите выйти из аккаунта? Для повторного входа потребуется снова авторизоваться.');
+        }
     </script>
 
     <style>
@@ -481,6 +494,22 @@ if (isset($_SESSION['USERDATA']['passphrase'])) {
             border-radius: 4px;
             font-size: 0.8em;
             margin-left: 10px;
+        }
+
+        .btn-logout {
+            background-color: #d9534f;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+
+        .btn-logout:hover {
+            background-color: #c9302c;
         }
     </style>
 </body>

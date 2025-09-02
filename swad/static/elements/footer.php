@@ -9,5 +9,5 @@
     <a href="/developer-agreement">Соглашение с разработчиком</a>
     <p class="footer-p">DUSTORE (Dust Store) является собственностью Dust Studio и Crazy Projects Lab. Все торговые марки являются собственностью соответствующих владельцев. НДС включён во все цены, где он применим</p>
     <!-- SemVer spec: status-global.design.tech#patch -->
-    <p class="footer-p">Версия платформы: alpha-1.8.14#14</p>
+    <p class="footer-p">Версия платформы: beta-1.10.15#15</p>
 </div>
