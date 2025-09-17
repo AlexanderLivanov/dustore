@@ -424,6 +424,7 @@ $stats = $stmt->fetch();
                         <strong>Был(а):</strong>
                         <?= time_ago(getUserLastActivity($user['telegram_id'])) ?>
                     </p>
+                    
 
                     <div class="social-links">
                         <?php if (!empty($user['website'])): ?>
