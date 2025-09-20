@@ -205,7 +205,7 @@ $platforms = !empty($game['platforms']) ? explode(',', $game['platforms']) : [];
                                 <!-- Будет заполнено JavaScript -->
                             </div>
 
-                            <button class="btn" style="width: 100%; margin-bottom: 15px;">Купить сейчас</button>
+                            <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button>
 
                             <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
                                 <?php if ($game['in_subscription']): ?>
