@@ -90,6 +90,10 @@
                 </div>
 
                 <div class="right-column">
+                    <div class="card animate-in delay-3">
+                        <h2 class="card-title">🛒 Корзина</h2>
+                        <button class="btn btn-primary" onclick="window.location = '/checkout'">Перейти в корзину</button>
+                    </div>
                     <div class="card animate-in delay-2">
                         <h2 class="card-title">💰 Текущий баланс</h2>
                         <div class="balance-amount"><?= "0 ₽ <br> 0 Ⓓ" ?></div>
@@ -159,7 +163,7 @@
                                     <span class="transaction-title">Бонус за регистрацию</span>
                                     <span class="transaction-date">только что</span>
                                 </div>
-                                <div class="transaction-amount positive">+ 2 000 Ⓓ  </div>
+                                <div class="transaction-amount positive">+ 2 000 Ⓓ </div>
                             </li>
                         </ul>
                     </div>

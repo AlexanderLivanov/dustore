@@ -207,6 +207,7 @@ $platforms = !empty($game['platforms']) ? explode(',', $game['platforms']) : [];
 
                             <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button>
 
+
                             <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
                                 <?php if ($game['in_subscription']): ?>
                                     <p>✔️ Есть в подписке</p>
@@ -338,7 +339,7 @@ $platforms = !empty($game['platforms']) ? explode(',', $game['platforms']) : [];
             });
         });
     </script>
-    <script>    
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const gameId = <?= $game_id ?>;
             window.gameCartManager = new GameCartManager(gameId);

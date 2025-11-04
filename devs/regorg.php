@@ -48,12 +48,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
         $teamSize = $_POST['team_size'] ?? null;
         $specialization = $_POST['specialization'] ?? null;
         $preAlpha = isset($_POST['pre_alpha']) ? 1 : 0;
+        $bank_name = $_POST['bank_name'] ?? '';
+        $BIC = $_POST['BIC'] ?? '';
+        $account_number = $_POST['account_number'] ?? '';
+        $INN = $_POST['tax_id'] ?? '';
 
         if ($specialization === 'soft') {
             $specialization = 'software';
         }
 
-        if (empty($name) || empty($description) || empty($vkLink) || empty($tgLink) || empty($email)) {
+        if (empty($name) || empty($description) || empty($email)) {
             $error = "Пожалуйста, заполните все обязательные поля";
         } else {
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -84,7 +88,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
                         'foundation_date' => $foundationDate,
                         'team_size' => $teamSize,
                         'specialization' => $specialization,
-                        'pre_alpha_program' => $preAlpha
+                        'pre_alpha_program' => $preAlpha,
+                        'bank_name' => $bank_name,
+                        'BIC' => $BIC,
+                        'acc_num' => $account_number,
+                        'INN' => $tax_id
                     ];
 
                     $columns = implode(', ', array_keys($data));
@@ -108,21 +116,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
                     $db->Insert($staffSql, array_values($staffData));
 
                     unset($_SESSION['form_token']);
-                    echo ("<script>alert('Чтобы получить уведомление об активации вашей студии, Вы можете просто запустить нашего Telegram-бота: @dustore_auth_bot')</script>");
                     send_group_message(-1002916906978, "Получена новая заяка на регистрацию студии!\n
-Название: <i>". $data['name'] . "</i>
-Описание: <i>" . $data['description']."</i>
-Почта для связи: <i>".$data['contact_email']."</i>
-ВК группа: <i>".$data['vk_link']."</i>
-Telegram: <i>".$data['tg_link']."</i>", true, "https://dustore.ru/devs/recentorgs");
-                    send_private_message($user_data['telegram_id'], 
-"Заявка на регистрацию вашей студии была отправлена на модерацию. А теперь - будем знакомиться! 😊\n
+Название: <i>" . $data['name'] . "</i>
+Описание: <i>" . $data['description'] . "</i>
+Почта для связи: <i>" . $data['contact_email'] . "</i>
+ВК группа: <i>" . $data['vk_link'] . "</i>
+Telegram: <i>" . $data['tg_link'] . "</i>", true, "https://dustore.ru/devs/recentorgs");
+                    send_private_message(
+                        $user_data['telegram_id'],
+                        "Заявка на регистрацию вашей студии была отправлена на модерацию. А теперь - будем знакомиться! 😊\n
 Меня зовут Дасти 😎 - я бот-ассистент на Платформе Dustore.Ru.
 Я буду присылать вам важные уведомления. А ещё вы можете добавить меня в чат вашей студии, куда я буду присылать еженедельную статистику, новости и уведомления. 
 О том, как это сделать, <a href='https://github.com/AlexanderLivanov/dustore-docs/wiki/Добавление-бота-в-чат-вашей-студии'>читайте здесь.</a>\n
 Спасибо, что пользуетесь Dustore ❤
 
-[ <a href='https://dustore.ru'>Сайт Платформы</a> ] [ <a href='https://t.me/dustore_official'>Новостной канал Платформы</a> ] [ <a href='https://vk.com/crazyprojectslab'>Crazy Projects Lab</a> ] [ <a href='https://vk.com/dgscorp'>Dust Studio</a> ]");
+[ <a href='https://dustore.ru'>Сайт Платформы</a> ] [ <a href='https://t.me/dustore_official'>Новостной канал Платформы</a> ] [ <a href='https://vk.com/crazyprojectslab'>Crazy Projects Lab</a> ] [ <a href='https://vk.com/dgscorp'>Dust Studio</a> ]"
+                    );
                     echo "<script>window.location.replace('/devs/select');</script>";
                     exit;
                 } catch (Exception $e) {
@@ -150,7 +159,6 @@ Telegram: <i>".$data['tg_link']."</i>", true, "https://dustore.ru/devs/recentorg
         <div class="page-header">
             <h1>Регистрация студии</h1>
             <p>Создайте свою студию на Dustore.Devs и получите доступ к экосистеме для инди-разработчиков</p>
-            <p>Чтобы получить уведомление об активации вашей студии, Вы можете запустить нашего Telegram-бота: <span style="font-weight: 900;"><a href="https://t.me/dustore_auth_bot">@dustore_auth_bot</a></span></p>
         </div>
 
         <div class="registration-container">
@@ -208,22 +216,16 @@ Telegram: <i>".$data['tg_link']."</i>", true, "https://dustore.ru/devs/recentorg
 
                     <div class="form-section">
                         <h3><span class="icon">🔗</span> Ссылки и контакты</h3>
-                        <h4 style="text-decoration: underline;">Внимание! Для прохождения модерации необходимо подтвердить права на владение студией. Для этого в ВК сообществе и Telegram-канале вашей студии создайте пост со следующим содержанием:</h4>
-                        <br>
-                        <div class="al" style="border-left: 2px solid #c32178; padding: 5px;">
-                            <i>Студия "<Ваша студия>" теперь есть на новой игровой платформе Dustore.Ru и скоро добавит свои проекты!</i>
-                        </div>
-                        <br>
                         <div class="form-group">
-                            <label for="vk_link" class="required">Ссылка на ВК группу</label>
-                            <input type="url" id="vk_link" name="vk_link" required
+                            <label for="vk_link">Ссылка на ВК группу</label>
+                            <input type="url" id="vk_link" name="vk_link"
                                 placeholder="https://vk.com/ваша_группа"
                                 maxlength="50">
                         </div>
 
                         <div class="form-group">
-                            <label for="tg_link" class="required">Ссылка на Telegram канал</label>
-                            <input type="url" id="tg_link" name="tg_link" required
+                            <label for="tg_link">Ссылка на Telegram канал</label>
+                            <input type="url" id="tg_link" name="tg_link"
                                 placeholder="https://t.me/ваш_канал"
                                 maxlength="50">
                         </div>
@@ -278,64 +280,53 @@ Telegram: <i>".$data['tg_link']."</i>", true, "https://dustore.ru/devs/recentorg
                             <input type="checkbox" id="pre_alpha" name="pre_alpha" value="1">
                             <label for="pre_alpha">Хочу участвовать в Программе Предварительной Оценки (ППО)</label>
                         </div>
-                        <p class="form-note">Участники ППО получают бесплатную регистрацию студтии, первой игры, уникальные бейджи и приоритетную техническую поддержку</p>
+                        <p class="form-note">Участники ППО получают ранние анонсы, уникальные бейджи и приоритетную техническую поддержку</p>
                         <div class="checkbox-group">
                             <input type="checkbox" id="terms" name="terms" value="1" required>
-                            <label for="terms" class="required">Согласен с <a href="/oferta" style="color: #14041d;">условиями использования</a></label>
+                            <label for="terms" class="required">Согласен с <a href="/oferta.txt" style="color: #14041d;">условиями использования</a></label>
                         </div>
                     </div>
 
                     <div class="form-section">
                         <h3><span class="icon">💳</span> Платежная информация</h3>
 
-                        <div class="form-group">
-                            <label for="payment_type">Тип оплаты</label>
-                            <select id="payment_type" name="payment_type" disabled>
-                                <option value="">Выберите тип оплаты</option>
-                                <option value="bank">Счёт в банке</option>
-                            </select>
-                        </div>
+                        <h4>На этот счёт будут приходить выплаты и гранты</h4>
 
-                        <!-- <div class="form-group">
+                        <br>
+                        <br>
+
+                        <div class="form-group">
                             <label for="bank_name">Название банка</label>
-                            <input type="text" id="bank_name" name="bank_name"
+                            <input type="text" id="bank_name" name="bank_name" minlength="5"
                                 placeholder="Введите название банка">
                         </div>
 
                         <div class="form-group">
+                            <label for="BIC">БИК</label>
+                            <input type="text" id="BIC" name="BIC" maxlength="9" minlength="9"
+                                placeholder="Введите БИК банка">
+                        </div>
+
+                        <div class="form-group">
                             <label for="account_number">Номер счета</label>
-                            <input type="text" id="account_number" name="account_number"
+                            <input type="text" id="account_number" name="account_number" minlength="20" maxlength="20"
                                 placeholder="Введите номер счета">
-                        </div> -->
+                        </div>
 
                         <div class="form-group">
                             <label for="tax_id">ИНН</label>
-                            <input type="text" id="tax_id" name="tax_id"
-                                placeholder="Введите налоговый номер" disabled>
+                            <input type="text" id="tax_id" name="tax_id" maxlength="12" minlength="10"
+                                placeholder="Введите налоговый номер">
                         </div>
-
-                        <div class="form-group">
-                            <label for="payment_agent">Платёжный агрегатор</label>
-                            <select id="payment_agent" name="payment_agent" disabled>
-                                <option value="">Выберите свой сервис</option>
-                                <option value="...">...</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="payment_token">Токен для оплаты</label>
-                            <input type="text" id="payment_token" name="payment_token"
-                                placeholder="Токен для оплаты можно получить у платёжного агрегатора" disabled>
-                        </div>
-
-                        <!-- <div class="form-group">
-                            <label for="billing_address">Платежный адрес</label>
-                            <textarea id="billing_address" name="billing_address"
-                                placeholder="Введите полный платежный адрес"></textarea>
-                        </div> -->
-
-                        <h4 style="text-decoration: underline;">Возможность создания платёжного профиля будет доступна после завершения Программы Предварительной Оценки</h4>
                     </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 50px">
+                    <h5>Результаты модераций, уведомления, статистика и много чего ещё в нашем боте:</h5>
+                    <a href="https://t.me/dustore_auth_bot" style="color: #14041d;" target="_blank">https://t.me/dustore_auth_bot</a>
+                    <br>
+                    <br>
+                    <img style=" border-radius: 15px;" src="/swad/static/img/dusty_tg_qr.png" alt="" width="25%">
                 </div>
 
                 <div class="form-actions">

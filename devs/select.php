@@ -25,8 +25,8 @@ $user_orgs = $curr_user->getUO($user_id);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dustore.Devs - Выберите студию</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
-  <link rel="stylesheet" href="/swad/css/studioselect.css">
+    <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
+    <link rel="stylesheet" href="/swad/css/studioselect.css">
 </head>
 
 <body>
@@ -84,7 +84,12 @@ $user_orgs = $curr_user->getUO($user_id);
                 Зарегистрировать новую студию
             </button>
         <?php endif; ?>
+        <div style="text-align: center; margin-top: 50px">
+            <h3>Для получения уведомлений достаточно <br> один раз запустить бота</h3>
+            <img src="/swad/static/img/dusty_tg_qr.png" alt="" width="33%">
+        </div>
     </div>
+
 </body>
 
 </html>

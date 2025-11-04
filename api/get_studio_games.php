@@ -27,13 +27,14 @@ $studio = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // print_r($studio);
 
 if ($studio) {
-    foreach($studio as $st){
-        echo json_encode([
-            'id' => $st['id'],
-            'name' => $st['name'],
-            'status' => $st['status']
-        ]);
-    }
+    // foreach($studio as $st){
+    //     echo json_encode([
+    //         'id' => $st['id'],
+    //         'name' => $st['name'],
+    //         'status' => $st['status']
+    //     ]);
+    // }
+    echo json_encode($studio);
 } else {
     http_response_code(404);
     echo json_encode(['error' => 'Studio not found']);

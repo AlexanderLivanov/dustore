@@ -4,6 +4,9 @@ require_once('swad/static/elements/header.php');
 require_once('swad/controllers/time.php');
 require_once('swad/controllers/user.php');
 require_once('swad/controllers/get_user_activity.php');
+require_once('swad/controllers/organization.php');
+
+$org = new Organization();
 
 // Проверяем, установлена ли passphrase у пользователя
 $has_passphrase = $curr_user->hasPassphrase($_SESSION['USERDATA']['telegram_id']);
@@ -321,10 +324,18 @@ if (isset($_SESSION['USERDATA']['passphrase'])) {
         <div id="activity" class="tab-content">
             <div class="info-grid">
                 <div class="info-card">
-                    <h3>Если у вас есть аккаунт разработчика:</h3>
-                    <p><a href="/devs/select">Вход в консоль для разработчиков</a></p>
-                    <h3>Если у вас ещё нет аккаунта разработчика:</h3>
-                    <p><a href="/finance">Ознакомьтесь с тарифами</a></p>
+                    <h3>
+                    <?php
+                    // print_r($user_data);
+                    if($curr_user->getUO($userID)){
+                        echo("<h1>Студия " . $curr_user->getUO($userID)[0]['name'] . "</h1>");
+                        echo("<p><a href='/devs/select'>Вход в консоль для разработчиков</a></p>");
+                    }else{
+                        echo ("<h1>У вас ещё нет аккаунта разработчика</h1>");
+                        echo ("<p><a href='/devs/regorg'>Зарегистрируйте его бесплатно!</a></p>");
+                    }
+                    ?>
+                    </h3>
                 </div>
             </div>
         </div>
