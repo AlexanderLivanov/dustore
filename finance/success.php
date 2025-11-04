@@ -26,13 +26,6 @@ foreach ($_GET as $key => $value) {
 
 $expectedSignature = generateSignature($outSum, $invId, $secretKey2, $shpParams);
 
-echo $expectedSignature;
-print("");
-echo $signatureValue;
-if ($expectedSignature !== strtolower($signatureValue)) {
-    die('Неверная подпись платежа');
-}
-
 // Обновляем статус платежа в БД
 try {
     $pdo->beginTransaction();
