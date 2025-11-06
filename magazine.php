@@ -137,18 +137,47 @@
             cursor: pointer;
             position: relative;
             transform-style: preserve-3d;
-            transition: all 0.1s ease-out;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
             filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.7));
         }
 
         .book:hover {
             filter: drop-shadow(0 15px 10px rgba(255, 0, 110, 0.));
+            transform: rotateX(10deg) rotateY(-10deg) translateY(-5px) scale(1.05);
+            box-shadow: 0 20px 45px rgba(255, 0, 110, 0.4);
+        }
+
+        .book::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -10px;
+            width: 10px;
+            height: 100%;
+            background: linear-gradient(180deg, #444, #222);
+            transform: rotateY(90deg) translateZ(5px);
+            transform-origin: left;
+            box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .book::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, #222, #444);
+            transform: rotateX(90deg);
+            transform-origin: top;
+            box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .book-cover {
             width: 100%;
             height: 100%;
-            border-radius: 0;
+            border-radius: 6px;
             position: relative;
             display: flex;
             flex-direction: column;
@@ -158,6 +187,7 @@
             text-align: center;
             padding: 20px;
             overflow: hidden;
+            transform: translateZ(10px);
             transform-style: preserve-3d;
             font-size: 1.1em;
             line-height: 1.4;
@@ -180,7 +210,7 @@
                     rgba(255, 255, 255, 0.02) 2px,
                     transparent 2px,
                     transparent 4px),
-                url('/swad/static/img/Slice\ 7.png');
+                url('/swad/static/img/Slice\ 6.jpg');
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center center;
@@ -188,6 +218,8 @@
             border-radius: 0;
             pointer-events: none;
         }
+
+
 
         /* ===== ПОЛИХРОМНЫЙ ЭФФЕКТ ===== */
         .book-cover.polychrome {
@@ -541,7 +573,6 @@
         .modal-btn:active {
             transform: translateY(0);
         }
-        
     </style>
 </head>
 

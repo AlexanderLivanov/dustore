@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $age_rating = $_POST['age_rating'];
   $price = (float)$_POST['price'];
   $in_subscription = isset($_POST['in_subscription']) ? 1 : 0;
+  $game_exec = $_POST['game-exec'];
 
   $s3Uploader = new S3Uploader();
 
@@ -164,7 +165,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // Обновление данных в базе
   $sql = "UPDATE games SET 
-            name = :name, 
+            name = :name,
+            game_exec = :game_exec,
             genre = :genre, 
             description = :description, 
             platforms = :platforms, 
@@ -186,6 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
     $stmt = $db->connect()->prepare($sql);
     $stmt->bindParam(':name', $project_name);
+    $stmt->bindParam(':game_exec', $game_exec);
     $stmt->bindParam(':genre', $genre);
     $stmt->bindParam(':description', $description);
     $stmt->bindParam(':platforms', $platforms);
@@ -344,6 +347,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="text" name="project-name" id="project-name"
                   value="<?= htmlspecialchars($project_info['name']) ?>" required>
                 <label for="project-name">Название проекта</label>
+              </div>
+
+              <div class="input-field">
+                <input type="text" name="game-exec" id="game-exec"
+                  value="<?= htmlspecialchars($project_info['game_exec']) ?>" required>
+                <label for="game-exec">Название исполняемого файла, например game.exe</label>
               </div>
 
               <div class="input-field">
