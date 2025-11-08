@@ -33,6 +33,7 @@ class Game
             g.path_to_cover,
             g.price,
             g.GQI,
+            g.status,
             g.release_date,
             s.name AS studio_name
         FROM games g
