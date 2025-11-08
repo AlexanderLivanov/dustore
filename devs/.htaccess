@@ -1,1 +1,15 @@
 Allow from all
+
+# Увеличение лимитов для загрузки больших файлов
+php_value upload_max_filesize 1024M
+php_value post_max_size 1024M
+php_value max_execution_time 300
+php_value max_input_time 300
+php_value memory_limit 512M
+
+# Включение прогрессивной загрузки
+php_value max_file_uploads 50
+php_value max_input_vars 3000
+
+# Для chunked upload
+php_value enable_post_data_reading 1

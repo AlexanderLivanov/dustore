@@ -26,8 +26,41 @@ if (empty($project_info)) {
   exit();
 }
 
+function formatFileSize($bytes)
+{
+  if ($bytes == 0) return '0 Bytes';
+  $k = 1024;
+  $sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  $i = floor(log($bytes) / log($k));
+  return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+}
+
 // Обработка формы редактирования
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Обработка ZIP-файла
+  $game_zip_url = $project_info['game_zip_url'] ?? '';
+
+  if (!empty($_FILES['game_zip']['name']) && $_FILES['game_zip']['error'] == UPLOAD_ERR_OK) {
+    $mime = mime_content_type($_FILES['game_zip']['tmp_name']);
+    if ($mime === 'application/zip' || str_ends_with($_FILES['game_zip']['name'], '.zip')) {
+      $safe_org_name = preg_replace('/[^a-z0-9]/i', '-', $org_name);
+      $safe_project_name = preg_replace('/[^a-z0-9]/i', '-', $project_name);
+      $zip_path = "{$safe_org_name}/{$safe_project_name}/game-" . uniqid() . ".zip";
+
+      // Удаляем старый ZIP если существует
+      if (!empty($game_zip_url) && strpos($game_zip_url, 'amazonaws.com') !== false) {
+        $s3Uploader->deleteFile($game_zip_url);
+      }
+
+      // Загружаем новый ZIP
+      $uploaded_zip = $s3Uploader->uploadFile($_FILES['game_zip']['tmp_name'], $zip_path);
+      if ($uploaded_zip) {
+        $game_zip_url = $uploaded_zip;
+      }
+    } else {
+      $error_message = "Допустимы только ZIP-архивы";
+    }
+  }
   // Обработка основных полей
   $project_name = preg_replace("/[^A-Za-zА-Яа-яёЁ0-9-_! ]/", '', $_POST['project-name']);
   $genre = $_POST['genre'];
@@ -115,6 +148,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     return $existing_path;
   }
 
+  // Обработка статуса
+  $status = $_POST['status'] === 'published' ? 'published' : 'draft';
+
+  // Обработка ZIP-файла в основном POST
+  $game_zip_url = $project_info['game_zip_url'] ?? '';
+  $game_zip_size = $project_info['game_zip_size'] ?? 0;
+
+  // Если загружается новый ZIP через основную форму (не AJAX)
+  if (!empty($_FILES['game_zip']['name']) && $_FILES['game_zip']['error'] == UPLOAD_ERR_OK) {
+    $mime = mime_content_type($_FILES['game_zip']['tmp_name']);
+    $extension = strtolower(pathinfo($_FILES['game_zip']['name'], PATHINFO_EXTENSION));
+
+    if ($mime === 'application/zip' || $extension === 'zip') {
+      $safe_org_name = preg_replace('/[^a-z0-9]/i', '-', $org_name);
+      $safe_project_name = preg_replace('/[^a-z0-9]/i', '-', $project_name);
+      $zip_path = "{$safe_org_name}/{$safe_project_name}/game-" . uniqid() . ".zip";
+
+      // Удаляем старый ZIP
+      if (!empty($game_zip_url)) {
+        $s3Uploader->deleteFile($game_zip_url);
+      }
+
+      // Загружаем новый ZIP
+      $uploaded_zip = $s3Uploader->uploadFile($_FILES['game_zip']['tmp_name'], $zip_path);
+      if ($uploaded_zip) {
+        $game_zip_url = $uploaded_zip;
+        $game_zip_size = $_FILES['game_zip']['size'];
+      }
+    }
+  }
+
+
   $org_info = $curr_user->getOrgData($_SESSION['studio_id']);
   $org_name = $org_info['name'];
 
@@ -165,25 +230,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // Обновление данных в базе
   $sql = "UPDATE games SET 
-            name = :name,
-            game_exec = :game_exec,
-            genre = :genre, 
-            description = :description, 
-            platforms = :platforms, 
-            release_date = :release_date, 
-            path_to_cover = :cover_path, 
-            game_website = :website,
-            banner_url = :banner_url,
-            trailer_url = :trailer_url,
-            rating_count = :rating_count,
-            features = :features,
-            screenshots = :screenshots,
-            requirements = :requirements,
-            languages = :languages,
-            age_rating = :age_rating,
-            price = :price,
-            in_subscription = :in_subscription
-            WHERE id = :id";
+        name = :name,
+        game_exec = :game_exec,
+        genre = :genre, 
+        description = :description, 
+        platforms = :platforms, 
+        release_date = :release_date, 
+        path_to_cover = :cover_path, 
+        game_website = :website,
+        banner_url = :banner_url,
+        trailer_url = :trailer_url,
+        rating_count = :rating_count,
+        features = :features,
+        screenshots = :screenshots,
+        requirements = :requirements,
+        languages = :languages,
+        age_rating = :age_rating,
+        price = :price,
+        in_subscription = :in_subscription,
+        status = :status,
+        game_zip_url = :game_zip_url,
+        game_zip_size = :game_zip_size
+        WHERE id = :id";
 
   try {
     $stmt = $db->connect()->prepare($sql);
@@ -206,6 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindParam(':price', $price);
     $stmt->bindParam(':in_subscription', $in_subscription);
     $stmt->bindParam(':id', $project_id);
+    $stmt->bindParam(':status', $status);
+    $stmt->bindParam(':game_zip_url', $game_zip_url);
     $stmt->execute();
 
     echo ("<script>window.location.replace('edit?id=" . $project_id . "&success=1');</script>");
@@ -314,6 +384,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       border-color: #ebccd1;
       color: #a94442;
     }
+
+    /* Добавьте плавные переходы */
+    .progress {
+      background-color: #f0f0f0;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .progress .determinate {
+      background: linear-gradient(45deg, #26a69a, #2bbbad);
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Анимация "пульсации" для индикации работы */
+    .progress .determinate::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        left: -100%;
+      }
+
+      100% {
+        left: 100%;
+      }
+    }
+
+    #zip-upload-progress {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
   </style>
 </head>
 
@@ -398,6 +517,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   value="<?= htmlspecialchars($project_info['age_rating']) ?>">
                 <label>Возрастной рейтинг</label>
               </div>
+
+              <div class="input-field">
+                <select name="status" required>
+                  <option value="draft" <?= $project_info['status'] == 'draft' ? 'selected' : '' ?>>Черновик</option>
+                  <option value="published" <?= $project_info['status'] == 'published' ? 'selected' : '' ?>>Опубликована</option>
+                </select>
+                <label>Статус игры</label>
+              </div>
+
+              <div class="file-field input-field">
+                <div class="btn">
+                  <span>Загрузить ZIP</span>
+                  <input type="file" name="game_zip" id="game_zip" accept=".zip">
+                </div>
+                <div class="file-path-wrapper">
+                  <input class="file-path" type="text">
+                </div>
+              </div>
+
+              <!-- Прогресс-бар для загрузки ZIP -->
+              <!-- Прогресс-бар для загрузки ZIP -->
+              <div id="zip-upload-progress" style="display: none;">
+                <div class="card-panel">
+                  <h6 style="margin-top: 0; color: #333;">
+                    <i class="material-icons left">cloud_upload</i>Загрузка ZIP архива
+                  </h6>
+
+                  <div class="progress" style="margin: 15px 0;">
+                    <div class="determinate" style="width: 0%"></div>
+                  </div>
+
+                  <div class="row" style="margin-bottom: 0;">
+                    <div class="col s8">
+                      <p id="zip-progress-text" style="margin: 0; font-weight: 500; color: #555;">
+                        Подготовка к загрузке...
+                      </p>
+                    </div>
+                    <div class="col s4 right-align">
+                      <span id="zip-percentage" style="font-weight: bold; color: #26a69a;">0%</span>
+                    </div>
+                  </div>
+
+                  <!-- Дополнительная информация -->
+                  <div id="zip-file-info" style="margin-top: 10px; font-size: 12px; color: #777;">
+                    <i class="material-icons tiny">info_outline</i>
+                    Файл будет обработан и сохранен в облачном хранилище
+                  </div>
+                </div>
+              </div>
+
+              <?php if (!empty($project_info['game_zip_url'])): ?>
+                <div class="card-panel teal lighten-4">
+                  <p><strong>Текущий архив:</strong></p>
+                  <a href="<?= $project_info['game_zip_url'] ?>" target="_blank" class="btn-small waves-effect waves-light">
+                    <i class="material-icons left">file_download</i>Скачать ZIP
+                  </a>
+                  <p class="grey-text">Размер: <?= formatFileSize($project_info['game_zip_size'] ?? 0) ?></p>
+                </div>
+              <?php endif; ?>
 
               <div class="input-field">
                 <input type="number" name="price" step="0.01"
@@ -639,6 +817,255 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       `);
       container.append(newRequirement);
+    }
+
+    function handleZipUpload() {
+      const zipFile = $('#game_zip')[0].files[0];
+      if (!zipFile) return;
+
+      // Показываем прогресс-бар
+      $('#zip-upload-progress').show();
+      updateProgress(0, 'Подготовка к загрузке...', '0%', '—', '—');
+
+      // Блокируем форму
+      $('form button[type="submit"]').prop('disabled', true).text('Загрузка ZIP...');
+      $('#game_zip').prop('disabled', true);
+
+      // Создаем FormData
+      const formData = new FormData();
+      formData.append('game_zip', zipFile);
+      formData.append('project_id', <?= $project_id ?>);
+      formData.append('project_name', $('#project-name').val());
+
+      // Переменные для прогресса
+      let startTime = Date.now();
+      let currentProgress = 0;
+      let isUploadComplete = false;
+      let uploadFinished = false;
+
+      // Запускаем анимацию прогресса
+      const progressInterval = setInterval(() => {
+        if (!uploadFinished) {
+          if (currentProgress < 70) {
+            // Плавное увеличение до 70% во время загрузки
+            currentProgress += 0.5;
+            const speed = calculateSpeed(currentProgress, startTime);
+            const remainingTime = calculateRemainingTime(currentProgress, startTime);
+
+            updateProgress(
+              Math.round(currentProgress),
+              'Загрузка на сервер...',
+              `${Math.round(currentProgress)}%`,
+              formatSpeed(speed),
+              formatTime(remainingTime)
+            );
+          }
+        } else {
+          clearInterval(progressInterval);
+        }
+      }, 100);
+
+      // Создаем AJAX-запрос
+      const xhr = new XMLHttpRequest();
+
+      // Реальный прогресс загрузки на сервер
+      xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable && !uploadFinished) {
+          const realProgress = Math.round((e.loaded / e.total) * 70);
+          // Обновляем текущий прогресс на основе реальных данных
+          if (realProgress > currentProgress) {
+            currentProgress = realProgress;
+          }
+
+          const speed = calculateSpeed(currentProgress, startTime);
+          const remainingTime = calculateRemainingTime(currentProgress, startTime);
+
+          updateProgress(
+            Math.round(currentProgress),
+            'Загрузка на сервер...',
+            `${Math.round((e.loaded / e.total) * 100)}%`,
+            formatSpeed(speed),
+            formatTime(remainingTime)
+          );
+        }
+      });
+
+      // Обрабатываем завершение загрузки
+      xhr.addEventListener('load', function() {
+        uploadFinished = true;
+        clearInterval(progressInterval);
+
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+
+            if (response.success) {
+              // Анимация завершения серверной обработки
+              simulateServerProcessing(currentProgress, 100, 3000);
+              $('#zip-progress-text').html('<span style="color: green">✓ ' + response.message + '</span>');
+
+              setTimeout(() => {
+                location.reload();
+              }, 2000);
+
+            } else {
+              showError('✗ ' + response.message);
+            }
+          } catch (e) {
+            console.error('Parse error:', e);
+            showError('✗ Ошибка обработки ответа сервера');
+          }
+        } else {
+          showError('✗ HTTP Error: ' + xhr.status);
+        }
+      });
+
+      xhr.addEventListener('error', function() {
+        uploadFinished = true;
+        clearInterval(progressInterval);
+        showError('✗ Ошибка сети при загрузке');
+      });
+
+      xhr.addEventListener('abort', function() {
+        uploadFinished = true;
+        clearInterval(progressInterval);
+        showError('✗ Загрузка отменена');
+      });
+
+      // Функция симуляции серверной обработки
+      function simulateServerProcessing(startPercent, endPercent, duration) {
+        let progress = startPercent;
+        const interval = setInterval(() => {
+          progress += (endPercent - startPercent) / (duration / 100);
+
+          if (progress >= endPercent) {
+            progress = endPercent;
+            clearInterval(interval);
+            updateProgress(progress, 'Завершено!', '100%', '—', '—');
+          } else {
+            updateProgress(
+              Math.round(progress),
+              'Обработка на сервере...',
+              `${Math.round(progress)}%`,
+              '—',
+              formatTime((duration - (progress - startPercent) * (duration / (endPercent - startPercent))) / 1000)
+            );
+          }
+        }, 100);
+      }
+
+      // Функция расчета скорости
+      function calculateSpeed(progress, startTime) {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const estimatedTotalBytes = (zipFile.size / progress) * 100;
+        return elapsed > 0 ? estimatedTotalBytes / elapsed : 0;
+      }
+
+      // Функция расчета оставшегося времени
+      function calculateRemainingTime(progress, startTime) {
+        const elapsed = (Date.now() - startTime) / 1000;
+        if (progress === 0 || elapsed === 0) return 0;
+
+        const estimatedTotalTime = (elapsed / progress) * 100;
+        return estimatedTotalTime - elapsed;
+      }
+
+      // Функция обновления прогресса
+      function updateProgress(percent, message, percentageText, speed, time) {
+        percent = Math.min(100, Math.max(0, percent));
+
+        $('.determinate').css('width', percent + '%');
+        $('#zip-progress-text').text(message);
+        $('#zip-percentage').text(percentageText);
+        $('#zip-speed').text(speed);
+        $('#zip-time').text(time);
+
+        // Меняем цвет при завершении
+        if (percent === 100) {
+          $('.determinate').css('background', 'linear-gradient(45deg, #4CAF50, #66BB6A)');
+        }
+      }
+
+      // Функция показа ошибки
+      function showError(message) {
+        $('.determinate').css('width', '100%').css('background-color', '#f44336');
+        $('#zip-progress-text').html('<span style="color: red">' + message + '</span>');
+        $('#zip-speed').text('—');
+        $('#zip-time').text('—');
+
+        setTimeout(resetForm, 5000);
+      }
+
+      // Функция сброса формы
+      function resetForm() {
+        $('form button[type="submit"]').prop('disabled', false).html('<i class="material-icons left">save</i> Сохранить изменения');
+        $('#game_zip').prop('disabled', false);
+        $('#zip-upload-progress').hide();
+        $('#game_zip').val('');
+      }
+
+      // Функция форматирования скорости
+      function formatSpeed(bytesPerSecond) {
+        if (bytesPerSecond === 0) return '—';
+
+        const units = ['Б/с', 'КБ/с', 'МБ/с', 'ГБ/с'];
+        let speed = bytesPerSecond;
+        let unitIndex = 0;
+
+        while (speed >= 1024 && unitIndex < units.length - 1) {
+          speed /= 1024;
+          unitIndex++;
+        }
+
+        return `${speed.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+      }
+
+      // Функция форматирования времени
+      function formatTime(seconds) {
+        if (seconds === 0 || isNaN(seconds) || !isFinite(seconds)) return '—';
+
+        if (seconds < 60) {
+          return `${Math.round(seconds)} сек`;
+        } else if (seconds < 3600) {
+          const minutes = Math.floor(seconds / 60);
+          const secs = Math.round(seconds % 60);
+          return `${minutes} мин ${secs} сек`;
+        } else {
+          const hours = Math.floor(seconds / 3600);
+          const minutes = Math.round((seconds % 3600) / 60);
+          return `${hours} ч ${minutes} мин`;
+        }
+      }
+
+      // Начинаем с небольшой анимации
+      let initialProgress = 0;
+      const initialInterval = setInterval(() => {
+        if (initialProgress < 5) {
+          initialProgress += 1;
+          updateProgress(initialProgress, 'Подготовка...', `${initialProgress}%`, '—', '—');
+        } else {
+          clearInterval(initialInterval);
+          // Начинаем реальную загрузку
+          currentProgress = 5;
+          startTime = Date.now();
+          xhr.open('POST', 'upload_zip.php');
+          xhr.send(formData);
+        }
+      }, 50);
+    }
+
+    // Обработчик изменения файла ZIP
+    $('#game_zip').on('change', function(e) {
+      handleZipUpload();
+    });
+
+    // Функция для форматирования размера файла
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
   </script>
 </body>
