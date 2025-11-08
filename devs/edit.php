@@ -69,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $release_date = $_POST['release-date'];
   $game_website = $_POST['website'];
   $trailer_url = $_POST['trailer'];
-  $rating_count = (int)$_POST['rating_count'];
+  $rating_count = isset($_POST['rating_count']) ? (int)$_POST['rating_count'] : 0;
   $languages = $_POST['languages'];
-  $age_rating = $_POST['age_rating'];
+  $age_rating = $_POST['age_rating'] ?? 0;
   $price = (float)$_POST['price'];
   $in_subscription = isset($_POST['in_subscription']) ? 1 : 0;
   $game_exec = $_POST['game-exec'];
@@ -276,6 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindParam(':id', $project_id);
     $stmt->bindParam(':status', $status);
     $stmt->bindParam(':game_zip_url', $game_zip_url);
+    $stmt->bindParam(':game_zip_size', $game_zip_size);
     $stmt->execute();
 
     echo ("<script>window.location.replace('edit?id=" . $project_id . "&success=1');</script>");
