@@ -594,7 +594,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col s12 m6">
               <div class="file-field input-field">
                 <div class="btn">
-                  <span>Обложка</span>
+                  <span>Баннер</span>
                   <input type="file" name="cover-art" accept="image/*">
                 </div>
                 <div class="file-path-wrapper">
@@ -605,13 +605,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if (!empty($project_info['path_to_cover'])): ?>
                   <img src="<?= $project_info['path_to_cover'] ?>" class="preview-image">
                 <?php else: ?>
-                  <p>Текущая обложка не загружена</p>
+                  <p>Текущий баннер не загружен</p>
                 <?php endif; ?>
               </div>
 
               <div class="file-field input-field">
                 <div class="btn">
-                  <span>Баннер</span>
+                  <span>Задний фон</span>
                   <input type="file" name="banner" accept="image/*">
                 </div>
                 <div class="file-path-wrapper">
@@ -622,7 +622,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if (!empty($project_info['banner_url'])): ?>
                   <img src="<?= $project_info['banner_url'] ?>" class="preview-image">
                 <?php else: ?>
-                  <p>Текущий баннер не загружен</p>
+                  <p>Задний фон не загружен</p>
                 <?php endif; ?>
               </div>
 
@@ -699,7 +699,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="input-field">
                       <textarea name="feature_description[]" class="materialize-textarea"><?= htmlspecialchars($feature['description']) ?></textarea>
-                      <label>Описание</label>
+                      <label>Текст</label>
                     </div>
                   </div>
                 <?php endforeach; ?>

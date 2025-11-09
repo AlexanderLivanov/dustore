@@ -127,9 +127,17 @@ function formatFileSize($bytes)
                                         <div class="stat-value"><?= date('d.m.Y', strtotime($game['release_date'])) ?></div>
                                         <div class="stat-label">Дата выпуска</div>
                                     </div>
+                                    <?php
+                                    $ratingData = $gameController->getAverageRating($game_id);
+                                    ?>
                                     <div class="stat-item">
-                                        <div class="stat-value"><?= number_format($game['rating_count'], 0, ',', ' ') ?></div>
-                                        <div class="stat-label">Оценок</div>
+                                        <?php if ($ratingData['count'] > 0): ?>
+                                            <div class="stat-value"><?= $ratingData['avg'] ?>/10 </div>
+                                            <div class="stat-label">Оценили: <?= $ratingData['count'] ?></div>
+                                        <?php else: ?>
+                                            <div class="stat-value">???</div>
+                                            <div class="stat-label">Ещё нет оценок. Будьте первыми.</div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -139,6 +147,18 @@ function formatFileSize($bytes)
                         <div class="game-description">
                             <p><?= nl2br(htmlspecialchars($game['description'])) ?></p>
                         </div>
+
+                        <?php if (!empty($_SESSION['USERDATA'])): ?>
+                            <div class="rating-section" style="margin-top: 20px;">
+                                <h2>Ваша оценка игре</h2>
+                                <div id="rating-stars" data-game-id="<?= $game_id ?>"></div>
+                            </div>
+                        <?php else: ?>
+                            <div class="rating-section" style="margin-top: 20px; opacity: 0.6;">
+                                <h2>Оценить игру</h2>
+                                <p>Войдите в аккаунт, чтобы поставить оценку.</p>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- Особенности игры -->
                         <?php if (!empty($features)): ?>
@@ -385,6 +405,54 @@ function formatFileSize($bytes)
         document.addEventListener('DOMContentLoaded', () => {
             const gameId = <?= $game_id ?>;
             window.gameCartManager = new GameCartManager(gameId);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const ratingContainer = document.getElementById('rating-stars');
+            if (!ratingContainer) return;
+
+            const gameId = ratingContainer.dataset.gameId;
+            for (let i = 1; i <= 10; i++) {
+                const star = document.createElement('span');
+                star.textContent = '★';
+                star.style.cursor = 'pointer';
+                star.style.fontSize = '24px';
+                star.style.color = '#666';
+                star.dataset.value = i;
+                star.addEventListener('mouseover', () => highlightStars(i));
+                star.addEventListener('mouseout', resetStars);
+                star.addEventListener('click', () => submitRating(i));
+                ratingContainer.appendChild(star);
+            }
+
+            function highlightStars(n) {
+                document.querySelectorAll('#rating-stars span').forEach((s, idx) => {
+                    s.style.color = idx < n ? '#ffcc00' : '#666';
+                });
+            }
+
+            function resetStars() {
+                document.querySelectorAll('#rating-stars span').forEach(s => s.style.color = '#666');
+            }
+
+            function submitRating(rating) {
+                fetch('/swad/controllers/rate_game.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `game_id=${gameId}&rating=${rating}`
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // alert(`Спасибо! Ваша оценка: ${rating}`);
+                            location.reload();
+                        } else {
+                            alert('Ошибка: ' + data.error);
+                        }
+                    });
+            }
         });
     </script>
 </body>

@@ -47,15 +47,53 @@ class Game
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getRating($gameId)
+    // public function getRating($gameId)
+    // {
+    //     $stmt = $this->db->connect()->prepare("
+    //     SELECT AVG(rating) as avg_rating 
+    //     FROM reviews 
+    //     WHERE game_id = ?
+    // ");
+    //     $stmt->execute([$gameId]);
+    //     $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    //     return $result['avg_rating'] ? round($result['avg_rating'], 1) : 0;
+    // }
+
+    // 09.11.2025 (с) Alexander Livanov
+    public function addRating($gameId, $userId, $rating)
     {
-        $stmt = $this->db->connect()->prepare("
-        SELECT AVG(rating) as avg_rating 
-        FROM reviews 
-        WHERE game_id = ?
-    ");
+        $db = $this->db->connect();
+
+        // Проверяем, ставил ли пользователь уже оценку
+        $stmt = $db->prepare("SELECT id FROM ratings WHERE game_id = ? AND user_id = ?");
+        $stmt->execute([$gameId, $userId]);
+
+        if ($stmt->fetch()) {
+            // Обновляем существующую
+            $update = $db->prepare("UPDATE ratings SET rating = ?, created_at = NOW() WHERE game_id = ? AND user_id = ?");
+            return $update->execute([$rating, $gameId, $userId]);
+        } else {
+            // Добавляем новую
+            $insert = $db->prepare("INSERT INTO ratings (game_id, user_id, rating) VALUES (?, ?, ?)");
+            return $insert->execute([$gameId, $userId, $rating]);
+        }
+    }
+
+    public function getAverageRating($gameId)
+    {
+        $stmt = $this->db->connect()->prepare("SELECT AVG(rating) AS avg_rating, COUNT(*) AS total FROM ratings WHERE game_id = ?");
         $stmt->execute([$gameId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['avg_rating'] ? round($result['avg_rating'], 1) : 0;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return [
+            'avg' => $row['avg_rating'] ? round($row['avg_rating'], 1) : 0,
+            'count' => $row['total'] ?? 0
+        ];
+    }
+
+    public function userHasRated($gameId, $userId)
+    {
+        $stmt = $this->db->connect()->prepare("SELECT 1 FROM ratings WHERE game_id = ? AND user_id = ?");
+        $stmt->execute([$gameId, $userId]);
+        return (bool)$stmt->fetchColumn();
     }
 }
