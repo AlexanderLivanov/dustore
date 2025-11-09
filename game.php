@@ -26,6 +26,12 @@ if (empty($game['status']) || strtolower($game['status']) !== 'published') {
     exit();
 }
 
+$userRating = 0;
+if (!empty($_SESSION['USERDATA']['id'])) {
+    $userId = $_SESSION['USERDATA']['id'];
+    $userRating = $gameController->userHasRated($game_id, $userId) ?? 0;
+}
+
 $screenshots = json_decode($game['screenshots'], true) ?: [];
 
 // Получаем особенности
@@ -74,11 +80,10 @@ function formatFileSize($bytes)
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
             display: flex;
             justify-content: center;
             align-items: center;
-            cursor: pointer;
+            z-index: 10000;
         }
 
         .lightbox img {
@@ -86,6 +91,91 @@ function formatFileSize($bytes)
             max-height: 90%;
             object-fit: contain;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            padding: 0 15px;
+            z-index: 10001;
+        }
+
+        .lightbox .arrow-left {
+            left: 10px;
+        }
+
+        .lightbox .arrow-right {
+            right: 10px;
+        }
+
+        .review-form {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .review-form h2 {
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .review-form textarea {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.4);
+            color: #fff;
+            padding: 10px;
+            font-size: 1rem;
+            resize: vertical;
+        }
+
+        .review-form select {
+            border-radius: 10px;
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.4);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .review-form button {
+            align-self: flex-start;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 10px;
+            background-color: #74155d;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .review-form button:hover {
+            background-color: #14041d;
+            color: #fff;
+        }
+
+        #review-stars span {
+            font-size: 24px;
+            color: #666;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: color 0.2s;
+        }
+
+        #review-stars span:hover,
+        #review-stars span.highlighted {
+            color: #ffcc00;
         }
     </style>
     <script src="/swad/js/CartManager.js"></script>
@@ -148,10 +238,10 @@ function formatFileSize($bytes)
                             <p><?= nl2br(htmlspecialchars($game['description'])) ?></p>
                         </div>
 
-                        <?php if (!empty($_SESSION['USERDATA'])): ?>
+                        <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
                             <div class="rating-section" style="margin-top: 20px;">
                                 <h2>Ваша оценка игре</h2>
-                                <div id="rating-stars" data-game-id="<?= $game_id ?>"></div>
+                                <div id="rating-stars" data-game-id="<?= $game_id ?>" data-user-rating="<?= $userRating ?>"></div>
                             </div>
                         <?php else: ?>
                             <div class="rating-section" style="margin-top: 20px; opacity: 0.6;">
@@ -213,24 +303,26 @@ function formatFileSize($bytes)
                             </div>
                         <?php endif; ?>
 
-                        <!-- Отзывы (статичные) -->
                         <div class="reviews-section">
                             <h2>Отзывы игроков</h2>
-                            <h3>Отзывы пока не работают</h3>
-                            <!-- <div class="review-card">
-                                <div class="review-header">
-                                    <div class="review-author">
-                                        <div class="author-avatar"></div>
-                                        <div>
-                                            <h3>Игрок123</h3>
-                                            <div>★ 10</div>
-                                        </div>
+                            <div id="reviews-container">
+                                <!-- Здесь JS добавляет отзывы -->
+                                <p>Загрузка отзывов...</p>
+                            </div>
+                            <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
+                                <div class="review-form" style="margin-top: 30px;">
+                                    <h2>Оставить отзыв</h2>
+                                    <textarea id="review-text" placeholder="Напишите ваш отзыв... Мат, спам и оскорбления будут удалены модераторами" rows="4"></textarea>
+                                    <div style="margin-top:10px;">
+                                        <label>Ваша оценка: </label>
+                                        <div id="review-stars" style="display:inline-block;"></div>
                                     </div>
-                                    <div class="review-date">19.06.2025</div>
+                                    <button class="btn" style="margin-top:10px;" id="submit-review">Отправить</button>
                                 </div>
-                                <p>Невероятная игра! Сюжет затягивает с первых минут, графика на высоте, а саундтрек просто бомбический. Потратил уже 10 часов и не могу оторваться.</p>
-                            </div> -->
+                            <?php endif; ?>
+
                         </div>
+
                     </div>
 
                     <div class="game-sidebar">
@@ -452,6 +544,176 @@ function formatFileSize($bytes)
                             alert('Ошибка: ' + data.error);
                         }
                     });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameId = <?= $game_id ?>;
+            const reviewsContainer = document.getElementById('reviews-container');
+
+            fetch(`/swad/controllers/get_reviews.php?game_id=${gameId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const reviewsContainer = document.getElementById('reviews-container');
+
+                    if (!data.success) {
+                        reviewsContainer.innerHTML = '<p>Не удалось загрузить отзывы.</p>';
+                        return;
+                    }
+
+                    const reviews = data.reviews;
+                    if (reviews.length === 0) {
+                        reviewsContainer.innerHTML = '<p>Отзывы пока отсутствуют. Будьте первым!</p>';
+                    } else {
+                        reviewsContainer.innerHTML = '';
+                        let userHasReview = false;
+
+                        reviews.forEach(review => {
+                            if (review.user_id == <?= $_SESSION['USERDATA']['id'] ?? 0 ?>) {
+                                userHasReview = true;
+                            }
+                            const div = document.createElement('div');
+                            div.className = 'review-card';
+                            div.innerHTML = `
+                    <div class="review-header">
+                        <div class="review-author">
+                            <div class="author-avatar">
+                                <img style="width: 100%; border-radius: 10000px;" src="${review.profile_picture || '/swad/static/img/logo_new.png'}" alt="${review.username}">
+                            </div>
+                            <div>
+                                <h3>${review.username || "Аноним"}</h3>
+                                <div>★ ${review.rating}</div>
+                            </div>
+                        </div>
+                        <div class="review-date">${new Date(review.created_at).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}</div>
+                    </div>
+                    <p>${review.text}</p>
+                `;
+                            reviewsContainer.appendChild(div);
+                        });
+
+                        // После загрузки отзывов
+                        if (userHasReview) {
+                            const form = document.querySelector('.review-form');
+                            if (form) {
+                                const textarea = form.querySelector('#review-text');
+                                const stars = form.querySelectorAll('#review-stars span');
+                                const button = form.querySelector('#submit-review');
+
+                                if (textarea) textarea.disabled = true;
+                                stars.forEach(s => s.style.pointerEvents = 'none');
+                                if (button) button.disabled = true;
+
+                                const notice = document.createElement('p');
+                                notice.textContent = 'Спасибо! Ваш отзыв принят.';
+                                notice.style.color = '#ffcc00';
+                                form.innerHTML = '';
+                                form.appendChild(notice);
+                            }
+                        }
+
+                    }
+                });
+
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const reviewStars = document.getElementById('review-stars');
+            const submitBtn = document.getElementById('submit-review');
+            let selectedRating = 10; // по умолчанию
+
+            if (reviewStars) {
+                // Генерируем звёздочки
+                for (let i = 1; i <= 10; i++) {
+                    const star = document.createElement('span');
+                    star.textContent = '★';
+                    star.dataset.value = i;
+                    star.addEventListener('mouseover', () => highlightStars(i));
+                    star.addEventListener('mouseout', () => highlightStars(selectedRating));
+                    star.addEventListener('click', () => {
+                        selectedRating = i;
+                        highlightStars(selectedRating);
+                    });
+                    reviewStars.appendChild(star);
+                }
+                highlightStars(selectedRating);
+
+                function highlightStars(n) {
+                    Array.from(reviewStars.children).forEach((s, idx) => {
+                        s.classList.toggle('highlighted', idx < n);
+                    });
+                }
+            }
+
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => {
+                    const text = document.getElementById('review-text').value.trim();
+                    if (!text) {
+                        alert('Введите текст отзыва!');
+                        return;
+                    }
+
+                    fetch('/swad/controllers/submit_review.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `game_id=<?= $game_id ?>&rating=${selectedRating}&text=${encodeURIComponent(text)}`
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Добавляем отзыв сразу в контейнер
+                                const reviewsContainer = document.getElementById('reviews-container');
+                                const div = document.createElement('div');
+                                div.className = 'review-card';
+                                const now = new Date();
+                                const reviewDate = new Date(review.created_at.replace(' ', 'T'));
+                                const dateStr = reviewDate.toLocaleString('ru-RU', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+
+                                div.innerHTML = `
+                        <div class="review-header">
+                            <div class="review-author">
+                                <div class="author-avatar">
+                                    <img style="width: 100%; border: 10000px;" src="<?= !empty($_SESSION['USERDATA']['']) ? $_SESSION['USERDATA']['avatar'] : 'swad/static/img/logo_new.png' ?>" alt="<?= $_SESSION['USERDATA']['profile_picture'] ?>">
+                                </div>
+                                <div>
+                                    <h3><?= $_SESSION['USERDATA']['username'] ?></h3>
+                                    <div>★ ${selectedRating}</div>
+                                </div>
+                            </div>
+                            <<div class="review-date">${dateStr}</div>
+
+                        </div>
+                        <p>${text}</p>
+                    `;
+                                if (reviewsContainer.querySelector('p')?.textContent.includes('Отзывы пока отсутствуют')) {
+                                    reviewsContainer.innerHTML = '';
+                                }
+                                reviewsContainer.prepend(div);
+
+                                // Очистка формы
+                                document.getElementById('review-text').value = '';
+                                selectedRating = 10;
+                                highlightStars(selectedRating);
+                            } else {
+                                alert('Ошибка: ' + data.error);
+                            }
+                        })
+                        .catch(err => console.error(err));
+                });
             }
         });
     </script>

@@ -47,18 +47,6 @@ class Game
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // public function getRating($gameId)
-    // {
-    //     $stmt = $this->db->connect()->prepare("
-    //     SELECT AVG(rating) as avg_rating 
-    //     FROM reviews 
-    //     WHERE game_id = ?
-    // ");
-    //     $stmt->execute([$gameId]);
-    //     $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    //     return $result['avg_rating'] ? round($result['avg_rating'], 1) : 0;
-    // }
-
     // 09.11.2025 (с) Alexander Livanov
     public function addRating($gameId, $userId, $rating)
     {
@@ -96,4 +84,31 @@ class Game
         $stmt->execute([$gameId, $userId]);
         return (bool)$stmt->fetchColumn();
     }
+
+    public function getReviews($game_id)
+    {
+        $stmt = $this->db->connect()->prepare("SELECT u.username, u.profile_picture, r.rating, r.text, r.created_at
+                                  FROM game_reviews r
+                                  JOIN users u ON r.user_id = u.id
+                                  WHERE r.game_id = ?");
+        $stmt->execute([$game_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function userHasReview($gameId, $userId)
+    {
+        $stmt = $this->db->connect()->prepare("SELECT 1 FROM game_reviews WHERE game_id = ? AND user_id = ?");
+        $stmt->execute([$gameId, $userId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    public function submitReview($gameId, $userId, $rating, $text)
+    {
+        $stmt = $this->db->connect()->prepare("
+            INSERT INTO game_reviews (game_id, user_id, rating, text, created_at)
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+        return $stmt->execute([$gameId, $userId, $rating, $text]);
+    }
+    
 }

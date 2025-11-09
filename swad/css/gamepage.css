@@ -154,6 +154,7 @@ h2:after {
 .game-logo {
     width: 180px;
     height: 180px;
+    object-fit: cover;
     border-radius: 25px;
     border: 5px solid white;
     background: var(--secondary);
@@ -162,6 +163,10 @@ h2:after {
     justify-content: center;
     font-size: 4rem;
     flex-shrink: 0;
+}
+
+#rating-stars {
+    width: 52px;
 }
 
 .game-info-header {
