@@ -35,9 +35,11 @@ if ($curr_user_org['status'] != 'active') {
                 <!-- Баннер в профиле -->
                 <img src="/swad/static/img/DD.svg" style="padding: 2rem; background-color: black; filter: brightness(20%)">
             </div>
-            <img class="circle" src="<?= $curr_user_data[6] ?>">
+            <img class="circle" src="<?= $_SESSION['USERDATA']['profile_picture'] ?>">
             <span class="white-text">Добро пожаловать,</span>
             <span class="white-text"><?= $curr_user->getUsername($_SESSION['USERDATA']['telegram_id']); ?></span>
+            <span class="white-text"><a href="/me" style="color: white; border: 1px solid white; border-radius: 15px; margin-bottom: 5px;">← Назад, в профиль</a></span>
+
         </div>
     </li>
 

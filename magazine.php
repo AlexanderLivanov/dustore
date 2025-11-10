@@ -512,14 +512,14 @@
             box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
         }
 
-        .modal-book {
+        /* .modal-book {
             width: 120px;
             height: 200px;
             border-radius: 8px;
             margin-bottom: 30px;
             box-shadow: 0 15px 40px rgba(255, 0, 110, 0.3);
             animation: bookBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
+        } */
 
         @keyframes bookBounce {
             0% {
@@ -593,28 +593,11 @@
             <div class="shelf">
                 <div class="shelf-bar"></div>
                 <div class="books">
-                    <div class="book polychrome" data-id="1" data-title="RE:START" data-text="1-й выпуск" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22><rect fill=%22%238B0000%22 width=%22200%22 height=%22300%22/><text x=%2250%25%22 y=%2250%25%22 font-size=%2240%22 fill=%22%23fff%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>⚔️</text></svg>')">
+                    <div class="book polychrome" data-id="1" data-title="RE:START" data-text="Самый 1-й выпуск. Должен выйти в декабре" style="background-image: url('/swad/static/img/Slice\ 6.jpg')">
+                        <!-- TODO: в .modal-book указаны стили и background-image: src() -->
                         <div class="book-cover polychrome">
-                            <div class="book-content">
-                                <!-- <span class="book-icon">📖</span>
-                                <div class="book-title">Война<br>и мир</div> -->
-                            </div>
                         </div>
                     </div>
-                    <!-- <div class="book default" data-id="2" data-title="Преступление и наказание" data-text="Психологический роман Достоевского о моральных дилеммах и духовном возрождении." style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22><rect fill=%22%234B0082%22 width=%22200%22 height=%22300%22/><text x=%2250%25%22 y=%2250%25%22 font-size=%2240%22 fill=%22%23fff%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>🔮</text></svg>')">
-                        <div class="book-cover">
-                            <div class="book-content">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="book default" data-id="3" data-title="Мастер и Маргарита" data-text="Шедевр Булгакова, сочетающий фантастику, сатиру и реальность советской эпохи." style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22><rect fill=%22%23DAA520%22 width=%22200%22 height=%22300%22/><text x=%2250%25%22 y=%2250%25%22 font-size=%2240%22 fill=%22%23fff%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>✨</text></svg>')">
-                        <div class="book-cover">
-                            <div class="book-content">
-                                <span class="book-icon"></span>
-                                <div class="book-title"><br><br><br><br><br><br></div>
-                            </div>
-                        </div>
-                    </div> -->
                 </div>
             </div>
 

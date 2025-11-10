@@ -596,7 +596,7 @@ function formatFileSize($bytes)
                                 <img style="width: 100%; border-radius: 10000px;" src="${review.profile_picture || '/swad/static/img/logo.svg'}" alt="${review.username}">
                             </div>
                             <div>
-                                <h3>${review.username || "Аноним"}</h3>
+                                <h3>${"<a style='color: white;' href='/player/" + review.username + "'>" + review.username + "</a>" || "Аноним"}</h3>
                                 <div>★ ${review.rating}</div>
                             </div>
                         </div>
