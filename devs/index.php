@@ -34,7 +34,18 @@ $org = new Organization();
   $curr_user_org_data = $curr_user->getOrgData($_SESSION['studio_id']);
   $_SESSION['STUDIODATA'] = $curr_user_org_data;
 
+  $db = new Database();
+  $conn = $db->connect();
+  $studio_id = $_SESSION['studio_id'];
 
+  $sql = "SELECT COUNT(*) AS added
+        FROM library l
+        INNER JOIN games g ON l.game_id = g.id
+        WHERE g.developer = :studio_id";
+
+  $stmt = $conn->prepare($sql);  
+  $stmt->execute(['studio_id' => $studio_id]); 
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
   ?>
   <main>
     <section class="content">
@@ -54,7 +65,7 @@ $org = new Organization();
             <div class="icon">
               <i class="ion ion-person-add"></i>
             </div>
-            <a href="#" class="small-box-footer" class="animsition-link">Управление <i class="fa fa-arrow-circle-right"></i></a>
+            <a href="staff" class="small-box-footer" class="animsition-link">Управление <i class="fa fa-arrow-circle-right"></i></a>
           </div>
         </div><!-- ./col -->
         <div class="col l3 s6">
@@ -74,7 +85,7 @@ $org = new Organization();
           <!-- small box -->
           <div class="small-box bg-yellow">
             <div class="inner">
-              <h3><?= 0 ?></h3>
+              <h3><?= $row['added'] ?></h3>
               <p>Играют в ваши игры</p>
             </div>
             <div class="icon">

@@ -92,8 +92,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && empty($error)) {
                         'pre_alpha_program' => $preAlpha,
                         'bank_name' => $bank_name,
                         'BIC' => $BIC,
-                        'acc_num' => $account_number, // Исправлено: было 'account_number'
-                        'INN' => $INN // Исправлено: было 'tax_id'
+                        'acc_num' => $account_number, 
+                        'INN' => $INN 
                     ];
 
                     $columns = implode(', ', array_keys($data));

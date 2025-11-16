@@ -20,6 +20,8 @@ $curr_user = new User();
   <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="assets/css/custom.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
   <style>
     .preview-container {
       margin-top: 15px;
@@ -66,17 +68,17 @@ $curr_user = new User();
       border-radius: 4px;
     }
   </style>
-  <script src="https://cdn.tiny.cloud/1/qz8i2t9v3yqmvp0hyjlv95kybrn89u3py39nj1efjraq0e9p/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+  <!-- <script src="assets/js/tinymce.min.js"></script> -->
 </head>
 
 <body>
-  <script>
+  <!-- <script>
     tinymce.init({
       selector: 'textarea',
       plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
       toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
     });
-  </script>
+  </script> -->
   <?php
   require_once('../swad/static/elements/sidebar.php');
 
@@ -335,9 +337,11 @@ $curr_user = new User();
 
           <div class="row">
             <div class="col s12">
+              <label>Описание студии</label>
+
               <div class="input-field">
-                <textarea name="description" class="materialize-textarea" required><?= htmlspecialchars($studio_info['description']) ?></textarea>
-                <label>Описание студии</label>
+                <div id="editor"><?= $studio_info['description'] ?></div>
+                <input type="hidden" name="description" id="description">
               </div>
             </div>
           </div>
@@ -385,6 +389,16 @@ $curr_user = new User();
       updatePreview('avatar_link', 'avatar_preview');
       updatePreview('banner_link', 'banner_preview');
     });
+  </script>
+  <script>
+    var quill = new Quill('#editor', {
+      theme: 'snow'
+    });
+
+    // Копируем HTML в скрытое поле при отправке
+    document.querySelector('form').onsubmit = function() {
+      document.querySelector('#description').value = quill.root.innerHTML;
+    };
   </script>
 </body>
 

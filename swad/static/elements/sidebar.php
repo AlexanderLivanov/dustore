@@ -30,7 +30,7 @@ if ($curr_user_org['status'] != 'active') {
 
 <ul id="slide-out" class="side-nav fixed z-depth-4">
     <li style="line-height: 36px;">
-        <div class="userView">
+        <div class="userView" style="padding: 32px 32px 10px 10px">
             <div class="background">
                 <!-- Баннер в профиле -->
                 <img src="/swad/static/img/DD.svg" style="padding: 2rem; background-color: black; filter: brightness(20%)">
@@ -50,9 +50,10 @@ if ($curr_user_org['status'] != 'active') {
 
     <li><a class="subheader">Управление</a></li>
     <li><a href="mystudio"><i class="material-icons pink-item">apartment</i>Моя студия</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">groups</i>Сотрудники</a></li>
+    <li><a href="staff"><i class="material-icons pink-item">groups</i>Сотрудники</a></li>
     <li><a href="projects"><i class="material-icons pink-item">work</i>Проекты</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">note_add</i>Отзывы</a></li>
+    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">note_add</i>Рецензии</a></li>
+    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">area_chart</i>Аналитика</a></li>
     <li>
         <div class="divider"></div>
     </li>
@@ -60,11 +61,10 @@ if ($curr_user_org['status'] != 'active') {
     <li><a href="new"><i class="material-icons pink-item">add</i>Создать новый</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">group</i>Исполнители</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">list_alt</i>Задачи</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">reviews</i>Отзывы</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">stars</i>Рейтинг игры</a></li>
+    <li><a href=""><i class="material-icons pink-item">reviews</i>Отзывы</a></li>
+    <li><a href=""><i class="material-icons pink-item">stars</i>Рейтинг игры</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">currency_ruble</i>Монетизация</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">bug_report</i>Написать отчёт</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">campaign</i>Создать событие</a></li>
     <li>
         <div class="divider"></div>
     </li>
