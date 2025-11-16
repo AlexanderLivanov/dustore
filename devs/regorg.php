@@ -274,7 +274,7 @@ Telegram: <i>" . $data['tg_link'] . "</i>", true, "https://dustore.ru/devs/recen
                         </div>
 
                         <div class="form-group">
-                            <label for="team_size" required>Размер команды</label>
+                            <label for="team_size" class="required">Размер команды</label>
                             <select id="team_size" name="team_size">
                                 <option value="">Выберите размер команды</option>
                                 <option value="1">1 человек (инди-разработчик)</option>
