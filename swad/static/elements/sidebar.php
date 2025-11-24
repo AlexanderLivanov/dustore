@@ -63,7 +63,7 @@ if ($curr_user_org['status'] != 'active') {
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">list_alt</i>Задачи</a></li>
     <li><a href=""><i class="material-icons pink-item">reviews</i>Отзывы</a></li>
     <li><a href=""><i class="material-icons pink-item">stars</i>Рейтинг игры</a></li>
-    <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">currency_ruble</i>Монетизация</a></li>
+    <li><a href="monetization"><i class="material-icons pink-item">currency_ruble</i>Монетизация</a></li>
     <li><a href="" class="disabled-link" aria-disabled="true"><i class="material-icons pink-item">bug_report</i>Написать отчёт</a></li>
     <li>
         <div class="divider"></div>

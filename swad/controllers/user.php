@@ -376,28 +376,24 @@ class User
         ];
     }
 
-    public function getUserCart(){
-
-    }
-}
-
-class Moderator extends User 
-{
-    public function getAllPendingOrgs(){
+    // 23.11.2025 (c) Alexander Livanov
+    public function getUserItems($user_id){
         $stmt = $this->db->prepare(
-            "SELECT     
-                            o.id AS organization_id,
-                            o.name AS organization_name,
-                            o.created_at AS created_at
-                            r.name AS user_role,
-                            uo.status 
-                        FROM user_organization uo
-                        JOIN organizations o ON o.id = uo.organization_id
-                        JOIN roles r ON r.id = uo.role_id
-                        WHERE status = 'pending' ORDER BY created_at DESC;"
+            "SELECT * FROM user_items WHERE user_id = :id LIMIT 1;"
         );
-        $stmt->execute();
+        $stmt->execute(['id' => $user_id]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateUserItems($user_id, $game_id){
+        $stmt = $this->db->prepare("
+            INSERT INTO library (player_id, game_id, purchased, date)
+            SELECT ?, ?, 1, NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM library WHERE player_id = ? AND game_id = ?
+            )
+        ");
+        $stmt->execute([$user_id, $game_id, $user_id, $game_id]);
     }
 }

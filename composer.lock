@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "77df7ff491dd822b115d8c15a9a4717b",
+    "content-hash": "611702a6e71f50801d2a2dfa4b688d63",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -751,6 +751,56 @@
                 "source": "https://github.com/ralouphie/getallheaders/tree/develop"
             },
             "time": "2019-03-08T08:55:37+00:00"
+        },
+        {
+            "name": "robokassa/sdk-php",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/robokassa/sdk-php.git",
+                "reference": "44cbcb2b4a18681c80e2d4101311c06afd26aef4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/robokassa/sdk-php/zipball/44cbcb2b4a18681c80e2d4101311c06afd26aef4",
+                "reference": "44cbcb2b4a18681c80e2d4101311c06afd26aef4",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Robokassa\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Robokassa",
+                    "email": "support@robokassa.ru"
+                }
+            ],
+            "description": "SDK для работы с Robokassa в PHP",
+            "homepage": "https://robokassa.com/",
+            "keywords": [
+                "payment",
+                "robokassa",
+                "sdk"
+            ],
+            "support": {
+                "issues": "https://github.com/robokassa/sdk-php/issues",
+                "source": "https://github.com/robokassa/sdk-php/tree/1.0.1"
+            },
+            "time": "2025-09-29T16:15:58+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",

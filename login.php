@@ -1,5 +1,4 @@
 <?php
-// Start the session
 session_start();
 
 if (isset($_SESSION['logged-in']) && $_SESSION['logged-in'] == TRUE) {
@@ -12,26 +11,9 @@ if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
     define('BOT_USERNAME', 'dustore_auth_local_bot');
 }
 
-// Обработка входа по ключевой фразе
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pp_login'])) {
-    require_once('swad/controllers/user.php');
-    require_once('swad/controllers/ppauth.php');
-
-    $username = trim($_POST['username']);
-    $passphrase = trim($_POST['passphrase']);
-
-    // Пытаемся войти по ключевой фразе
-    $result = ppLogin($username, $passphrase);
-
-    if ($result['success']) {
-        // Успешный вход, перенаправляем
-        die(header('Location: /me'));
-    } else {
-        $error_message = $result['message'];
-    }
-}
+// обработка входа/регистрации
+require_once('swad/controllers/email_auth.php');
 ?>
-
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -40,63 +22,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pp_login'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход</title>
     <link rel="stylesheet" href="swad/css/login.css">
-    <?php require_once('swad/controllers/ymcounter.php'); ?>
 </head>
 
 <body>
     <div class="container">
+
         <div class="toggle-container">
-            <button class="toggle-btn active" onclick="showForm('login')">Войти через Telegram</button>
-            <button class="toggle-btn" onclick="showForm('register')">Войти по ключевой фразе</button>
+            <button class="toggle-btn active" onclick="showForm('emailLogin')">Вход по Email</button>
+            <button class="toggle-btn" onclick="showForm('login')">Telegram</button>
+            <button class="toggle-btn" onclick="showForm('emailRegister')">Регистрация</button>
         </div>
 
-        <form id="loginForm" class="form-container active">
-            Мы за современый и безопасный подход к созданию аккаунтов. Вы можете войти через Telegram и использовать этот аккаунт для всех сервисов в экосистеме DustEcoSystem (DES)
+        <!-- Вход по email -->
+        <form id="emailLoginForm" class="form-container active" method="POST">
+            <?php if (!empty($login_error)) echo "<div class='error-message'>$login_error</div>"; ?>
+
+            <input type="hidden" name="action" value="login">
+
+            <div class="form-group"><input type="email" name="email" placeholder="Email" required></div>
+            <div class="form-group"><input type="password" name="password" placeholder="Пароль" required></div>
+
+            <button type="submit">Войти</button>
+        </form>
+
+        <!-- Вход через Телеграм -->
+        <form id="loginForm" class="form-container">
+            <p>Вы можете войти через Telegram и использовать этот аккаунт в экосистеме DustEcoSystem.</p>
             <div class="form-group" style="text-align: center; margin-top: 35px;">
-                <script async src="https://telegram.org/js/telegram-widget.js" data-telegram-login="<?= BOT_USERNAME ?>" data-size="large" data-auth-url="swad/controllers/auth.php"></script>
+                <script async src="https://telegram.org/js/telegram-widget.js"
+                    data-telegram-login="<?= BOT_USERNAME ?>"
+                    data-size="large"
+                    data-auth-url="swad/controllers/auth.php"></script>
             </div>
         </form>
 
-        <form id="registerForm" class="form-container" method="POST" action="">
-            <?php if (isset($error_message)): ?>
-                <div class="error-message"><?= $error_message ?></div>
-            <?php endif; ?>
+        <!-- Регистрация -->
+        <form id="emailRegisterForm" class="form-container" method="POST">
+            <?php if (!empty($register_error)) echo "<div class='error-message'>$register_error</div>"; ?>
 
-            <div class="form-group">
-                <input type="text" name="username" placeholder="Имя пользователя" required>
-            </div>
-            <div class="form-group">
-                <input type="password" name="passphrase" placeholder="Passphrase" required>
-            </div>
-            <button type="submit" name="pp_login">Войти</button>
+            <input type="hidden" name="action" value="register">
 
-            <div class="form-footer">
-                <p>Нет аккаунта? <a href="/login">Войдите через Telegram</a></p>
-                <p>Забыли passphrase? Увы, в таком случае аккаунт восстановлению не подлежит :(</p>
+            <div class="form-group"><input type="text" name="username" placeholder="Имя пользователя" required></div>
+            <div class="form-group"><input type="email" name="email" placeholder="Email" required></div>
+            <div class="form-group"><input type="password" name="password" placeholder="Пароль" required></div>
+
+            <div class="dropdown">
+                <p onclick="toggleExtra()">Дополнительные данные ▼</p>
+                <div id="extraFields" style="display: none;">
+                    Имя
+                    <div class="form-group"><input type="text" name="first_name" placeholder="Имя" value="Неопознанный"></div>
+                    Фамилия
+                    <div class="form-group"><input type="text" name="last_name" placeholder="Фамилия" value="Игрок"></div>
+                    <div class="form-group"><input type="text" name="country" placeholder="Страна"></div>
+                    <div class="form-group"><input type="text" name="city" placeholder="Город"></div>
+                    <div class="form-group"><input type="text" name="website" placeholder="Сайт (необязательно)"></div>
+                </div>
             </div>
+
+            <button type="submit">Зарегистрироваться</button>
         </form>
+
     </div>
 
     <script>
         function showForm(formType) {
-            document.querySelectorAll('.toggle-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            document.getElementById('loginForm').classList.remove('active');
-            document.getElementById('registerForm').classList.remove('active');
+            document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));
             document.getElementById(formType + 'Form').classList.add('active');
         }
 
-        // Показать нужную форму при загрузке
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('method') === 'passphrase') {
-                showForm('register');
-            }
+        function toggleExtra() {
+            const box = document.getElementById('extraFields');
+            box.style.display = box.style.display === "none" ? "block" : "none";
+        }
+
+        // Если ?method=email
+        document.addEventListener('DOMContentLoaded', () => {
+            const query = new URLSearchParams(window.location.search);
+            if (query.get('method') === 'email') showForm('emailLogin');
         });
     </script>
+
 </body>
 
 </html>

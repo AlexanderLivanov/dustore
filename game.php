@@ -3,6 +3,7 @@ session_start();
 require_once('swad/config.php');
 require_once('swad/controllers/game.php');
 
+
 $db = new Database();
 $pdo = $db->connect();
 
@@ -354,13 +355,86 @@ function formatFileSize($bytes)
                                     <!-- Будет заполнено JavaScript -->
                                 </div>
 
-                                <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button>
+                                <?php
+                                $stmt = $db->connect()->prepare("SELECT * FROM studios where name = ?");
+                                $stmt->execute([$game['studio_name']]);
+                                $studio_payment_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                // 2.
+                                // Оплата заданной суммы с выбором валюты на сайте ROBOKASSA
+                                // Payment of the set sum with a choice of currency on site ROBOKASSA
+
+                                // регистрационная информация (логин, пароль #1)
+                                // registration info (login, password #1)
+                                $mrh_login = $studio_payment_data['merchant_login'];
+                                $mrh_pass1 = $studio_payment_data['merchant_password'];
+
+                                // номер заказа
+                                // number of order
+                                $inv_id = time();
+                                $IsTest = 1;
+
+                                // описание заказа
+                                // order description
+                                $inv_desc = $game['description'];
+
+                                // сумма заказа
+                                // sum of order
+                                $out_summ = $game['price'];
+
+                                // тип товара
+                                // code of goods
+                                $shp_item = $game_id;
+
+                                // предлагаемая валюта платежа
+                                // default payment e-currency
+                                $in_curr = "";
+
+                                // язык
+                                // language
+                                $culture = "ru";
+
+                                // формирование подписи
+                                // generate signature
+                                $crc  = md5("$mrh_login:$out_summ:$inv_id:$mrh_pass1:Shp_item=$shp_item");
+
+                                // форма оплаты товара
+                                // payment form
+                                print "<html>" .
+                                    "<form action='https://auth.robokassa.ru/Merchant/Index.aspx' method=POST>" .
+                                    "<input type=hidden name=MerchantLogin value=$mrh_login>" .
+                                    "<input type=hidden name=OutSum value=$out_summ>" .
+                                    "<input type=hidden name=InvId value=$inv_id>" .
+                                    "<input type=hidden name=Description value='$inv_desc'>" .
+                                    "<input type=hidden name=SignatureValue value=$crc>" .
+                                    "<input type=hidden name=Shp_item value='$shp_item'>" .
+                                    "<input type=hidden name=IncCurrLabel value=$in_curr>" .
+                                    "<input type=hidden name=Culture value=$culture>" .
+                                    "<input type=hidden name=IsTest value=$IsTest>" .
+                                    "<input type=submit value='Купить' class='btn' style='width: 100%; margin-bottom: 15px;'>" .
+                                    "</form></html>";
+
+                                //     "<input type=submit value='Купить' class='btn' style='width: 100%; margin-bottom: 15px;'>" .
+                                ?>
+
+                                <!-- <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button> -->
 
                                 <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
                                     <?php if ($game['in_subscription']): ?>
-                                        <p>✔️ Есть в подписке</p>
+                                        <p>✔️ Есть в подписке</p><br>
+
                                     <?php endif; ?>
-                                    <p>✔️ Высокий рейтинг</p>
+                                    <!-- <p>✔️ Высокий рейтинг</p> -->
+
+                                    <?php if (!empty($game['game_zip_size'])): ?>
+                                        <div style="font-size: 0.9rem; opacity: 0.8;">
+                                            Размер: <?= htmlspecialchars(formatFileSize((int)$game['game_zip_size'])) ?>
+                                            <br>
+                                            Купили: <?= $downloaded ?> раз(а)
+                                        </div>
+                                    <?php else: ?>
+                                        <p style="color: orange;">Файл игры пока не загружен</p>
+                                    <?php endif; ?>
                                 </div>
 
                             <?php else: ?>
@@ -392,7 +466,7 @@ function formatFileSize($bytes)
 
 
                         <!-- Информация о разработчике -->
-                        <div class="developer-info">
+                        <div class="developer-info" onclick="location.href='/d/<?= htmlspecialchars($game['studio_slug']) ?>'" style="cursor: pointer;">
                             <div class="developer-logo">🏢</div>
                             <div>
                                 <h3><?= htmlspecialchars($game['studio_name']) ?></h3>
@@ -403,6 +477,104 @@ function formatFileSize($bytes)
                         <button class="btn btn-secondary" style="width: 100%; margin-bottom: 20px;" onclick="location.href='/d/<?= htmlspecialchars($game['studio_slug']) ?>'">
                             Все игры разработчика
                         </button>
+
+                        <!-- Кнопка для просмотра оферты -->
+                        <button class="btn btn-secondary" style="width: 100%; margin-bottom: 20px;" onclick="showOfferModal()">
+                            Оферта разработчика
+                        </button>
+
+                        <!-- Модальное окно с офертой -->
+                        <div id="offerModal" class="modal">
+                            <div class="modal-content">
+                                <span class="close" onclick="closeOfferModal()">&times;</span>
+
+                                <div class="offer-content">
+                                    <h2>ПУБЛИЧНАЯ ОФЕРТА</h2>
+
+                                    <div>
+                                        <p><strong>г. <?= htmlspecialchars($game['studio_city'] ?? 'Москва') ?></strong></p>
+                                        <p><strong><?= date('d.m.Y', strtotime($game['offer_date'] ?? 'now')) ?></strong></p>
+                                    </div>
+
+                                    <div>
+                                        <p><strong><?= htmlspecialchars($game['studio_name']) ?></strong></p>
+                                        <p>ИНН: <?= htmlspecialchars($game['studio_inn'] ?? 'укажите ИНН') ?></p>
+                                        <p>КПП: <?= htmlspecialchars($game['studio_kpp'] ?? 'укажите КПП') ?></p>
+                                        <p>Юридический адрес: <?= htmlspecialchars($game['studio_legal_address'] ?? 'укажите адрес') ?></p>
+                                        <p>Расчетный счет: <?= htmlspecialchars($game['studio_bank_account'] ?? 'укажите расчетный счет') ?></p>
+                                        <p>Банк: <?= htmlspecialchars($game['studio_bank_name'] ?? 'укажите банк') ?></p>
+                                        <p>БИК: <?= htmlspecialchars($game['studio_bik'] ?? 'укажите БИК') ?></p>
+                                        <p>Корр. счет: <?= htmlspecialchars($game['studio_correspondent_account'] ?? 'укажите корр. счет') ?></p>
+                                    </div>
+
+                                    <div>
+                                        <h3>1. ПРЕДМЕТ ОФЕРТЫ</h3>
+                                        <p>1.1. <?= htmlspecialchars($game['studio_name']) ?> (далее — «Продавец») предлагает заключить договор розничной купли-продажи цифрового товара (далее — «Договор») на изложенных ниже условиях.</p>
+                                        <p>1.2. Цифровым товаром признается игра «<?= htmlspecialchars($game['title']) ?>» в цифровой форме, не имеющая материального носителя.</p>
+                                    </div>
+
+                                    <div>
+                                        <h3>2. МОМЕНТ ЗАКЛЮЧЕНИЯ ДОГОВОРА</h3>
+                                        <p>2.1. Текст данного Договора является публичной офертой.</p>
+                                        <p>2.2. Акцептом оферты является совершение Покупателем действий, направленных на осуществление платежа за Товар.</p>
+                                        <p>2.3. Акцепт оферты означает, что Покупатель согласен со всеми положениями настоящего Договора.</p>
+                                    </div>
+
+                                    <div>
+                                        <h3>3. ЦЕНА ТОВАРА И ПОРЯДОК РАСЧЕТОВ</h3>
+                                        <p>3.1. Цена Товара указывается на странице Товара в момент оформления заказа.</p>
+                                        <p>3.2. Расчеты между сторонами осуществляются с использованием платежного сервиса Робокасса.</p>
+                                        <p>3.3. Моментом оплаты считается поступление денежных средств на расчетный счет Продавца.</p>
+                                    </div>
+
+                                    <div>
+                                        <h3>4. ПЕРЕДАЧА ТОВАРА</h3>
+                                        <p>4.1. Товар передается Покупателю в электронной форме путем предоставления доступа к скачиванию файлов или активации лицензионного ключа.</p>
+                                        <p>4.2. Моментом исполнения обязательств Продавца по передаче Товара считается момент предоставления доступа к Товару.</p>
+                                    </div>
+
+                                    <div>
+                                        <h3>5. ВОЗВРАТ ТОВАРА</h3>
+                                        <p>5.1. В соответствии с пунктом 4 статьи 26.1 Закона «О защите прав потребителей» цифровые товары надлежащего качества возврату и обмену не подлежат.</p>
+                                        <p>5.2. Возврат денежных средств осуществляется в случае технической невозможности предоставить оплаченный Товар.</p>
+                                    </div>
+
+                                    <div>
+                                        <h3>6. ЗАКЛЮЧИТЕЛЬНЫЕ ПОЛОЖЕНИЯ</h3>
+                                        <p>6.1. Продавец вправе в одностороннем порядке изменять условия оферты.</p>
+                                        <p>6.2. К отношениям между Покупателем и Продавцом применяется право Российской Федерации.</p>
+                                    </div>
+
+                                    <div>
+                                        <h3>7. РЕКВИЗИТЫ ПРОДАВЦА</h3>
+                                        <p><strong><?= htmlspecialchars($game['studio_name']) ?></strong></p>
+                                        <p>ИНН: <?= htmlspecialchars($game['studio_inn'] ?? 'укажите ИНН') ?></p>
+                                        <p>КПП: <?= htmlspecialchars($game['studio_kpp'] ?? 'укажите КПП') ?></p>
+                                        <p>Адрес: <?= htmlspecialchars($game['studio_legal_address'] ?? 'укажите адрес') ?></p>
+                                        <p>Телефон: <?= htmlspecialchars($game['studio_phone'] ?? 'укажите телефон') ?></p>
+                                        <p>Email: <?= htmlspecialchars($game['studio_email'] ?? 'укажите email') ?></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            function showOfferModal() {
+                                document.getElementById('offerModal').style.display = 'block';
+                            }
+
+                            function closeOfferModal() {
+                                document.getElementById('offerModal').style.display = 'none';
+                            }
+
+                            // Закрытие модального окна при клике вне его
+                            window.onclick = function(event) {
+                                const modal = document.getElementById('offerModal');
+                                if (event.target == modal) {
+                                    closeOfferModal();
+                                }
+                            }
+                        </script>
 
                         <!-- Дополнительная информация -->
                         <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">

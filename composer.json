@@ -1,5 +1,6 @@
 {
     "require": {
-        "aws/aws-sdk-php": "^3.354"
+        "aws/aws-sdk-php": "^3.354",
+        "robokassa/sdk-php": "^1.0"
     }
 }

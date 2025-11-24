@@ -1,52 +1,65 @@
-<?php
+﻿<?php
 require_once('../swad/config.php');
+require_once('../swad/controllers/user.php');
 session_start();
 
 $db = new Database();
 $pdo = $db->connect();
 
-if (!isset($_GET['OutSum'], $_GET['InvId'], $_GET['SignatureValue'])) {
-    die('Неверные параметры запроса');
+$curr_user = new User();
+
+if (empty($_SESSION)) {
+    echo ("<script>window.location.href ='/login';</script>");
 }
 
-// Получаем параметры
-$outSum = $_GET['OutSum'];
-$invId = $_GET['InvId'];
-$signatureValue = $_GET['SignatureValue'];
-$isTest = $_GET['IsTest'] ?? 0;
+// регистрационная информация (пароль #1)
+// registration info (password #1)
+$mrh_pass1 = "UF4oF54w9FNILTdhGzv9";
 
-// Получаем пользовательские параметры
-$userId = $_GET['shp_user_id'] ?? "0";
-$itemId = $_GET['shp_item_id'] ?? null;
+// чтение параметров
+// read parameters
+$out_summ = $_REQUEST["OutSum"];
+$inv_id = $_GET["InvId"];
+$shp_item = $_REQUEST["Shp_item"];
+$crc = $_REQUEST["SignatureValue"];
+$crc = strtoupper($crc);
 
-// Проверяем подпись (используйте ваш секретный ключ для проверки)
-$secretKey = 'a2V7bTCmw2xROVVmX0D0'; // Секретный ключ из Robokassa
-$shpParams = [];
-foreach ($_GET as $key => $value) {
-    if (strpos($key, 'shp_') === 0) {
-        $shpParams[substr($key, 4)] = $value;
+$my_crc = strtoupper(md5("$out_summ:$inv_id:$mrh_pass1:Shp_item=$shp_item"));
+
+// проверка корректности подписи
+// check signature
+if ($my_crc != $crc) {
+    echo "bad sign\n";
+    exit();
+}
+
+// проверка наличия номера счета в истории операций
+// check of number of the order info in history of operations
+$f = @fopen("order.txt", "r+") or die("error");
+
+while (!feof($f)) {
+    $str = fgets($f);
+
+    $str_exp = explode(";", $str);
+    if ($str_exp[0] == "order_num :$inv_id") {
+        echo "Операция прошла успешно\n";
+        echo "Operation of payment is successfully completed\n";
+        echo "\n";
     }
 }
-$expectedSignature = generateSignature($outSum, $invId, $secretKey, $shpParams);
+fclose($f);
 
 
-// Обновляем статус платежа в БД
 try {
     $pdo->beginTransaction();
 
-    // Обновляем статус платежа
     $stmt = $pdo->prepare("UPDATE payments SET status = 'completed', updated_at = NOW() WHERE id = ?");
-    $stmt->execute([$invId]);
+    $stmt->execute([$inv_id]);
 
-    // Добавляем товар пользователю
-    $stmt = $pdo->prepare("INSERT INTO user_items (user_id, item_id, purchase_date) 
-    VALUES (?, ?, NOW()) 
-    ON DUPLICATE KEY UPDATE purchase_date = NOW()");
-    $stmt->execute([$userId, $itemId]);
+    $curr_user->updateUserItems($_SESSION['telegram_id'], $shp_item);
 
-    // Получаем информацию о товаре
     $stmt = $pdo->prepare("SELECT * FROM games WHERE id = ?");
-    $stmt->execute([$itemId]);
+    $stmt->execute([$shp_item]);
     $item = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $pdo->commit();
@@ -54,19 +67,8 @@ try {
     $pdo->rollBack();
     die('Ошибка при обработке платежа: ' . $e->getMessage());
 }
-
-// Функция для генерации подписи (должна быть такая же как в payment.php)
-function generateSignature($outSum, $invId, $secretKey, $shpParams = [])
-{
-    $signature = "{$outSum}:{$invId}:{$secretKey}";
-
-    foreach ($shpParams as $key => $value) {
-        $signature .= ":shp_{$key}={$value}";
-    }
-
-    return md5($signature);
-}
 ?>
+
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -239,12 +241,12 @@ function generateSignature($outSum, $invId, $secretKey, $shpParams = [])
     <div class="payment-container">
         <div class="success-icon animate-in">🎉</div>
         <h1 class="animate-in delay-1">Оплата успешна!</h1>
-        <p class="animate-in delay-1">Ваши игры уже готовы к скачиванию. Приятной игры!</p>
+        <p class="animate-in delay-1">Ваши игры уже в вашей Коллекции. Приятной игры!</p>
 
         <div class="order-details animate-in delay-2">
             <div class="detail-row">
                 <span>Номер заказа:</span>
-                <span>#<?php echo htmlspecialchars($invId); ?></span>
+                <span>#<?php echo $inv_id; ?></span>
             </div>
             <div class="detail-row">
                 <span>Товар:</span>
@@ -256,7 +258,7 @@ function generateSignature($outSum, $invId, $secretKey, $shpParams = [])
             </div>
             <div class="detail-row">
                 <span>Сумма:</span>
-                <span><?php echo number_format($outSum, 0, ',', ' '); ?> ₽</span>
+                <span><?php echo number_format($out_summ, 0, ',', ' '); ?> ₽</span>
             </div>
             <div class="detail-row">
                 <span>Статус:</span>
@@ -265,7 +267,8 @@ function generateSignature($outSum, $invId, $secretKey, $shpParams = [])
         </div>
 
         <div class="animate-in delay-2">
-            <a href="/library" class="btn">Перейти к библиотеке</a>
+            <a href="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'" class="btn">Скачать прямо сейчас!</a>
+            <a href="/library" class="btn btn-secondary">Перейти к библиотеке</a>
             <a href="/explore" class="btn btn-secondary">Посмотреть ещё игры</a>
         </div>
     </div>

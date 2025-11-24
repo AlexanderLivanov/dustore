@@ -7,6 +7,12 @@ $curr_user = new User();
 $db = new Database();
 
 $curr_user->checkAuth();
+
+if (empty($_COOKIE['temp_id'])) {
+    setcookie("temp_id", rand(-10 ** 5, -10 ** 2));
+}
+
+print_r($_COOKIE);
 ?>
 
 <!DOCTYPE html>
@@ -91,7 +97,7 @@ $curr_user->checkAuth();
         </div>
         <div class="section right-section">
             <div class="buttons-right">
-                <button class="button" onclick="location.href='/wallet'"><?= "0 ₽" ?></button>
+                <!-- <button class="button" onclick="location.href='/wallet'"><?= "0 ₽" ?></button> -->
                 <?php
                 $curr_user->checkAuth();
                 if (empty($_SESSION['USERDATA']['telegram_id'])) {
@@ -100,7 +106,7 @@ $curr_user->checkAuth();
                     echo ("</button>");
                 } else {
                     echo ("<button class=\"button\" onclick=\"location.href='/me'\">");
-                    echo ($curr_user->getUsername($_SESSION['USERDATA']['telegram_id']) . "");
+                    echo ($_SESSION['USERDATA']['username']);
                     echo ("</button>");
                 }
                 ?>

@@ -164,8 +164,8 @@ if (isset($_SESSION['USERDATA']['passphrase'])) {
 <body>
     <?php
     if ($curr_user->checkAuth() > 0) {
-        echo ("<script>window.location.replace('/login');</script>");
-        exit;
+        // echo ("<script>window.location.replace('/login');</script>");
+        // exit;
     }
     ?>
 
