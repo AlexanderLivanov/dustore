@@ -4,8 +4,6 @@ require_once('jwt.php');
 
 class User
 {
-    // 22.05.2025: Сделал эти поля публичными, иначе другие классы не могут обращаться к БД
-    // (да, я не умю наследовать классы) (c) Alexander Livanov
     public $db;
     public $table = 'users';
 
@@ -15,7 +13,8 @@ class User
         $this->db = $database->connect();
     }
 
-    public function getID($telegram_id){
+    public function getID($telegram_id)
+    {
         $query = 'SELECT id FROM ' . $this->table . ' WHERE telegram_id = :telegram_id LIMIT 1';
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':telegram_id', $telegram_id);
@@ -36,8 +35,6 @@ class User
         return $result ? $result['telegram_username'] : null;
     }
 
-    // 01.09.2025 (c) Alexander Livanov - new 
-
     public function getUserByUsername($username)
     {
         try {
@@ -52,11 +49,9 @@ class User
         }
     }
 
-    // end new
-
-    // 19.05.2025 (c) Alexander Livanov
-    public function printUserPrivileges($role){
-        switch($role){
+    public function printUserPrivileges($role)
+    {
+        switch ($role) {
             case 'creator':
                 echo "Создатель этого мира";
                 break;
@@ -80,28 +75,39 @@ class User
         }
     }
 
-    public function getUserRole($id, $type){
-        if($type == "in_company"){
+    public function getUserRole($id, $type)
+    {
+        if ($type == "in_company") {
             $stmt = $this->db->prepare("
                 SELECT `role_id` FROM user_organization WHERE user_id = ?
             ");
             $stmt->execute([$id]);
-            return $stmt->fetch(PDO::FETCH_ASSOC)['role_id'];
-        }else if($type == "global"){
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ? $result['role_id'] : null; // ✅ Возвращаем null вместо false
+        } else if ($type == "global") {
             $stmt = $this->db->prepare("
                 SELECT `global_role` FROM users WHERE telegram_id = ?
             ");
             $stmt->execute([$id]);
-            return $stmt->fetch(PDO::FETCH_ASSOC)['global_role'];
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ? $result['global_role'] : null; // ✅ Возвращаем null вместо false
         }
+        return null;
     }
 
-    public function getRoleName($role_id){
+    public function getRoleName($role_id)
+    {
+        // ✅ Проверяем, что role_id не пустой
+        if (empty($role_id)) {
+            return null;
+        }
+
         $stmt = $this->db->prepare("
             SELECT `name` FROM roles WHERE id = ?
         ");
         $stmt->execute([$role_id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC)['name'];
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['name'] : null; // ✅ Возвращаем null вместо false
     }
 
     public function userHasRole($userId, $organizationId, $requiredRole)
@@ -119,7 +125,6 @@ class User
         return $stmt->fetchColumn() > 0;
     }
 
-    // (c) 01.06.2025 Alexander Livanov
     public function checkAuth()
     {
         if (empty($_COOKIE['auth_token'])) {
@@ -130,7 +135,6 @@ class User
 
         if (!$telegram_id) {
             setcookie('auth_token', '', time() - 3600, '/');
-            // header('HTTP/1.1 403 Forbidden');
             return 2;
         }
 
@@ -138,31 +142,31 @@ class User
         $query = 'SELECT * FROM ' . $this->table . ' WHERE telegram_id = :telegram_id LIMIT 1';
         $stmt = $this->db->prepare($query);
         $stmt->execute(['telegram_id' => $telegram_id]);
-        $user = $stmt->fetch();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC); // ✅ Добавлен PDO::FETCH_ASSOC
 
         if (!$user) {
-            // header('HTTP/1.1 404 Not Found');
             return 3;
         }
-        
+
         $_SESSION['USERDATA'] = $user;
-        // $_SESSION['auth_token'] = $_COOKIE['auth_token'];
         return 0;
     }
 
-    public function auth() {
-        if(empty($_SESSION['auth_token'])){
+    public function auth()
+    {
+        if (empty($_SESSION['auth_token'])) {
             $_SESSION['auth_token'] = $_COOKIE['auth_token'];
             return validateToken($_COOKIE['auth_token']);
         }
         return validateToken($_COOKIE['auth_token']);
     }
 
-    public function checkRole(){
+    public function checkRole()
+    {
         if ($_SESSION['USERDATA']['global_role'] != -1 && $_SESSION['USERDATA']['global_role'] < 2) {
             echo ("<script>alert('У вас нет прав на использование этой функции');</script>");
             exit();
-        }else{
+        } else {
             return True;
         }
     }
@@ -179,12 +183,10 @@ class User
                 VALUES (?, ?, ?)
             ");
         $stmt->execute([$userId, $organizationId, $givenRoleId]);
-
-        // TODO: сделать систему уведомлений
-        // $this->sendNotification($userId, "You've been added to organization");
     }
 
-    public function getUO($user_id, $limit="100"){
+    public function getUO($user_id, $limit = "100")
+    {
         $stmt = $this->db->prepare(
             "SELECT * FROM studios WHERE owner_id = :id ORDER BY status DESC LIMIT $limit;"
         );
@@ -193,7 +195,8 @@ class User
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getOrgData($org_id){
+    public function getOrgData($org_id)
+    {
         $stmt = $this->db->prepare(
             "SELECT * FROM studios WHERE id = :id LIMIT 1;"
         );
@@ -211,8 +214,6 @@ class User
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-
-    // 30.08.2025 (c) Alexander Livanov
 
     public function checkUsernameExists($username)
     {
@@ -243,12 +244,9 @@ class User
         }
     }
 
-    // 01.09.2025 (с) Alexander Livanov
-
     public function updatePassphrase($userID, $hashed_passphrase)
     {
         try {
-            // Если передано null - очищаем passphrase (отключаем)
             if ($hashed_passphrase === null) {
                 $stmt = $this->db->prepare(
                     "UPDATE users SET passphrase = NULL, updated = NOW() WHERE telegram_id = :user_id;"
@@ -256,7 +254,6 @@ class User
                 return $stmt->execute(['user_id' => $userID]);
             }
 
-            // Если передана passphrase - обновляем
             $stmt = $this->db->prepare(
                 "UPDATE users SET passphrase = :passphrase, updated = NOW() WHERE telegram_id = :user_id;"
             );
@@ -306,7 +303,6 @@ class User
         }
     }
 
-    // 02.09.2025
     public function logout()
     {
         session_unset();
@@ -318,10 +314,8 @@ class User
         exit;
     }
 
-    // 19.09.2025  
     public function updateUserCart($game_id, $method)
     {
-        // Инициализируем корзину
         if (!isset($_COOKIE['USERCART'])) {
             $cart = [];
         } else {
@@ -333,7 +327,6 @@ class User
 
         if (!empty($game_id) && !empty($method)) {
             if ($method == "ADD") {
-                // Добавляем игру в корзину
                 if (isset($cart[$game_id])) {
                     $cart[$game_id]['quantity'] += 1;
                 } else {
@@ -344,12 +337,10 @@ class User
                     ];
                 }
             } elseif ($method == "REMOVE") {
-                // Полностью удаляем игру из корзины
                 if (isset($cart[$game_id])) {
                     unset($cart[$game_id]);
                 }
             } elseif ($method == "DECREASE") {
-                // Уменьшаем количество на 1
                 if (isset($cart[$game_id])) {
                     if ($cart[$game_id]['quantity'] > 1) {
                         $cart[$game_id]['quantity'] -= 1;
@@ -359,7 +350,6 @@ class User
                 }
             }
 
-            // Сохраняем обновленную корзину
             setcookie("USERCART", json_encode($cart), time() + 60 * 60 * 24 * 30, "/");
 
             return [
@@ -376,8 +366,8 @@ class User
         ];
     }
 
-    // 23.11.2025 (c) Alexander Livanov
-    public function getUserItems($user_id){
+    public function getUserItems($user_id)
+    {
         $stmt = $this->db->prepare(
             "SELECT * FROM user_items WHERE user_id = :id LIMIT 1;"
         );
@@ -386,7 +376,8 @@ class User
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function updateUserItems($user_id, $game_id){
+    public function updateUserItems($user_id, $game_id)
+    {
         $stmt = $this->db->prepare("
             INSERT INTO library (player_id, game_id, purchased, date)
             SELECT ?, ?, 1, NOW()

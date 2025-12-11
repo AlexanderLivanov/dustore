@@ -9,6 +9,7 @@ $db = new Database();
 $conn = $db->connect();
 
 if ($curr_user->checkAuth() > 0) {
+    // echo $curr_user->checkAuth();
     echo "<script>window.location.replace('/login');</script>";
     exit;
 }

@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__ . '/../config.php');
 require_once(__DIR__ . '/user.php');
+require_once(__DIR__ . '/jwt.php'); // ВАЖНО: подключаем JWT
 
 $db = new Database();
 $pdo = $db->connect();
@@ -15,9 +16,17 @@ function generateFakeTelegram()
 
 function loadSessionUser($user)
 {
+    // Создаём JWT токен для пользователя
+    $token = authUser($user['telegram_id']);
+
     $_SESSION['logged-in'] = true;
     $_SESSION['user_id']   = $user['id'];
+    $_SESSION['telegram_id'] = $user['telegram_id'];
+    $_SESSION['auth_token'] = $token;
     $_SESSION['USERDATA']  = $user;
+
+    // Устанавливаем cookie с токеном (30 дней)
+    setcookie('auth_token', $token, time() + 86400 * 30, '/', '', true, true);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
