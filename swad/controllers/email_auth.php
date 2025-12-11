@@ -33,10 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (!$user['email_verified']) {
                 // $login_error = "⛔ Email не подтверждён! Проверьте почту.";
                 loadSessionUser($user);
-                die(header("Location: /me"));
+                die(header("Location: /player/" . $_SESSION['USERDATA']['username']));
             } else {
                 loadSessionUser($user);
-                die(header("Location: /me"));
+                die(header("Location: /player/" . $_SESSION['USERDATA']['username']));
             }
         } else {
             $login_error = "❌ Неверный email или пароль!";

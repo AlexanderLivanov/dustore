@@ -1,41 +1,82 @@
 <?php
-function getLastCommitInfo()
+function getProjectPulse($repo = "AlexanderLivanov/dustore")
 {
-    $repo = "AlexanderLivanov/dustore"; // <<< поменяй
-    $branch = "main";        // или master
+    $headers = ["User-Agent: ProjectPulse"];
 
-    $url = "https://api.github.com/repos/$repo/commits/$branch";
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
+    // ---- last commit ----
+    $commitUrl = "https://api.github.com/repos/$repo/commits";
+    $c = curl_init($commitUrl);
+    curl_setopt_array($c, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_USERAGENT => 'version-checker'
+        CURLOPT_HTTPHEADER => $headers
     ]);
-    $response = curl_exec($ch);
-    curl_close($ch);
+    $commitRaw = curl_exec($c);
+    curl_close($c);
 
-    if (!$response) return null;
+    if (!$commitRaw) return null;
+    $commits = json_decode($commitRaw, true);
 
-    $commitData = json_decode($response, true);
+    $last = $commits[0] ?? "0";
+    $lastCommitSha = $last["sha"] ?? "";
+    $lastCommitMsg = $last["commit"]["message"] ?? "";
+    $lastCommitDate = $last["commit"]["committer"]["date"] ?? "";
+    $lastCommitAuthor = $last["commit"]["committer"]["name"] ?? "";
 
-    $sha = $commitData['sha'];
-    $message = $commitData['commit']['message'];
-    $date = $commitData['commit']['committer']['date'];
+    // ---- contributors stats ----
+    $statsUrl = "https://api.github.com/repos/$repo/stats/commit_activity";
+    $s = curl_init($statsUrl);
+    curl_setopt_array($s, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => $headers
+    ]);
+    $statsRaw = curl_exec($s);
+    curl_close($s);
 
-    // Парсим версию из сообщения
-    preg_match('/v(\d+\.\d+\.\d+)/', $message, $match);
-    $version = $match[0] ?? "no version";
+    $commitActivity = json_decode($statsRaw, true);
+    $commitsLastMonth = $commitActivity ? array_sum(array_column(array_slice($commitActivity, -4), "total")) : 0;
+
+    // ---- repo info ----
+    $infoUrl = "https://api.github.com/repos/$repo";
+    $i = curl_init($infoUrl);
+    curl_setopt_array($i, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => $headers
+    ]);
+    $infoRaw = curl_exec($i);
+    curl_close($i);
+
+    $info = json_decode($infoRaw, true);
+
+    // ---- issues ----
+    $openIssues = $info["open_issues_count"] ?? 0;
+    $stars = $info["stargazers_count"] ?? 0;
+    $watchers = $info["subscribers_count"] ?? 0;
+    $forks = $info["forks"] ?? 0;
+
+    // activity status
+    $daysSinceCommit = (time() - strtotime($lastCommitDate)) / 86400;
+    if ($daysSinceCommit < 7) $status = "🔥 Active";
+    elseif ($daysSinceCommit < 30) $status = "⚡ Moderate";
+    else $status = "💤 Inactive";
 
     return [
-        'version' => $version,
-        'sha' => $sha,
-        'short' => substr($sha, 0, 7),
-        'date' => date("d.m.Y H:i", strtotime($date)),
-        'url' => "https://github.com/$repo/commit/$sha"
+        "status" => $status,
+        "last_commit_msg" => $lastCommitMsg,
+        "last_commit_date" => date("d.m.Y H:i", strtotime($lastCommitDate)),
+        "last_commit_author" => $lastCommitAuthor,
+        "last_sha_short" => substr($lastCommitSha, 0, 7),
+
+        "month_commits" => $commitsLastMonth,
+        "stars" => $stars,
+        "watchers" => $watchers,
+        "forks" => $forks,
+        "open_issues" => $openIssues,
+
+        "url_commit" => $last["html_url"],
+        "url_repo" => $info["html_url"] ?? ""
     ];
 }
 
-$info = getLastCommitInfo();
 ?>
 
 <head>
@@ -91,14 +132,38 @@ $info = getLastCommitInfo();
     <p class="footer-p">DUSTORE (Dust Store) является собственностью Dust Studio и Crazy Projects Lab. Все торговые марки являются собственностью соответствующих владельцев. НДС включён во все цены, где он применим</p>
     <!-- SemVer spec: status-global.design.tech#patch -->
     <!-- <p class="footer-p">Версия платформы: beta-1.11.24#22</p> -->
-    <?php if ($info): ?>
+    <!-- <?php if ($info): ?>
         <p class="footer-p">Версия: <strong><?= $info['version'] ?></strong>
             | <a href="<?= $info['url'] ?>" target="_blank"><?= $info['short'] ?></a>
             | <?= $info['date'] ?></p>
     <?php else: ?>
         Не удалось получить версию
+    <?php endif; ?> -->
+
+
+
+    
+    <?php
+    $pulse = getProjectPulse("AlexanderLivanov/dustore");
+    ?>
+
+    <?php if ($pulse): ?>
+        <p class="footer-p">
+            <strong>Пульс проекта:</strong> <?= $pulse["status"] ?><br>
+            Последний коммит: <a href="<?= $pulse["url_commit"] ?>" target="_blank"><?= $pulse["last_sha_short"] ?></a>
+            — <?= $pulse["last_commit_msg"] ?>
+            <br>
+            Дата: <?= $pulse["last_commit_date"] ?> | Автор: <?= $pulse["last_commit_author"] ?><br>
+            Коммитов за месяц: <?= $pulse["month_commits"] ?>
+            | ⭐ <?= $pulse["stars"] ?>
+            | 👁 <?= $pulse["watchers"] ?>
+            | 🍴 <?= $pulse["forks"] ?>
+            | 🐞 Issues: <?= $pulse["open_issues"] ?>
+        </p>
     <?php endif; ?>
+
 </div>
+
 <div id="notify-container"></div>
 <style>
     #notify-container {

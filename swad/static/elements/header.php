@@ -59,17 +59,83 @@ if (empty($_COOKIE['temp_id'])) {
     <meta name="generator" content="SWAD Framework">
     <meta name="google" content="notranslate">
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <style>
+        .update-progress {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 15px;
+            font-family: inherit;
+        }
+
+        @media (width < 900px) {
+            .update-progress {
+                display: none;
+            }
+        }
+
+        .update-percent {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+
+        .update-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 3px;
+        }
+
+        .update-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7fff9f, #42d37d);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .update-next {
+            font-size: 11px;
+            opacity: 0.75;
+            color: #fff;
+        }
+    </style>
 </head>
 
 <body>
-    <!-- <div class="top-banner" id="top-banner">
+    <div class="top-banner" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
-                ⚠️ Важное уведомление! С 1 июля по 3 сентября Платформа работает в тестовом режиме. Возможны перебои в работе сервиса.
+                Следите за новостями в нашем <a style="color: lightgreen;" target="_blank" href="https://t.me/dustore_official">Telegram канале<svg style="vertical-align: middle;"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        stroke-width="1"
+                        stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" />
+                    </svg></a> и <a style="color: lightgreen;" target="_blank" href="https://vk.com/crazyprojectslab">VK сообществе<svg style="vertical-align: middle;"
+                        xmlns=" http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        stroke-width="1"
+                        stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M14 19h-4a8 8 0 0 1 -8 -8v-5h4v5a4 4 0 0 0 4 4h0v-9h4v4.5l.03 0a4.531 4.531 0 0 0 3.97 -4.496h4l-.342 1.711a6.858 6.858 0 0 1 -3.658 4.789h0a5.34 5.34 0 0 1 3.566 4.111l.434 2.389h0h-4a4.531 4.531 0 0 0 -3.97 -4.496v4.5z" />
+                    </svg></a>
+
             </div>
             <button class="close-banner" id="close-banner">&times;</button>
         </div>
-    </div> -->
+    </div>
     <div class="header">
         <div class="section left-section">
             <div>
@@ -81,10 +147,10 @@ if (empty($_COOKIE['temp_id'])) {
             </div>
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
-                <button class="button" onclick="location.href='/magazine'">Журнал</button>
                 <!-- <button class="button" onclick="location.href='https:\/\/media.dustore.ru'">Медиа</button> -->
                 <button class="button" onclick="location.href='/about'">О платформе</button>
-                <button class="button disabled-btn tooltip">Финансы<span class="tooltiptext">Финансов пока нет</span></button>
+                <button class="button" onclick="location.href='/studios'">Разработчики</button>
+                <button class="button" onclick="location.href='/users'">Игроки</button>
             </div>
         </div>
         <div class="section center-section">
@@ -96,14 +162,28 @@ if (empty($_COOKIE['temp_id'])) {
         <div class="section right-section">
             <div class="buttons-right">
                 <?php
-                $pdo = $db->connect();
-                $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? AND status = 'unread'");
-                $stmt->execute([$_SESSION['USERDATA']['id']]);
-                $unread_notif_count = sizeof($stmt->fetchAll(PDO::FETCH_ASSOC));
-                if($unread_notif_count > 0){
-                    $unread_notif_count = "+".$unread_notif_count;
+                if (!empty($_SESSION['USERDATA'])) {
+                    $pdo = $db->connect();
+                    $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? AND status = 'unread'");
+                    $stmt->execute([$_SESSION['USERDATA']['id']]);
+                    $unread_notif_count = sizeof($stmt->fetchAll(PDO::FETCH_ASSOC));
+                } else {
+                    $unread_notif_count = 0;
+                }
+
+                if ($unread_notif_count > 0) {
+                    $unread_notif_count = "+" . $unread_notif_count;
                 }
                 ?>
+
+                <div class="update-progress">
+                    <div class="update-percent" id="updatePercent">72%</div>
+                    <div class="update-bar">
+                        <div class="update-bar-fill" id="updateBarFill" style="width: 72%;"></div>
+                    </div>
+                    <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>
+                </div>
+
                 <button class="button" onclick="location.href='/notifications'"><?= $unread_notif_count . " 🔔" ?></button>
                 <?php
                 $curr_user->checkAuth();
@@ -112,7 +192,7 @@ if (empty($_COOKIE['temp_id'])) {
                     echo ("Войти в аккаунт");
                     echo ("</button>");
                 } else {
-                    echo ("<button class=\"button\" onclick=\"location.href='/me'\">");
+                    echo ("<button class=\"button\" onclick=\"location.href='/player/" . $_SESSION['USERDATA']['username'] . "'\">");
                     echo ($_SESSION['USERDATA']['username']);
                     echo ("</button>");
                 }
@@ -205,6 +285,16 @@ if (empty($_COOKIE['temp_id'])) {
 
         setInterval(updateUserActivity, 60000);
     </script>
+    <script>
+        function setUpdateProgress(percent, nextText) {
+            document.getElementById("updatePercent").textContent = percent + "%";
+            document.getElementById("updateBarFill").style.width = percent + "%";
+            document.getElementById("updateNext").textContent = nextText;
+        }
+
+        setUpdateProgress(10, "Следующее обновление: v1.14.40");
+    </script>
+
 </body>
 
 </html>

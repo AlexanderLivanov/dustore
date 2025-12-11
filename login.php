@@ -2,7 +2,8 @@
 session_start();
 
 if (isset($_SESSION['logged-in']) && $_SESSION['logged-in'] == TRUE) {
-    die(header('Location: me'));
+    // print_r($_SESSION);
+    die(header('Location: /'));
 }
 
 if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {

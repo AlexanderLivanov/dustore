@@ -448,17 +448,32 @@ function formatFileSize($bytes)
                                     </div>
 
                                     <?php if (!empty($game['game_zip_url'])): ?>
-                                        <button class="btn" style="width: 100%; margin-bottom: 10px;"
-                                            onclick="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
-                                            Скачать игру
-                                        </button>
+                                        <?php if ($game['platforms'] == 'web'): ?>
+                                            <button class="btn" style="width: 100%; margin-bottom: 10px;"
+                                                onclick="window.location.href='/webplayer?id=<?= $game_id ?>'">
+                                                Запустить игру в браузере
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn" style="width: 100%; margin-bottom: 10px;"
+                                                onclick="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
+                                                Скачать игру
+                                            </button>
+                                        <?php endif; ?>
 
                                         <?php if (!empty($game['game_zip_size'])): ?>
-                                            <div style="font-size: 0.9rem; opacity: 0.8;">
-                                                Размер: <?= htmlspecialchars(formatFileSize((int)$game['game_zip_size'])) ?>
-                                                <br>
-                                                Скачали: <?= $downloaded ?> раз(а)
-                                            </div>
+                                            <?php if ($game['platforms'] == 'web'): ?>
+                                                <div style="font-size: 0.9rem; opacity: 0.8;">
+                                                    Это веб игра. Она не требует скачивания.
+                                                    <br>
+                                                    <!-- Сыграли: <?= $downloaded ?> раз(а) -->
+                                                </div>
+                                            <?php else: ?>
+                                                <div style="font-size: 0.9rem; opacity: 0.8;">
+                                                    Размер: <?= htmlspecialchars(formatFileSize((int)$game['game_zip_size'])) ?>
+                                                    <br>
+                                                    Скачали: <?= $downloaded ?> раз(а)
+                                                </div>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     <?php else: ?>
                                         <p style="color: orange;">Файл игры пока не загружен</p>
