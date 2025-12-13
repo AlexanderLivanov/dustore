@@ -392,6 +392,15 @@ $games_all_time = cumulative($games_all_time);
                     backgroundColor: 'rgba(195,33,120,0.2)',
                     fill: true,
                 }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        ticks: {
+                            precision: 0 // <--- округление до целых
+                        }
+                    }
+                }
             }
         });
     </script>
