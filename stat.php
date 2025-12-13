@@ -334,7 +334,7 @@ $games_all_time = cumulative($games_all_time);
             }
         });
         new Chart(gamesGrowth, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: <?= json_encode(array_column(array_reverse($games_growth), 'd')) ?>,
                 datasets: [{
