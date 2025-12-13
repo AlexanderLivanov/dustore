@@ -24,12 +24,15 @@ class Game
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    
+
     public function getLatestGames($limit = 10)
     {
         $stmt = $this->db->connect()->prepare("
         SELECT 
             g.id,
             g.name,
+            g.description,
             g.path_to_cover,
             g.price,
             g.GQI,
@@ -117,4 +120,12 @@ class Game
         return $stmt->execute([$gameId, $userId, $rating, $text]);
     }
     
+    // 13.12.2025 (c) Alexander Livanov
+    public function getTotalDownloads($gameId){
+        $stmt = $this->db->connect()->prepare("
+            SELECT * FROM library WHERE game_id = ?
+        ");
+        $stmt->execute([$gameId]);
+        return count($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
 }

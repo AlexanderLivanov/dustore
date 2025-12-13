@@ -42,7 +42,7 @@ if ($adultSection) {
         <section class="games-header">
             <div class="container">
                 <h1>Откройте для себя новый мир!</h1>
-                <p>Исследуйте лучшие игры от независимых разработчиков</p>
+                <p>Исследуйте лучшие игры от независимых инди-разработчиков</p>
             </div>
         </section>
 
@@ -103,15 +103,35 @@ if ($adultSection) {
 
                                 <div class="game-info">
                                     <h3 class="game-title"><?= htmlspecialchars($game['name']) ?></h3>
+                                    <p><?= mb_substr(htmlspecialchars($game['description']), 0, 150, 'UTF-8') . '...' ?></p>
+                                    <br>
                                     <p class="game-developer">От <?= htmlspecialchars($game['studio_name']) ?></p>
                                     <div class="game-footer">
                                         <?php if ($game['GQI'] > 0): ?>
-                                            <div class="game-rating">★ <?= number_format($game['GQI'], 0) ?></div>
+                                            <div class="game-rating">GQI:  <?= number_format($game['GQI'], 0) ?></div>
+                                        <?php endif; ?>
+                                        <?php
+                                        $avg_rating = $gameController->getAverageRating($game['id'])['avg'];
+                                        // print_r($avg_rating);
+                                        $total_reviews = count($gameController->getReviews($game['id']));
+                                        $total_downloads = $gameController->getTotalDownloads($game['id']);
+                                        ?>
+                                        <?php if ($game['GQI'] > 0): ?>
+                                            <div class="game-rating">★ <?= $avg_rating . "/10" ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($avg_rating > 0): ?>
+                                            <div class="game-rating"><?= $game['age_rating'] ?></div>
                                         <?php endif; ?>
                                         <div class="game-price <?= ($game['price'] == 0) ? 'free' : '' ?>">
                                             <?= $price ?>
                                         </div>
                                     </div>
+                                    <br>
+                                    <h6>
+                                        <?php echo 'Отзывов: ' . $total_reviews;
+                                        echo '<br>';
+                                        echo 'Скачали: ' . $total_downloads . ' раз(а)'; ?>
+                                    </h6>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -197,7 +217,7 @@ if ($adultSection) {
                 });
             }
 
-            
+
         });
     </script>
 </body>

@@ -19,6 +19,15 @@ class Organization
         return $result;
     }
 
+    public function getOwnersID($studio_id){
+        $query = 'SELECT owner_id FROM studios WHERE id = ?';
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([$studio_id]);
+
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $result;
+    }
+
     public function getAllProjects($studio_id)
     {
         $query = 'SELECT * FROM games WHERE developer = ?';
