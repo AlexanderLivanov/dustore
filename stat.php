@@ -11,7 +11,7 @@ $users_total = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 
 $users_online = (int)$pdo->query("
     SELECT COUNT(*) FROM users
-    WHERE last_activity >= NOW() - INTERVAL 10 MINUTE
+    WHERE last_activity >= NOW() - INTERVAL 185 MINUTE
 ")->fetchColumn();
 
 $games_total = (int)$pdo->query("SELECT COUNT(*) FROM games")->fetchColumn();
@@ -34,19 +34,19 @@ $avg_gqi = round(
 
 /* ===== АКТИВНОСТЬ 24 ЧАСА ===== */
 
-$posts_24h = (int)$pdo->query("
+$posts_7d = (int)$pdo->query("
     SELECT COUNT(*) FROM posts
-    WHERE created_at >= NOW() - INTERVAL 1 DAY
+    WHERE created_at >= NOW() - INTERVAL 7 DAY
 ")->fetchColumn();
 
-$comments_24h = (int)$pdo->query("
+$comments_7d = (int)$pdo->query("
     SELECT COUNT(*) FROM comments
-    WHERE created_at >= NOW() - INTERVAL 1 DAY
+    WHERE created_at >= NOW() - INTERVAL 7 DAY
 ")->fetchColumn();
 
-$likes_24h = (int)$pdo->query("
+$likes_7d = (int)$pdo->query("
     SELECT COUNT(*) FROM likes
-    WHERE created_at >= NOW() - INTERVAL 1 DAY
+    WHERE created_at >= NOW() - INTERVAL 7 DAY
 ")->fetchColumn();
 
 /* ===== РОСТ (30 ДНЕЙ) ===== */
@@ -271,18 +271,18 @@ $games_all_time = cumulative($games_all_time);
         </div>
 
         <div class="section-2">
-            <h2>Активность за 24 часа</h2>
+            <h2>Активность за неделю</h2>
             <div class="stats-grid">
                 <div class="stat-item">
-                    <div class="stat-number"><?= $posts_24h ?></div>
+                    <div class="stat-number"><?= $posts_7d ?></div>
                     <div class="stat-label">Постов</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number"><?= $comments_24h ?></div>
+                    <div class="stat-number"><?= $comments_7d ?></div>
                     <div class="stat-label">Комментариев</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number"><?= $likes_24h ?></div>
+                    <div class="stat-number"><?= $likes_7d ?></div>
                     <div class="stat-label">Лайков</div>
                 </div>
             </div>

@@ -167,9 +167,9 @@
                         <div class="stat-label">Регистраций игроков</div>
                     </div>
                 </div>
-                <!-- <div class="hero-buttons">
+                <div class="hero-buttons">
                     <a href="/stat" class="btn">Подробная статистика</a>
-                </div> -->
+                </div>
             </div>
         </section>
 

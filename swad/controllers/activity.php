@@ -34,7 +34,7 @@ try {
         echo json_encode(['success' => false, 'message' => 'Database update failed']);
     }
 } catch (PDOException $e) {
-    // error_log("Error updating user activity: " . $e->getMessage());
+    echo ("Error updating user activity: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Database error']);
 }
 ?>
