@@ -19,7 +19,6 @@ $conn = $db->connect();
 // Проверяем, нет ли уже записи на сегодня
 $exists = $conn->prepare("SELECT id FROM daily_stats WHERE date = ?");
 $exists->execute([$today]);
-
 if ($exists->rowCount() <= 0) {
     /* ---- Получение TOTAL ---- */
 
@@ -60,15 +59,15 @@ if ($exists->rowCount() <= 0) {
     ]);
 }
 
-$online_count = (int)$pdo->query("
+$online_count = (int)$conn->query("
     SELECT COUNT(*) FROM users
-    WHERE last_activity >= NOW() - INTERVAL 185 MINUTE
+    WHERE last_activity >= NOW() - INTERVAL 5 MINUTE
 ")->fetchColumn();
 
 // Округляем до часа
 $hour = date('Y-m-d H:00:00');
 
-$stmt = $pdo->prepare("
+$stmt = $conn->prepare("
     INSERT INTO users_online_history (ts, online_count)
     VALUES (:ts, :count)
     ON DUPLICATE KEY UPDATE online_count = :count
@@ -359,7 +358,7 @@ $stmt->execute([
             document.getElementById("updateNext").textContent = nextText;
         }
 
-        setUpdateProgress(10, "Следующее обновление: v1.14.40");
+        setUpdateProgress(22, "Следующее обновление: v1.14.40");
     </script>
 
 </body>

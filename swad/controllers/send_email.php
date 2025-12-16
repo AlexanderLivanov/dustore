@@ -1,14 +1,36 @@
 <?php
-function sendVerificationEmail($email, $token)
-{
-    $link = "https://dustore.ru/verify.php?token=" . $token;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-    $subject = "Подтверждение email";
-    $message = "Здравствуйте! Перейдите по ссылке для подтверждения почты:\n\n$link";
-    $headers = "MIME-Version: 1.0" . "\r\n";
-    $headers .= "Content-type:text/plain;charset=UTF-8" . "\r\n";
-    $headers .= "From: Dust Games <no-reply@dustgames.local>" . "\r\n";
-    $headers .= "Reply-To: no-reply@dustgames.local" . "\r\n";
+require __DIR__ . '/../../vendor/autoload.php';
 
-    mail($email, $subject, $message, $headers);
+function sendMail($send_to, $subject, $data, $params=""){
+    $mail = new PHPMailer(true);
+
+    try {
+        $mail->CharSet = 'UTF-8';
+
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.mail.ru';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'dusty@dustore.ru';
+        $mail->Password   = 'YOnwzU1TeLuLiIt69ffL'; // пароль приложения
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port       = 465;
+
+        $mail->setFrom('dusty@dustore.ru', 'Менеджер Дасти');
+        $mail->addAddress($send_to);
+
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+
+        $mail->Body = $data;
+
+        // $mail->SMTPDebug = 2;
+        // $mail->Debugoutput = 'html';
+        $mail->send();
+        // echo 'OK';
+    } catch (Exception $e) {
+        echo "Ошибка: {$mail->ErrorInfo}";
+    }
 }

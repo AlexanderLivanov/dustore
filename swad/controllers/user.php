@@ -83,21 +83,20 @@ class User
             ");
             $stmt->execute([$id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $result ? $result['role_id'] : null; // ✅ Возвращаем null вместо false
+            return $result ? $result['role_id'] : null; 
         } else if ($type == "global") {
             $stmt = $this->db->prepare("
                 SELECT `global_role` FROM users WHERE telegram_id = ?
             ");
             $stmt->execute([$id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $result ? $result['global_role'] : null; // ✅ Возвращаем null вместо false
+            return $result ? $result['global_role'] : null; 
         }
         return null;
     }
 
     public function getRoleName($role_id)
     {
-        // ✅ Проверяем, что role_id не пустой
         if (empty($role_id)) {
             return null;
         }
@@ -107,7 +106,7 @@ class User
         ");
         $stmt->execute([$role_id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ? $result['name'] : null; // ✅ Возвращаем null вместо false
+        return $result ? $result['name'] : null; 
     }
 
     public function userHasRole($userId, $organizationId, $requiredRole)

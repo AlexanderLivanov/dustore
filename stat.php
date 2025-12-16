@@ -311,10 +311,10 @@ $games_all_time = cumulative($games_all_time);
             <div class="card">
                 <h2>Игры за всё время</h2><canvas id="gamesAll"></canvas>
             </div>
-            <div class="card">
+            <!-- <div class="card">
                 <h2>Онлайн за всё время</h2>
                 <canvas id="usersOnlineAll"></canvas>
-            </div>
+            </div> -->
 
         </div>
 
