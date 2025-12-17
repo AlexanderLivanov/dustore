@@ -4,7 +4,7 @@ require_once('swad/config.php');
 require_once('swad/controllers/game.php');
 
 $gameController = new Game();
-$games = $gameController->getLatestGames(20);
+$games = $gameController->getLatestGames();
 
 $games = array_filter($games, function ($game) {
     return isset($game['status']) && strtolower($game['status']) === 'published';
