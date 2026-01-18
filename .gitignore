@@ -10,3 +10,4 @@ feed.php
 swad/pass.php
 db_migration.php
 webplayerdata/*
+l4t/.env
