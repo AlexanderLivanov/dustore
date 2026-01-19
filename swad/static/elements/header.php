@@ -413,7 +413,7 @@ $stmt->execute([
             if (!subscription) {
                 subscription = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: <?php echo "'" . VAPID_PUBLIC_KEY . "'" ?>
+                    applicationServerKey: VAPID_PUBLIC
                 });
             }
 
