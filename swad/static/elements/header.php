@@ -395,7 +395,7 @@ $stmt->execute([
         }
     </script>
     <script>
-        const VAPID_PUBLIC = <?php echo "'" . VAPID_PUBLIC_KEY . "'" ?>
+        const VAPID_PUBLIC = <?php echo '"' . VAPID_PUBLIC_KEY . '"'; ?>
 
         document.getElementById("pushBtn").addEventListener("click", async () => {
             // ждём готовности SW
