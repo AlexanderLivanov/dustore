@@ -172,6 +172,9 @@ $stmt->execute([
 
 <body>
     <button onclick="fetch('/trigger-push.php')">
+        Subscribe
+    </button>
+    <button onclick="fetch('/trigger-push.php')">
         Push
     </button>
     <div class="top-banner" id="top-banner">
@@ -362,6 +365,34 @@ $stmt->execute([
         }
 
         setUpdateProgress(78, "Следующее обновление: v1.15");
+    </script>
+    <!-- subscrive to push 19.01.2025 (c) Alexander Livanov -->
+    <script>
+        async function subscribeToPush() {
+            const reg = await navigator.serviceWorker.ready;
+
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted") return;
+
+            let subscription = await reg.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: VAPID_PUBLIC
+                });
+            }
+
+            // Отправляем на сервер свою подписку
+            await fetch("/save-subscription.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(subscription)
+            });
+
+            alert("Подписка сохранена");
+        }
     </script>
 </body>
 
