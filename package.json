@@ -1,0 +1,24 @@
+{
+  "name": "htdocs",
+  "version": "1.0.0",
+  "description": "(желательно, если вы скажете, что код говно и покажете как надо :) )",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlexanderLivanov/dustore.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AlexanderLivanov/dustore/issues"
+  },
+  "homepage": "https://github.com/AlexanderLivanov/dustore#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "web-push": "^3.6.7"
+  }
+}

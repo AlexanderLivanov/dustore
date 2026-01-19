@@ -171,6 +171,9 @@ $stmt->execute([
 </head>
 
 <body>
+    <button onclick="fetch('/trigger-push.php')">
+        Push
+    </button>
     <div class="top-banner" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
@@ -358,9 +361,8 @@ $stmt->execute([
             document.getElementById("updateNext").textContent = nextText;
         }
 
-        setUpdateProgress(22, "Следующее обновление: v1.14.40");
+        setUpdateProgress(78, "Следующее обновление: v1.15");
     </script>
-
 </body>
 
 </html>
