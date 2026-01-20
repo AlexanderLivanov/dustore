@@ -254,10 +254,17 @@ session_start();
             <a href="#" onclick="show('fav',this)">Избранное</a>
             <a href="#" onclick="show('profile',this)">Профиль</a>
             <div class="ad-block">
-                <div class="ad-title">📢 Объявление</div>
-
-                <!-- Yandex.RTB R-A-18474572-1 -->
-                <div id="yandex_rtb_R-A-18474572-1"></div>
+                <div class="ad-title">📢 Тут могла быть ваша реклама</div>
+                <!-- Yandex.RTB R-A-18474572-2 -->
+                <div id="yandex_rtb_R-A-18474572-2"></div>
+                <script>
+                    window.yaContextCb.push(() => {
+                        Ya.Context.AdvManager.render({
+                            "blockId": "R-A-18474572-2",
+                            "renderTo": "yandex_rtb_R-A-18474572-2"
+                        })
+                    })
+                </script>
             </div>
 
         </aside>
@@ -514,17 +521,6 @@ session_start();
     </script>
     <script>
         window.yaContextCb = window.yaContextCb || [];
-    </script>
-
-    <script src="https://yandex.ru/ads/system/context.js" async></script>
-
-    <script>
-        window.yaContextCb.push(() => {
-            Ya.Context.AdvManager.render({
-                blockId: "R-A-18474572-1",
-                renderTo: "yandex_rtb_R-A-18474572-1"
-            });
-        });
     </script>
 
 </body>

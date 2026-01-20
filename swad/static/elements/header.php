@@ -171,12 +171,101 @@ $stmt->execute([
 </head>
 
 <body>
-    <button onclick='subscribeToPush()'>
+    <div id="push-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#333; color:#fff; padding:15px; text-align:center; z-index:1000;">
+        🔔 Хотите получать уведомления? Так вы не пропустите ничего нового...
+        <button id="enable-push" style="margin-left:10px; padding:5px 10px;">Включить</button>
+        <button id="disable-push" style="margin-left:10px; padding:5px 10px;">Конечно! (нет)</button>
+    </div>
+
+    <script>
+        async function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        }
+
+        async function subscribeToPush() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert('Ваш браузер не поддерживает push-уведомления.');
+                return;
+            }
+
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: await urlBase64ToUint8Array("<?= VAPID_PUBLIC_KEY ?>")
+                });
+
+                const res = await fetch('/api/push/subscribe.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(sub)
+                });
+
+                const data = await res.json();
+                if (data.ok) {
+                    alert('Вы успешно подписались на уведомления!');
+                    localStorage.setItem('push-banner-dismissed', 'true'); // скрываем баннер навсегда
+                } else {
+                    alert('Ошибка при подписке: ' + (data.msg || 'неизвестная ошибка'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Подписка не удалась.');
+            }
+        }
+
+        async function requestPushPermission() {
+            if (!('Notification' in window)) {
+                alert('Ваш браузер не поддерживает уведомления.');
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                // Уже разрешено
+                await subscribeToPush();
+            } else if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    await subscribeToPush();
+                } else {
+                    console.log('Пользователь отклонил уведомления или закрыл запрос');
+                }
+            } else if (Notification.permission === 'denied') {
+                alert('Вы запретили уведомления. Включите их в настройках браузера.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Показ баннера, если разрешение ещё не дано и пользователь не закрыл ранее
+            setTimeout(() => {
+                if (!localStorage.getItem('push-banner-dismissed') && Notification.permission !== 'granted') {
+                    document.getElementById('push-banner').style.display = 'block';
+                }
+            }, 500);
+
+            document.getElementById('enable-push').addEventListener('click', async () => {
+                await requestPushPermission();
+                document.getElementById('push-banner').style.display = 'none';
+            });
+
+            document.getElementById('dismiss-push').addEventListener('click', () => {
+                document.getElementById('push-banner').style.display = 'none';
+                localStorage.setItem('push-banner-dismissed', 'true'); // скрываем навсегда
+            });
+        });
+    </script>
+
+
+    <!-- <button onclick='subscribeToPush()'>
         Subscribe
     </button>
     <button id="pushBtn">
         Push
-    </button>
+    </button> -->
     <div class="top-banner" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
@@ -366,7 +455,7 @@ $stmt->execute([
 
         setUpdateProgress(78, "Следующее обновление: v1.15");
     </script>
-    <!-- subscrive to push 19.01.2025 (c) Alexander Livanov -->
+    <!-- subscribe to push 19.01.2025 (c) Alexander Livanov -->
     <script>
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -378,29 +467,29 @@ $stmt->execute([
         }
 
         async function subscribeToPush() {
-            const reg = await navigator.serviceWorker.ready;
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array("<?= VAPID_PUBLIC_KEY ?>")
+                });
 
-            let sub = await reg.pushManager.getSubscription();
+                console.log("Subscription object:", sub); // ✅ посмотри что там приходит
 
-            if (sub) {
-                console.log("Старая подписка найдена, удаляем");
-                await sub.unsubscribe();
+                const response = await fetch("/api/push/subscribe.php", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(sub)
+                });
+
+                const data = await response.json();
+                console.log("Response from PHP:", data); // ✅ ответ сервера
+                alert("Подписка сохранена");
+            } catch (err) {
+                console.error("Push subscription failed:", err);
             }
-
-            sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array("<?= VAPID_PUBLIC_KEY ?>")
-            });
-
-            await fetch("/api/push/subscribe.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(sub)
-            });
-
-            alert("Push-подписка обновлена");
         }
     </script>
 

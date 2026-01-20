@@ -38,7 +38,7 @@
     $stmt->execute([$org_id]);
 
     send_private_message($tg_id, "Ваша студия была подтверждена. Теперь вы можете создать свой первый проект!\n\nБлагодарим за регистрацию на нашей платформе! ❤");
-    send_group_message(-1002916906978, "<i>❗ #подтверждение</i>\n@" . $_SESSION['USERDATA']['telegram_username'] . " (" . $curr_user->getRoleName($_SESSION['USERDATA']['global_role']) . ") подтвердил студию ". $org_name ." (" . $org_id . ").", false, "");
+    send_group_message(-1002916906978, "<i>❗ #подтверждение</i>\n@" . $_SESSION['USERDATA']['telegram_username'] . " (" . $curr_user->getRoleName($_SESSION['USERDATA']['global_role']) . ") подтвердил студию " . $org_name . " (" . $org_id . ").", false, "");
     echo ("<script>alert('Студия успешно подтверждена!'); window.location.href = 'recentorgs';</script>");
     exit();
   }
@@ -52,7 +52,7 @@
     $stmt = $db->connect()->prepare("UPDATE studios SET status = 'suspended', ban_reason = ? WHERE id = ?");
     $stmt->execute([$reason, $org_id]);
 
-    send_group_message(-1002916906978, "<i>❗ #отказ</i>\n@" . $_SESSION['USERDATA']['telegram_username'] . "(" . $curr_user->getRoleName($_SESSION['USERDATA']['global_role']) . ") отклонил студию " . $org_name . " (" . $org_id . ") по причине: ". $reason .".", false, "");
+    send_group_message(-1002916906978, "<i>❗ #отказ</i>\n@" . $_SESSION['USERDATA']['telegram_username'] . "(" . $curr_user->getRoleName($_SESSION['USERDATA']['global_role']) . ") отклонил студию " . $org_name . " (" . $org_id . ") по причине: " . $reason . ".", false, "");
     send_private_message($tg_id, "Ваша заявка на регистрацию студии была отклонена. Причина отклонения: <i>" . trim($_GET['reject_reason']) . "</i>. Вы можете изменить вашу заявку на странице https://dustore.ru/devs/regorg и отправить её заново!");
     echo ("<script>alert('Студия отклонена!'); window.location.href = 'recentorgs';</script>");
     exit();
@@ -186,6 +186,49 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Ниже таблицы active -->
+      <div id="map" style="width: 100%; height: 500px; margin-top: 40px;"></div>
+
+      <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+      <script>
+        ymaps.ready(initMap);
+
+        function initMap() {
+          var map = new ymaps.Map("map", {
+            center: [55.76, 37.64], // Москва как центр
+            zoom: 4,
+            controls: ['zoomControl', 'fullscreenControl']
+          });
+
+          // Данные студий из PHP
+          var studios = [
+            <?php foreach ($active as $org):
+              if (!empty($org['city'])):
+                $name = htmlspecialchars($org['name'], ENT_QUOTES);
+                $city = htmlspecialchars($org['city'], ENT_QUOTES);
+                $email = htmlspecialchars($org['contact_email'], ENT_QUOTES);
+                echo "{name: '{$name}', city: '{$city}', email: '{$email}'},";
+              endif;
+            endforeach; ?>
+          ];
+
+          studios.forEach(function(studio) {
+            ymaps.geocode(studio.city, {
+              results: 1
+            }).then(function(res) {
+              var coord = res.geoObjects.get(0).geometry.getCoordinates();
+              var placemark = new ymaps.Placemark(coord, {
+                balloonContent: `<strong>${studio.name}</strong><br>${studio.city}<br>${studio.email}`
+              }, {
+                preset: 'islands#blueDotIcon'
+              });
+              map.geoObjects.add(placemark);
+            });
+          });
+        }
+      </script>
+
     </section>
   </main>
   <?php require_once('footer.php'); ?>
