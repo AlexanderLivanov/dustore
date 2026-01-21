@@ -414,11 +414,12 @@ function formatFileSize($bytes)
                                     "<input type=hidden name=IncCurrLabel value=$in_curr>" .
                                     "<input type=hidden name=Culture value=$culture>" .
                                     "<input type=hidden name=IsTest value=$IsTest>" .
-                                    "<input type=submit value='Купить игру пока нельзя' disabled class='btn-disabled' style='width: 100%; margin-bottom: 15px;'>" .
+                                    "<input type=submit value='Купить' class='btn' style='width: 100%; margin-bottom: 15px;'>" .
                                     "</form></html>";
-
+                                    // "<input type=submit value='Купить игру пока нельзя' disabled class='btn-disabled' style='width: 100%; margin-bottom: 15px;'>" .
+                            
                                 //     "<input type=submit value='Купить' class='btn' style='width: 100%; margin-bottom: 15px;'>" .
-                                ?>
+                            ?>
 
                                 <!-- <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button> -->
 

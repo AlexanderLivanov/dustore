@@ -1,6 +1,10 @@
 <?php
 // 1768985142695DEMO - Terminal ID
 // 2$XMgboHTiyRtE*d - Password
+// Merchant_name - Dustore
+// Merchant_id - 200000001715398
+// Terminal_id - 25857237
+// Sbp_merchant_id - MA0005888661
 ?>
 <html>
 
