@@ -40,13 +40,7 @@ $curr_user = new User();
   // Обработка отправки формы
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Сбор данных формы
-    $project_name = trim(
-      preg_replace(
-        '/[^\p{L}\p{N}\-_! ]/u',
-        '',
-        $_POST['project-name']
-      )
-    );
+    $project_name = $_POST['project-name'];
     $genre = $_POST['genre'];
     $description = $_POST['description'];
     $platforms = implode(',', $_POST['platform'] ?? []);
