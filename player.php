@@ -754,6 +754,22 @@ if ($is_owner) {
                 </div>
                 <h1><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></h1>
                 <p>@<?= htmlspecialchars($user['username']) ?></p>
+                <h2><a style="color: white;" href="/l4t/<?= $username ?>">Профиль на L4T
+                        <svg style="vertical-align: middle;"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#fff"
+                            stroke-width="1"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" />
+                            <path d="M11 13l9 -9" />
+                            <path d="M15 4h5v5" />
+                        </svg>
+                    </a></h2>
 
                 <?php if ($is_owner): ?>
                     <a href="/me" class="edit-profile-btn">Редактировать профиль</a>
@@ -796,7 +812,7 @@ if ($is_owner) {
         function showAchievementModal(ach) {
             const modal = document.getElementById('achievementModal');
             const body = document.getElementById('achievementModalBody');
-            
+
             body.innerHTML = `
         <div style="text-align: center;">
             <div style="font-size: 3em; margin-bottom: 15px;"><img src="${ach.icon}" alt="<?= htmlspecialchars($title) ?>" class="achievement-icon-img"></div>

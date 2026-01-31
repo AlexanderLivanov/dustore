@@ -1,5 +1,9 @@
 <?php
 session_start();
+require_once('../swad/config.php');
+require_once('../swad/controllers/user.php');
+
+$curr_user = new User();
 
 // bid structure:
 // id, title, author_id, path_to_cover, person_seek, needed_exp, salary_condition
@@ -10,6 +14,9 @@ $bids_array = [
     [3, "Solder Simulator", 3, "/path_to_cover", "Физик-ядерщик", 1, "non-free"],
     [4, "Dustore", 4, "/path_to_cover", "Деньги", 1, "non-free"]
 ];
+
+$user_orgs = $curr_user->getUO($_SESSION['USERDATA']['id']);
+// print_r($user_orgs);
 ?>
 
 <!DOCTYPE html>
@@ -105,27 +112,113 @@ $bids_array = [
 
                     <!-- СОЗДАТЬ ЗАЯВКУ -->
                     <div id="view-create" class="content-view">
-                        <form class="create-form">
-                            <div class="form-group">
-                                <label>Название</label>
-                                <input placeholder="Dustore">
+
+                        <div class="content-filter">
+                            <div class="filter-item active" data-filter="new_reqs">Новые заявки</div>
+                            <div class="filter-item" data-filter="my_reqs">Созданные заявки</div>
+                        </div>
+
+                        <!-- НОВАЯ ЗАЯВКА -->
+                        <div id="tab-new" class="req-view active">
+
+                            <!-- переключатель -->
+                            <div class="switch-row">
+                                <span>Студия (<?= $user_orgs[0]['name'] ?>)</span>
+
+                                <label class="switch">
+                                    <input type="checkbox" id="typeToggle">
+                                    <span class="slider"></span>
+                                </label>
+
+
+                                <span>Пользователь (<?= $_SESSION['USERDATA']['username'] ?>)</span>
                             </div>
 
-                            <div class="form-group">
-                                <label>Кого ищем</label>
-                                <input placeholder="Unity программист">
+                            <!-- сетка 2 на 2 -->
+                            <div class="grid-2x2">
+
+                                <div class="form-row">
+                                    <label>Я хочу найти:</label>
+                                    <select></select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label>Уточнение:</label>
+                                    <select></select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label>Опыт:</label>
+                                    <select></select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label>Условия:</label>
+                                    <select></select>
+                                </div>
+
                             </div>
 
-                            <button class="submit-btn">Создать</button>
-                        </form>
+                            <div class="form-row full">
+                                <label>Цель:</label>
+                                <select style="width: 94%;"></select>
+                            </div>
+
+                            <div class="desc-row">
+                                <label style="text-align: right;">Детальное <br> описание:</label>
+
+                                <div class="desc-wrap">
+                                    <textarea></textarea>
+
+                                    <button class="ok-btn" id="ok-btn">
+                                        ✓
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <!-- МОИ ЗАЯВКИ -->
+                        <div id="tab-my" class="req-view">
+
+                            <div class="my-bid">
+                                <div class="my-bid-main">
+                                    <div>
+                                        <strong>Unity программист</strong>
+                                        <div class="bid-date">25.01.2026 18:40</div>
+                                    </div>
+                                    <button class="submit-btn edit-btn"
+                                        data-title="Unity программист"
+                                        data-goal="Найти разработчика"
+                                        data-desc="Нужен Unity dev с опытом 3+ года">
+                                        Редактировать
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="my-bid">
+                                <div class="my-bid-main">
+                                    <div>
+                                        <strong>CGI художник</strong>
+                                        <div class="bid-date">24.01.2026 12:10</div>
+                                    </div>
+                                    <button class="submit-btn edit-btn"
+                                        data-title="Unity программист"
+                                        data-goal="Найти разработчика"
+                                        data-desc="Нужен Unity dev с опытом 3+ года">
+                                        Редактировать
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
                 </div>
-
             </div>
         </div>
     </div>
     <script>
+        // ===== ГЛАВНЫЕ ВКЛАДКИ =====
         const views = {
             market: document.getElementById("view-market"),
             create: document.getElementById("view-create"),
@@ -143,31 +236,132 @@ $bids_array = [
 
             views[name].classList.add("active");
             if (buttons[name]) buttons[name].classList.add("active");
+
+            localStorage.setItem("activeView", name);
         }
 
-        /* левая панель */
         buttons.market.onclick = () => showView("market");
         buttons.create.onclick = () => showView("create");
-
-        /* профиль */
         document.getElementById("btn-profile").onclick = () => showView("profile");
 
-        /* фильтр биржи */
-        const filterItems = document.querySelectorAll(".filter-item");
-        const projects = document.getElementById("market-projects");
-        const people = document.getElementById("market-people");
 
-        filterItems.forEach(item => {
-            item.onclick = () => {
-                filterItems.forEach(i => i.classList.remove("active"));
-                item.classList.add("active");
+        // ===== ПОДВКЛАДКИ В СОЗДАНИИ ЗАЯВКИ =====
+        const createTabBtns = document.querySelectorAll("#view-create .filter-item");
+        const tabNew = document.getElementById("tab-new");
+        const tabMy = document.getElementById("tab-my");
 
-                projects.classList.toggle("active", item.dataset.filter === "projects");
-                people.classList.toggle("active", item.dataset.filter === "people");
+        createTabBtns.forEach(btn => {
+            btn.onclick = () => {
+                createTabBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+
+                const isNew = btn.dataset.filter === "new_reqs";
+
+                tabNew.classList.toggle("active", isNew);
+                tabMy.classList.toggle("active", !isNew);
+
+                localStorage.setItem("createSubTab", btn.dataset.filter);
             };
         });
-    </script>
 
+
+        // ===== ВОССТАНОВЛЕНИЕ ПОСЛЕ F5 =====
+        window.addEventListener("DOMContentLoaded", () => {
+
+            // 1. Главная вкладка
+            const savedView = localStorage.getItem("activeView");
+            if (savedView && views[savedView]) {
+                showView(savedView);
+            }
+
+            // 2. Подвкладка в "Создать заявку"
+            const savedSub = localStorage.getItem("createSubTab");
+            if (savedSub) {
+                const btn = document.querySelector(
+                    `#view-create .filter-item[data-filter="${savedSub}"]`
+                );
+                if (btn) btn.click();
+            }
+        });
+    </script>
+    <script>
+        // вкладки "Новые заявки" / "Созданные заявки"
+        const createTabBtns = document.querySelectorAll("#view-create .filter-item");
+        const tabNew = document.getElementById("tab-new");
+        const tabMy = document.getElementById("tab-my");
+
+        createTabBtns.forEach(btn => {
+            btn.onclick = () => {
+
+                createTabBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+
+                const isNew = btn.dataset.filter === "new_reqs";
+
+                tabNew.classList.toggle("active", isNew);
+                tabMy.classList.toggle("active", !isNew);
+
+                localStorage.setItem("createSubTab", btn.dataset.filter);
+            };
+        });
+
+        // восстановление после обновления страницы
+        window.addEventListener("DOMContentLoaded", () => {
+
+            const saved = localStorage.getItem("createSubTab");
+
+            if (saved) {
+                const btn = document.querySelector(
+                    `#view-create .filter-item[data-filter="${saved}"]`
+                );
+
+                if (btn) btn.click();
+            }
+        });
+    </script>
+    <script>
+        const editButtons = document.querySelectorAll(".edit-btn");
+        const createForm = document.getElementById("create-card");
+        const submitBtn = document.getElementById("ok-btn");
+
+        const goalSelect = document.querySelector(".form-row.full select");
+        const descTextarea = document.querySelector(".desc-row textarea");
+
+        /* переключение в режим редактирования */
+        editButtons.forEach(btn => {
+            btn.onclick = () => {
+
+                /* открыть вкладку "Новые заявки" */
+                document.querySelector('[data-create-tab="new"]').click();
+
+                /* режим edit */
+                createForm.dataset.mode = "edit";
+                submitBtn.textContent = "Сохранить";
+
+                /* заполнение */
+                goalSelect.value = btn.dataset.goal;
+                descTextarea.value = btn.dataset.desc;
+
+                /* скролл к форме (по-человечески) */
+                createForm.scrollIntoView({
+                    behavior: "smooth"
+                });
+            };
+        });
+
+        /* сабмит */
+        submitBtn.onclick = (e) => {
+            e.preventDefault();
+
+            if (createForm.dataset.mode === "edit") {
+                console.log("Сохраняем изменения");
+                // тут будет UPDATE в БД
+            } else {
+                console.log("Создаём новую заявку");
+                // тут INSERT
+            }
+        };
+    </script>
 
 </body>
 

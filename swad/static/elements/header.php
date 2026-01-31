@@ -311,13 +311,13 @@ $stmt->execute([
                 <button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>
                 <button class="button" onclick="location.href='/about'">О платформе</button>
                 <button class="button" onclick="location.href='/search'">Поиск</button>
-                <button class="button disabled-btn tooltip">L4T<span class="tooltiptext">Скоро</span></button>
+                <button class="button" onclick="location.href='/l4t'">L4T</button>
             </div>
         </div>
         <div class="section center-section">
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
-                <img src="/swad/static/img/logo_new.png" alt="" onclick="location.href='/'">\
+                <img src="/swad/static/img/logo_new.png" alt="" onclick="location.href='/'">
                 <!-- <img id="dancingCow" style="height: 80px;"
                     src="https://media.tenor.com/yNy3XaDrdjgAAAAj/polish-dancing-cow-dancing.gif"
                     alt=""

@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_id'])) {
     }
 
     $_SESSION['studio_id'] = (int)$_POST['studio_id'];
-    header('Location: index');
+    header('Location: ' . $_POST['backUrl']);
     exit();
 }
 

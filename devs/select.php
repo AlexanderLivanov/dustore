@@ -8,8 +8,10 @@ $curr_user = new User();
 $db = new Database();
 
 if ($curr_user->checkAuth() > 0) {
-    echo ("<script>window.location.replace('../login?backUrl=". $_SERVER['REQUEST_URI'] ."');</script>");
+    echo ("<script>window.location.replace('../login?backUrl=" . $_SERVER['REQUEST_URI'] . "');</script>");
 }
+
+$backUrl = $_GET['backUrl'] ?? '/devs/';
 
 $user_id = $curr_user->getID($curr_user->auth());
 
@@ -47,6 +49,7 @@ $user_orgs = $curr_user->getUO($user_id);
                     <li class="studio-item">
                         <form action="set_studio.php" method="post" style="all: unset;">
                             <input type="hidden" name="studio_id" value="<?= $org['id'] ?>">
+                            <input type="hidden" name="backUrl" value="<?= $backUrl ?>">
                             <button type="submit" style="all: unset; width: 100%; cursor: pointer;">
                                 <i class="material-icons studio-icon">business</i>
                                 <span class="studio-name"><?= $org['name'] ?></span>
@@ -85,7 +88,7 @@ $user_orgs = $curr_user->getUO($user_id);
             </button>
         <?php endif; ?>
         <div style="text-align: center; margin-top: 50px">
-            <h3>Для получения уведомлений достаточно <br> один раз запустить бота</h3>
+            <h3>Вы можете запустить бота для<br> получения уведомлений</h3>
             <img src="/swad/static/img/dusty_tg_qr.png" alt="" width="33%">
         </div>
     </div>

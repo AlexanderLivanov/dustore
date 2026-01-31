@@ -8,7 +8,7 @@ $curr_user = new User();
 $db = new Database();
 
 if ($curr_user->checkAuth() > 0) {
-    echo ("<script>window.location.replace('../login');</script>");
+    echo ("<script>window.location.replace('../login?backUrl=". $_SERVER['REQUEST_URI'] . "');</script>");
 } else {
     $curr_user_data = $_SESSION['USERDATA'];
 }
