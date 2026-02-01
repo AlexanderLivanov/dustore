@@ -3,6 +3,14 @@ session_start();
 require_once('../swad/config.php');
 require_once('../swad/controllers/user.php');
 
+$curr_user = new User;
+
+if(empty($_SESSION['USERDATA'])){
+    if(empty($_COOKIE['auth_token'])){
+        echo ("<script>window.location.href='/login?backUrl=" . $_SERVER['REQUEST_URI'] . "'</script>");
+    }
+}
+
 $curr_user = new User();
 
 // bid structure:
@@ -84,7 +92,7 @@ $user_orgs = $curr_user->getUO($_SESSION['USERDATA']['id']);
                             <div class="card-header">
                                 <div>
                                     <div class="label">Имя пользователя:</div>
-                                    <h2 class="username">Eshward_Williams <span class="copy" style="font-size: .9rem; color: #ffffff3b;">⧉</span></h2>
+                                    <h2 class="username"><?= "@" . $_SESSION['USERDATA']['telegram_username'] ?? $_SESSION['USERDATA']['username']  ?> <span class="copy" style="font-size: .9rem; color: #ffffff3b;">⧉</span></h2>
                                 </div>
 
                                 <div class="since"><br><br>На платформе с: 23.05.2025</div>

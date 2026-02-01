@@ -837,6 +837,7 @@ input:checked + .slider::before {
   grid-template-columns: repeat(4, .17fr);
   gap: 12px;
   margin-bottom: 10px;
+  margin-top: 6px;
 }
 
 .proj {
@@ -852,6 +853,7 @@ input:checked + .slider::before {
     display: flex;
     align-items: flex-start;;
     gap: 10px;
+    margin-top: 2px;
 }
 
 .proj.add {

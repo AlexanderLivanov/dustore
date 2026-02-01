@@ -8,7 +8,7 @@ function generateToken($telegram_id)
 
     $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
     $payload = json_encode([
-        'telegram_id' => $telegram_id,
+        'id' => $telegram_id,
         'iat' => time(),
         'exp' => time() + TOKEN_EXPIRE
     ]);
@@ -39,7 +39,7 @@ function validateToken($token)
     // check expiration date
     if (time() > $payload['exp']) return false;
 
-    return $payload['telegram_id'];
+    return $payload['id'];
 }
 
 function authUser($telegram_id)

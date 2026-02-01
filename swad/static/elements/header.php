@@ -369,7 +369,7 @@ $stmt->execute([
                 <button class="button" onclick="location.href='/notifications'"><?= $unread_notif_count . " 🔔" ?></button>
                 <?php
                 $curr_user->checkAuth();
-                if (empty($_SESSION['USERDATA']['telegram_id'])) {
+                if (empty($_SESSION['USERDATA']['id'])) {
                     echo ("<button class=\"button\" onclick=\"location.href='/login'\">");
                     echo ("Войти в аккаунт");
                     echo ("</button>");

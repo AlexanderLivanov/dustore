@@ -1,9 +1,14 @@
 <?php
 session_start();
+require_once('swad/config.php');
+require_once('swad/controllers/user.php');
 
-if (isset($_SESSION['logged-in']) && $_SESSION['logged-in'] == TRUE) {
+$curr_user = new User;
+
+if (isset($_COOKIE['auth_token'])) {
     // print_r($_SESSION);
-    die(header('Location: /'));
+    // $curr_user->auth();
+    die(header('Location: ' . ($_GET['backUrl'] ?? "/")));
 }
 
 if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
