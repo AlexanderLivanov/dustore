@@ -77,15 +77,236 @@ $user_orgs = $curr_user->getUO($_SESSION['USERDATA']['id']);
 
                     <!-- ПРОФИЛЬ -->
 
-                    <div id="view-profile" class="content-view">
+                    <div class="profile-page">
 
-                        <div style="color:white; padding:30px;">
-                            <h2>Профиль</h2>
-                            <p>Ник: <?= $_SESSION['USERDATA']['username'] ?? 'L4T' ?></p>
-                            <p>Email: <?= $_SESSION['USERDATA']['email'] ?? '-' ?></p>
+                        <!-- ВЕРХНИЙ БЛОК: ЮЗЕР -->
+                        <div class="card user-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="label">Имя пользователя:</div>
+                                    <h2 class="username">Eshward_Williams <span class="copy" style="font-size: .9rem; color: #ffffff3b;">⧉</span></h2>
+                                </div>
+
+                                <div class="since"><br><br>На платформе с: 23.05.2025</div>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="data-for">
+                                    Данные для L4T
+                                </div>
+                                <div class="card-body-main">
+                                    <div class="left">
+                                        <div class="row">
+                                            <span class="label">Роль:</span><br>
+                                            Руководитель Dust Game Studio, CEO Dustore
+                                        </div>
+
+                                        <div class="row">
+                                            <span class="label">Опыт:</span>
+
+                                            <div class="tags">
+                                                <div class="tag">Программист RenPy 3г.</div>
+                                                <div class="tag">Дизайн UI 1г.</div>
+                                                <div class="tag">Диктор 5л.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <span class="label">Доп. данные:</span>
+
+                                            <div class="files">
+                                                <div class="file">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="25"
+                                                        height="25"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="#ffffff3b"
+                                                        stroke-width="3"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" />
+                                                    </svg>
+                                                </div>
+                                                <div class="file">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="25"
+                                                        height="25"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="#ffffff3b"
+                                                        stroke-width="3"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" />
+                                                    </svg>
+                                                </div>
+                                                <div class="file">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="25"
+                                                        height="25"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="#ffffff3b"
+                                                        stroke-width="3"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M9 15l6 -6" />
+                                                        <path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" />
+                                                        <path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" />
+                                                    </svg>
+
+                                                </div>
+                                                <div class="file add" style="font-weight: bold;">+</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="right">
+                                        <div class="projects-right">
+                                            <div class="label" style="vertical-align:top">Проекты:</div>
+
+                                            <div class="projects">
+                                                <div class="proj"></div>
+                                                <div class="proj"></div>
+                                                <div class="proj add">+</div>
+                                                <div class="proj add">+</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="projects-right">
+                                            <div class="label">О себе:   </div>
+                                            <textarea class="about"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- БЛОК СТУДИИ -->
+                        <div class="card user-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="label">Студия:</div>
+                                    <h2 class="username">Dust Game Studio<span class="copy" style="font-size: .9rem; color: #ffffff3b;"> ⧉</span></h2>
+                                </div>
+
+                                <div class="since"><br><br>Студия на платформе с: 15.02.2025</div>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="data-for">
+                                    Данные для L4T
+                                </div>
+                                <div class="card-body-main">
+                                    <div class="left">
+                                        <div class="row">
+                                            <span class="label">Участники:</span>
+                                            <div class="projects-right">
+                                                <div class="users-total">
+                                                    7
+                                                </div>
+
+                                                <div class="users">
+                                                    <div class="user">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="32"
+                                                            height="32"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="#ffffff3b"
+                                                            stroke-width="1"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                                            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="user">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="32"
+                                                            height="32"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="#ffffff3b"
+                                                            stroke-width="1"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                                            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                                        </svg>
+
+
+                                                    </div>
+                                                    <div class="user">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="32"
+                                                            height="32"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="#ffffff3b"
+                                                            stroke-width="1"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                                            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                                        </svg>
+
+                                                    </div>
+
+                                                    <div class="user">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="32"
+                                                            height="32"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="#ffffff3b"
+                                                            stroke-width="1"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                                            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="user">
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="32"
+                                                            height="32"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="#ffffff3b"
+                                                            stroke-width="1"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                                            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="user more">Ещё</div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                    <div class="right">
+                                        <div class="info-block">
+                                            Скоро
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
 
                     <!-- БИРЖА -->
                     <div id="view-market" class="content-view active">
@@ -218,63 +439,62 @@ $user_orgs = $curr_user->getUO($_SESSION['USERDATA']['id']);
         </div>
     </div>
     <script>
-        // ===== ГЛАВНЫЕ ВКЛАДКИ =====
-        const views = {
-            market: document.getElementById("view-market"),
-            create: document.getElementById("view-create"),
-            profile: document.getElementById("view-profile"),
-        };
+        document.addEventListener("DOMContentLoaded", () => {
 
-        const buttons = {
-            market: document.querySelector(".left-side-button"),
-            create: document.querySelector(".left-side-button1"),
-        };
-
-        function showView(name) {
-            Object.values(views).forEach(v => v.classList.remove("active"));
-            Object.values(buttons).forEach(b => b && b.classList.remove("active"));
-
-            views[name].classList.add("active");
-            if (buttons[name]) buttons[name].classList.add("active");
-
-            localStorage.setItem("activeView", name);
-        }
-
-        buttons.market.onclick = () => showView("market");
-        buttons.create.onclick = () => showView("create");
-        document.getElementById("btn-profile").onclick = () => showView("profile");
-
-
-        // ===== ПОДВКЛАДКИ В СОЗДАНИИ ЗАЯВКИ =====
-        const createTabBtns = document.querySelectorAll("#view-create .filter-item");
-        const tabNew = document.getElementById("tab-new");
-        const tabMy = document.getElementById("tab-my");
-
-        createTabBtns.forEach(btn => {
-            btn.onclick = () => {
-                createTabBtns.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-
-                const isNew = btn.dataset.filter === "new_reqs";
-
-                tabNew.classList.toggle("active", isNew);
-                tabMy.classList.toggle("active", !isNew);
-
-                localStorage.setItem("createSubTab", btn.dataset.filter);
+            // ===== ОСНОВНЫЕ СТРАНИЦЫ =====
+            const views = {
+                market: document.getElementById("view-market"),
+                create: document.getElementById("view-create"),
+                profile: document.querySelector(".profile-page")
             };
-        });
 
+            const buttons = {
+                market: document.querySelector(".left-side-button"),
+                create: document.querySelector(".left-side-button1"),
+                profile: document.getElementById("btn-profile")
+            };
 
-        // ===== ВОССТАНОВЛЕНИЕ ПОСЛЕ F5 =====
-        window.addEventListener("DOMContentLoaded", () => {
+            function showView(name) {
+                Object.values(views).forEach(v => v.style.display = "none");
+                Object.values(buttons).forEach(b => b && b.classList.remove("active"));
 
-            // 1. Главная вкладка
-            const savedView = localStorage.getItem("activeView");
-            if (savedView && views[savedView]) {
-                showView(savedView);
+                views[name].style.display = "block";
+
+                if (buttons[name]) {
+                    buttons[name].classList.add("active");
+                }
+
+                localStorage.setItem("activeView", name);
             }
 
-            // 2. Подвкладка в "Создать заявку"
+            buttons.market.onclick = () => showView("market");
+            buttons.create.onclick = () => showView("create");
+            buttons.profile.onclick = () => showView("profile");
+
+            // ===== ПОДВКЛАДКИ В СОЗДАНИИ ЗАЯВКИ =====
+            const createTabBtns = document.querySelectorAll("#view-create .filter-item");
+            const tabNew = document.getElementById("tab-new");
+            const tabMy = document.getElementById("tab-my");
+
+            createTabBtns.forEach(btn => {
+                btn.onclick = () => {
+
+                    createTabBtns.forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+
+                    const isNew = btn.dataset.filter === "new_reqs";
+
+                    tabNew.classList.toggle("active", isNew);
+                    tabMy.classList.toggle("active", !isNew);
+
+                    localStorage.setItem("createSubTab", btn.dataset.filter);
+                };
+            });
+
+            // ===== ВОССТАНОВЛЕНИЕ ПОСЛЕ F5 =====
+            const savedView = localStorage.getItem("activeView") || "market";
+            showView(savedView);
+
             const savedSub = localStorage.getItem("createSubTab");
             if (savedSub) {
                 const btn = document.querySelector(
@@ -282,87 +502,10 @@ $user_orgs = $curr_user->getUO($_SESSION['USERDATA']['id']);
                 );
                 if (btn) btn.click();
             }
+
+            
         });
     </script>
-    <script>
-        // вкладки "Новые заявки" / "Созданные заявки"
-        const createTabBtns = document.querySelectorAll("#view-create .filter-item");
-        const tabNew = document.getElementById("tab-new");
-        const tabMy = document.getElementById("tab-my");
-
-        createTabBtns.forEach(btn => {
-            btn.onclick = () => {
-
-                createTabBtns.forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-
-                const isNew = btn.dataset.filter === "new_reqs";
-
-                tabNew.classList.toggle("active", isNew);
-                tabMy.classList.toggle("active", !isNew);
-
-                localStorage.setItem("createSubTab", btn.dataset.filter);
-            };
-        });
-
-        // восстановление после обновления страницы
-        window.addEventListener("DOMContentLoaded", () => {
-
-            const saved = localStorage.getItem("createSubTab");
-
-            if (saved) {
-                const btn = document.querySelector(
-                    `#view-create .filter-item[data-filter="${saved}"]`
-                );
-
-                if (btn) btn.click();
-            }
-        });
-    </script>
-    <script>
-        const editButtons = document.querySelectorAll(".edit-btn");
-        const createForm = document.getElementById("create-card");
-        const submitBtn = document.getElementById("ok-btn");
-
-        const goalSelect = document.querySelector(".form-row.full select");
-        const descTextarea = document.querySelector(".desc-row textarea");
-
-        /* переключение в режим редактирования */
-        editButtons.forEach(btn => {
-            btn.onclick = () => {
-
-                /* открыть вкладку "Новые заявки" */
-                document.querySelector('[data-create-tab="new"]').click();
-
-                /* режим edit */
-                createForm.dataset.mode = "edit";
-                submitBtn.textContent = "Сохранить";
-
-                /* заполнение */
-                goalSelect.value = btn.dataset.goal;
-                descTextarea.value = btn.dataset.desc;
-
-                /* скролл к форме (по-человечески) */
-                createForm.scrollIntoView({
-                    behavior: "smooth"
-                });
-            };
-        });
-
-        /* сабмит */
-        submitBtn.onclick = (e) => {
-            e.preventDefault();
-
-            if (createForm.dataset.mode === "edit") {
-                console.log("Сохраняем изменения");
-                // тут будет UPDATE в БД
-            } else {
-                console.log("Создаём новую заявку");
-                // тут INSERT
-            }
-        };
-    </script>
-
 </body>
 
 </html>
