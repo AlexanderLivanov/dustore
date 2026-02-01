@@ -346,7 +346,7 @@ $stmt->execute([
                 <?php
                 if (!empty($_SESSION['USERDATA'])) {
                     $pdo = $db->connect();
-                    print_r($_SESSION['USERDATA']);
+                    // print_r($_SESSION['USERDATA']);
                     $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? AND status = 'unread'");
                     $stmt->execute([$_SESSION['USERDATA']['id']]);
                     $unread_notif_count = sizeof($stmt->fetchAll(PDO::FETCH_ASSOC));
