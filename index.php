@@ -23,6 +23,7 @@
                     <div class="hero-buttons">
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
                         <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
+                        <a href="https://t.me/dustore_devs" target="_blank" class="btn btn-secondary">Чатик для разработчиков</a>
                     </div>
                     <div class="hero-image floating">
                         <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

@@ -112,6 +112,7 @@ $curr_user = new User();
     $team_size = $_POST['team_size'];
     $specialization = $_POST['specialization'];
     $pre_alpha_program = isset($_POST['pre_alpha_program']) ? 1 : 0;
+    $donate_link = $_POST['donate_link'];
 
     // Обработка API токена
     $api_token = $_POST['api_token'] ?? '';
@@ -138,7 +139,8 @@ $curr_user = new User();
             foundation_date = :foundation_date,
             team_size = :team_size,
             specialization = :specialization,
-            pre_alpha_program = :pre_alpha_program";
+            pre_alpha_program = :pre_alpha_program,
+            donate_link = :donate_link";
 
     // Добавляем обновление токена, если он был введен
     if ($update_api_token) {
@@ -164,6 +166,7 @@ $curr_user = new User();
       $stmt->bindParam(':team_size', $team_size);
       $stmt->bindParam(':specialization', $specialization);
       $stmt->bindParam(':pre_alpha_program', $pre_alpha_program);
+      $stmt->bindParam(':donate_link', $donate_link);
 
       // Привязываем хешированный токен, если он был введен
       if ($update_api_token) {
@@ -234,6 +237,12 @@ $curr_user = new User();
                 <input type="text" name="tg_studio_id"
                   value="<?= htmlspecialchars($studio_info['tg_studio_id']) ?>" minlength="7" maxlength="16">
                 <label for="tg_studio_id">ID Telegram чата студии</label>
+              </div>
+
+              <div class="input-field">
+                <input type="text" name="donate_link"
+                  value="<?= htmlspecialchars($studio_info['donate_link']) ?>" minlength="5" maxlength="50">
+                <label for="donate_link">Ссылка на страницу для донатов</label>
               </div>
 
               <div class="input-field">

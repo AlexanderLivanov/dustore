@@ -311,7 +311,7 @@ $stmt->execute([
                 <button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>
                 <button class="button" onclick="location.href='/about'">О платформе</button>
                 <button class="button" onclick="location.href='/search'">Поиск</button>
-                <button class="button" onclick="location.href='/l4t'">L4T</button>
+                <button class="button disabled-btn tooltip">L4T<span class="tooltiptext">Скоро</span></button>
             </div>
         </div>
         <div class="section center-section">
@@ -360,9 +360,9 @@ $stmt->execute([
                 ?>
 
                 <div class="update-progress">
-                    <div class="update-percent" id="updatePercent">72%</div>
+                    <div class="update-percent" id="updatePercent">50%</div>
                     <div class="update-bar">
-                        <div class="update-bar-fill" id="updateBarFill" style="width: 72%;"></div>
+                        <div class="update-bar-fill" id="updateBarFill" style="width: 50%;"></div>
                     </div>
                     <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>
                 </div>
@@ -475,7 +475,7 @@ $stmt->execute([
             document.getElementById("updateNext").textContent = nextText;
         }
 
-        setUpdateProgress(0, "Следующее обновление: v1.15.2");
+        setUpdateProgress(5, "Следующее обновление: v1.15.2");
     </script>
     <!-- subscribe to push 19.01.2025 (c) Alexander Livanov -->
     <script>
@@ -496,7 +496,7 @@ $stmt->execute([
                     applicationServerKey: urlBase64ToUint8Array("<?= VAPID_PUBLIC_KEY ?>")
                 });
 
-                console.log("Subscription object:", sub); // ✅ посмотри что там приходит
+                console.log("Subscription object:", sub);
 
                 const response = await fetch("/api/push/subscribe.php", {
                     method: "POST",

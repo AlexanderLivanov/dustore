@@ -24,6 +24,10 @@ $stmt = $db->connect()->prepare("SELECT * FROM library where game_id = ?");
 $stmt->execute([$game_id]);
 $downloaded = count($stmt->fetchAll(PDO::FETCH_ASSOC));
 
+$stmt = $db->connect()->prepare("SELECT * FROM studios where name = ?");
+$stmt->execute([$game['studio_name']]);
+$studio_payment_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$game) {
     header('Location: /explore');
     exit();
@@ -208,6 +212,10 @@ function formatFileSize($bytes)
                             <div class="game-info-header">
                                 <h1><?= htmlspecialchars($game['name']) ?></h1>
 
+                                <?php if (!empty($studio_payment_data['donate_link'])): ?>
+                                    <h3>💰<a href="<?= $studio_payment_data['donate_link'] ?>" style="color: #ffffff;" target="_blank">Задонатить разработчику</a></h3>
+                                <?php endif; ?>
+
                                 <!-- Бейджи игры -->
                                 <div class="game-badges">
                                     <?php foreach ($badges as $badge): ?>
@@ -355,10 +363,6 @@ function formatFileSize($bytes)
                                 </div>
 
                                 <?php
-                                $stmt = $db->connect()->prepare("SELECT * FROM studios where name = ?");
-                                $stmt->execute([$game['studio_name']]);
-                                $studio_payment_data = $stmt->fetch(PDO::FETCH_ASSOC);
-
                                 // 2.
                                 // Оплата заданной суммы с выбором валюты на сайте ROBOKASSA
                                 // Payment of the set sum with a choice of currency on site ROBOKASSA
@@ -444,6 +448,40 @@ function formatFileSize($bytes)
                                                 onclick="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
                                                 Скачать игру
                                             </button>
+
+                                            <button onclick="downloadGame(123)">Скачать игру</button>
+
+                                            <script>
+                                                function downloadGame(gameId) {
+                                                    fetch(`http://127.0.0.1:5000/download_game?game_id=${gameId}`)
+                                                        .then(r => r.json())
+                                                        .then(res => {
+                                                            if (res.ok) {
+                                                                alert("Игра скачана и распакована!");
+                                                            } else {
+                                                                alert("Ошибка: " + res.error);
+                                                            }
+                                                        }).catch(err => alert("Не удалось обратиться к лаунчеру"));
+                                                }
+                                            </script>
+
+                                            <button onclick="launchGame('ach.exe')">Запустить игру</button>
+
+                                            <script>
+                                                function launchGame(path) {
+                                                    fetch(`http://127.0.0.1:5000/launch_game?path=${encodeURIComponent(path)}`)
+                                                        .then(r => r.json())
+                                                        .then(res => {
+                                                            if (res.ok) {
+                                                                alert("Игра запущена!");
+                                                            } else {
+                                                                alert("Ошибка: " + res.error);
+                                                            }
+                                                        }).catch(err => alert("Не удалось обратиться к лаунчеру"));
+                                                }
+                                            </script>
+
+
                                         <?php endif; ?>
 
                                         <?php if (!empty($game['game_zip_size'])): ?>

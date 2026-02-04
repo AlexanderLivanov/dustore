@@ -35,6 +35,9 @@ if (!$studio) {
                         <img class="studio-logo" src="<?= $studio['avatar_link'] ?>" alt="">
                         <div class="studio-info-header">
                             <h1><?= $studio['name'] ?></h1>
+                            <?php if(!empty($studio['donate_link'])): ?>
+                                <h3>💰<a href="<?= $studio['donate_link'] ?>" style="color: #ffffff;" target="_blank">Задонатить разработчику</a></h3>
+                            <?php endif; ?>
                             <div class="studio-badges">
                                 <?php
                                 $date = new DateTime($studio['foundation_date']);

@@ -130,8 +130,9 @@ $bids_array = [
                                     </div>
                                     <div class="card-body-main">
                                         <div class="left">
+                                            <span class="label">Роль:</span><br>
                                             <div class="row role" data-userid="<?= $userdata['id'] ?>">
-                                                <span class="label">Роль:</span><br>
+
                                                 <span class="role-text">
                                                     <?= $userdata['l4t_role'] ?? "Роль не указана" ?>
                                                 </span>
@@ -140,11 +141,36 @@ $bids_array = [
                                             <div class="row">
                                                 <span class="label">Опыт:</span>
 
-                                                <div class="tags">
-                                                    <div class="tag">Программист RenPy 3г.</div>
-                                                    <div class="tag">Дизайн UI 1г.</div>
-                                                    <div class="tag">Диктор 5л.</div>
+                                                <div class="tags" id="expTags">
+                                                    <?php
+                                                    $exp = json_decode($userdata['l4t_exp'] ?? '[]', true);
+                                                    foreach ($exp as $i => $e): ?>
+                                                        <div class="tag" data-index="<?= $i ?>">
+                                                            <?= htmlspecialchars($e['role']) ?> <?= $e['years'] ?>г.
+                                                            <span class="del-exp">×</span>
+                                                        </div>
+                                                    <?php endforeach; ?>
                                                 </div>
+
+                                                <div id="experience-container"></div>
+
+                                                <button class="tag" id="add-exp-btn">+</button>
+                                            </div>
+
+                                            <div id="expModal" class="modal hidden">
+                                                <div class="modal-body">
+                                                    <div id="expRows"></div>
+
+                                                    <button id="addRow">Добавить строку</button>
+                                                    <button id="saveExp">Сохранить</button>
+                                                </div>
+                                            </div>
+
+                                            <div id="filesModal" class="modal hidden">
+                                                <button id="addLink">Ссылка</button>
+                                                <button id="addFile">Файл</button>
+
+                                                <div id="filesRows"></div>
                                             </div>
 
                                             <div class="row">
@@ -519,65 +545,93 @@ $bids_array = [
 
 
         });
+        const addBtn = document.getElementById('add-exp-btn');
+        const container = document.getElementById('experience-container');
+        const expTags = document.getElementById('expTags');
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const roleRow = document.querySelector(".row.role");
-            const roleText = roleRow.querySelector(".role-text");
-            let editing = false;
+        // добавление новой строки
+        addBtn.addEventListener('click', () => {
+            const row = document.createElement('div');
+            row.classList.add('exp-row');
+            row.innerHTML = `
+        <input type="text" name="exp_title[]" placeholder="Название опыта">
+        <input type="number" name="exp_years[]" placeholder="Лет" min="0" max="50">
+        <span class="del">×</span>
+    `;
+            container.appendChild(row);
 
-            roleRow.addEventListener("click", () => {
-                if (editing) return;
-                editing = true;
+            row.querySelector('.del').onclick = () => row.remove();
+        });
 
-                const currentText = roleText.textContent;
-                const input = document.createElement("input");
-                input.type = "text";
-                input.value = currentText;
-                input.style.width = "100%";
-                roleText.replaceWith(input);
-                input.focus();
+        // функция сохранения
+        function saveExp() {
+            const rows = [...container.querySelectorAll('.exp-row')];
+            const data = rows.map(r => ({
+                role: r.querySelector('input[name="exp_title[]"]').value.slice(0, 30),
+                years: parseInt(r.querySelector('input[name="exp_years[]"]').value) || 0
+            }));
 
-                const save = () => {
-                    editing = false;
-                    const newText = input.value;
+            fetch("/swad/controllers/l4t/update_exp.php", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        exp: data
+                    })
+                })
+                .then(res => res.json())
+                .then(resp => {
+                    if (!resp.success) alert("Ошибка при сохранении опыта");
+                    else {
+                        // очищаем теги и заново рисуем
+                        expTags.innerHTML = '';
+                        data.forEach((e, i) => {
+                            const tag = document.createElement('div');
+                            tag.className = 'tag';
+                            tag.dataset.index = i;
+                            tag.innerHTML = `${e.role} ${e.years}г. <span class="del-exp">×</span>`;
+                            expTags.appendChild(tag);
+                        });
 
-                    // Возвращаем span
-                    const span = document.createElement("span");
-                    span.className = "role-text";
-                    span.textContent = newText;
-                    input.replaceWith(span);
-
-                    // Отправляем в БД
-                    const userId = roleRow.dataset.userid;
-                    fetch("/swad/controllers/l4t/update_role.php", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                id: userId,
-                                role: newText
-                            })
-                        }).then(res => res.json())
-                        .then(data => {
-                            if (!data.success) alert("Ошибка при сохранении!");
-                        })
-                        .catch(() => alert("Ошибка при сохранении!"));
-                };
-
-                input.addEventListener("blur", save);
-                input.addEventListener("keydown", e => {
-                    if (e.key === "Enter") input.blur();
-                    if (e.key === "Escape") {
-                        editing = false;
-                        const span = document.createElement("span");
-                        span.className = "role-text";
-                        span.textContent = currentText;
-                        input.replaceWith(span);
+                        // чистим контейнер после сохранения
+                        container.innerHTML = '';
                     }
                 });
-            });
+        }
+
+        // удаление из тегов
+        expTags.addEventListener('click', e => {
+            if (!e.target.classList.contains('del-exp')) return;
+
+            const tag = e.target.closest('.tag');
+            const index = tag.dataset.index;
+
+            const data = [...expTags.querySelectorAll('.tag')]
+                .filter(t => t.dataset.index != index)
+                .map(t => {
+                    const parts = t.textContent.replace("×", "").trim().split(" ");
+                    const years = parseInt(parts.pop());
+                    const role = parts.join(" ");
+                    return {
+                        role,
+                        years
+                    };
+                });
+
+            fetch("/swad/controllers/l4t/update_exp.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    exp: data
+                })
+            }).then(() => tag.remove());
         });
+
+        // сохраняем при потере фокуса в контейнере
+        container.addEventListener('focusout', saveExp);
     </script>
 </body>
 

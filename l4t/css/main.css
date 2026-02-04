@@ -699,8 +699,7 @@ input:checked + .slider::before {
 
 .row.role:hover {
     border: 1px dashed #ffffff80;
-    border-radius: 4px;
-    padding: 4px;
+    border-radius: 3px;
 }
 
 .card-header {
@@ -937,4 +936,164 @@ input:checked + .slider::before {
   justify-content: center;
 
   color: #6b5d70;
+}
+
+/* МОДАЛКА */
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #000000aa; /* полупрозрачный фон */
+    border: 1px solid #ffffff30;
+    border-radius: 12px;
+    padding: 24px;
+    width: 400px;
+    max-width: 90%;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 0 15px #c32178aa;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    border-bottom: 1px solid #ffffff2a;
+    padding-bottom: 8px;
+}
+
+.modal-close {
+    cursor: pointer;
+    font-size: 20px;
+    color: #ffffff70;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #ffffff;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: #ddd;
+}
+
+.modal-body input {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #ffffff30;
+    background-color: #00000072;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.modal-body input:focus {
+    border-color: #c32178;
+}
+
+.modal-body .exp-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.modal-body .exp-row input {
+    flex: 1;
+}
+
+.modal-body .exp-row .del {
+    cursor: pointer;
+    color: #ff5555;
+    font-weight: bold;
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.modal-body .exp-row .del:hover {
+    color: #ff0000;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.modal-footer button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.modal-footer button.save-btn {
+    background-color: #c32178;
+    color: #fff;
+}
+
+.modal-footer button.save-btn:hover {
+    background-color: #74155d;
+}
+
+.modal-footer button.cancel-btn {
+    background-color: #555;
+    color: #fff;
+}
+
+.modal-footer button.cancel-btn:hover {
+    background-color: #333;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 900;
+}
+
+
+.exp-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.exp-row input {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ffffff30;
+    background-color: #00000072;
+    color: #fff;
+    outline: none;
+}
+
+.exp-row .del {
+    cursor: pointer;
+    color: #ff5555;
+    font-weight: bold;
+    font-size: 18px;
+    transition: color 0.2s;
+}
+
+.exp-row .del:hover {
+    color: #ff0000;
 }
