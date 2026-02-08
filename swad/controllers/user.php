@@ -439,4 +439,120 @@ class User
             ':id' => $user_id
         ]);
     }
+
+    // 05.02.2026 (c) Alexander Livanov
+    /* ================= FRIEND SYSTEM ================= */
+
+    public function sendFriendRequest($from_id, $to_id)
+    {
+        if ($from_id == $to_id) {
+            throw new Exception("Нельзя дружить с самим собой, гений");
+        }
+
+        $stmt = $this->db->prepare("
+            SELECT status FROM friends
+            WHERE (player_id = ? AND friend_id = ?)
+            OR (player_id = ? AND friend_id = ?)
+            LIMIT 1
+        ");
+        $stmt->execute([$from_id, $to_id, $to_id, $from_id]);
+
+        if ($stmt->fetch()) {
+            throw new Exception("Заявка уже существует или вы уже друзья");
+        }
+
+        $stmt = $this->db->prepare("
+            INSERT INTO friends
+            (player_id, friend_id, status, created_at, updated_at)
+            VALUES (?, ?, 'pending', NOW(), NOW())
+        ");
+        $stmt->execute([$from_id, $to_id]);
+
+        $nc = new NotificationCenter();
+        $nc->sendNotifications(
+            [$to_id],
+            "Новая заявка в друзья",
+            "Пользователь хочет добавить вас в друзья",
+            "/notifications"
+        );
+
+        return true;
+    }
+
+    public function acceptFriendRequest($current_user_id, $request_from_id)
+    {
+        $stmt = $this->db->prepare("
+            SELECT id FROM friends
+            WHERE player_id = ?
+            AND friend_id = ?
+            AND status = 'pending'
+            LIMIT 1
+        ");
+        $stmt->execute([$request_from_id, $current_user_id]);
+
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$req) {
+            throw new Exception("Заявка не найдена или уже обработана");
+        }
+
+        $stmt = $this->db->prepare("
+            UPDATE friends
+            SET status = 'accepted', updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$req['id']]);
+
+        $nc = new NotificationCenter();
+        $nc->sendNotifications(
+            [$request_from_id],
+            "Заявка принята",
+            "Пользователь принял вашу заявку в друзья",
+            "/me"
+        );
+
+        return true;
+    }
+
+    public function declineFriendRequest($current_user_id, $request_from_id)
+    {
+        $stmt = $this->db->prepare("
+            SELECT id FROM friends
+            WHERE player_id = ?
+            AND friend_id = ?
+            AND status = 'pending'
+            LIMIT 1
+        ");
+        $stmt->execute([$request_from_id, $current_user_id]);
+
+        $req = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$req) {
+            throw new Exception("Заявка не найдена");
+        }
+
+        $stmt = $this->db->prepare("
+            UPDATE friends
+            SET status = 'declined', updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$req['id']]);
+
+        return true;
+    }
+
+    public function getFriendStatus($user1, $user2)
+    {
+        $stmt = $this->db->prepare("
+            SELECT status, player_id, friend_id
+            FROM friends
+            WHERE (player_id = ? AND friend_id = ?)
+            OR (player_id = ? AND friend_id = ?)
+            LIMIT 1
+        ");
+
+        $stmt->execute([$user1, $user2, $user2, $user1]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }

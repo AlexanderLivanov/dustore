@@ -171,11 +171,11 @@ $stmt->execute([
 </head>
 
 <body>
-    <div id="push-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#333; color:#fff; padding:15px; text-align:center; z-index:1000;">
+    <!-- <div id="push-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#333; color:#fff; padding:15px; text-align:center; z-index:1000;">
         🔔 Хотите получать уведомления? Так вы не пропустите ничего нового...
         <button id="enable-push" style="margin-left:10px; padding:5px 10px;">Включить</button>
         <button id="dismiss-push" style="margin-left:10px; padding:5px 10px;">Конечно! (отключить)</button>
-    </div>
+    </div> -->
 
     <script>
         async function urlBase64ToUint8Array(base64String) {
@@ -475,7 +475,7 @@ $stmt->execute([
             document.getElementById("updateNext").textContent = nextText;
         }
 
-        setUpdateProgress(5, "Следующее обновление: v1.15.2");
+        setUpdateProgress(12, "Следующее обновление: v1.15.2");
     </script>
     <!-- subscribe to push 19.01.2025 (c) Alexander Livanov -->
     <script>

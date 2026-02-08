@@ -89,6 +89,7 @@ $info = getLastCommitInfo();
     <a href="/oferta.txt">Публичная оферта</a> .
     <a href="/developer-agreement">Соглашение с разработчиком</a>
     <p class="footer-p">DUSTORE (Dust Store) является собственностью Dust Studio и Crazy Projects Lab. Все торговые марки являются собственностью соответствующих владельцев. НДС включён во все цены, где он применим</p>
+    <!-- <p class="footer-p">ИП Ливанов Александр Алексеевич <br>ИНН 771392840109 <br>ОГРНИП 326774600034839 <br>г. Москва</p> -->
     <!-- SemVer spec: status-global.design.tech#patch -->
     <!-- <p class="footer-p">Версия платформы: beta-1.11.24#22</p> -->
     <?php if ($info): ?>

@@ -449,7 +449,7 @@ function formatFileSize($bytes)
                                                 Скачать игру
                                             </button>
 
-                                            <button onclick="downloadGame(123)">Скачать игру</button>
+                                            <!-- <button onclick="downloadGame(123)">Скачать игру</button>
 
                                             <script>
                                                 function downloadGame(gameId) {
@@ -479,7 +479,7 @@ function formatFileSize($bytes)
                                                             }
                                                         }).catch(err => alert("Не удалось обратиться к лаунчеру"));
                                                 }
-                                            </script>
+                                            </script> -->
 
 
                                         <?php endif; ?>

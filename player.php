@@ -617,7 +617,7 @@ if ($is_owner) {
         .edit-profile-btn {
             display: inline-block;
             padding: 10px 20px;
-            background: var(--primary);
+            background: #26072d;
             color: white;
             border: none;
             border-radius: 20px;
@@ -628,7 +628,7 @@ if ($is_owner) {
         }
 
         .edit-profile-btn:hover {
-            background: #e62e8a;
+            background: #400c4a;
             transform: translateY(-2px);
         }
 
@@ -771,15 +771,136 @@ if ($is_owner) {
                         </svg>
                     </a></h2>
 
+                <?php
+                $status = null;
+
+                if (!empty($_SESSION['USERDATA']['id']) && !$is_owner) {
+                    $u = new User();
+                    $status = $u->getFriendStatus(
+                        $_SESSION['USERDATA']['id'],
+                        $user['id']
+                    );
+                }
+
+                ?>
+
                 <?php if ($is_owner): ?>
                     <a href="/me" class="edit-profile-btn">Редактировать профиль</a>
+                    <?php
+                    $incomingRequests = [];
+
+                    if ($is_owner) {
+                        $stmt = $pdo->prepare("
+                            SELECT f.id, u.id as user_id, u.username, 
+                                u.first_name, u.last_name, u.profile_picture
+                            FROM friends f
+                            JOIN users u ON u.id = f.player_id
+                            WHERE f.friend_id = :me
+                            AND f.status = 'pending'
+                            ORDER BY f.id DESC
+                        ");
+
+                        $stmt->execute([':me' => $user['id']]);
+                        $incomingRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+
+                    // print_r($incomingRequests);
+                    // echo $_SESSION['USERDATA']['id'];
+
+                    ?>
+
+                    <?php if ($is_owner && !empty($incomingRequests)): ?>
+
+                        <div class="profile-card" style="border: 1px solid #c32178;">
+                            <h3>Входящие заявки в друзья</h3>
+
+                            <?php foreach ($incomingRequests as $req): ?>
+
+                                <div style="
+                                        display:flex;
+                                        align-items:center;
+                                        gap:12px;
+                                        margin:10px 0;
+                                        background:rgba(255,255,255,.05);
+                                        padding:10px;
+                                        border-radius:10px;
+                                    ">
+
+                                    <img src="<?= $req['profile_picture'] ?: '/swad/static/img/logo.svg' ?>"
+                                        style="width:40px;height:40px;border-radius:50%">
+
+                                    <div style="flex:1">
+                                        <a href="/player/<?= htmlspecialchars($req['username']) ?>"
+                                            style="color:white;text-decoration:none">
+                                            <?= htmlspecialchars($req['first_name'] . ' ' . $req['last_name']) ?>
+                                            (@<?= htmlspecialchars($req['username']) ?>)
+                                        </a>
+                                    </div>
+
+                                    <button class="acceptFriend"
+                                        data-user="<?= $req['user_id'] ?>"
+                                        style="background:#26072d;color:white;
+                                                border:none;padding:6px 12px;
+                                                border-radius:8px;cursor:pointer">
+                                        Принять
+                                    </button>
+
+                                </div>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    <?php endif; ?>
+                <?php elseif (!empty($_SESSION['USERDATA']['id'])): ?>
+                    <?php
+                    $btnText = 'Добавить в друзья';
+                    $btnAction = 'send';
+                    $disabled = '';
+                    if ($status) {
+                        if ($status['status'] === 'pending') {
+                            if ($status['player_id'] == $_SESSION['USERDATA']['id']) {
+                                $btnText = 'Заявка отправлена';
+                                $disabled = 'disabled';
+                            } else {
+                                $btnText = 'Принять заявку';
+                                $btnAction = 'accept';
+                            }
+                        }
+
+                        if ($status['status'] === 'accepted') {
+                            $btnText = 'В друзьях';
+                            $disabled = 'disabled';
+                        }
+                    }
+                    ?>
+
+                    <a href="#"
+                        id="friendBtn"
+                        class="edit-profile-btn"
+                        data-user="<?= $user['id'] ?>"
+                        data-action="<?= $btnAction ?>"
+                        <?= $disabled ?>>
+
+                        <svg style="vertical-align: middle;"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16" height="16" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <path d="M13.666 1.429l6.75 3.98l.096 .063l.093 .078l.106 .074a3.22 3.22 0 0 1 1.284 2.39l.005 .204v7.284c0 1.175 -.643 2.256 -1.623 2.793l-6.804 4.302c-.98 .538 -2.166 .538 -3.2 -.032l-6.695 -4.237a3.23 3.23 0 0 1 -1.678 -2.826v-7.285c0 -1.106 .57 -2.128 1.476 -2.705l6.95 -4.098c1 -.552 2.214 -.552 3.24 .015m-1.666 6.571a1 1 0 0 0 -1 1v2h-2a1 1 0 0 0 -.993 .883l-.007 .117a1 1 0 0 0 1 1h2v2a1 1 0 0 0 .883 .993l.117 .007a1 1 0 0 0 1 -1v-2h2a1 1 0 0 0 .993 -.883l.007 -.117a1 1 0 0 0 -1 -1h-2v-2a1 1 0 0 0 -.883 -.993z" />
+                        </svg>
+
+                        <span id="friendBtnText"><?= $btnText ?></span>
+                    </a>
+
                 <?php endif; ?>
+
+
 
                 <div class="achievements-container">
                     <?php foreach ($achievements as $ach): ?>
                         <?php
                         $title = htmlspecialchars($ach['name']);
-                        $icon = htmlspecialchars($ach['icon_url'] ?? '🏆'); // можно хранить emoji или путь к картинке
+                        $icon = htmlspecialchars($ach['icon_url'] ?? '🏆');
                         ?>
                         <div class="achievement-icon"
                             title="<?= htmlspecialchars($title) ?>"
@@ -1314,6 +1435,78 @@ if ($is_owner) {
             if (e.target === this) {
                 closeItemModal();
             }
+        });
+
+        document.getElementById('friendBtn')?.addEventListener('click', async function(e) {
+            e.preventDefault();
+
+            const btn = this;
+            const text = document.getElementById('friendBtnText');
+
+            if (btn.hasAttribute('disabled')) return;
+
+            const userId = btn.dataset.user;
+            const action = btn.dataset.action;
+
+            try {
+                const res = await fetch('/api/friends.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: action,
+                        user_id: userId
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!data.success) {
+                    console.error(data.error);
+                    return;
+                }
+
+                if (action === 'send') {
+                    text.innerText = 'Заявка отправлена';
+                    btn.setAttribute('disabled', 'true');
+                }
+
+                if (action === 'accept') {
+                    text.innerText = 'В друзьях';
+                    btn.setAttribute('disabled', 'true');
+                }
+
+            } catch (err) {
+                alert('Сеть отвалилась, как и твой энтузиазм');
+            }
+        });
+
+        document.querySelectorAll('.acceptFriend').forEach(btn => {
+            btn.addEventListener('click', async function() {
+
+                const uid = this.dataset.user;
+
+                const res = await fetch('/api/friends.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: 'accept',
+                        user_id: uid
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    this.innerText = 'В друзьях';
+                    this.disabled = true;
+                } else {
+                    alert(data.error || 'Чёт пошло по пизде');
+                }
+            });
         });
     </script>
 </body>
