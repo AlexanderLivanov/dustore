@@ -87,7 +87,7 @@ $mail_body = '<!DOCTYPE html>
                 ';
 // print_r($_SESSION);
 
-if ($gameId <= 0 || $rating < 1 || $rating > 10) {
+if (!is_numeric ($gameId) && ($gameId <= 0 || $rating < 1 || $rating > 10)) {
     echo json_encode(['error' => 'invalid_data']);
     exit;
 }
