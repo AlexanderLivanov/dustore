@@ -4,13 +4,11 @@ require_once('../../config.php');
 
 $db = new Database();
 $pdo = $db->connect("desl4t");
-
 $data = $_POST;
 
 if (empty($_SESSION['USERDATA']['id'])) {
     die("не авторизован, герой");
 }
-
 if (!empty($data['bid_id'])) {
 
     // UPDATE

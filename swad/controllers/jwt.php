@@ -1,6 +1,6 @@
 <?php
+require_once(__DIR__ . '/../pass.php');
 // TOKENS FOR USERS AUTH
-define('SECRET_KEY', 'S+a2pTxd4NTyzC6HrmYUy6AEMIaq+jYfpqfJ5FqqM20=');
 define('TOKEN_EXPIRE', 3600 * 24 * 3); // 3 days
 
 function generateToken($telegram_id)

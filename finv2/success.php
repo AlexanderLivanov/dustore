@@ -1,57 +1,34 @@
 ﻿<?php
-require_once('../swad/config.php');
-require_once('../swad/controllers/user.php');
-require_once('../swad/controllers/TBankPay.php');
 
+require_once('../swad/config.php');
 session_start();
 
-$orderId = $_GET['order'] ?? null;
-if (!$orderId) {
-    header('Location: /finv2/fail?reason=invalid');
+$db = new Database();
+$pdo = $db->connect();
+
+$subId = $_GET['sub'] ?? null;
+
+if (!$subId) {
+    header('Location: fail?reason=invalid');
     exit;
 }
 
-$pay = new TBankPay(
-    '1768985142695DEMO',
-    '2$XMgboHTiyRtE*d'
-);
+$stmt = $pdo->prepare("SELECT * FROM subscriptions WHERE id=?");
+$stmt->execute([$subId]);
+$subscription = $stmt->fetch(PDO::FETCH_ASSOC);
 
-/**
- * Получаем PaymentId по OrderId
- */
-$stmt = $pdo->prepare("SELECT * FROM payments WHERE order_id = ?");
-$stmt->execute([$orderId]);
-$payment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$payment) {
-    header('Location: /finv2/fail?reason=not_found');
+if (!$subscription) {
+    header('Location: fail?reason=not_found');
     exit;
 }
 
-$state = $pay->getState($payment['payment_id']);
-
-if (($state['Status'] ?? '') !== 'CONFIRMED') {
-    header('Location: /finv2/fail?reason=not_confirmed');
+if ($subscription['status'] !== 'active') {
+    header('Location: fail?reason=not_confirmed');
     exit;
 }
 
-/**
- * Обновляем платёж (один раз!)
- */
-if ($payment['status'] !== 'completed') {
-    $pdo->prepare(
-        "UPDATE payments SET status='completed', updated_at=NOW() WHERE id=?"
-    )->execute([$payment['id']]);
-
-    (new User())->updateUserItems(
-        $_SESSION['USERDATA']['id'],
-        $payment['item_id']
-    );
-}
-
-$orderId        = $payment['order_id'];
-$out_summ       = $state['Amount'] / 100;
-$item['name']   = $payment['item_name'];
+$planName = $subscription['plan_code'];
+$amount = $subscription['amount'];
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -235,7 +212,7 @@ $item['name']   = $payment['item_name'];
             </div>
             <div class="detail-row">
                 <span>Товар:</span>
-                <span><?php echo htmlspecialchars($item['name'] ?? 'Неизвестный товар'); ?></span>
+                <span><?php echo htmlspecialchars($planName); ?></span>
             </div>
             <div class="detail-row">
                 <span>Дата оплаты:</span>
@@ -243,7 +220,7 @@ $item['name']   = $payment['item_name'];
             </div>
             <div class="detail-row">
                 <span>Сумма:</span>
-                <span><?php echo number_format($out_summ, 0, ',', ' '); ?> ₽</span>
+                <span><?php echo number_format($amount, 0, ',', ' '); ?> ₽</span>
             </div>
             <div class="detail-row">
                 <span>Статус:</span>
