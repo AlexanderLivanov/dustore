@@ -1,3 +1,28 @@
+<?php
+session_start();
+require_once('../swad/config.php');
+
+$db = new Database();
+$pdo = $db->connect();
+
+$userId = $_SESSION['USERDATA']['id'] ?? null;
+
+$currentPlan = null;
+
+if ($userId) {
+    $stmt = $pdo->prepare("
+        SELECT plan_code 
+        FROM subscriptions 
+        WHERE user_id = ?
+          AND status = 'active'
+          AND expires_at > NOW()
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$userId]);
+    $currentPlan = $stmt->fetchColumn();
+}
+?>
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -151,6 +176,24 @@
             color: var(--muted);
             border-top: 1px solid #222;
         }
+
+        .plan.active {
+            border: 2px solid var(--accent2);
+            box-shadow: 0 0 25px rgba(0, 212, 166, 0.25);
+        }
+
+        .plan.active::before {
+            content: "Текущий тариф";
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--accent2);
+            color: #000;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -182,7 +225,7 @@
                 <button class="btn-outline">Включено по умолчанию</button>
             </div>
 
-            <div class="plan">
+            <div class="plan <?= $currentPlan === 'indie_pro' ? 'active' : '' ?>">
                 <h2>Инди Pro</h2>
                 <div class="price">299 ₽ / мес</div>
                 <div class="features">Для тех, у кого много проектов.</div>
@@ -193,13 +236,17 @@
                     <li>- Расширенная статистика</li>
                     <li>- Возможность добавлять сотрудников</li>
                 </ul>
-                <button class="btn-primary"
-                    onclick="location.href='billing/checkout.php?plan=indie_pro'">
-                    Купить
-                </button>
+                <?php if ($currentPlan === 'indie_pro'): ?>
+                    <button class="btn-outline" disabled>Активировано</button>
+                <?php else: ?>
+                    <button class="btn-primary"
+                        onclick="location.href='billing/checkout.php?plan=indie_pro'">
+                        Купить
+                    </button>
+                <?php endif; ?>
             </div>
 
-            <div class="plan">
+            <div class="plan <?= $currentPlan === 'indie_disk' ? 'active' : '' ?>">
                 <h2>Инди Диск</h2>
                 <div class="price">99 ₽ / мес</div>
                 <div class="features">Для тех, кому нужно только выложить тяжёлые игры.</div>
@@ -289,7 +336,14 @@
         </section>
 
         <footer>
-            © 2026 GameDev Platform
+            © 2025-2026 Dustore (Dust Store). Исходный код является <a style="color: var(--accent);" href="https://github.com/AlexanderLivanov/dustore">открытым</a> и распространяется под лицензией Apache 2.0 License.
+            <p> </p>
+            <h2>Реквизиты Платформы:</h2>
+            <p>ИП Ливанов Александр Алексеевич</p>
+            <p>ИНН 771392840109</p>
+            <p>ОГРНИП 326774600034839</p>
+            <p>р/с 40802810400009281106</p>
+            <p>АО «ТБанк»</p>
         </footer>
 
     </div>

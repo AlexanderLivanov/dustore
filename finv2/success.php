@@ -230,9 +230,9 @@ $amount = $subscription['amount'];
         </div>
 
         <div class="animate-in delay-2">
-            <a href="/swad/controllers/download_game.php?game_id=<?= $item['game_zip_url'] ?>'" class="btn">Скачать прямо сейчас!</a>
-            <a href="/library" class="btn btn-secondary">Перейти к библиотеке</a>
-            <a href="/explore" class="btn btn-secondary">Посмотреть ещё игры</a>
+            <!-- <a href="/swad/controllers/download_game.php?game_id=<?= $item['game_zip_url'] ?>'" class="btn">Скачать прямо сейчас!</a> -->
+            <a href="/finv2" class="btn btn-secondary">Перейти к подписке</a>
+            <!-- <a href="/explore" class="btn btn-secondary">Посмотреть ещё игры</a> -->
         </div>
     </div>
 
