@@ -27,6 +27,7 @@ if ($subscription['status'] !== 'active') {
     exit;
 }
 
+$id = $subscription['id'];
 $planName = $subscription['plan_code'];
 $amount = $subscription['amount'];
 ?>
@@ -203,12 +204,12 @@ $amount = $subscription['amount'];
         <div class="success-icon animate-in">🎉</div>
         <h1 class="animate-in delay-1">Оплата успешна!</h1>
         <?php echo $tg_is_empty_warning ?>
-        <p class="animate-in delay-1">Ваши игры уже в вашей Коллекции. Приятной игры!</p>
+        <p class="animate-in delay-1">Спасибо за покупку!</p>
 
         <div class="order-details animate-in delay-2">
             <div class="detail-row">
                 <span>Номер заказа:</span>
-                <span>#<?php echo $inv_id; ?></span>
+                <span>#<?php echo $id; ?></span>
             </div>
             <div class="detail-row">
                 <span>Товар:</span>
