@@ -33,6 +33,11 @@ if ($adultSection) {
     <title>Dustore - Каталог игр</title>
     <link rel="stylesheet" href="swad/css/explore.css">
     <?php require_once('swad/controllers/ymcounter.php'); ?>
+    <!-- Yandex.RTB -->
+    <script>
+        window.yaContextCb = window.yaContextCb || []
+    </script>
+    <script src="https://yandex.ru/ads/system/context.js" async></script>
 </head>
 
 <body>
@@ -75,7 +80,39 @@ if ($adultSection) {
                             <p>Игры еще не добавлены в каталог</p>
                         </div>
                     <?php else: ?>
-                        <?php foreach ($games as $game):
+
+                        <?php
+                        $maxTiles = 10000;
+                        $i = 0;
+
+                        foreach ($games as $game):
+
+                            if ($i >= $maxTiles) break;
+
+                            $i++;
+
+                            // Каждая 6-я плитка — реклама
+                            if ($i % 6 === 0): ?>
+                                <div class="game-card ad-card">
+                                    <div class="game-image">
+                                        <img src="/images/ad-banner.jpg" alt="Реклама">
+                                    </div>
+                                    <div class="game-info">
+                                        <!-- Yandex.RTB R-A-18474572-3 -->
+                                        <div id="yandex_rtb_R-A-18474572-3"></div>
+                                        <script>
+                                            window.yaContextCb.push(() => {
+                                                Ya.Context.AdvManager.render({
+                                                    "blockId": "R-A-18474572-3",
+                                                    "renderTo": "yandex_rtb_R-A-18474572-3"
+                                                })
+                                            })
+                                        </script>
+                                    </div>
+                                </div>
+                                <?php continue; ?>
+                            <?php endif;
+
                             $badge = '';
                             $badgeClass = '';
 
@@ -89,13 +126,15 @@ if ($adultSection) {
                             $price = ($game['price'] == 0)
                                 ? 'Бесплатно'
                                 : number_format($game['price'], 0, ',', ' ') . ' ₽';
-                        ?>
+                            ?>
+
                             <div class="game-card" onclick="window.location.href='/g/<?= $game['id'] ?>';">
                                 <div class="game-image <?= ($adultSection && $game['age_rating'] >= 18) ? 'blur-adult' : '' ?>">
                                     <img src="<?= !empty($game['path_to_cover'])
                                                     ? htmlspecialchars($game['path_to_cover'])
                                                     : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
                                         alt="<?= htmlspecialchars($game['name']) ?>">
+
                                     <?php if ($badge): ?>
                                         <div class="game-badge <?= $badgeClass ?>"><?= $badge ?></div>
                                     <?php endif; ?>
@@ -106,36 +145,38 @@ if ($adultSection) {
                                     <p><?= mb_substr(htmlspecialchars($game['description']), 0, 150, 'UTF-8') . '...' ?></p>
                                     <br>
                                     <p class="game-developer">От <?= htmlspecialchars($game['studio_name']) ?></p>
+
                                     <div class="game-footer">
                                         <?php if ($game['GQI'] > 0): ?>
-                                            <div class="game-rating">GQI:  <?= number_format($game['GQI'], 0) ?></div>
+                                            <div class="game-rating">GQI: <?= number_format($game['GQI'], 0) ?></div>
                                         <?php endif; ?>
+
                                         <?php
                                         $avg_rating = $gameController->getAverageRating($game['id'])['avg'];
-                                        // print_r($avg_rating);
                                         $total_reviews = count($gameController->getReviewsArray($game['id']));
-
                                         $total_downloads = $gameController->getTotalDownloads($game['id']);
                                         ?>
-                                        <?php if ($game['GQI'] > 0): ?>
-                                            <div class="game-rating">★ <?= $avg_rating . "/10" ?></div>
-                                        <?php endif; ?>
+
                                         <?php if ($avg_rating > 0): ?>
-                                            <div class="game-rating"><?= $game['age_rating'] ?></div>
+                                            <div class="game-rating">★ <?= $avg_rating ?>/10</div>
                                         <?php endif; ?>
+
                                         <div class="game-price <?= ($game['price'] == 0) ? 'free' : '' ?>">
                                             <?= $price ?>
                                         </div>
                                     </div>
+
                                     <br>
+
                                     <h6>
-                                        <?php echo 'Отзывов: ' . $total_reviews;
-                                        echo '<br>';
-                                        echo 'Скачали: ' . $total_downloads . ' раз(а)'; ?>
+                                        Отзывов: <?= $total_reviews ?><br>
+                                        Скачали: <?= $total_downloads ?> раз(а)
                                     </h6>
                                 </div>
                             </div>
+
                         <?php endforeach; ?>
+
                     <?php endif; ?>
                 </div>
             </div>
