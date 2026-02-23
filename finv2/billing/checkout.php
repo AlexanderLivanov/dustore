@@ -53,7 +53,7 @@ $payment = $client->createPayment(
         ],
         'confirmation' => [
             'type' => 'redirect',
-            'return_url' => 'http://127.0.0.1/finv2/success.php?sub=' . $subscriptionDbId,
+            'return_url' => 'https://dustore.ru/finv2/success.php?sub=' . $subscriptionDbId,
         ],
         'capture' => true,
         'description' => 'Подписка: ' . $plan,
