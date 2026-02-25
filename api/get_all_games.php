@@ -11,14 +11,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $db = new Database();
 $pdo = $db->connect();
 
-// Получаем список игр студии
-$stmt = $pdo->prepare("SELECT * FROM games;");
-$stmt->execute();
-$games = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+$offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+$platform = isset($_GET['platform']) ? $_GET['platform'] : 'Android';
+$search = isset($_GET['search']) ? $_GET['search'] : '';
 
-if ($games !== false) {
-    echo json_encode($games);
-} else {
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to fetch games']);
-}
+$sql = "SELECT * FROM games 
+        WHERE status='published'
+        AND platforms LIKE :platform
+        AND name LIKE :search
+        LIMIT :limit OFFSET :offset";
+
+$stmt = $pdo->prepare($sql);
+$stmt->bindValue(':platform', "%$platform%");
+$stmt->bindValue(':search', "%$search%");
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
+
+$games = $stmt->fetchAll(PDO::FETCH_ASSOC);
+echo json_encode($games);
