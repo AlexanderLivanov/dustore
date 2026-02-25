@@ -698,11 +698,6 @@ input:checked + .slider::before {
     transition: 0.2s;
 }
 
-.row.role:hover {
-    border: 1px dashed #ffffff80;
-    border-radius: 3px;
-}
-
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -1097,4 +1092,60 @@ input:checked + .slider::before {
 
 .exp-row .del:hover {
     color: #ff0000;
+}
+
+.l4t-input {
+    background: #201724;
+    border: 1px solid #3a2a3f;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #ddd;
+    transition: 0.2s;
+}
+
+.l4t-input:focus {
+    border-color: #c32178;
+    outline: none;
+}
+
+.l4t-btn {
+    background: #201724;
+    border: 1px solid #3a2a3f;
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.l4t-btn:hover {
+    background: #2c1d30;
+}
+
+@media (max-width: 900px) {
+
+.view-container {
+    flex-direction: column;
+    width: 95vw;
+    margin: 0 auto;
+}
+
+.left-side-menu {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+}
+
+.right-content-view {
+    padding: 20px;
+}
+
+.card-body-main {
+    grid-template-columns: 1fr;
+    gap: 40px;
+}
+
+.projects {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 }
