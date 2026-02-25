@@ -11,23 +11,37 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $db = new Database();
 $pdo = $db->connect();
 
+// Параметры запроса
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-$platform = isset($_GET['platform']) ? $_GET['platform'] : 'Android';
+$platform = isset($_GET['platform']) ? $_GET['platform'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 
-$sql = "SELECT * FROM games 
-        WHERE status='published'
-        AND platforms LIKE :platform
-        AND name LIKE :search
-        LIMIT :limit OFFSET :offset";
+// Строим SQL динамически
+$sql = "SELECT g.*, s.name AS developer_name
+        FROM games g
+        LEFT JOIN studios s ON g.developer = s.id
+        WHERE g.status = 'published'";
+
+$params = [];
+
+// Фильтр по платформе
+if ($platform !== '') {
+    $sql .= " AND g.platforms LIKE :platform";
+    $params[':platform'] = "%$platform%";
+}
+
+// Фильтр по имени игры
+if ($search !== '') {
+    $sql .= " AND g.name LIKE :search";
+    $params[':search'] = "%$search%";
+}
+
+// LIMIT и OFFSET вставляем напрямую
+$sql .= " LIMIT $limit OFFSET $offset";
 
 $stmt = $pdo->prepare($sql);
-$stmt->bindValue(':platform', "%$platform%");
-$stmt->bindValue(':search', "%$search%");
-$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->execute();
+$stmt->execute($params);
 
 $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
-echo json_encode($games);
+echo json_encode($games, JSON_UNESCAPED_UNICODE);
