@@ -341,7 +341,7 @@ p {
     --secondary: #74155d;
     --dark: #14041d;
     --light: #f8f9fa;
-    --gradient: linear-gradient(180deg, #14041d, #400c4a, #74155d, #c32178);
+    --gradient: linear-gradient(180deg, #230e2d, #65154c);
     --gradient2: linear-gradient(180deg, #c32178, #14041d, #400c4a, #c32178);
 }
 

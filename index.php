@@ -14,7 +14,7 @@
 
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
-    <main>
+    <main >
         <section class="hero">
             <div class="container">
                 <div class="hero-content">
