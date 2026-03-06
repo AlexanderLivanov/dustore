@@ -65,8 +65,8 @@ main {
 }
 
 .container {
-    max-width: 1330px;
-    max-height: 1080px;
+    max-width: 95.5%;
+    max-height: 100vh;
     margin: 0 auto;
     padding: 0 20px;
 }
