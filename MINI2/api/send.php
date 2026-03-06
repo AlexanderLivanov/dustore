@@ -85,4 +85,9 @@ if ($status >= 200 && $status < 300) {
 }
 
 http_response_code($status);
+file_put_contents(
+    __DIR__ . '/send_log.txt',
+    date('c') . " " . json_encode($response) . "\n",
+    FILE_APPEND
+);
 echo $body;

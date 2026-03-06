@@ -1,5 +1,9 @@
 <?php
-
+file_put_contents(
+    __DIR__ . '/get_log.txt',
+    date('c') . " " . json_encode($_GET) . "\n",
+    FILE_APPEND
+);
 /**
  * get_messages.php
  *
