@@ -1,0 +1,381 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.screen {
+    display: none;
+    height: 100%;
+    flex-direction: column;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* Header styles */
+.app-header, .chat-header {
+    background-color: #075e54;
+    color: white;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.chat-header {
+    background-color: #128C7E;
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.btn-add-chat {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-add-chat:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* Chats list */
+.chats-list {
+    flex: 1;
+    overflow-y: auto;
+    background-color: white;
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.chat-item:hover {
+    background-color: #f5f5f5;
+}
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #075e54;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.chat-info {
+    flex: 1;
+}
+
+.chat-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.chat-last-message {
+    color: #666;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.chat-time {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Messages */
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #e5ddd5;
+    display: flex;
+    flex-direction: column;
+}
+
+.message {
+    max-width: 70%;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    border-radius: 15px;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message.sent {
+    background-color: #dcf8c6;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.message.received {
+    background-color: white;
+    align-self: flex-start;
+}
+
+.message-time {
+    font-size: 11px;
+    color: #999;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.message.sent .message-time {
+    color: #4a7a3a;
+}
+
+/* Message input */
+.message-input-container {
+    display: flex;
+    padding: 10px;
+    background-color: #f0f2f5;
+    gap: 10px;
+}
+
+.message-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 25px;
+    outline: none;
+    font-size: 16px;
+    background-color: white;
+}
+
+.btn-send {
+    background-color: #128C7E;
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-send:hover {
+    background-color: #075e54;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal-content h3 {
+    margin-bottom: 15px;
+    color: #075e54;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel {
+    background-color: #f0f0f0;
+}
+
+.btn-save {
+    background-color: #075e54;
+    color: white;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: #999;
+    font-size: 16px;
+}
+
+/* Стили для статусов сообщений */
+.message-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.message-status {
+    font-size: 12px;
+    color: #4a7a3a;
+}
+
+.message-status.delivered {
+    color: #4a7a3a;
+}
+
+.message-status.sent {
+    color: #999;
+}
+
+.message.received .message-status {
+    display: none;
+}
+
+/* Непрочитанные чаты */
+.chat-item.unread {
+    background-color: #f0f7ff;
+}
+
+.chat-item.unread .chat-name {
+    font-weight: bold;
+}
+
+/* Индикатор загрузки */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-indicator::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Анимация для ошибок */
+@keyframes slideDown {
+    from {
+        top: -50px;
+        opacity: 0;
+    }
+    to {
+        top: 20px;
+        opacity: 1;
+    }
+}
+
+/* Сообщения с ошибкой */
+.message.error {
+    background-color: #ffebee;
+    border: 1px solid #ffcdd2;
+}
+
+/* Оффлайн индикатор */
+.offline-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff9800;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.btn-load {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.btn-load:hover {
+    color: #ddd;
+}
+
+.recipient-select {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-right: 10px;
+    font-size: 14px;
+}
