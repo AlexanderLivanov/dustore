@@ -92,6 +92,7 @@ if ($adultSection) {
                             $i++;
 
                             
+                            
 
                             $badge = '';
                             $badgeClass = '';
