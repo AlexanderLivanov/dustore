@@ -91,27 +91,7 @@ if ($adultSection) {
 
                             $i++;
 
-                            // Каждая 6-я плитка — реклама
-                            if ($i % 6 === 0): ?>
-                                <div class="game-card ad-card">
-                                    <div class="game-image">
-                                        <img src="/images/ad-banner.jpg" alt="Реклама">
-                                    </div>
-                                    <div class="game-info">
-                                        <!-- Yandex.RTB R-A-18474572-3 -->
-                                        <div id="yandex_rtb_R-A-18474572-3"></div>
-                                        <script>
-                                            window.yaContextCb.push(() => {
-                                                Ya.Context.AdvManager.render({
-                                                    "blockId": "R-A-18474572-3",
-                                                    "renderTo": "yandex_rtb_R-A-18474572-3"
-                                                })
-                                            })
-                                        </script>
-                                    </div>
-                                </div>
-                                <?php continue; ?>
-                            <?php endif;
+                            
 
                             $badge = '';
                             $badgeClass = '';

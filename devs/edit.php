@@ -228,6 +228,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   $screenshots_json = json_encode($new_screenshots);
 
+  if ($status === 'published') {
+    $experts_approved = 0;
+
+    $stmt = $db->connect()->prepare("DELETE FROM expert_reviews WHERE game_id = ?");
+    $stmt->execute([$project_id]);
+  } else {
+    $experts_approved = $project_info['experts_approved'];
+  }
+
   // Обновление данных в базе
   $sql = "UPDATE games SET 
         name = :name,
@@ -250,7 +259,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         in_subscription = :in_subscription,
         status = :status,
         game_zip_url = :game_zip_url,
-        game_zip_size = :game_zip_size
+        game_zip_size = :game_zip_size,
+        experts_approved = :experts_approved,
         WHERE id = :id";
 
   try {
@@ -276,6 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindParam(':id', $project_id);
     $stmt->bindParam(':status', $status);
     $stmt->bindParam(':game_zip_url', $game_zip_url);
+    $stmt->bindParam(':experts_approved', $experts_approved);
     $stmt->bindParam(':game_zip_size', $game_zip_size);
     $stmt->execute();
 
@@ -735,6 +746,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="row">
             <div class="col s12 center-align">
+              <?php if ($project_info['status'] === 'published'): ?>
+                <hr>
+                <h5>Экспертная оценка:</h5>
+
+                <?php
+                $expertReviews = $db->connect()->prepare("
+                    SELECT er.*, u.username 
+                    FROM expert_reviews er
+                    LEFT JOIN users u ON u.id = er.expert_id
+                    WHERE er.game_id = ?
+                ");
+                $expertReviews->execute([$project_id]);
+                $reviews = $expertReviews->fetchAll(PDO::FETCH_ASSOC);
+                ?>
+
+                <?php foreach ($reviews as $review): ?>
+                  <div class="card-panel">
+                    <strong><?= htmlspecialchars($review['name']) ?></strong>
+                    <p>Оценка: <?= $review['score'] ?>/100</p>
+                    <p><?= nl2br(htmlspecialchars($review['review'])) ?></p>
+                    <p>Статус: <?= $review['status'] ?></p>
+                  </div>
+                <?php endforeach; ?>
+                <div class="card-panel"></div>
+
+
+              <?php endif; ?>
               <button class="btn waves-effect waves-light" type="submit">
                 <i class="material-icons left">save</i> Сохранить изменения
               </button>
