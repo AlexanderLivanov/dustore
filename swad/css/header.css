@@ -1,3 +1,13 @@
+@font-face {
+  font-family: "BahnschriftLight";
+  src: url("bahnschrift_light.ttf") format("truetype");
+  font-weight: 200;
+}
+
+.header {
+font-family: "BahnschriftLight";
+}
+
 .header-container {
     display: flex;
     text-align: center;
@@ -6,13 +16,9 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap');
 
-@font-face {
-    font-family: 'PixelizerBold';
-    src: url('PixelizerBold.ttf');
-}
 
 body {
-    font-family: Arial, sans-serif;
+    font-family:"Bahnschrift Light";
     margin: 0;
     padding: 0;
 }
@@ -24,7 +30,7 @@ body {
     padding-left: 15px;
     padding-right: 15px;
     height: 80px;
-    background-color: #14041d;
+    background-color: #230e2d;
     backdrop-filter: blur(1px);
     position: sticky;
     top: 0;
@@ -40,66 +46,87 @@ body {
     justify-content: center;
 }
 
-.left-section,
-.right-section {
+.left-section {
     justify-content: center;
+}
+
+.right-section {
+    justify-content: right;
+    padding-right: 0px;
+    margin-left: 30px;
+    margin-right: 20px;
 }
 
 .buttons-left,
 .buttons-right {
     display: flex;
-    gap: 10px;
+    gap: 7px;
+    background-color:#00000066;
+    margin-top: 20px;
+    padding: 5px;
+    border-radius: 11px;
+    font-family: "Bahnschrift Light";
 }
 
 .button {
-    padding: 10px;
-    background-color: white;
-    color: #14041d;
+    padding: 10px 25px 10px 25px;
+    background-color: #ffffff1a;
+    color: #ffffffa1;
     border: none;
+    border-radius: 9px;
     cursor: pointer;
-    box-shadow: 5px 5px 10px rgba(255, 255, 255, 1);
-    font-family: 'PixelizerBold', 'Gill Sans';
+    //box-shadow: 5px 5px 10px rgba(255, 255, 255, 1);
+    font-family:"Bahnschrift Light";
+    font-size: 13pt;
     transition: all .2s;
 }
 
+.buttons-left .button {
+    text-align: left;
+    padding: 10px 25px 10px 25px !important;
+    font-family:"Bahnschrift Light" !important;
+    font-size: 13pt;
+}
+
 .footer {
-    background-color: #c32178;
-    padding: 10px;
+    padding-bottom: 8px;
+    padding-left: 54px;
+    padding-right: 54px;
+    margin-top: 10px;
     color: white;
-    font-size: 18pt;
-    font-family: 'PixelizerBold', ' Gill Sans';
+    font-size: 11pt;
+    font-family:"Bahnschrift Light";
     text-align: center;
 }
 
 .footer a {
     color: white;
-    font-size: 18pt;
-    font-family: 'PixelizerBold', ' Gill Sans';
+    font-size: 7pt;
+    font-family:"Bahnschrift Light";
     text-align: center;
 }
 
 .footer-p {
     color: white;
-    font-size: 12pt;
-    font-family: 'PixelizerBold', ' Gill Sans';
+    font-size: 7pt;
+    font-family:"Bahnschrift Light";
     text-align: center;
 }
 
 
 .button:hover {
-    background-color: #c32178;
+    background-color: #ffffff40;
     color: white;
-    font-family: 'PixelizerBold', 'Gill Sans';
+    font-family:"Bahnschrift Light";
     transition: all .2s;
-    font-size: 12pt;
-    padding: 10px;
+    padding: 10px 25px 10px 25px;
     border: none;
 }
 
 .image img {
     width: auto;
-    padding: 4px;
-    height: 130px;
+    padding: 0px;
+    height: 110px;
     transition: all .2s;
 }
 
@@ -163,14 +190,13 @@ body {
 }
 
 .left-section {
+    justify-content: left;
     position: relative;
+    left: 5px;
     gap: 12px;
+    margin-right: 50px;
 }
 
-.buttons-left .button {
-    text-align: left;
-    padding: 12px !important;
-}
 
 .disabled-btn {
     opacity: 0.6;
@@ -203,4 +229,19 @@ body {
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.top-banner.hidden {
+    display: none !important;
 }

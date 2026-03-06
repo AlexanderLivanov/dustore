@@ -6,6 +6,7 @@ require_once('swad/controllers/game.php');
 $gameController = new Game();
 $games = $gameController->getLatestGames();
 
+
 $games = array_filter($games, function ($game) {
     return isset($game['status']) && strtolower($game['status']) === 'published';
 });
@@ -21,12 +22,35 @@ if ($adultSection) {
         return !isset($game['age_rating']) || intval($game['age_rating']) < 18;
     });
 }
+// --- Сбор уникальных жанров из всех игр ---
+$allGenres = [];
+foreach ($games as $game) {
+    if (!empty($game['genre'])) {
+        // Разбиваем по запятой, убираем пробелы
+        $genres = array_map('trim', explode(',', $game['genre']));
+        foreach ($genres as $g) {
+            $g = trim($g);
+            if (!empty($g) && !in_array($g, $allGenres)) {
+                $allGenres[] = $g;
+            }
+        }
+    }
+}
+sort($allGenres); // алфавитный порядок
 
-
+// --- Фильтрация по выбранному жанру ---
+$selectedGenre = isset($_GET['genre']) ? trim(urldecode($_GET['genre'])) : null;
+if ($selectedGenre) {
+    $games = array_filter($games, function ($game) use ($selectedGenre) {
+        if (empty($game['genre'])) return false;
+        $genres = array_map('trim', explode(',', $game['genre']));
+        // Сравнение без учёта регистра
+        return in_array(strtolower($selectedGenre), array_map('strtolower', $genres));
+    });
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,18 +63,10 @@ if ($adultSection) {
     </script>
     <script src="https://yandex.ru/ads/system/context.js" async></script>
 </head>
-
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
 
     <main>
-        <section class="games-header">
-            <div class="container">
-                <h1>Откройте для себя новый мир!</h1>
-                <p>Исследуйте лучшие игры от независимых инди-разработчиков</p>
-            </div>
-        </section>
-
         <section class="games-list">
             <div class="container">
                 <?php if (isset($_GET['adult']) && $_GET['adult'] == 1): ?>
@@ -59,112 +75,95 @@ if ($adultSection) {
                         в соответствии с законодательством РФ.
                     </div>
                 <?php endif; ?>
-                <div class="games-controls">
-                    <div class="controls-left">
-                        <a href="?adult=0" class="btn-filter <?= (!isset($_GET['adult']) || $_GET['adult'] == 0) ? 'active' : '' ?>">
-                            Все игры
-                        </a>
-                        <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                            18+
-                        </a>
-                    </div>
+
+                <!-- Поиск теперь сверху -->
+                <div class="search-wrapper">
                     <div class="search-bar">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
                         <input type="text" placeholder="Введите название игры или тикер разработчика...">
                     </div>
                 </div>
 
-                <div class="games-grid">
-                    <?php if (empty($games)): ?>
-                        <div class="no-games-message">
-                            <p>Игры еще не добавлены в каталог</p>
+                <!-- Ряд с фильтрами и сеткой -->
+                <div class="content-row">
+                    <div class="games-controls">
+                        <div class="controls-left">
+                            <!-- Все игры (сброс жанра, остаёмся в текущей adult-секции) -->
+                            <a href="?adult=<?= (int)$adultSection ?>" class="btn-filter <?= !isset($_GET['genre']) ? 'active' : '' ?>">Все игры</a>
+
+                            <!-- 18+ (переключение секции) -->
+                            <a href="?adult=1"
+                               class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
+                                18+
+                            </a>
+
+                            <!-- Динамические жанры из игр -->
+                            <?php foreach ($allGenres as $genre): ?>
+                                <a href="?adult=<?= (int)$adultSection ?>&genre=<?= urlencode($genre) ?>"
+                                   class="btn-filter <?= (isset($_GET['genre']) && urldecode($_GET['genre']) == $genre) ? 'active' : '' ?>">
+                                    <?= htmlspecialchars($genre) ?>
+                                </a>
+                            <?php endforeach; ?>
                         </div>
-                    <?php else: ?>
+                    </div>
 
-                        <?php
-                        $maxTiles = 10000;
-                        $i = 0;
+                    <div class="games-grid">
+                        <?php if (empty($games)): ?>
+                            <div class="no-games-message">
+                                <p>Игры еще не добавлены в каталог</p>
+                            </div>
+                        <?php else: ?>
+                            <?php
+                            $maxTiles = 10000;
+                            $i = 0;
+                            foreach ($games as $game):
+                                if ($i >= $maxTiles) break;
+                                $i++;
 
-                        foreach ($games as $game):
 
-                            if ($i >= $maxTiles) break;
+                                $badge = '';
+                                $badgeClass = '';
+                                if ($game['price'] == 0) {
+                                    $badge = 'Бесплатно';
+                                    $badgeClass = 'free';
+                                } elseif ((time() - strtotime($game['release_date'])) < (30 * 24 * 60 * 60)) {
+                                    $badge = 'Новинка';
+                                }
 
-                            $i++;
-
-                            
-                            
-
-                            $badge = '';
-                            $badgeClass = '';
-
-                            if ($game['price'] == 0) {
-                                $badge = 'Бесплатно';
-                                $badgeClass = 'free';
-                            } elseif ((time() - strtotime($game['release_date'])) < (30 * 24 * 60 * 60)) {
-                                $badge = 'Новинка';
-                            }
-
-                            $price = ($game['price'] == 0)
-                                ? 'Бесплатно'
-                                : number_format($game['price'], 0, ',', ' ') . ' ₽';
-                            ?>
-
-                            <div class="game-card" onclick="window.location.href='/g/<?= $game['id'] ?>';">
-                                <div class="game-image <?= ($adultSection && $game['age_rating'] >= 18) ? 'blur-adult' : '' ?>">
-                                    <img src="<?= !empty($game['path_to_cover'])
-                                                    ? htmlspecialchars($game['path_to_cover'])
-                                                    : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
-                                        alt="<?= htmlspecialchars($game['name']) ?>">
-
-                                    <?php if ($badge): ?>
-                                        <div class="game-badge <?= $badgeClass ?>"><?= $badge ?></div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="game-info">
-                                    <h3 class="game-title"><?= htmlspecialchars($game['name']) ?></h3>
-                                    <p><?= mb_substr(htmlspecialchars($game['description']), 0, 150, 'UTF-8') . '...' ?></p>
-                                    <br>
-                                    <p class="game-developer">От <?= htmlspecialchars($game['studio_name']) ?></p>
-
-                                    <div class="game-footer">
-                                        <?php if ($game['GQI'] > 0): ?>
-                                            <div class="game-rating">GQI: <?= number_format($game['GQI'], 0) ?></div>
+                                $price = ($game['price'] == 0)
+                                    ? 'Бесплатно'
+                                    : number_format($game['price'], 0, ',', ' ') . ' ₽';
+                                ?>
+                                <div class="game-card" onclick="window.location.href='/g/<?= $game['id'] ?>';">
+                                    <div class="game-image <?= ($adultSection && $game['age_rating'] >= 18) ? 'blur-adult' : '' ?>">
+                                        <img src="<?= !empty($game['path_to_cover'])
+                                            ? htmlspecialchars($game['path_to_cover'])
+                                            : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
+                                            alt="<?= htmlspecialchars($game['name']) ?>"
+                                            style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 60%, rgba(0, 0, 0, 0) 100%);">
+                                        <?php if ($badge): ?>
+                                            <div class="game-badge <?= $badgeClass ?>"><?= $badge ?></div>
                                         <?php endif; ?>
-
-                                        <?php
-                                        $avg_rating = $gameController->getAverageRating($game['id'])['avg'];
-                                        $total_reviews = count($gameController->getReviewsArray($game['id']));
-                                        $total_downloads = $gameController->getTotalDownloads($game['id']);
-                                        ?>
-
-                                        <?php if ($avg_rating > 0): ?>
-                                            <div class="game-rating">★ <?= $avg_rating ?>/10</div>
-                                        <?php endif; ?>
-
-                                        <div class="game-price <?= ($game['price'] == 0) ? 'free' : '' ?>">
-                                            <?= $price ?>
+                                    </div>
+                                    <div class="game-info">
+                                        <h3 class="game-title"><?= htmlspecialchars($game['name']) ?></h3>
+                                        <div class="game-footer">
+                                            <div class="game-price <?= ($game['price'] == 0) ? 'free' : '' ?>">
+                                                <?= $price ?>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <br>
-
-                                    <h6>
-                                        Отзывов: <?= $total_reviews ?><br>
-                                        Скачали: <?= $total_downloads ?> раз(а)
-                                    </h6>
                                 </div>
-                            </div>
-
-                        <?php endforeach; ?>
-
-                    <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
     <?php require_once('swad/static/elements/footer.php'); ?>
+
     <div id="adultModal" class="adult-modal">
         <div class="adult-modal-content">
             <h2>Подтверждение возраста</h2>
@@ -172,51 +171,45 @@ if ($adultSection) {
             <button id="adultConfirmBtn">Мне есть 18 лет</button>
         </div>
     </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const gameCards = document.querySelectorAll('.game-card');
-
             gameCards.forEach((card, index) => {
                 card.style.transitionDelay = `${index * 0.05}s`;
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
-
                 setTimeout(() => {
                     card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
+                    card.style.transform = '';
+                    card.style.transitionDelay = '';
                 }, 100);
             });
 
-            // Поиск по играм
             const searchInput = document.querySelector('.search-bar input');
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                const gameCards = document.querySelectorAll('.game-card');
-
-                gameCards.forEach(card => {
-                    const title = card.querySelector('.game-title').textContent.toLowerCase();
-                    const developer = card.querySelector('.game-developer').textContent.toLowerCase();
-
-                    if (title.includes(searchTerm) || developer.includes(searchTerm)) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    const gameCards = document.querySelectorAll('.game-card:not(.ad-card)'); // рекламу не скрываем
+                    gameCards.forEach(card => {
+                        const title = card.querySelector('.game-title')?.textContent.toLowerCase() || '';
+                        const developer = card.querySelector('.game-developer')?.textContent.toLowerCase() || '';
+                        if (title.includes(searchTerm) || developer.includes(searchTerm)) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
                 });
-            });
-        });
+            }
 
-        document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const isAdultSection = urlParams.get('adult') == 1;
-
             if (isAdultSection && !sessionStorage.getItem('adultConfirmed')) {
                 const modal = document.getElementById('adultModal');
                 const btn = document.getElementById('adultConfirmBtn');
-
                 modal.style.display = 'flex';
 
-                // запрет закрытия ESC
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
                         e.preventDefault();
@@ -224,7 +217,6 @@ if ($adultSection) {
                     }
                 }, true);
 
-                // запрет закрытия кликом вне
                 modal.addEventListener('click', function(e) {
                     e.stopPropagation();
                 });
@@ -232,17 +224,72 @@ if ($adultSection) {
                 btn.addEventListener('click', function() {
                     sessionStorage.setItem('adultConfirmed', 'true');
                     modal.style.display = 'none';
-
-                    // убираем размытие с картинок
                     document.querySelectorAll('.blur-adult').forEach(img => {
                         img.classList.remove('blur-adult');
                     });
                 });
             }
-
-
         });
     </script>
-</body>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const grid = document.querySelector('.games-grid');
+        if (!grid) return;
 
+        let activeCard = null;
+
+        // Сброс трансформации карточки
+        function resetTilt(card) {
+            card.style.transform = '';
+        }
+
+        // Обработчик движения мыши внутри grid
+        grid.addEventListener('mousemove', (e) => {
+            const card = e.target.closest('.game-card');
+            if (!card || card.classList.contains('ad-card')) return;
+
+            // Если перешли на новую карточку, сбрасываем старую
+            if (activeCard !== card) {
+                if (activeCard) resetTilt(activeCard);
+                activeCard = card;
+            }
+
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Нормализация координат в диапазон -1..1
+            const nx = (x / rect.width) * 2 - 1;
+            const ny = (y / rect.height) * 2 - 1;
+
+            const maxAngle = 12; // максимальный угол наклона
+            const rotateY = maxAngle * nx;
+            const rotateX = -maxAngle * ny;
+
+            const dx = nx * 50; // диапазон от -50% до 50%
+            card.style.setProperty('--dx', `${dx}%`);
+
+            // Применяем наклон + лёгкий подъём и масштабирование
+            card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.02)`;
+        });
+
+        // Когда мышь покидает grid (ушла за пределы)
+        grid.addEventListener('mouseleave', () => {
+            if (activeCard) {
+                resetTilt(activeCard);
+                activeCard = null;
+            }
+        });
+
+        // Когда мышь уходит с карточки на пустую область
+        grid.addEventListener('mouseout', (e) => {
+            const card = e.target.closest('.game-card');
+            if (card && !card.contains(e.relatedTarget)) {
+                resetTilt(card);
+                if (activeCard === card) activeCard = null;
+            }
+        });
+    });
+</script>
+</body>
 </html>

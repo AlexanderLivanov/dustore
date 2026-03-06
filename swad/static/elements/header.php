@@ -266,7 +266,7 @@ $stmt->execute([
     <button id="pushBtn">
         Push
     </button> -->
-    <div class="top-banner" id="top-banner">
+    <div class="top-banner hidden" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
                 Следите за новостями в нашем <a style="color: lightgreen;" target="_blank" href="https://t.me/dustore_official">Telegram канале<svg style="vertical-align: middle;"
@@ -308,8 +308,8 @@ $stmt->execute([
             </div>
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
-                <button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>
-                <button class="button" onclick="location.href='/about'">О платформе</button>
+                <!--<button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>-->
+                <button class="button" onclick="location.href='/about'">О нас</button>
                 <button class="button" onclick="location.href='/search'">Поиск</button>
                 <button class="button disabled-btn tooltip">L4T<span class="tooltiptext">Скоро</span></button>
             </div>
@@ -342,7 +342,7 @@ $stmt->execute([
             </div>
         </div>
         <div class="section right-section">
-            <div class="buttons-right">
+            <div class="buttons-right" style="padding-left:100px;">
                 <?php
                 if (!empty($_SESSION['USERDATA'])) {
                     $pdo = $db->connect();
@@ -359,15 +359,28 @@ $stmt->execute([
                 }
                 ?>
 
-                <div class="update-progress">
+        <!--        <div class="update-progress">
                     <div class="update-percent" id="updatePercent">50%</div>
                     <div class="update-bar">
                         <div class="update-bar-fill" id="updateBarFill" style="width: 50%;"></div>
                     </div>
                     <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>
                 </div>
-
-                <button class="button" onclick="location.href='/notifications'"><?= $unread_notif_count . " 🔔" ?></button>
+-->
+                <button class="button" style="padding: 6px;" onclick="location.href='/notifications'">
+                    <!--<?= $unread_notif_count ?> -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="icon icon-tabler icons-tabler-filled icon-tabler-bell"
+                    style="vertical-align: middle;">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M14.235 19c.865 0 1.322 1.024 .745 1.668a3.992 3.992 0 0 1 -2.98 1.332a3.992 3.992 0 0 1 -2.98 -1.332c-.552 -.616 -.158 -1.579 .634 -1.661l.11 -.006h4.471z" />
+                    <path d="M12 2c1.358 0 2.506 .903 2.875 2.141l.046 .171l.008 .043a8.013 8.013 0 0 1 4.024 6.069l.028 .287l.019 .289v2.931l.021 .136a3 3 0 0 0 1.143 1.847l.167 .117l.162 .099c.86 .487 .56 1.766 -.377 1.864l-.116 .006h-16c-1.028 0 -1.387 -1.364 -.493 -1.87a3 3 0 0 0 1.472 -2.063l.021 -.143l.001 -2.97a8 8 0 0 1 3.821 -6.454l.248 -.146l.01 -.043a3.003 3.003 0 0 1 2.562 -2.29l.182 -.017l.176 -.004z" />
+                </svg>
+            </button>
                 <?php
                 $curr_user->checkAuth();
                 if (empty($_SESSION['USERDATA']['id'])) {
@@ -515,6 +528,133 @@ $stmt->execute([
         }
     </script>
 
+<script>
+  (function() {
+)
+    const gradientColors = ['#14041d', '#c32178', '#ffaa00']; // ЗАМЕНИ НА СВОИ
+
+    const hero = document.querySelector('.hero');
+    const header = document.querySelector('.header');
+
+    if (!hero || !header) return;
+
+    header.style.transition = 'background-color 0.01s linear';
+
+    function interpolateColor(color1, color2, factor) {
+
+      const r1 = parseInt(color1.substring(1,3), 16);
+      const g1 = parseInt(color1.substring(3,5), 16);
+      const b1 = parseInt(color1.substring(5,7), 16);
+      const r2 = parseInt(color2.substring(1,3), 16);
+      const g2 = parseInt(color2.substring(3,5), 16);
+      const b2 = parseInt(color2.substring(5,7), 16);
+
+      const r = Math.round(r1 + factor * (r2 - r1));
+      const g = Math.round(g1 + factor * (g2 - g1));
+      const b = Math.round(b1 + factor * (b2 - b1));
+
+      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+
+    function updateHeaderColor() {
+      const scrollY = window.scrollY;
+      const heroTop = hero.offsetTop;
+      const heroHeight = hero.offsetHeight;
+      const heroBottom = heroTop + heroHeight;
+
+      let factor;
+      if (scrollY < heroTop) {
+        factor = 0;                     // выше hero
+      } else if (scrollY > heroBottom) {
+        factor = 1;                     // ниже hero
+      } else {
+        factor = (scrollY - heroTop) / heroHeight; // внутри hero
+      }
+
+      if (gradientColors.length === 2) {
+
+        const newColor = interpolateColor(gradientColors[0], gradientColors[1], factor);
+        header.style.backgroundColor = newColor;
+      } else if (gradientColors.length > 2) {
+
+        const totalSegments = gradientColors.length - 1;
+        const exactIndex = factor * totalSegments;
+        const leftIndex = Math.floor(exactIndex);
+        const rightIndex = Math.min(leftIndex + 1, totalSegments);
+        const segmentFactor = exactIndex - leftIndex;
+
+        const newColor = interpolateColor(
+          gradientColors[leftIndex],
+          gradientColors[rightIndex],
+          segmentFactor
+        );
+        header.style.backgroundColor = newColor;
+      }
+    }
+
+    window.addEventListener('scroll', updateHeaderColor);
+    window.addEventListener('resize', updateHeaderColor); // на случай изменения высоты hero
+
+    updateHeaderColor();
+  })();
+</script>
+
+<script>
+  (function() {
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Скрипт глобального изменения цвета запущен');
+
+      const colorTop = '#2e0f32';    // цвет вверху страницы
+      const colorBottom = '#65154c'; // цвет внизу страницы
+
+      const header = document.querySelector('.header');
+      if (!header) {
+        console.warn('Header не найден');
+        return;
+      }
+
+      header.style.transition = 'background-color 0.2s ease';
+
+      function interpolateColor(color1, color2, factor) {
+
+        const r1 = parseInt(color1.substring(1,3), 16);
+        const g1 = parseInt(color1.substring(3,5), 16);
+        const b1 = parseInt(color1.substring(5,7), 16);
+        const r2 = parseInt(color2.substring(1,3), 16);
+        const g2 = parseInt(color2.substring(3,5), 16);
+        const b2 = parseInt(color2.substring(5,7), 16);
+
+        const r = Math.round(r1 + factor * (r2 - r1));
+        const g = Math.round(g1 + factor * (g2 - g1));
+        const b = Math.round(b1 + factor * (b2 - b1));
+
+        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+      }
+
+      function updateHeaderColor() {
+        const scrollY = window.scrollY;
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+
+        let factor;
+        if (maxScroll <= 0) {
+
+          factor = 0;
+        } else {
+          factor = Math.min(1, Math.max(0, scrollY / maxScroll));
+        }
+
+        const newColor = interpolateColor(colorTop, colorBottom, factor);
+        header.style.backgroundColor = newColor;
+      }
+
+      window.addEventListener('scroll', updateHeaderColor);
+      window.addEventListener('resize', updateHeaderColor);
+
+      updateHeaderColor();
+    });
+  })();
+</script>
 </body>
 
 </html>

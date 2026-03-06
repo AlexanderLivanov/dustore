@@ -1,7 +1,15 @@
 @font-face {
   font-family: "Bahnschrift Light";
-  src: url("../fonts/bahnschrift_light.ttf") format("truetype");
+  src: url("../static/fonts/bahnschrift_light.ttf") format("truetype");
   font-weight: 400;
+}
+
+@font-face {
+    font-family: "PixelizerBold";
+    src: url("../static/fonts/PixelizerBold.ttf") format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
 }
 
 select {
@@ -92,13 +100,13 @@ select {
 }
 
 .content-background {
-    width: 100%;
-    height: 100%;
-    background-color: #00000072;
-    border-radius: 8px;
-    border: 1px solid #ffffff30;
-    overflow-y: auto;
-    overflow-x: hidden;
+    width: 100%;                    //ширина
+    height: 100%;                   //высота
+    background-color: #00000072;    //фоновый цвет
+    border-radius: 8px;             //скругление
+    border: 1px solid #ffffff30;    //рамка
+    overflow-y: auto;               //прокрутка вертикальная (показана)
+    overflow-x: hidden;             //прокрутка горизонтальная (скрыта)
 }
 
 .content-background::-webkit-scrollbar {
@@ -111,7 +119,7 @@ select {
 }
 
 .content-background::-webkit-scrollbar-track {
-    background: transparent;
+    background: transparent; //(транспэрэнт - прозрачное)
 }
 
 .avatar-canvas{

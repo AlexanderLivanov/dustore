@@ -10,6 +10,49 @@
     --gradient2: linear-gradient(180deg, #c32178, #14041d, #400c4a, #c32178);
 }
 
+@font-face {
+    font-family: "PixelizerBold";
+    src: url("../static/fonts/PixelizerBold.ttf") format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+.pixel-title {
+    font-family: 'PixelizerBold', 'Gill Sans', sans-serif !important;
+    /* При необходимости можно добавить другие свойства:
+    font-size: 3rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    */
+}
+
+/* Для Chrome, Safari, Edge (WebKit) */
+::-webkit-scrollbar {
+    width: 12px;          /* ширина вертикального */
+    height: 12px;         /* высота горизонтального */
+}
+
+::-webkit-scrollbar-track {
+    background: #230e2d;  /* цвет дорожки */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c32178;  /* цвет ползунка */
+    border-radius: 6px;
+    border: 2px solid #230e2d; /* создаёт отступы */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #e62e8a;  /* цвет при наведении */
+}
+
+/* Для Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #c32178 #230e2d; /* ползунок и дорожка */
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -18,7 +61,7 @@
 }
 
 body {
-    background-color: var(--dark);
+/*    background-color: var(--dark);*/
     color: var(--light);
     overflow-x: hidden;
 }
@@ -95,7 +138,7 @@ p {
 }
 
 .hero {
-    background: var(--gradient);
+    background: none;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -151,7 +194,7 @@ p {
 
 /* Секция платформы */
 .platform {
-    background: linear-gradient(var(--primary), var(--dark));
+    background: none;
     position: relative;
     padding-top: 50px;
 }
@@ -188,7 +231,7 @@ p {
 
 /* Секция статистики */
 .stats {
-    background: var(--dark);
+    background: none;
     position: relative;
 }
 
@@ -219,7 +262,7 @@ p {
 
 /* Секция как это работает */
 .how-it-works {
-    background: var(--gradient);
+    background: none;
 }
 
 .steps {
@@ -265,7 +308,7 @@ p {
 .cta {
     text-align: center;
     padding: 100px 0;
-    background: var(--gradient);
+    background: none;
 }
 
 .cta h2 {
@@ -334,6 +377,8 @@ p {
 }
 
 
+
+
 /* 18.06.2025 (c) Alexander Livanov */
 /* About page */
 :root {
@@ -341,7 +386,7 @@ p {
     --secondary: #74155d;
     --dark: #14041d;
     --light: #f8f9fa;
-    --gradient: linear-gradient(180deg, #14041d, #400c4a, #74155d, #c32178);
+    --gradient: linear-gradient(180deg, #2e0f32, #65154c);
     --gradient2: linear-gradient(180deg, #c32178, #14041d, #400c4a, #c32178);
 }
 
@@ -353,9 +398,11 @@ p {
 }
 
 body {
-    background-color: var(--gradient);
+    background: var(--gradient);
     color: var(--light);
     overflow-x: hidden;
+    margin: 0;
+    min-height: 100vh;
 }
 
 .container {

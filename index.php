@@ -14,11 +14,11 @@
 
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
-    <main>
+    <main >
         <section class="hero">
             <div class="container">
                 <div class="hero-content">
-                    <h1>DUSTORE — открытое пространство для инди-разработчиков</h1>
+                    <h1 class="pixel-title">DUSTORE — открытое пространство для инди-разработчиков</h1>
                     <p>Делаем платформу, где разработчики смогут свободно выложить проекты, а игроки - открыть новые игровые миры. Присоединяйтесь к сообществу!</p>
                     <div class="hero-buttons">
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
