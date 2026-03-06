@@ -248,7 +248,7 @@ select {
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
     margin-right: 20px;
-    margin-top: 30px;
+    /*margin-top: 30px;*/
     margin-bottom: 30px;
     transition: all 0.1s;
     cursor: pointer;
@@ -260,7 +260,7 @@ select {
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
     margin-right: 20px;
-    margin-top: 30px;
+    /*margin-top: 30px;*/
     margin-bottom: 30px;
     transition: all 0.1s;
     cursor: pointer;
@@ -272,7 +272,7 @@ select {
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
     margin-right: 20px;
-    margin-top: 30px;
+    /*margin-top: 30px;*/
     margin-bottom: 30px;
     transition: all 0.1s;
     cursor: pointer;
@@ -492,10 +492,11 @@ select {
 
 .grid-2x2 {
     display: grid;
+    justify-items: center;
     grid-template-columns: 1fr 1fr;
     column-gap: 40px;
-    row-gap: 18px;
-    margin-bottom: 18px;
+    row-gap: 50px;
+    margin-bottom: 50px;
     margin-top: 60px;
 }
 
@@ -510,7 +511,8 @@ select {
 
 .form-row.full {
     grid-template-columns: 150px 1fr;
-    margin-bottom: 18px;
+    justify-items: center;
+    margin-bottom: 60px;
 }
 
 .form-row label {
@@ -528,7 +530,7 @@ select:focus {
     justify-content: center;
     gap: 12px;
     margin-bottom: 24px;
-    padding-top: 40px;
+    padding-top: 30px;
     color: #aaa;
 }
 
@@ -613,11 +615,9 @@ textarea {
     margin-right: 50px;
     background-color: #ffffff13;
     width: 100%;
-    height: 83%;
-    /* bottom: 0; */
-    /* padding-right: 50px; */
-    border-radius: 40px 40px 8px 8px;
-    padding-top: 20px;
+    height: 100%;
+    border-radius: 3px 3px 3px 3px;
+    padding-bottom: 50px;
 }
 
 /* контейнер */
@@ -698,7 +698,6 @@ input:checked + .slider::before {
 .card-body {
     background-color: #0000005c;
     border-radius: 3px;
-    padding: 0px 20px 20px 20px;
 }
 
 .card-body-main {

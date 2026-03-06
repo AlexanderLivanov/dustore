@@ -768,7 +768,7 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
                                 </div>
                                 <div class="form-row full">
                                     <label>Цель:</label>
-                                    <select name="goal" style="width:94%">
+                                    <select name="goal" style="width:85%">
                                         <option>Найти человека в команду</option>
                                         <option>Консультация</option>
                                         <option>Разовая работа</option>
