@@ -1,0 +1,18 @@
+{
+    "name": "DustStore Chat",
+    "short_name": "DS Chat",
+    "description": "Мессенджер поверх MAX API — DustStore",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a0a2e",
+    "theme_color": "#1a0a2e",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "icons/logo_new.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DustStore Chat</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a0a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icons/logo_new.png">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --accent: #e8521a;
+            --accent-dark: #b33e10;
+            --accent-gold: #f0a500;
+            --purple: #7b2d8b;
+            --bg-header: #1a0a2e;
+            --bg-sub: #2d1245;
+            --bg-chat: #f0ede8;
+            --bg-app: #f5f3f0;
+            --bubble-out: #ffe5d0;
+            --bubble-in: #ffffff;
+            --text-main: #1a1a2e;
+            --text-muted: #6b7280;
+            --header-h: 56px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg-app);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* ── HEADER ── */
+        .app-header,
+        .chat-header {
+            background: var(--bg-header);
+            color: #fff;
+            padding: 0 12px;
+            height: var(--header-h);
+            padding-top: var(--safe-top);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 12px rgba(232, 82, 26, .25);
+            position: relative;
+            z-index: 10;
+        }
+
+        .chat-header {
+            background: var(--bg-sub);
+        }
+
+        .app-header-logo {
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            object-fit: contain;
+        }
+
+        .app-header h1 {
+            font-size: 17px;
+            font-weight: 700;
+            flex: 1;
+            background: linear-gradient(90deg, var(--accent), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .chat-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── SETTINGS PANEL ── */
+        .header-settings {
+            position: absolute;
+            top: calc(var(--header-h) + var(--safe-top));
+            left: 0;
+            right: 0;
+            background: var(--bg-header);
+            padding: 12px 12px 16px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 9;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .header-settings.open {
+            display: flex;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .settings-label {
+            color: rgba(255, 255, 255, .55);
+            font-size: 10px;
+            white-space: nowrap;
+            min-width: 58px;
+        }
+
+        .settings-row input {
+            flex: 1;
+            padding: 7px 10px;
+            border: none;
+            border-radius: 7px;
+            font-size: 13px;
+            background: rgba(255, 255, 255, .1);
+            color: #fff;
+            outline: none;
+        }
+
+        .settings-row input:focus {
+            background: rgba(255, 255, 255, .18);
+        }
+
+        .settings-row input::placeholder {
+            color: rgba(255, 255, 255, .32);
+        }
+
+        .settings-row .btn-ok {
+            padding: 7px 12px;
+            border: none;
+            border-radius: 7px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .settings-row .btn-find {
+            padding: 7px 10px;
+            border: none;
+            border-radius: 7px;
+            background: rgba(240, 165, 0, .8);
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .settings-divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, .1);
+            margin: 2px 0;
+        }
+
+        .settings-hint {
+            color: rgba(255, 255, 255, .38);
+            font-size: 10px;
+            padding-left: 64px;
+            line-height: 1.4;
+        }
+
+        /* ── ICON BUTTONS ── */
+        .btn-icon {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background .15s;
+        }
+
+        .btn-icon:hover,
+        .btn-icon:active {
+            background: rgba(255, 255, 255, .12);
+        }
+
+        /* ── CHATS LIST ── */
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+            background: #fff;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 13px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            gap: 12px;
+            transition: background .12s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .chat-item:active {
+            background: #faf5ff;
+        }
+
+        .chat-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            color: #fff;
+            font-size: 19px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .chat-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 3px;
+        }
+
+        .chat-last-message {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .chat-item.unread .chat-avatar {
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .chat-item.unread .chat-last-message {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .empty-state small {
+            font-size: 12px;
+            opacity: .7;
+        }
+
+        /* ── MESSAGES ── */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 10px 6px;
+            background: var(--bg-chat);
+            display: flex;
+            flex-direction: column;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message {
+            max-width: 75%;
+            margin-bottom: 6px;
+            padding: 8px 11px 5px;
+            border-radius: 12px;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .message.sent {
+            background: var(--bubble-out);
+            align-self: flex-end;
+            border-bottom-right-radius: 3px;
+            box-shadow: 0 1px 3px rgba(232, 82, 26, .12);
+        }
+
+        .message.received {
+            background: var(--bubble-in);
+            align-self: flex-start;
+            border-bottom-left-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+        }
+
+        .message.pending {
+            opacity: .6;
+        }
+
+        .message.error {
+            background: #ffe4e4;
+        }
+
+        .message-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            margin-top: 3px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .message-status {
+            font-size: 11px;
+            color: #bbb;
+        }
+
+        .message-status.delivered {
+            color: var(--accent);
+        }
+
+        /* ── INPUT ── */
+        .message-input-container {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            padding-bottom: calc(8px + var(--safe-bottom));
+            background: var(--bg-app);
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 11px 14px;
+            border: none;
+            border-radius: 22px;
+            outline: none;
+            font-size: 15px;
+            background: #fff;
+            color: var(--text-main);
+            resize: none;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .1);
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #fff;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(232, 82, 26, .4);
+            transition: opacity .15s;
+        }
+
+        .btn-send:active {
+            opacity: .8;
+        }
+
+        /* ── MODAL ── */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 24px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 6px;
+            color: var(--bg-header);
+            font-size: 17px;
+        }
+
+        .modal-subtitle {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 4px;
+            margin-top: 10px;
+        }
+
+        .modal-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: -8px 0 12px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .modal-input:focus {
+            border-color: var(--accent);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #f0f0f0;
+            color: #555;
+        }
+
+        .btn-save {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: calc(80px + var(--safe-bottom));
+            left: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: rgba(26, 10, 46, .9);
+            color: #fff;
+            padding: 9px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity .2s, transform .2s;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .toast.toast-visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- ══ СПИСОК ЧАТОВ ══ -->
+        <div id="chats-screen" class="screen active">
+            <header class="app-header">
+                <img src="icons/logo_new.png" class="app-header-logo" alt="">
+                <h1>DustStore Chat</h1>
+                <button class="btn-icon" id="addChatBtn" title="Новый чат">＋</button>
+                <button class="btn-icon" id="settingsBtn" title="Настройки">⚙</button>
+                <button class="btn-icon" id="loadMessagesBtn" title="Обновить">↻</button>
+            </header>
+
+            <!-- Панель настроек -->
+            <div class="header-settings" id="headerSettings">
+                <!-- Сервер -->
+                <div class="settings-row">
+                    <span class="settings-label">Сервер</span>
+                    <input type="url" id="serverInput" placeholder="http://192.168.x.x/api">
+                    <button class="btn-ok" id="saveServerBtn">OK</button>
+                </div>
+                <hr class="settings-divider">
+                <!-- Мой user_id -->
+                <div class="settings-row">
+                    <span class="settings-label">Мой user_id</span>
+                    <input type="text" inputmode="numeric" id="myUserIdInput" placeholder="217304483">
+                    <button class="btn-ok" id="saveMyUserIdBtn">OK</button>
+                </div>
+                <div class="settings-hint">Твой числовой MAX ID (другие пишут тебе на него)</div>
+                <!-- Мой chat_id -->
+                <div class="settings-row">
+                    <span class="settings-label">chat_id бота</span>
+                    <input type="text" inputmode="numeric" id="myChatIdInput" placeholder="14262570">
+                    <button class="btn-find" id="findChatIdBtn" title="Определить автоматически">🔍</button>
+                    <button class="btn-ok" id="saveMyUserIdBtn2">OK</button>
+                </div>
+                <div class="settings-hint">ID диалога с ботом — отличается от user_id.<br>
+                    Нажми 🔍 для автоопределения (нужны сервер + user_id).</div>
+            </div>
+
+            <div class="chats-list" id="chatsList"></div>
+
+            <!-- Модалка нового чата -->
+            <div class="modal" id="addChatModal">
+                <div class="modal-content">
+                    <h3>Новый чат</h3>
+                    <p class="modal-subtitle">Введите данные собеседника.</p>
+                    <label class="modal-label">user_id собеседника</label>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="newUserId"
+                        placeholder="Например: 217304483" class="modal-input">
+                    <label class="modal-label">chat_id собеседника с ботом</label>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="newChatId"
+                        placeholder="Например: 14262570" class="modal-input">
+                    <p class="modal-hint">Узнай у собеседника его chat_id из страницы setup.php</p>
+                    <div class="modal-buttons">
+                        <button class="btn-cancel" id="cancelAddChat">Отмена</button>
+                        <button class="btn-save" id="saveNewChat">Добавить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ ЧАТ ══ -->
+        <div id="chat-screen" class="screen">
+            <header class="chat-header">
+                <button class="btn-icon" id="backToChats">←</button>
+                <h2 id="chatUserName">Чат</h2>
+            </header>
+            <div class="messages-container" id="messagesContainer"></div>
+            <div class="message-input-container">
+                <input type="text" id="messageInput" placeholder="Сообщение..." class="message-input" autocomplete="off"
+                    autocorrect="off">
+                <button class="btn-send" id="sendMessageBtn">➤</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            document.getElementById('headerSettings').classList.toggle('open');
+        });
+    </script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
