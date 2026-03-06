@@ -29,7 +29,7 @@ class Game
     public function getLatestGames($limit = 99999)
     {
         $stmt = $this->db->connect()->prepare("
-        SELECT 
+        SELECT
             g.id,
             g.name,
             g.description,

@@ -309,7 +309,7 @@ $stmt->execute([
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
                 <!--<button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>-->
-                <button class="button" onclick="location.href='/about'">О платформе</button>
+                <button class="button" onclick="location.href='/about'">О нас</button>
                 <button class="button" onclick="location.href='/search'">Поиск</button>
                 <button class="button disabled-btn tooltip">L4T<span class="tooltiptext">Скоро</span></button>
             </div>
@@ -530,23 +530,18 @@ $stmt->execute([
 
 <script>
   (function() {
-    // ===== НАСТРОЙКИ =====
-    // Цвета градиента hero (от верхнего к нижнему)
+)
     const gradientColors = ['#14041d', '#c32178', '#ffaa00']; // ЗАМЕНИ НА СВОИ
 
-    // Элементы
     const hero = document.querySelector('.hero');
     const header = document.querySelector('.header');
 
-    // Если элемента hero нет (например, на других страницах) — ничего не делаем
     if (!hero || !header) return;
 
-    // Добавим плавный переход для цвета фона (можно сразу в CSS, но продублируем)
-    header.style.transition = 'background-color 0.3s ease';
+    header.style.transition = 'background-color 0.01s linear';
 
-    // ===== Функция интерполяции цвета (HEX -> RGB) =====
     function interpolateColor(color1, color2, factor) {
-      // Парсим HEX в RGB
+
       const r1 = parseInt(color1.substring(1,3), 16);
       const g1 = parseInt(color1.substring(3,5), 16);
       const b1 = parseInt(color1.substring(5,7), 16);
@@ -561,14 +556,12 @@ $stmt->execute([
       return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
     }
 
-    // ===== Основная функция обновления цвета =====
     function updateHeaderColor() {
       const scrollY = window.scrollY;
       const heroTop = hero.offsetTop;
       const heroHeight = hero.offsetHeight;
       const heroBottom = heroTop + heroHeight;
 
-      // Прогресс от 0 до 1 в пределах hero
       let factor;
       if (scrollY < heroTop) {
         factor = 0;                     // выше hero
@@ -578,13 +571,12 @@ $stmt->execute([
         factor = (scrollY - heroTop) / heroHeight; // внутри hero
       }
 
-      // Интерполяция цвета в зависимости от количества цветов
       if (gradientColors.length === 2) {
-        // Простой случай – два цвета
+
         const newColor = interpolateColor(gradientColors[0], gradientColors[1], factor);
         header.style.backgroundColor = newColor;
       } else if (gradientColors.length > 2) {
-        // Многоцветный градиент: определяем два соседних цвета
+
         const totalSegments = gradientColors.length - 1;
         const exactIndex = factor * totalSegments;
         const leftIndex = Math.floor(exactIndex);
@@ -600,15 +592,69 @@ $stmt->execute([
       }
     }
 
-    // Подписываемся на события
     window.addEventListener('scroll', updateHeaderColor);
     window.addEventListener('resize', updateHeaderColor); // на случай изменения высоты hero
 
-    // Вызываем сразу, чтобы установить цвет при загрузке
     updateHeaderColor();
   })();
 </script>
 
+<script>
+  (function() {
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Скрипт глобального изменения цвета запущен');
+
+      const colorTop = '#2e0f32';    // цвет вверху страницы
+      const colorBottom = '#65154c'; // цвет внизу страницы
+
+      const header = document.querySelector('.header');
+      if (!header) {
+        console.warn('Header не найден');
+        return;
+      }
+
+      header.style.transition = 'background-color 0.2s ease';
+
+      function interpolateColor(color1, color2, factor) {
+
+        const r1 = parseInt(color1.substring(1,3), 16);
+        const g1 = parseInt(color1.substring(3,5), 16);
+        const b1 = parseInt(color1.substring(5,7), 16);
+        const r2 = parseInt(color2.substring(1,3), 16);
+        const g2 = parseInt(color2.substring(3,5), 16);
+        const b2 = parseInt(color2.substring(5,7), 16);
+
+        const r = Math.round(r1 + factor * (r2 - r1));
+        const g = Math.round(g1 + factor * (g2 - g1));
+        const b = Math.round(b1 + factor * (b2 - b1));
+
+        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+      }
+
+      function updateHeaderColor() {
+        const scrollY = window.scrollY;
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+
+        let factor;
+        if (maxScroll <= 0) {
+
+          factor = 0;
+        } else {
+          factor = Math.min(1, Math.max(0, scrollY / maxScroll));
+        }
+
+        const newColor = interpolateColor(colorTop, colorBottom, factor);
+        header.style.backgroundColor = newColor;
+      }
+
+      window.addEventListener('scroll', updateHeaderColor);
+      window.addEventListener('resize', updateHeaderColor);
+
+      updateHeaderColor();
+    });
+  })();
+</script>
 </body>
 
 </html>
