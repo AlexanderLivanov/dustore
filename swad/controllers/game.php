@@ -29,23 +29,23 @@ class Game
     public function getLatestGames($limit = 99999)
     {
         $stmt = $this->db->connect()->prepare("
-        SELECT
-            g.id,
-            g.name,
-            g.description,
-            g.path_to_cover,
-            g.price,
-            g.GQI,
-            g.status,
-            g.age_rating,
-            g.release_date,
-            s.name AS studio_name
-        FROM games g
-        JOIN studios s ON g.developer = s.id
-        ORDER BY g.release_date DESC
-        LIMIT :limit
-    ");
-
+            SELECT
+                g.id,
+                g.name,
+                g.description,
+                g.path_to_cover,
+                g.price,
+                g.GQI,
+                g.status,
+                g.age_rating,
+                g.release_date,
+                g.genre,                     -- ← добавляем жанр
+                s.name AS studio_name
+            FROM games g
+            JOIN studios s ON g.developer = s.id
+            ORDER BY g.release_date DESC
+            LIMIT :limit
+        ");
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

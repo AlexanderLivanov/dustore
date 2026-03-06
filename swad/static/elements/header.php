@@ -266,7 +266,7 @@ $stmt->execute([
     <button id="pushBtn">
         Push
     </button> -->
-    <div class="top-banner" id="top-banner">
+    <div class="top-banner hidden" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
                 Следите за новостями в нашем <a style="color: lightgreen;" target="_blank" href="https://t.me/dustore_official">Telegram канале<svg style="vertical-align: middle;"

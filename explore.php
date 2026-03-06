@@ -22,7 +22,32 @@ if ($adultSection) {
         return !isset($game['age_rating']) || intval($game['age_rating']) < 18;
     });
 }
+// --- Сбор уникальных жанров из всех игр ---
+$allGenres = [];
+foreach ($games as $game) {
+    if (!empty($game['genre'])) {
+        // Разбиваем по запятой, убираем пробелы
+        $genres = array_map('trim', explode(',', $game['genre']));
+        foreach ($genres as $g) {
+            $g = trim($g);
+            if (!empty($g) && !in_array($g, $allGenres)) {
+                $allGenres[] = $g;
+            }
+        }
+    }
+}
+sort($allGenres); // алфавитный порядок
 
+// --- Фильтрация по выбранному жанру ---
+$selectedGenre = isset($_GET['genre']) ? trim(urldecode($_GET['genre'])) : null;
+if ($selectedGenre) {
+    $games = array_filter($games, function ($game) use ($selectedGenre) {
+        if (empty($game['genre'])) return false;
+        $genres = array_map('trim', explode(',', $game['genre']));
+        // Сравнение без учёта регистра
+        return in_array(strtolower($selectedGenre), array_map('strtolower', $genres));
+    });
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -63,51 +88,22 @@ if ($adultSection) {
                 <div class="content-row">
                     <div class="games-controls">
                         <div class="controls-left">
-                            <a href="?adult=0" class="btn-filter <?= (!isset($_GET['adult']) || $_GET['adult'] == 0) ? 'active' : '' ?>">
-                                Все игры
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
+                            <!-- Все игры (сброс жанра, остаёмся в текущей adult-секции) -->
+                            <a href="?adult=<?= (int)$adultSection ?>" class="btn-filter <?= !isset($_GET['genre']) ? 'active' : '' ?>">Все игры</a>
+
+                            <!-- 18+ (переключение секции) -->
+                            <a href="?adult=1"
+                               class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
                                 18+
                             </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Экшен
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                RPG
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Стратегии
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Приключения
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Симуляторы
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                RPG
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Визуальные новеллы
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Инди
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Настольные
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Roguelite
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Хоррор-игры
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Выживание
-                            </a>
-                            <a href="?adult=1" class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                Экономические
-                            </a>
+
+                            <!-- Динамические жанры из игр -->
+                            <?php foreach ($allGenres as $genre): ?>
+                                <a href="?adult=<?= (int)$adultSection ?>&genre=<?= urlencode($genre) ?>"
+                                   class="btn-filter <?= (isset($_GET['genre']) && urldecode($_GET['genre']) == $genre) ? 'active' : '' ?>">
+                                    <?= htmlspecialchars($genre) ?>
+                                </a>
+                            <?php endforeach; ?>
                         </div>
                     </div>
 
@@ -123,6 +119,7 @@ if ($adultSection) {
                             foreach ($games as $game):
                                 if ($i >= $maxTiles) break;
                                 $i++;
+
 
                                 $badge = '';
                                 $badgeClass = '';

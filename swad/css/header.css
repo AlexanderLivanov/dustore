@@ -230,3 +230,18 @@ body {
     visibility: visible;
     opacity: 1;
 }
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.top-banner.hidden {
+    display: none !important;
+}
