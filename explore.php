@@ -207,6 +207,7 @@ if ($adultSection) {
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = '';
+                    card.style.transitionDelay = '';
                 }, 100);
             });
 
