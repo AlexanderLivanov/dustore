@@ -493,9 +493,10 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
 </head>
 
 <body>
+    <?php require_once(__DIR__ . '/../swad/static/elements/header.php'); ?>
     <div class="main-container">
         <div class="header-container">
-            <img class="logo" src="/swad/static/img/logo_new.png" alt="">
+
         </div>
         <div class="view-container">
 

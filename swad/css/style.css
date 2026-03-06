@@ -7,9 +7,9 @@
 } */
 
 .main-container {
-    height: 100vh;
-    background: linear-gradient(#14041d, #400c4a, #74155d, #c32178);
-    /* background: linear-gradient(#a148aa, #dd743d, #fff837); */
+    background: linear-gradient(#2e0f32, #3a2a3f);
+    height: calc(100vh - 70px - 10px);
+    overflow: hidden;
 }
 
 .search-field-container {

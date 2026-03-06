@@ -1,7 +1,7 @@
 <?php
-require_once('constants.php');
-require_once(ROOT_DIR . '/swad/config.php');
-require_once(ROOT_DIR . '/swad/controllers/user.php');
+require_once(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/../../controllers/user.php');
+
 
 $curr_user = new User();
 $db = new Database();
