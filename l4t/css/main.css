@@ -50,43 +50,31 @@ select {
 * {
     margin: 0;
     padding: 0;
-    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serifs;
     font-weight: 200;
 }
 
 .main-container {
-    background: var(--gradient);
+    background: linear-gradient(#2e0f32, #c32178);
+    height: calc(100vh - 70px - 10px);
+    overflow: hidden;
     width: 100vw;
-    height: 100vh;
-}
-
-.header-container {
-    display: flex;
-    justify-content: center;
-    vertical-align: middle;
-    width: 100vw;
-    height: 128px;
-}
-
-.logo {
-    width: 128px;
-    height: auto;
 }
 
 .view-container {
-    width: calc(100vw - 97px*2);
-    height: 80%;
-    background-color: #00000072;
-    margin-left: 97px;
-    margin-right: 97px;
+    max-width: 95.5%;
+    min-width: 95.5%;
+    max-height: 100vh;
+    min-height: 82vh;
+    background-color: #00000066;
+    margin-top: 30px;
     border-radius: 10px;
     display: flex;
+    justify-self: center;
 }
 
 .left-side-menu {
     width: 23%;
-    height: 100%;
-    background-color: #00000072;
+    background-color: #00000066;
     border-radius: 10px 10px 0 10px;
     display: flex;
     flex-direction: column;
@@ -102,7 +90,7 @@ select {
 .content-background {
     width: 100%;                    //ширина
     height: 100%;                   //высота
-    background-color: #00000072;    //фоновый цвет
+    background-color: #00000066;    //фоновый цвет
     border-radius: 8px;             //скругление
     border: 1px solid #ffffff30;    //рамка
     overflow-y: auto;               //прокрутка вертикальная (показана)
@@ -123,10 +111,10 @@ select {
 }
 
 .avatar-canvas{
-    background-color: #00000072;
+    background-color: #00000066;
     /* width: 1; */
     height: 70%;
-    border: 1px solid rgb(255, 204, 0);
+    border: 1px solid #c3217880;
     border-radius: 10px 10px 40px 40px;
     display: flex;
     flex-direction: column;
@@ -149,7 +137,7 @@ select {
 
 .buttons-container {
     margin-top: auto;
-    background-color: #00000072;
+    background-color: #00000066;
     height: 25%;
     position: relative;
     border-radius: 10px 10px 0 10px;
@@ -163,7 +151,7 @@ select {
     content: "";
     position: absolute;
     inset: 0;
-    padding: 1px;               
+    padding: 2px;
     border-radius: inherit;
 
     background: linear-gradient(
@@ -241,7 +229,7 @@ select {
 .bid-container {
     /* width: 100%; */
     height: 150px;
-    background-color: #00000072;
+    background-color: #00000066;
     margin-top: 15px;
     margin-left: 20px;
     margin-right: 20px;
@@ -260,7 +248,7 @@ select {
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
     margin-right: 20px;
-    margin-top: 30px;
+    /*margin-top: 30px;*/
     margin-bottom: 30px;
     transition: all 0.1s;
     cursor: pointer;
@@ -272,7 +260,7 @@ select {
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
     margin-right: 20px;
-    margin-top: 30px;
+    /*margin-top: 30px;*/
     margin-bottom: 30px;
     transition: all 0.1s;
     cursor: pointer;
@@ -284,7 +272,7 @@ select {
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
     margin-right: 20px;
-    margin-top: 30px;
+    /*margin-top: 30px;*/
     margin-bottom: 30px;
     transition: all 0.1s;
     cursor: pointer;
@@ -305,7 +293,7 @@ select {
 
 .create-form input,
 .create-form select {
-    background-color: #00000072;
+    background-color: #00000066;
     border: 1px solid #ffffff30;
     border-radius: 6px;
     padding: 8px;
@@ -394,7 +382,7 @@ select {
 
 .select-grid select,
 .full-width {
-    background-color: #00000072;
+    background-color: #00000066;
     border: 1px solid #ffffff30;
     border-radius: 6px;
     padding: 8px;
@@ -417,7 +405,7 @@ select {
     flex: 1;
     height: 120px;
     resize: none;
-    background-color: #00000072;
+    background-color: #00000066;
     border: 1px solid #aaaaaaaa;
     border-radius: 6px;
     padding: 10px;
@@ -428,7 +416,7 @@ select {
 .my-bid {
     margin: 20px;
     padding: 15px;
-    background-color: #00000072;
+    background-color: #00000066;
     border-radius: 6px;
 }
 
@@ -504,10 +492,11 @@ select {
 
 .grid-2x2 {
     display: grid;
+    justify-items: center;
     grid-template-columns: 1fr 1fr;
     column-gap: 40px;
-    row-gap: 18px;
-    margin-bottom: 18px;
+    row-gap: 50px;
+    margin-bottom: 50px;
     margin-top: 60px;
 }
 
@@ -522,7 +511,8 @@ select {
 
 .form-row.full {
     grid-template-columns: 150px 1fr;
-    margin-bottom: 18px;
+    justify-items: center;
+    margin-bottom: 60px;
 }
 
 .form-row label {
@@ -540,7 +530,7 @@ select:focus {
     justify-content: center;
     gap: 12px;
     margin-bottom: 24px;
-    padding-top: 40px;
+    padding-top: 30px;
     color: #aaa;
 }
 
@@ -625,11 +615,9 @@ textarea {
     margin-right: 50px;
     background-color: #ffffff13;
     width: 100%;
-    height: 83%;
-    /* bottom: 0; */
-    /* padding-right: 50px; */
-    border-radius: 40px 40px 8px 8px;
-    padding-top: 20px;
+    height: 100%;
+    border-radius: 3px 3px 3px 3px;
+    padding-bottom: 50px;
 }
 
 /* контейнер */
@@ -689,11 +677,6 @@ input:checked + .slider::before {
 
 #view-market.active {
   display: block;
-}
-
-/* КАРТОЧКА */
-.card {
-  padding: 10px 40px 10px 40px;
 }
 
 .row {
@@ -999,7 +982,7 @@ input:checked + .slider::before {
     padding: 8px 10px;
     border-radius: 6px;
     border: 1px solid #ffffff30;
-    background-color: #00000072;
+    background-color: #00000066;
     color: #fff;
     font-size: 14px;
     outline: none;
@@ -1085,7 +1068,7 @@ input:checked + .slider::before {
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #ffffff30;
-    background-color: #00000072;
+    background-color: #00000066;
     color: #fff;
     outline: none;
 }
