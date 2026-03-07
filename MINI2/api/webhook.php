@@ -36,6 +36,17 @@ if ($type === 'message_created' || $type === 'bot_started') {
     $chat_id   = $recipient['chat_id'] ?? $sender['user_id'] ?? null;
     $user_id   = $sender['user_id']    ?? null;
     $user_name = $sender['name']       ?? $sender['username'] ?? ('User ' . $user_id);
+    $MAP_FILE = __DIR__ . '/user_chat_map.json';
+
+    if ($user_id && $chat_id) {
+        $map = file_exists($MAP_FILE)
+            ? json_decode(file_get_contents($MAP_FILE), true)
+            : [];
+
+        $map[$user_id] = $chat_id;
+
+        file_put_contents($MAP_FILE, json_encode($map, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
     $text      = $body['text']         ?? $msg['text'] ?? '';
     $mid       = $body['mid']          ?? $msg['mid']  ?? uniqid('msg_');
     $timestamp = $msg['timestamp']     ?? (time() * 1000);

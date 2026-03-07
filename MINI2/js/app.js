@@ -88,6 +88,7 @@ class ChatApp {
             this.showToast('✅ Сервер сохранён');
             this.tryStartPolling();
         });
+        
 
         // ── Настройки: мой user_id ──
         this.saveMyUserIdBtn.addEventListener('click', () => {
@@ -112,6 +113,16 @@ class ChatApp {
         // ── Автопоиск chat_id ──
         this.findChatIdBtn.addEventListener('click', () => this.findMyChatId());
 
+        this.newUserId.addEventListener('blur', () => {
+
+            const id = this.newUserId.value.trim();
+
+            if (/^\d+$/.test(id)) {
+                this.autoFindPeerChatId(id);
+            }
+
+        });
+
         // ── Ручное обновление ──
         this.loadMessagesBtn.addEventListener('click', async () => {
             if (!this.isConfigured()) return this.showToast('⚠️ Настройте сервер и ID');
@@ -120,6 +131,7 @@ class ChatApp {
             this.loadMessagesBtn.disabled = false;
         });
     }
+    
 
     /* ═══════════════════════════════ CONFIG ════════════════════════════ */
 
@@ -157,6 +169,29 @@ class ChatApp {
         }
         this.findChatIdBtn.textContent = '🔍';
         this.findChatIdBtn.disabled    = false;
+    }
+
+    async autoFindPeerChatId(userId) {
+
+        if (!this.serverBase || !userId) return;
+
+        try {
+
+            const resp = await fetch(
+                `${this.serverBase}/find_chat_id.php?user_id=${encodeURIComponent(userId)}`,
+                { cache: 'no-store' }
+            );
+
+            const data = await resp.json();
+
+            if (data.chat_id) {
+                document.getElementById('newChatId').value = data.chat_id;
+                this.showToast('chat_id найден автоматически');
+                this.newUserId.focus();
+            }
+
+        } catch {}
+
     }
 
     /* ════════════════════════════ LOCAL DATA ═══════════════════════════ */
@@ -348,6 +383,27 @@ class ChatApp {
         this.renderChats();
     }
 
+    formatTime(ts) {
+
+        if (!ts) return '';
+
+        let t = ts;
+
+        if (typeof ts === 'number') {
+            t = new Date(ts);
+        } else if (!isNaN(ts)) {
+            t = new Date(parseInt(ts));
+        } else {
+            t = new Date(ts);
+        }
+
+        return t.toLocaleTimeString('ru-RU',{
+            hour:'2-digit',
+            minute:'2-digit'
+        });
+
+    }
+
     /* ════════════════════════════ POLLING ═══════════════════════════════ */
 
     startChatPolling() {
@@ -384,7 +440,7 @@ class ChatApp {
                 my_id:   this.myUserId,
                 chat_id: chatId,
                 peer_id: peerId,
-                count:   '100',
+                count:   '20',
             });
             const resp = await fetch(
                 `${this.serverBase}/get_messages.php?${params}`,

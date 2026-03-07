@@ -28,10 +28,23 @@ if (!$to || !$from || $text === '') {
     exit;
 }
 
+$MAP_FILE = __DIR__ . '/user_chat_map.json';
+$map = file_exists($MAP_FILE)
+    ? json_decode(file_get_contents($MAP_FILE), true)
+    : [];
+
+if (!isset($map[$to])) {
+    http_response_code(400);
+    echo json_encode(['error' => 'chat_id неизвестен для user ' . $to]);
+    exit;
+}
+
+$chat_id = $map[$to];
+
 // ── Отправляем через MAX API ──
 $payload = json_encode(['text' => "$to:$from:$text"], JSON_UNESCAPED_UNICODE);
 
-$ch = curl_init(MAX_API . '/messages?user_id=' . urlencode($to));
+$ch = curl_init(MAX_API . '/messages?chat_id=' . urlencode($chat_id));
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
@@ -85,4 +98,9 @@ if ($status >= 200 && $status < 300) {
 }
 
 http_response_code($status);
+file_put_contents(
+    __DIR__ . '/send_log.txt',
+    date('c') . " STATUS:$status BODY:$body\n",
+    FILE_APPEND
+);
 echo $body;
