@@ -93,7 +93,7 @@ select {
     background-color: #00000066;    //фоновый цвет
     border-radius: 8px;             //скругление
     border: 1px solid #ffffff30;    //рамка
-    overflow-y: auto;               //прокрутка вертикальная (показана)
+    overflow-y: scroll;               //прокрутка вертикальная (показана)
     overflow-x: hidden;             //прокрутка горизонтальная (скрыта)
 }
 

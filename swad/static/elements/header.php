@@ -655,6 +655,106 @@ $stmt->execute([
     });
   })();
 </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const imageContainer = document.querySelector('.image');
+        const logoImg = document.querySelector('.image img');
+        if (!imageContainer || !logoImg) return;
+
+        // Переменные для перетаскивания
+        let isDragging = false;
+        let startX, startY, originalX, originalY;
+
+        // Эффект наклона (голографический)
+        function handleTilt(e) {
+            if (isDragging) return; // при перетаскивании наклон не нужен
+
+            const rect = logoImg.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const nx = (x / rect.width) * 2 - 1;
+            const ny = (y / rect.height) * 2 - 1;
+
+            const maxAngle = 25;
+            const rotateY = maxAngle * nx;
+            const rotateX = -maxAngle * ny;
+
+            // Применяем наклон к картинке (без translate, т.к. при перетаскивании он сброшен)
+            logoImg.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+
+            // Голографический градиент
+            const bgX = (nx * 50) + 50;
+            const bgY = (ny * 50) + 50;
+            imageContainer.style.setProperty('--bg-x', `${bgX}%`);
+            imageContainer.style.setProperty('--bg-y', `${bgY}%`);
+        }
+
+        // Сброс эффекта
+        function resetTilt() {
+            if (isDragging) return;
+            logoImg.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0)';
+            imageContainer.style.setProperty('--bg-x', '0%');
+            imageContainer.style.setProperty('--bg-y', '0%');
+        }
+
+        // Отмена стандартного перетаскивания картинки браузером
+        logoImg.addEventListener('dragstart', (e) => e.preventDefault());
+
+        // Начало перетаскивания
+        imageContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // чтобы не выделялось
+            isDragging = true;
+
+            // Сохраняем начальную позицию мыши
+            startX = e.clientX;
+            startY = e.clientY;
+
+            // Сохраняем текущее смещение (если уже было)
+            const transform = logoImg.style.transform;
+            // Простейший способ – сбросить наклон и запомнить translate
+            // Но мы просто будем двигать относительно исходного положения,
+            // поэтому сбрасываем transform и будем применять только translate
+            logoImg.style.transition = 'none'; // отключаем анимацию при перетаскивании
+            logoImg.style.transform = ''; // убираем наклон
+            originalX = 0;
+            originalY = 0;
+        });
+
+        // Перемещение
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            // Перемещаем картинку
+            logoImg.style.transform = `translate(${dx}px, ${dy}px)`;
+        });
+
+        // Завершение перетаскивания
+        window.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            // Возвращаем transition
+            logoImg.style.transition = 'transform 0.3s ease-out';
+
+            // Плавно возвращаем на место
+            logoImg.style.transform = '';
+
+            // После окончания анимации можно вернуть наклон (но пока убираем)
+            setTimeout(() => {
+                logoImg.style.transition = 'transform 0.01s ease-out'; // возвращаем быструю реакцию
+            }, 50); // время должно совпадать с transition
+        });
+
+        // Обработчики наклона
+        imageContainer.addEventListener('mousemove', handleTilt);
+        imageContainer.addEventListener('mouseleave', resetTilt);
+    });
+</script>
 </body>
 
 </html>
