@@ -1,5 +1,4 @@
 <?php
-
 require '../../vendor/autoload.php';
 require_once('../../swad/config.php');
 
@@ -18,7 +17,7 @@ if (empty($_SESSION['USERDATA'])) {
 $plan = $_GET['plan'] ?? null;
 
 $plans = [
-    'indie_pro' => 299,
+    'indie_pro' => 13.37,
     'indie_disk' => 99
 ];
 
@@ -31,11 +30,10 @@ $amount = $plans[$plan];
 $client = new Client();
 $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SHOP_KEY);
 
-$subscriptionId = uniqid('sub_');
-
+// Insert subscription with status 'pending'
 $stmt = $pdo->prepare("
-    INSERT INTO subscriptions (user_id, plan_code, amount)
-    VALUES (?, ?, ?)
+    INSERT INTO subscriptions (user_id, plan_code, amount, status)
+    VALUES (?, ?, ?, 'pending')
 ");
 $stmt->execute([
     $_SESSION['USERDATA']['id'],
@@ -45,6 +43,13 @@ $stmt->execute([
 
 $subscriptionDbId = $pdo->lastInsertId();
 
+// Get user email – required for receipt
+$userEmail = $_SESSION['USERDATA']['email'] ?? null;
+if (!$userEmail) {
+    die('User email is required for receipt. Please update your profile.');
+}
+
+// Create payment with receipt
 $payment = $client->createPayment(
     [
         'amount' => [
@@ -53,23 +58,45 @@ $payment = $client->createPayment(
         ],
         'confirmation' => [
             'type' => 'redirect',
-            'return_url' => 'https://dustore.ru/finv2/success.php?sub=' . $subscriptionDbId,
+            'return_url' => 'https://dustore.ru/finv2/success.php?sub=' . $subscriptionDbId . '&payment={payment_id}',
         ],
         'capture' => true,
         'description' => 'Подписка: ' . $plan,
         'metadata' => [
-            'subscription_id' => $subscriptionDbId
+            'subscription_id' => $subscriptionDbId,
+            'plan_code' => $plan
+        ],
+        'receipt' => [
+            'customer' => [
+                'email' => $userEmail,
+            ],
+            'items' => [
+                [
+                    'description' => 'Подписка: ' . $plan,
+                    'quantity' => 1,
+                    'amount' => [
+                        'value' => number_format($amount, 2, '.', ''),
+                        'currency' => 'RUB',
+                    ],
+                    'vat_code' => 1,   // ⚠️ REPLACE with your actual VAT code (1=0%, 5=20%)
+                    'payment_subject' => 'service',
+                    'payment_mode' => 'full_payment',
+                ]
+            ]
         ]
     ],
     uniqid('', true)
 );
 
-$pdo->prepare("
-    UPDATE subscriptions SET payment_id=? WHERE id=?
-")->execute([
-    $payment->getId(),
-    $subscriptionDbId
-]);
+$paymentId = $payment->getId();
 
+// Update subscription with payment_id
+$pdo->prepare("UPDATE subscriptions SET payment_id = ? WHERE id = ?")
+    ->execute([$paymentId, $subscriptionDbId]);
+
+// Build the correct return URL with the real payment_id
+$returnUrl = 'https://dustore.ru/finv2/success.php?sub=' . $subscriptionDbId . '&payment=' . $paymentId;
+
+// Redirect to YooKassa payment page
 header('Location: ' . $payment->getConfirmation()->getConfirmationUrl());
 exit;

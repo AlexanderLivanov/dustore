@@ -227,7 +227,7 @@ if ($userId) {
 
             <div class="plan <?= $currentPlan === 'indie_pro' ? 'active' : '' ?>">
                 <h2>Инди Pro</h2>
-                <div class="price">299 ₽ / мес</div>
+                <div class="price">13.37 ₽ / мес</div>
                 <div class="features">Для тех, у кого много проектов.</div>
                 <ul class="features">
                     <li>- До 3 студий</li>
