@@ -79,7 +79,7 @@ if ($selectedGenre) {
                 <!-- Поиск теперь сверху -->
                 <div class="search-wrapper">
                     <div class="search-bar">
-                        <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
+                        <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
                         <input type="text" placeholder="Введите название игры или тикер разработчика...">
                     </div>
                 </div>
@@ -290,6 +290,45 @@ if ($selectedGenre) {
             }
         });
     });
+
+(function() {
+    const filterButtons = document.querySelectorAll('.btn-filter');
+    if (!filterButtons.length) return;
+
+    function resetTilt(btn) {
+        btn.style.transform = '';
+    }
+
+    function handleMouseMove(e) {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Нормализация координат в диапазон -1..1
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+
+        const maxAngle = 15; // мягкий наклон
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+
+        const translateY = 0; // подъём в пикселях
+        const scale = 1.07;    // лёгкое увеличение
+
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+
+    function handleMouseLeave(e) {
+        resetTilt(e.currentTarget);
+    }
+
+    filterButtons.forEach(btn => {
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
+
 </script>
 </body>
 </html>

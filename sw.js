@@ -3,7 +3,8 @@ const CACHE_NAME = "pwa-version-1";
 const assets = [
   "/manifest.json",
   "/index.php",
-  "/me.php"
+  "/me.php",
+  "/swad/static/img/logo_new.png"
 ];
 
 self.addEventListener("install", (evt) => {

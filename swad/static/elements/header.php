@@ -171,6 +171,11 @@ $stmt->execute([
 </head>
 
 <body>
+    <div id="preloader" class="preloader">
+        <div class="preloader-content">
+            <img src="/swad/static/img/logo_new.png" alt="Dustore" class="preloader-logo">
+        </div>
+    </div>
     <!-- <div id="push-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#333; color:#fff; padding:15px; text-align:center; z-index:1000;">
         🔔 Хотите получать уведомления? Так вы не пропустите ничего нового...
         <button id="enable-push" style="margin-left:10px; padding:5px 10px;">Включить</button>
@@ -754,7 +759,59 @@ $stmt->execute([
         imageContainer.addEventListener('mousemove', handleTilt);
         imageContainer.addEventListener('mouseleave', resetTilt);
     });
+
+(function() {
+    const headerButtons = document.querySelectorAll('.header .button');
+    if (!headerButtons.length) return;
+
+    function resetTilt(btn) {
+        btn.style.transform = '';
+    }
+
+    function handleMouseMove(e) {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Нормализация координат в диапазон -1..1
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+
+        const maxAngle = 15; // мягкий наклон
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+
+        // Небольшой подъём и масштаб
+        const translateY = -3; // в пикселях
+        const scale = 1.04;
+
+        // Применяем все трансформации
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+
+    function handleMouseLeave(e) {
+        resetTilt(e.currentTarget);
+    }
+
+    headerButtons.forEach(btn => {
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
+
+// Скрываем прелоадер после полной загрузки страницы
+window.addEventListener('load', function() {
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        preloader.classList.add('hidden');
+        // Полностью удаляем из DOM после завершения анимации (опционально)
+        setTimeout(() => preloader.remove(), 500);
+    }
+});
+
 </script>
+
 </body>
 
 </html>

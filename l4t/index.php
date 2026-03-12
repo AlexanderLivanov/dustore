@@ -43,6 +43,9 @@ $bids_array = [
     [2, "Pigeon of Sorrow", 2, "/path_to_cover", "Unity программист", 1, "non-free"],
     [3, "Solder Simulator", 3, "/path_to_cover", "Физик-ядерщик",     1, "non-free"],
     [4, "Dustore",          4, "/path_to_cover", "Деньги",            1, "non-free"],
+    [4, "Dustore",          5, "/path_to_cover", "Деньги",            1, "non-free"],
+    [4, "Dustore",          6, "/path_to_cover", "Деньги",            1, "non-free"],
+    [4, "Dustore",          7, "/path_to_cover", "Деньги",            1, "non-free"],
 ];
 
 // Превью «о себе» — 200 символов

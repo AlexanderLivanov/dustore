@@ -66,6 +66,7 @@ body {
     padding: 5px;
     border-radius: 11px;
     font-family: "Bahnschrift Light";
+    box-shadow: inset 1px 1px 1px 2px #00000050;
 }
 
 .button {
@@ -75,7 +76,7 @@ body {
     border: none;
     border-radius: 9px;
     cursor: pointer;
-    //box-shadow: 5px 5px 10px rgba(255, 255, 255, 1);
+    box-shadow: 1px 1px 1px 1px #00000060;
     font-family:"Bahnschrift Light";
     font-size: 13pt;
     transition: all .2s;
@@ -86,6 +87,7 @@ body {
     padding: 10px 25px 10px 25px !important;
     font-family:"Bahnschrift Light" !important;
     font-size: 13pt;
+    box-shadow: 1px 1px 1px 1px #00000060;
 }
 
 .footer {
@@ -118,7 +120,7 @@ body {
     background-color: #ffffff40;
     color: white;
     font-family:"Bahnschrift Light";
-    transition: all .2s;
+    transition: all .15s;
     padding: 10px 25px 10px 25px;
     border: none;
 }
@@ -161,7 +163,7 @@ body {
     pointer-events: none;
     z-index: 2;
     mix-blend-mode: overlay;
-    border-radius: inherit; /* если у картинки есть скругление */
+    border-radius: inherit;
 }
 
 .image:hover::after {
@@ -172,6 +174,12 @@ body {
 
 }
 
+
+.header .button {
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.001s ease-out;
+}
 
 @media screen and (width < 900px) {
     .buttons-left {
@@ -334,4 +342,56 @@ body {
 
 .image:hover::after {
     opacity: 1;
+}
+
+/* Прелоадер */
+.preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2e0f32, #c32178);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease, visibility 0.1s ease;
+}
+
+.preloader.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.preloader-content {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.preloader-logo {
+    width: 220px;
+    height: auto;
+    vertical-align: middle;
+    margin-bottom: 100px;
+    animation: pulse 0.7s infinite ease-in-out;
+}
+
+.preloader-spinner {
+    margin-top: 20px;
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--primary, #c32178);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
