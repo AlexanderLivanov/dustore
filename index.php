@@ -16,6 +16,9 @@
     <?php require_once('swad/static/elements/header.php'); ?>
     <main >
         <section class="hero">
+            <div class="hero-bg">
+
+               </div>
             <div class="container">
                 <div class="hero-content">
                     <h1 class="pixel-title">DUSTORE — открытое пространство для инди-разработчиков</h1>
@@ -24,105 +27,6 @@
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
                         <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
                         <a href="https://t.me/dustore_devs" target="_blank" class="btn btn-secondary">Чатик для разработчиков</a>
-                    </div>
-                    <div class="hero-image floating">
-                        <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Основной контейнер магазина -->
-                            <rect x="50" y="50" width="700" height="300" rx="20" fill="#1e0a28" stroke="#c32178" stroke-width="3" />
-
-                            <!-- Шапка магазина -->
-                            <rect x="60" y="60" width="680" height="50" rx="10" fill="#0f0316" />
-                            <text x="80" y="90" font-family="Arial" font-size="20" fill="white" font-weight="bold">DUSTORE - ИГРОВАЯ ПЛАТФОРМА</text>
-
-                            <!-- Панель поиска и фильтров -->
-                            <rect x="80" y="120" width="500" height="40" rx="20" fill="#400c4a" />
-                            <text x="100" y="145" font-family="Arial" font-size="16" fill="#aaaaaa">Поиск игр...</text>
-                            <rect x="600" y="120" width="120" height="40" rx="20" fill="#74155d" />
-                            <text x="620" y="145" font-family="Arial" font-size="16" fill="white">Фильтры</text>
-
-                            <!-- Категории -->
-                            <rect x="80" y="180" width="640" height="30" fill="transparent" />
-                            <rect x="80" y="180" width="100" height="30" rx="15" fill="#c32178" />
-                            <text x="130" y="200" font-family="Arial" font-size="14" fill="white" text-anchor="middle">Все</text>
-
-                            <rect x="190" y="180" width="100" height="30" rx="15" fill="#400c4a" />
-                            <text x="240" y="200" font-family="Arial" font-size="14" fill="#aaaaaa" text-anchor="middle">Экшен</text>
-
-                            <rect x="300" y="180" width="100" height="30" rx="15" fill="#400c4a" />
-                            <text x="350" y="200" font-family="Arial" font-size="14" fill="#aaaaaa" text-anchor="middle">RPG</text>
-
-                            <rect x="410" y="180" width="100" height="30" rx="15" fill="#400c4a" />
-                            <text x="460" y="200" font-family="Arial" font-size="14" fill="#aaaaaa" text-anchor="middle">Стратегии</text>
-
-                            <rect x="520" y="180" width="100" height="30" rx="15" fill="#400c4a" />
-                            <text x="570" y="200" font-family="Arial" font-size="14" fill="#aaaaaa" text-anchor="middle">Инди</text>
-
-                            <!-- Карточки игр -->
-                            <!-- Игра 1 -->
-                            <g transform="translate(80, 220)">
-                                <rect x="0" y="0" width="150" height="100" rx="10" fill="#400c4a" />
-                                <rect x="10" y="10" width="130" height="50" rx="5" fill="#74155d" />
-                                <text x="75" y="75" font-family="Arial" font-size="12" fill="white" text-anchor="middle">Super Game</text>
-                                <rect x="10" y="85" width="50" height="20" rx="3" fill="#0f0316" />
-                                <text x="35" y="100" font-family="Arial" font-size="12" fill="#c32178" text-anchor="middle">★ 4.7</text>
-                                <rect x="110" y="85" width="30" height="20" rx="3" fill="#c32178" />
-                                <text x="125" y="100" font-family="Arial" font-size="12" fill="white" text-anchor="middle">149 ₽</text>
-                            </g>
-
-                            <!-- Игра 2 -->
-                            <g transform="translate(240, 220)">
-                                <rect x="0" y="0" width="150" height="100" rx="10" fill="#400c4a" />
-                                <rect x="10" y="10" width="130" height="50" rx="5" fill="#74155d" />
-                                <text x="75" y="75" font-family="Arial" font-size="12" fill="white" text-anchor="middle">Great Game</text>
-                                <rect x="10" y="85" width="50" height="20" rx="3" fill="#0f0316" />
-                                <text x="35" y="100" font-family="Arial" font-size="12" fill="#c32178" text-anchor="middle">★ 4.9</text>
-                                <rect x="110" y="85" width="30" height="20" rx="3" fill="#c32178" />
-                                <text x="125" y="100" font-family="Arial" font-size="12" fill="white" text-anchor="middle">349 ₽</text>
-                            </g>
-
-                            <!-- Игра 3 -->
-                            <g transform="translate(400, 220)">
-                                <rect x="0" y="0" width="150" height="100" rx="10" fill="#400c4a" />
-                                <rect x="10" y="10" width="130" height="50" rx="5" fill="#74155d" />
-                                <text x="75" y="75" font-family="Arial" font-size="12" fill="white" text-anchor="middle">Mega Game</text>
-                                <rect x="10" y="85" width="50" height="20" rx="3" fill="#0f0316" />
-                                <text x="35" y="100" font-family="Arial" font-size="12" fill="#c32178" text-anchor="middle">★ 4.5</text>
-                                <rect x="110" y="85" width="30" height="20" rx="3" fill="#c32178" />
-                                <text x="125" y="100" font-family="Arial" font-size="12" fill="white" text-anchor="middle">49 ₽</text>
-                            </g>
-
-                            <!-- Игра 4 -->
-                            <g transform="translate(560, 220)">
-                                <rect x="0" y="0" width="150" height="100" rx="10" fill="#400c4a" />
-                                <rect x="10" y="10" width="130" height="50" rx="5" fill="#74155d" />
-                                <text x="75" y="75" font-family="Arial" font-size="12" fill="white" text-anchor="middle">New Game</text>
-                                <rect x="10" y="85" width="50" height="20" rx="3" fill="#0f0316" />
-                                <text x="35" y="100" font-family="Arial" font-size="12" fill="#c32178" text-anchor="middle">★ 4.8</text>
-                                <rect x="110" y="85" width="30" height="20" rx="3" fill="#c32178" />
-                                <text x="125" y="100" font-family="Arial" font-size="12" fill="white" text-anchor="middle">109 ₽</text>
-                            </g>
-
-                            <!-- Иконка корзины -->
-                            <g transform="translate(700, 75)">
-                                <rect x="0" y="0" width="25" height="25" rx="5" fill="transparent" stroke="#c32178" stroke-width="2" />
-                                <circle cx="12.5" cy="10" r="2" fill="#c32178" />
-                                <circle cx="5" cy="20" r="1" fill="#c32178" />
-                                <circle cx="12.5" cy="20" r="1" fill="#c32178" />
-                                <circle cx="20" cy="20" r="1" fill="#c32178" />
-                            </g>
-
-                            <!-- Иконка пользователя -->
-                            <g transform="translate(650, 75)">
-                                <circle cx="12.5" cy="10" r="7" fill="transparent" stroke="#c32178" stroke-width="2" />
-                                <rect x="5" y="20" width="15" height="10" rx="2" fill="transparent" stroke="#c32178" stroke-width="2" />
-                            </g>
-
-                            <!-- Иконка избранного -->
-                            <g transform="translate(600, 75)">
-                                <path d="M12.5,5 L15,10 L20,11 L16,15 L17,20 L12.5,17.5 L8,20 L9,15 L5,11 L10,10 Z"
-                                    fill="transparent" stroke="#c32178" stroke-width="2" />
-                            </g>
-                        </svg>
                     </div>
                 </div>
             </div>
@@ -595,6 +499,36 @@
                 })
                 .catch(err => console.log('service worker not registered', err));
         }
+
+    (function() {
+    const hero = document.querySelector('.hero');
+    if (!hero) return;
+
+    // Максимальное смещение в пикселях (вправо)
+    const MAX_OFFSET = 300;
+
+    function updateHeroBgOffset() {
+        const scrollY = window.scrollY;
+        // Рассчитываем смещение: чем больше скролл, тем больше offset (но не больше MAX_OFFSET)
+        let offset = Math.min(scrollY * 0.5, MAX_OFFSET);
+        hero.style.setProperty('--hero-bg-offset', offset + 'px');
+    }
+
+    // Запускаем при загрузке
+    updateHeroBgOffset();
+
+    // Оптимизированный обработчик скролла с requestAnimationFrame
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                updateHeroBgOffset();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    });
+})();
     </script>
 </body>
 

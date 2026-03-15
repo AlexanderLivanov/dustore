@@ -1,35 +1,59 @@
-:root {
-    --primary: #c32178;
-    --secondary: #74155d;
-    --dark: #14041d;
-    --light: #f8f9fa;
-    --gradient: linear-gradient(180deg, #14041d, #400c4a, #74155d, #c32178);
-}
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-    background: var(--dark);
+    background: linear-gradient(#2e0f32, #2e0f32);
     color: var(--light);
     min-height: 100vh;
+    overflow: hidden;
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 30px 30px 30px;
+    background: linear-gradient(180deg, #ffffff13, #ffffff13, #ffffff13, #ffffff20);
+    border-radius: 15px;
+    border: 1px white;
+    box-shadow: 0px 0px 1px 1px #ffffff33;
+    backdrop-filter: blur(40px);
 }
 
+/* Стилизация скроллбара для правой колонки */
+.profile-right::-webkit-scrollbar {
+    width: 2px;
+    height: 2px;
+}
+
+.profile-right::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.profile-right::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+
+.profile-right::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Для Firefox */
+.profile-right {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+
 .profile-header {
-    background: var(--gradient);
-    padding: 60px 0 30px;
     position: relative;
-    margin-bottom: 40px;
+    padding: 20px;
+    overflow: hidden;
 }
 
 .profile-content {
@@ -50,17 +74,22 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 15px;
     padding: 25px;
-    margin-bottom: 25px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .user-avatar {
     width: 150px;
     height: 150px;
-    border-radius: 50%;
+    border-radius: 20px;
     object-fit: cover;
-    border: 4px solid var(--primary);
+    /* border: 4px solid var(--primary); */
     margin-bottom: 20px;
+}
+
+.user-info {
+    width: 100%;
+    height: 100%;
+    display: flex;
 }
 
 .user-info h1 {
@@ -119,42 +148,58 @@ body {
 
 .section-title {
     font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
-    font-size: 1.8rem;
+    font-size: 1rem;
     margin-bottom: 20px;
     padding-bottom: 10px;
     border-bottom: 2px solid var(--primary);
-}
-
-/* Стили для вкладок */
-.tabs {
-    display: flex;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    margin-bottom: 30px;
-    overflow: hidden;
+    text-align: center;
 }
 
 .tab-button {
     flex: 1;
-    padding: 15px 20px;
-    background: none;
+    padding: 12px 20px;
+    background: #3f2a416e;
     border: none;
     color: #aaa;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.1s ease;
     text-align: center;
+    box-shadow: inset 1px 1px 1px 1px #00000060;
+}
+
+.tab-button {
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: background 0.01s, color 0.01s, transform 0.01s ease-out; /* transform быстро */
+    backdrop-filter: blur(10px);
+}
+
+.profile-left .tabs {
+    width: 100%;
+}
+
+.profile-left .tab-button {
+    width: 100%;
+    border-radius: 9px;
+    box-shadow: 0px 0px 0px 1px #d6d6d626;
 }
 
 .tab-button:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #3f2a416e;
     color: white;
 }
 
 .tab-button.active {
-    background: var(--primary);
+    background: #614164a3;
     color: white;
+    pointer-events: none;
+}
+
+.tab-button.active:hover {
+    color: white;
+    pointer-events: none;
 }
 
 .tab-content {
@@ -162,7 +207,7 @@ body {
 }
 
 .tab-content.active {
-    display: block;
+    display: contents;
     animation: fadeIn 0.5s ease;
 }
 
@@ -426,21 +471,18 @@ body {
     color: #888;
 }
 
+
+
 .edit-profile-btn {
-    display: inline-block;
-    padding: 10px 20px;
-    background: #26072d;
+    display: flex;
     color: white;
     border: none;
     border-radius: 20px;
-    text-decoration: none;
-    font-weight: bold;
     transition: all 0.3s ease;
-    margin-top: 15px;
+    margin-top: auto;
 }
 
 .edit-profile-btn:hover {
-    background: #400c4a;
     transform: translateY(-2px);
 }
 
@@ -468,12 +510,36 @@ body {
 
 .avatar-wrapper .user-avatar {
     position: absolute;
-    top: 25px;
-    left: 25px;
-    width: 150px;
-    height: 150px;
+    /* top: 25px; */
+    /* left: 25px; */
+    width: 300px;
+    height: 400px;
     z-index: 1;
+    padding: 5px;
+    border-radius: 30px;
 }
+
+.hz {
+
+}
+
+h1 {
+    margin-top: 10px;
+    margin-left: 20px;
+    font-weight: 100;
+}
+
+p {
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+
+
 
 @media (max-width: 900px) {
     .profile-content {
@@ -547,4 +613,215 @@ body {
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+/* Левая колонка профиля */
+.profile-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+}
+
+/* Кнопка "Добавить в друзья" — стили уже есть, но для надёжности */
+.btn-friend {
+    background: var(--primary);
+    border: none;
+    border-radius: 40px;
+    padding: 10px 25px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 8px 16px rgba(195, 33, 120, 0.3);
+    display: inline-block;
+}
+
+.btn-friend:hover {
+    background: #ff4d9e;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(195, 33, 120, 0.5);
+}
+
+
+.profile-left .tabs {
+    flex-direction: column;
+    background: linear-gradient(rgb(32 14 34), rgb(28 9 30));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    margin-top: auto;
+    gap: 7px;
+    padding: 5px;
+}
+
+/* Правая колонка */
+.profile-right .profile-card {
+    height: 100%;
+    background: rgb(0 0 0 / 40%);
+    margin-top: auto;
+    box-shadow: inset 1px 1px 3px 1px #00000066;
+}
+
+/* Адаптивность */
+@media (max-width: 900px) {
+    .profile-header .container {
+        flex-direction: column;
+    }
+    .profile-left {
+        flex: 1 1 auto;
+    }
+}
+
+/* Принудительное горизонтальное расположение внутри profile-header */
+.profile-header .container {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 30px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+/* Левая колонка (профиль + вкладки) */
+.profile-left {
+    flex: 0 0 300px;
+    min-width: 260px;
+    box-shadow: inset 1px 1px 3px 1px #00000066;
+    background: linear-gradient(#1c091e, #00000066, #1c091e);
+    border-radius: 30px;
+}
+
+/* Правая колонка (контент вкладок) */
+.profile-right {
+    display: flex;
+    flex: 1;
+    min-width: 280px;
+    overflow-y: auto;
+    height: 100%;
+    flex-direction: column;
+}
+
+/* Если есть старые стили для .container, которые мешают, убираем лишнее */
+.profile-header .container {
+    max-width: none; /* убираем ограничение, если было */
+}
+
+.avatar-wrapper {
+    position: relative; /* станет якорем для абсолютного позиционирования */
+    display: inline-block; /* или block, в зависимости от макета */
+}
+
+.edit-profile-btn {
+    position: absolute;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* Карусель коллекции игр */
+.carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 20px 0;
+    overflow: visible;
+}
+
+.carousel-track-wrap {
+    overflow: hidden;
+    width: 100%;
+    padding: 20px 0;
+    margin: 0 40px;
+}
+
+.carousel-track {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    transition: transform 0.3s ease-out;
+    will-change: transform;
+}
+
+.carousel-item {
+    flex: 0 0 240px; /* ширина карточки */
+    transition: all 0.3s ease;
+    transform-origin: center center;
+    opacity: 0.6;
+    scale: 0.85;
+    filter: blur(1px);
+}
+
+.carousel-item.active {
+    opacity: 1;
+    scale: 1.1;
+    filter: blur(0);
+    z-index: 10;
+    transform: translateY(-10px); /* приподнимаем центральную */
+}
+
+.carousel-item .game-card {
+    width: 100%;
+    height: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.03);
+    transition: box-shadow 0.3s;
+}
+
+.carousel-item.active .game-card {
+    box-shadow: 0 20px 40px rgba(195,33,120,0.4);
+}
+
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.carousel-btn:hover {
+    background: #ff4d9e;
+    box-shadow: 0 6px 15px rgba(195,33,120,0.5);
+}
+
+.carousel-btn.prev {
+    left: 0;
+}
+
+.carousel-btn.next {
+    right: 0;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 700px) {
+    .carousel-item {
+        flex: 0 0 180px;
+    }
+    .carousel-track-wrap {
+        margin: 0 30px;
+    }
+    .carousel-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 20px;
+    }
 }

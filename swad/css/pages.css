@@ -66,6 +66,8 @@ body {
     overflow-x: hidden;
 }
 
+
+
 section {
     padding: 80px 0;
 }
@@ -142,7 +144,8 @@ p {
     min-height: 100vh;
     display: flex;
     align-items: center;
-    overflow: hidden;
+    position: relative;
+    /*overflow: hidden;*/
 }
 
 .hero-content {
@@ -190,6 +193,24 @@ p {
     width: 100%;
     border-radius: 10px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 120%;
+    height: 120%;
+    background-image: url('/swad/static/img/logo.svg');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.15;
+    z-index: -1;
+    pointer-events: none;
+    transform: translateX(var(--hero-bg-offset, 0px)); /* добавляем смещение */
+    transition: transform 0.60s ease-out; /* немного сглаживания (опционально) */
 }
 
 /* Секция платформы */
@@ -411,6 +432,7 @@ body {
     padding-top: 100px;
     padding: 0 20px;
 }
+
 
 /* section {
     padding: 80px 0;

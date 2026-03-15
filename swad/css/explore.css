@@ -3,7 +3,7 @@
     --secondary: #74155d;
     --dark: #14041d;
     --light: #f8f9fa;
-    --gradient: linear-gradient(180deg, #28112b, #61114e);
+    --gradient: linear-gradient(180deg, #2e0f32, #2e0f32, #2e0f32, #2e0f32, #2e0f32, #61114e);
 }
 
 /* Скроллбар для сетки */
@@ -147,12 +147,12 @@ h2:after {
 .controls-left {
     display: grid;
     align-items: center;
-    background: #00000040;
+    background: #260d2a;
     padding: 10px;
     border-radius: 10px;
     overflow-y: auto;
     overflow-x: hidden;
-    box-shadow: inset 3px 3px 3px 3px #00000040;
+    box-shadow: inset 2px 2px 1px 2px #00000040;
 }
 
 .search-wrapper {
@@ -168,16 +168,16 @@ h2:after {
 
 .search-bar input {
     width: 100%;
-    padding: 6px 10px;
+    padding: 8px 10px;
     padding-left: 45px;
     background: #00000040;
     border: none;
     border-radius: 10px;
     color: #ffffff;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     outline: none;
     transition: all 0.3s;
-    box-shadow: inset 1px 1px 1px 1px #00000066;
+    box-shadow: inset 2px 2px 1px 2px #00000040;
 }
 
 .search-bar input::placeholder {
@@ -250,28 +250,27 @@ h2:after {
 .games-list .container {
     height: 100%;
     display: flex;
-    flex-direction: column;  /* теперь вертикально */
+    flex-direction: column;
     padding: 20px 30px 30px 30px;
-    background: #00000040;
+    background: linear-gradient(180deg, #ffffff13, #ffffff13, #ffffff13, #ffffff20);
     border-radius: 15px;
     border: 1px white;
-    box-shadow: 0px 0px 1px 1px #ffffff10;
-    backdrop-filter: blur(10px);
-}
+    box-shadow: 0px 0px 1px 1px #ffffff33;
+    backdrop-filter: blur(40px);
 
 .games-grid {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 30px;
-    padding: 30px;
-    border-radius: 10px;
-    background: #00000040;
-    box-shadow: inset 3px 3px 3px 3px #00000040;
-}
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 30px;
+        padding: 30px;
+        border-radius: 10px;
+        background: linear-gradient(180deg, #260d2a);
+        box-shadow: inset 2px 2px 1px 2px #00000040;
+    }
 
 .game-card {
     border-radius: 20px;
@@ -281,6 +280,7 @@ h2:after {
     transform-style: preserve-3d;
     will-change: transform;
     box-shadow: 2px 2px 2px 2px #00000040;
+    background: #ffffff05;
 }
 
 .game-card:hover {
@@ -462,11 +462,13 @@ h2:after {
 .btn-filter:hover {
     color: white;
     background: #352535;
+    box-shadow: 1px 1px 1px 1px #00000050;
 }
 
 .btn-filter.active {
     background: #ffffff1a;
     color: #fff;
+    box-shadow: 1px 1px 1px 1px #00000050;
 }
 
 .warning-adult {
