@@ -489,13 +489,12 @@ p {
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.01s ease;
 }
 
 .btn:hover {
     background: #e62e8a;
     transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(195, 33, 120, 0.3);
 }
 
 .about-hero {

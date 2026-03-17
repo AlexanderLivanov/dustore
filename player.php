@@ -373,6 +373,7 @@ if ($is_owner) {
                    <!--<p>@<?= htmlspecialchars($user['username']) ?></p>-->
                     <!--<h2><a style="color: white;" href="/l4t/<?= $username ?>">Профиль на L4T-->
                             <!--<svg style="vertical-align: middle;"
+                            <!--<svg style="vertical-align: middle;"
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="32"
                                 height="32"
@@ -387,209 +388,254 @@ if ($is_owner) {
                                 <path d="M15 4h5v5" />
                             </svg>-->
                         </a></h2>
+                <?php
+                $games_main   = array_slice($games, 0, 6);
+                $reviews_main = array_slice($reviews, 0, 3);
+                ?>
                 <div id="tab-profile" class="tab-content">
-                    <div class="profile-content">
-                        <div class="profile-sidebar">
-                            <div class="profile-card">
-                                <h3>Информация</h3>
+                    <div class="pf-wrap">
 
-                                <?php if (!empty($user['country']) || !empty($user['city'])): ?>
-                                    <p>
-                                        <strong>Местоположение:</strong><br>
-                                        <?= !empty($user['city']) ? htmlspecialchars($user['city']) : '' ?>
-                                        <?= !empty($user['country']) ? ', ' . htmlspecialchars($user['country']) : '' ?>
-                                    </p>
+                        <!-- ① Статистика -->
+                        <div class="pf-stats-row">
+                            <div class="pf-stat">
+                                <span class="pf-stat-num"><?= (int)$stats['library_count'] ?></span>
+                                <span class="pf-stat-lbl">игр</span>
+                            </div>
+                            <div class="pf-stat-div"></div>
+                            <div class="pf-stat">
+                                <span class="pf-stat-num"><?= (int)$stats['friends_count'] ?></span>
+                                <span class="pf-stat-lbl">друзей</span>
+                            </div>
+                            <div class="pf-stat-div"></div>
+                            <div class="pf-stat">
+                                <span class="pf-stat-num"><?= (int)$stats['reviews_count'] ?></span>
+                                <span class="pf-stat-lbl">отзывов</span>
+                            </div>
+                            <div class="pf-stat-div"></div>
+                            <div class="pf-stat">
+                                <span class="pf-stat-num"><?= (int)$stats['achievements_count'] ?></span>
+                                <span class="pf-stat-lbl">достижений</span>
+                            </div>
+
+                            <!-- Meta справа -->
+                            <div class="pf-meta">
+                                <?php if (!empty($user['city']) || !empty($user['country'])): ?>
+                                <span class="pf-meta-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                                    <?= htmlspecialchars(implode(', ', array_filter([$user['city'], $user['country']]))) ?>
+                                </span>
                                 <?php endif; ?>
-
-                                <p>
-                                    <strong>Был(а):</strong>
+                                <span class="pf-meta-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                     <?= time_ago(getUserLastActivity($user['telegram_id'])) ?>
-                                </p>
-
-                                <div class="social-links">
-                                    <?php if (!empty($user['website'])): ?>
-                                        <a href="<?= htmlspecialchars($user['website']) ?>" class="social-link" target="_blank">🌐 Сайт</a>
-                                    <?php endif; ?>
-
-                                    <?php if (!empty($user['vk'])): ?>
-                                        <a href="<?= htmlspecialchars($user['vk']) ?>" class="social-link" target="_blank">ВК</a>
-                                    <?php endif; ?>
-
-                                    <?php if (!empty($user['telegram_username'])): ?>
-                                        <a href="https://t.me/<?= htmlspecialchars($user['telegram_username']) ?>" class="social-link" target="_blank">Telegram</a>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                            <div class="profile-card">
-                                <h3>Статистика</h3>
-                                <div class="user-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-number"><?= (int)$stats['reviews_count'] ?></span>
-                                        <span class="stat-label">Отзывов:</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-number"><?= (int)$stats['friends_count'] ?></span>
-                                        <span class="stat-label">Друзей:</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-number"><?= (int)$stats['library_count'] ?></span>
-                                        <span class="stat-label">Игр в библиотеке:</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-number"><?= (int)$stats['achievements_count'] ?></span>
-                                        <span class="stat-label">Достижений:</span>
-                                    </div>
-                                </div>
+                                </span>
                             </div>
                         </div>
 
-                        <div class="profile-main">
-                            <div class="profile-card">
-                                <h2 class="section-title">Игры в Коллекции пользователя</h2>
+                        <!-- ② Соцсети -->
+                        <?php if (!empty($user['website']) || !empty($user['vk']) || !empty($user['telegram_username'])): ?>
+                        <div class="pf-socials">
+                            <?php if (!empty($user['website'])): ?>
+                            <a href="<?= htmlspecialchars($user['website']) ?>" class="pf-social-btn" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                Сайт
+                            </a>
+                            <?php endif; ?>
+                            <?php if (!empty($user['vk'])): ?>
+                            <a href="<?= htmlspecialchars($user['vk']) ?>" class="pf-social-btn" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14C20.67 22 22 20.67 22 15.07V8.93C22 3.33 20.67 2 15.07 2zm3.08 13.27h-1.56c-.59 0-.77-.47-1.83-1.54-.92-.9-1.33-.9-1.56-.9-.32 0-.41.09-.41.54v1.4c0 .38-.12.61-1.14.61-1.68 0-3.54-1.02-4.85-2.91C5.61 10.3 5 8.42 5 7.97c0-.23.09-.45.54-.45h1.56c.4 0 .56.18.72.63.79 2.29 2.12 4.3 2.67 4.3.2 0 .29-.09.29-.59V9.63c-.06-1.06-.62-1.15-.62-1.53 0-.18.15-.36.38-.36h2.45c.34 0 .45.18.45.56v3c0 .34.15.45.25.45.2 0 .38-.11.76-.49 1.17-1.31 2.01-3.33 2.01-3.33.11-.23.29-.45.69-.45h1.56c.47 0 .58.24.47.56-.2.92-2.12 3.63-2.12 3.63-.17.27-.23.38 0 .68.17.23.72.7 1.08 1.12.67.76 1.18 1.4 1.32 1.84.14.43-.09.65-.52.65z"/></svg>
+                                ВКонтакте
+                            </a>
+                            <?php endif; ?>
+                            <?php if (!empty($user['telegram_username'])): ?>
+                            <a href="https://t.me/<?= htmlspecialchars($user['telegram_username']) ?>" class="pf-social-btn" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.93.43l-2.58-1.9-1.24 1.2c-.14.13-.26.25-.53.25l.19-2.67 4.84-4.37c.21-.19-.05-.29-.32-.1L7.54 14.44l-2.52-.79c-.55-.17-.56-.55.11-.81l9.85-3.8c.46-.17.86.11.66.76z"/></svg>
+                                Telegram
+                            </a>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
 
-                                <?php
-                                // Получаем последние 6 игр для главной вкладки
-                                $games_main = array_slice($games, 0, 6);
-                                ?>
-
-                                <?php if (!empty($games_main)): ?>
-                                    <div class="games-grid">
-                                        <?php foreach ($games_main as $game): ?>
-                                            <a href="/g/<?= $game['id'] ?>" class="game-card-link" style="text-decoration: none; color: inherit;">
-                                                <div class="game-card">
-                                                    <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>"
-                                                        alt="Обложка игры" class="game-cover">
-                                                    <div class="game-info">
-                                                        <h3 class="game-title"><?= htmlspecialchars($game['name']) ?></h3>
-                                                        <p class="game-description"><?= htmlspecialchars($game['description']) ?></p>
-                                                        <div class="game-meta">
-                                                            <span class="game-rating">★ <?= number_format($game['rating'], 1) ?></span>
-                                                            <span class="game-price"><?= $game['price'] > 0 ? $game['price'] . ' ₽' : 'Бесплатно' ?></span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </a>
-                                        <?php endforeach; ?>
-                                    </div>
-
-                                    <?php if (count($games) > 6): ?>
-                                        <div style="text-align: center; margin-top: 20px;">
-                                            <button onclick="switchTab('games')" class="edit-profile-btn">Показать все игры</button>
-                                        </div>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <div class="empty-state">
-                                        <p>Этот пользователь пока не сыграл ни в одну игру :(</p>
-                                    </div>
+                        <!-- ③ Последние игры -->
+                        <?php if (!empty($games_main)): ?>
+                        <div class="pf-section">
+                            <div class="pf-section-head">
+                                <span class="pf-section-title">Последние игры</span>
+                                <?php if (count($games) > 6): ?>
+                                <button onclick="switchTab('games')" class="pf-link-btn">Все игры →</button>
                                 <?php endif; ?>
                             </div>
-
-                            <div class="profile-card">
-                                <h2 class="section-title">Последние отзывы</h2>
-
-                                <?php
-                                // Получаем последние 3 отзыва для главной вкладки
-                                $reviews_main = array_slice($reviews, 0, 3);
-                                ?>
-
-                                <?php if (!empty($reviews_main)): ?>
-                                    <div class="reviews-list">
-                                        <?php foreach ($reviews_main as $review): ?>
-                                            <a href="/g/<?= $review['game_id'] ?>" class="review-item-link" style="text-decoration: none; color: inherit;">
-                                                <div class="review-item">
-                                                    <div class="review-header">
-                                                        <img src="<?= !empty($review['game_cover']) ? htmlspecialchars($review['game_cover']) : '/assets/default-game-cover.png' ?>"
-                                                            alt="Обложка игры" class="review-game-cover">
-                                                        <div>
-                                                            <div class="review-game-title"><?= htmlspecialchars($review['game_title']) ?></div>
-                                                            <div class="review-rating">★ <?= $review['rating'] ?>/10</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="review-text">
-                                                        <?= nl2br(htmlspecialchars($review['text'])) ?>
-                                                    </div>
-                                                    <div class="review-date">
-                                                        <?= date('d.m.Y H:i', strtotime($review['created_at'])) ?>
-                                                    </div>
-                                                </div>
-                                            </a>
-                                        <?php endforeach; ?>
-                                    </div>
-
-                                    <?php if (count($reviews) > 3): ?>
-                                        <div style="text-align: center; margin-top: 20px;">
-                                            <button onclick="switchTab('reviews')" class="edit-profile-btn">Показать все отзывы</button>
+                            <div class="pf-games-scroll">
+                                <?php foreach ($games_main as $game): ?>
+                                <a href="/g/<?= $game['id'] ?>" class="pf-game-thumb">
+                                    <div class="pf-game-cover">
+                                        <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>" alt="">
+                                        <div class="pf-game-overlay">
+                                            <span class="pf-game-rating">★ <?= number_format($game['rating'], 1) ?></span>
                                         </div>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <div class="empty-state">
-                                        <p>Этот пользователь пока не оставил ни одного отзыва :(</p>
                                     </div>
-                                <?php endif; ?>
+                                    <span class="pf-game-name"><?= htmlspecialchars(mb_strimwidth($game['name'], 0, 18, '…')) ?></span>
+                                </a>
+                                <?php endforeach; ?>
                             </div>
                         </div>
+                        <?php endif; ?>
+
+                        <!-- ④ Последние отзывы -->
+                        <?php if (!empty($reviews_main)): ?>
+                        <div class="pf-section">
+                            <div class="pf-section-head">
+                                <span class="pf-section-title">Последние отзывы</span>
+                                <?php if (count($reviews) > 3): ?>
+                                <button onclick="switchTab('reviews')" class="pf-link-btn">Все отзывы →</button>
+                                <?php endif; ?>
+                            </div>
+                            <div class="pf-reviews">
+                                <?php foreach ($reviews_main as $review): ?>
+                                <a href="/g/<?= $review['game_id'] ?>" class="pf-review">
+                                    <img src="<?= !empty($review['game_cover']) ? htmlspecialchars($review['game_cover']) : '/assets/default-game-cover.png' ?>" class="pf-review-cover" alt="">
+                                    <div class="pf-review-body">
+                                        <div class="pf-review-top">
+                                            <span class="pf-review-game"><?= htmlspecialchars($review['game_title']) ?></span>
+                                            <span class="pf-review-score">★ <?= $review['rating'] ?>/10</span>
+                                        </div>
+                                        <p class="pf-review-text"><?= htmlspecialchars(mb_strimwidth($review['text'], 0, 120, '…')) ?></p>
+                                        <span class="pf-review-date"><?= date('d.m.Y', strtotime($review['created_at'])) ?></span>
+                                    </div>
+                                </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
                     </div>
                 </div>
-
 
                 <!-- Вкладка "Игры" -->
                 <div id="tab-games" class="tab-content active">
                     <?php
-                    // ВРЕМЕННО: создаём тестовые карточки, если игр нет (для предпросмотра карусели)
+                    // ВРЕМЕННО: тестовые данные, если игр нет
                     if (empty($games)) {
                         $games = [];
-                        for ($i = 1; $i <= 7; $i++) {
+                        for ($i = 1; $i <= 10; $i++) {
                             $games[] = [
                                 'id' => $i,
-                                'name' => 'Тестовая игра ' . $i,
-                                'description' => 'Описание тестовой игры для предпросмотра карусели',
+                                'name' => 'Игра ' . $i,
+                                'description' => 'Описание игры',
                                 'path_to_cover' => '/assets/default-game-cover.png',
                                 'rating' => 4.5,
                                 'price' => 0
                             ];
                         }
                     }
+                    // Для бесконечности сделаем массив больше (дублируем)
+                    $displayGames = array_merge($games, $games, $games); // три копии для плавной прокрутки
+                    $total = count($games); // реальное количество уникальных игр
                     ?>
 
-                    <div class="profile-card" style="overflow: visible; padding: 20px 10px;">
-                        <h2 class="section-title">Коллекция игр (<?= count($games) ?>)</h2>
+                    <div class="profile-card games-profile-card">
+                        <!-- Шапка: вкладки по центру, иконки-переключатели справа -->
+                        <div class="games-section-header">
+                            <div class="showcase-tabs" id="showcaseTabsGlobal">
+                                <button class="showcase-tab active" data-showcase="games">Игры</button>
+                                <button class="showcase-tab" data-showcase="achievements">Достижения</button>
+                            </div>
+                            <div class="games-view-icons">
+                                <!-- Сетка = витрина -->
+                                <button class="games-view-icon-btn" data-view="showcase" title="Витрина (сетка)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                                    </svg>
+                                </button>
+                                <!-- Список = карусель -->
+                                <button class="games-view-icon-btn active" data-view="carousel" title="Карусель (список)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="18"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
 
-                        <?php if (!empty($games)): ?>
-                            <div class="carousel-container">
-                                <button class="carousel-btn prev" aria-label="Предыдущие игры">‹</button>
-                                <div class="carousel-track-wrap">
-                                    <div class="carousel-track" id="gameCarouselTrack">
-                                        <?php foreach ($games as $index => $game): ?>
-                                            <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>" data-index="<?= $index ?>">
-                                                <a href="/g/<?= $game['id'] ?>" class="game-card-link" style="text-decoration: none; color: inherit;">
-                                                    <div class="game-card">
-                                                        <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>"
-                                                             alt="Обложка игры" class="game-cover">
-                                                        <div class="game-info">
-                                                            <h3 class="game-title"><?= htmlspecialchars($game['name']) ?></h3>
-                                                            <p class="game-description"><?= htmlspecialchars($game['description']) ?></p>
-                                                            <div class="game-meta">
-                                                                <span class="game-rating">★ <?= number_format($game['rating'], 1) ?></span>
-                                                                <span class="game-price"><?= $game['price'] > 0 ? $game['price'] . ' ₽' : 'Бесплатно' ?></span>
-                                                            </div>
+                        <!-- Режим "Карусель" (активен по умолчанию) -->
+                        <div class="carousel-3d-container" id="carouselView" style="display: block;">
+                            <button class="carousel-3d-btn prev" aria-label="Предыдущие игры">‹</button>
+                            <div class="carousel-3d-stage" id="carouselStage">
+                                <div class="carousel-3d-track" id="carouselTrack">
+                                    <?php foreach ($displayGames as $index => $game): ?>
+                                        <div class="carousel-3d-item" data-index="<?= $index % $total ?>" data-absolute-index="<?= $index ?>">
+                                            <a href="/g/<?= $game['id'] ?>" class="game-card-link" style="text-decoration: none; color: inherit;">
+                                                <div class="game-card-vertical">
+                                                    <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>"
+                                                         alt="Обложка игры" class="game-cover-vertical">
+                                                    <div class="game-info-vertical">
+                                                        <h3 class="game-title-vertical"><?= htmlspecialchars($game['name']) ?></h3>
+                                                        <div class="game-meta-vertical">
+                                                            <span class="game-rating">★ <?= number_format($game['rating'], 1) ?></span>
+                                                            <span class="game-price"><?= $game['price'] > 0 ? $game['price'] . ' ₽' : 'Бесплатно' ?></span>
                                                         </div>
                                                     </div>
-                                                </a>
-                                            </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <button class="carousel-3d-btn next" aria-label="Следующие игры">›</button>
+                        </div>
+
+                        <!-- Режим "Витрина" -->
+                        <div class="showcase-container" id="showcaseView" style="display: none;">
+                            <div class="showcase-body" id="showcaseGamesBody">
+                                <div class="showcase-shelves" id="showcaseShelves">
+                                    <?php
+                                    $perRow = 8;
+                                    $showcaseSlots = $games;
+                                    $remainder = count($showcaseSlots) % $perRow;
+                                    if ($remainder !== 0) {
+                                        $showcaseSlots = array_merge($showcaseSlots, array_fill(0, $perRow - $remainder, null));
+                                    }
+                                    if (empty($showcaseSlots)) {
+                                        $showcaseSlots = array_fill(0, $perRow, null);
+                                    }
+                                    $showcaseRows = array_chunk($showcaseSlots, $perRow);
+                                    foreach ($showcaseRows as $rowIndex => $rowGames):
+                                    ?>
+                                    <div class="showcase-shelf-row">
+                                        <?php foreach ($rowGames as $sg): ?>
+                                            <?php if ($sg): ?>
+                                                <div class="showcase-game-card"
+                                                     onclick="window.location.href='/g/<?= $sg['id'] ?>'"
+                                                     title="<?= htmlspecialchars($sg['name']) ?>">
+                                                    <?php if (!empty($sg['path_to_cover'])): ?>
+                                                        <img src="<?= htmlspecialchars($sg['path_to_cover']) ?>"
+                                                             alt="<?= htmlspecialchars($sg['name']) ?>">
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="showcase-game-card showcase-game-empty"></div>
+                                            <?php endif; ?>
                                         <?php endforeach; ?>
                                     </div>
+                                    <?php endforeach; ?>
                                 </div>
-                                <button class="carousel-btn next" aria-label="Следующие игры">›</button>
                             </div>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <p>Этот пользователь пока не сыграл ни в одну игру :(</p>
+
+                            <!-- Достижения — в разработке -->
+                            <div class="showcase-achievements-wip" id="showcaseAchievementsBody" style="display: none;">
+                                <div class="showcase-wip-inner">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="showcase-wip-icon">
+                                        <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/>
+                                        <path d="M11 13l9 -9"/><path d="M15 4h5v5"/>
+                                    </svg>
+                                    <p class="showcase-wip-title">В разработке</p>
+                                    <p class="showcase-wip-sub">Скоро здесь можно будет просматривать свои достижения</p>
+                                </div>
                             </div>
-                        <?php endif; ?>
+
+                        </div>
                     </div>
                 </div>
-
                 <!-- Вкладка "Отзывы" -->
                 <div id="tab-reviews" class="tab-content">
                     <div class="profile-card">
@@ -981,68 +1027,68 @@ if ($is_owner) {
         });
     </script>
 <script>
-    (function() {
-        // Выбираем кнопки вкладок в левой колонке
-        const tabButtons = document.querySelectorAll('.profile-left .tab-button');
-        if (!tabButtons.length) return;
+        (function() {
+            // Выбираем кнопки вкладок в левой колонке
+            const tabButtons = document.querySelectorAll('.profile-left .tab-button');
+            if (!tabButtons.length) return;
 
-        function resetTilt(btn) {
-            btn.style.transform = '';
-        }
+            function resetTilt(btn) {
+                btn.style.transform = '';
+            }
 
-        function handleMouseMove(e) {
-            const btn = e.currentTarget;
-            const rect = btn.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            function handleMouseMove(e) {
+                const btn = e.currentTarget;
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
 
-            // Нормализация координат в диапазон -1..1
-            const nx = (x / rect.width) * 2 - 1;
-            const ny = (y / rect.height) * 2 - 1;
+                // Нормализация координат в диапазон -1..1
+                const nx = (x / rect.width) * 2 - 1;
+                const ny = (y / rect.height) * 2 - 1;
 
-            const maxAngle = 8;               // мягкий наклон
-            const rotateY = maxAngle * nx;
-            const rotateX = -maxAngle * ny;
+                const maxAngle = 8;               // мягкий наклон
+                const rotateY = maxAngle * nx;
+                const rotateX = -maxAngle * ny;
 
-            const translateY = -3;             // подъём
-            const scale = 1.06;                 // лёгкое увеличение
+                const translateY = -3;             // подъём
+                const scale = 1.06;                 // лёгкое увеличение
 
-            btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-        }
+                btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+            }
 
-        function handleMouseLeave(e) {
-            resetTilt(e.currentTarget);
-        }
+            function handleMouseLeave(e) {
+                resetTilt(e.currentTarget);
+            }
 
-        tabButtons.forEach(btn => {
-            btn.addEventListener('mousemove', handleMouseMove);
-            btn.addEventListener('mouseleave', handleMouseLeave);
-        });
-    })();
-</script>
+            tabButtons.forEach(btn => {
+                btn.addEventListener('mousemove', handleMouseMove);
+                btn.addEventListener('mouseleave', handleMouseLeave);
+            });
+        })();
+    </script>
 
-<script>
-    (function() {
-        const track = document.getElementById('gameCarouselTrack');
-        if (!track) return;
+    <script>
+        (function() {
+            const track = document.getElementById('gameCarouselTrack');
+            if (!track) return;
 
-        const items = Array.from(track.children);
-        const prevBtn = document.querySelector('.carousel-btn.prev');
-        const nextBtn = document.querySelector('.carousel-btn.next');
-        const itemWidth = items[0]?.getBoundingClientRect().width || 240;
-        const gap = 20; // должно совпадать с gap в CSS
+            const items = Array.from(track.children);
+            const prevBtn = document.querySelector('.carousel-btn.prev');
+            const nextBtn = document.querySelector('.carousel-btn.next');
+            const itemWidth = items[0]?.getBoundingClientRect().width || 600;
+            const gap = 0 ; // должно совпадать с gap в CSS
 
-        let currentIndex = 0; // индекс активного элемента
+            let currentIndex = 0; // индекс активного элемента
 
-        // Функция обновления классов и позиции
-        function updateCarousel(index) {
-            // Ограничиваем индекс
-            if (index < 0) index = 0;
-            if (index >= items.length) index = items.length - 1;
+            // Функция обновления классов и позиции
+            function updateCarousel(index) {
+                // Ограничиваем индекс
+                if (index < 0) index = 0;
+                if (index >= items.length) index = items.length - 1;
 
-            currentIndex = index;
+                currentIndex = index;
 
-            // Сдвигаем трек так, чтобы активный элемент был по центру
+                // Сдвигаем трек так, чтобы активный элемент был по центру
             const trackWidth = track.offsetWidth;
             const containerWidth = track.parentElement.offsetWidth;
             const targetX = -(currentIndex * (itemWidth + gap)) + (containerWidth / 2) - (itemWidth / 2);
@@ -1078,6 +1124,97 @@ if ($is_owner) {
     })();
 </script>
 
+<script>
+    (function() {
+        const track = document.getElementById('carouselTrack');
+        if (!track) return;
+
+        const items = Array.from(track.children);
+        const totalUnique = <?= $total ?>; // количество уникальных игр
+        const itemCount = items.length;
+
+        // Устанавливаем data-position для каждого элемента
+        function updatePositions(centerIndex) {
+            // centerIndex – абсолютный индекс элемента, который должен быть в центре
+            items.forEach((item, idx) => {
+                let offset = idx - centerIndex;
+                // Нормализуем offset для циклического эффекта (в пределах -floor(total/2) .. +floor(total/2))
+                // Но проще использовать offset как есть, но CSS обрабатывает любые значения
+                item.setAttribute('data-position', offset);
+            });
+        }
+
+        // Начальное положение: центральный элемент с индексом 0 (первый)
+        updatePositions(0);
+
+        // Обработчики кнопок
+        const prevBtn = document.querySelector('.carousel-3d-btn.prev');
+        const nextBtn = document.querySelector('.carousel-3d-btn.next');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                // Сдвигаем центр влево (увеличиваем offset для всех)
+                // Находим текущий центральный (data-position="0")
+                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
+                if (currentCenterIdx === -1) currentCenterIdx = 0;
+                let newCenterIdx = (currentCenterIdx - 1 + itemCount) % itemCount;
+                updatePositions(newCenterIdx);
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
+                if (currentCenterIdx === -1) currentCenterIdx = 0;
+                let newCenterIdx = (currentCenterIdx + 1) % itemCount;
+                updatePositions(newCenterIdx);
+            });
+        }
+    })();
+</script>
+<script>
+// Иконки сетка/список — переключение между каруселью и витриной
+document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.games-view-icon-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        const view = this.dataset.view;
+        const carousel = document.getElementById('carouselView');
+        const showcase = document.getElementById('showcaseView');
+
+        if (view === 'carousel') {
+            carousel.style.display = 'block';
+            showcase.style.display = 'none';
+        } else {
+            carousel.style.display = 'none';
+            showcase.style.display = 'block';
+        }
+    });
+});
+</script>
+<script>
+// Переключение вкладок внутри витрины (Игры / Достижения)
+document.querySelectorAll('.showcase-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+
+        // Принудительно переключаемся в режим витрины
+        document.getElementById('carouselView').style.display  = 'none';
+        document.getElementById('showcaseView').style.display  = 'block';
+
+        // Обновляем активную иконку
+        document.querySelectorAll('.games-view-icon-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === 'showcase');
+        });
+
+        const target = this.dataset.showcase;
+        document.getElementById('showcaseGamesBody').style.display       = target === 'games'        ? 'flex' : 'none';
+        document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'flex' : 'none';
+    });
+});
+</script>
 </body>
 
 </html>
