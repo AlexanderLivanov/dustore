@@ -128,13 +128,20 @@ h2:after {
     padding: 30px 0 10px;
 }
 
-/* Новая обёртка для строки с фильтрами и сеткой */
-.content-row {
+/* Обёртка для строки с фильтрами и сеткой */
+.games-body {
     display: flex;
     flex-direction: row;
     gap: 30px;
     margin-top: 20px;
     min-height: 0;
+}
+
+.content-row {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 .games-controls {
@@ -431,19 +438,181 @@ h2:after {
     background: var(--primary);
 }
 
-/* Адаптивность */
+/* ══════════════════════════════════════════════
+   МОБИЛЬНАЯ АДАПТАЦИЯ
+   ══════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
-    .content-row {
+
+    body { overflow: hidden; height: 100vh; }
+
+    main {
+        height: calc(100vh - 64px);
+        overflow: hidden;
+        display: flex;
         flex-direction: column;
     }
+
+    section.games-list {
+        flex: 1;
+        min-height: 0;
+        padding: 8px 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .games-list .container {
+        flex: 1;
+        min-height: 0;
+        padding: 10px;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow: hidden;
+    }
+
+    .container { padding: 0 10px; max-width: 100%; }
+
+    /* Поиск */
+    .search-wrapper { flex-shrink: 0; width: 100%; }
+    .search-bar { width: 100%; max-width: 100%; }
+    .search-bar input { font-size: 1rem; padding: 10px 10px 10px 42px; }
+
+    /* games-body: колонка — controls сверху, грид снизу */
+    .games-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow: visible; /* controls dropdown не обрезается */
+    }
+
+    /* Фильтры — снаружи от скроллящегося контейнера */
     .games-controls {
+        flex-shrink: 0;
         width: 100%;
+        position: relative;
+        z-index: 100;
     }
-    .search-bar {
-        min-width: 100%;
+
+    /* Кнопка тоггл */
+    .mobile-filter-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #260d2a;
+        border: 1px solid rgba(195, 33, 120, 0.35);
+        color: rgba(255,255,255,0.7);
+        font-size: 0.9rem;
+        padding: 8px 16px;
+        border-radius: 10px;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.2s, color 0.2s;
     }
+    .mobile-filter-toggle.open,
+    .mobile-filter-toggle:hover { background: #3a1040; color: #fff; }
+    .mobile-filter-toggle .filter-label { flex: 1; text-align: left; }
+    .mobile-filter-toggle .active-badge {
+        background: var(--primary); color: #fff;
+        font-size: 0.72rem; padding: 1px 7px; border-radius: 10px;
+    }
+    .mobile-filter-toggle svg.chevron { transition: transform 0.25s ease; }
+    .mobile-filter-toggle.open svg.chevron { transform: rotate(180deg); }
+
+    /* Дропдаун — абсолютный, не обрезается */
+    .controls-left {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0; right: 0;
+        z-index: 200;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px;
+        background: #1c0923;
+        border: 1px solid rgba(195, 33, 120, 0.3);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+        max-height: 50vh;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.2) transparent;
+    }
+    .controls-left.open { display: flex; }
+
+    .btn-filter {
+        width: 100%; padding: 10px 14px; font-size: 0.92rem;
+        border-radius: 8px; text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .btn-filter:last-child { border-bottom: none; }
+
+    /* content-row: flex: 1, скроллится */
+    .content-row {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 10px;
+    }
+
+    /* Грид: высота по контенту, скроллится через родителя */
     .games-grid {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        display: grid !important;
+        width: 100%;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        align-content: start;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 10px 4px;
+        background: linear-gradient(180deg, #260d2a);
+        border-radius: 10px;
+        box-shadow: inset 2px 2px 1px 2px #00000040;
+    }
+
+    /* Карточки */
+    .game-card { height: auto; border-radius: 12px; }
+    .game-image { height: 110px; }
+    .game-title { font-size: 0.9rem; margin-left: 4px; }
+    .game-info  { padding: 6px; margin-top: 2px; }
+    .game-price { font-size: 0.82rem; }
+
+    .warning-adult {
+        flex-shrink: 0; font-size: 12px;
+        padding: 8px 10px; margin-bottom: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .games-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .game-image  { height: 90px; }
+    .game-title  { font-size: 0.8rem; }
+    .game-price  { font-size: 0.78rem; }
+}
+
+/* Тоггл скрыт на десктопе */
+@media (min-width: 769px) {
+    .mobile-filter-toggle { display: none; }
+    /* На десктопе games-body ведёт себя как старый content-row */
+    .games-body {
+        display: flex;
+        flex-direction: row;
+        gap: 30px;
+        margin-top: 20px;
+        min-height: 0;
+    }
+    .content-row {
+        flex: 1;
+        min-height: 0;
+        height: 100%;
+        overflow: hidden;
     }
 }
 

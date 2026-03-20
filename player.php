@@ -900,10 +900,10 @@ if ($is_owner) {
                         🏆
                     </div>
                     <h2 style="color: #00f5ff; margin-bottom: 10px; font-size: 1.8em;">${item.title}</h2>
-                    <div style="background: ${rarityInfo.color}; 
-                          color: #000; 
-                          padding: 8px 20px; 
-                          border-radius: 20px; 
+                    <div style="background: ${rarityInfo.color};
+                          color: #000;
+                          padding: 8px 20px;
+                          border-radius: 20px;
                           display: inline-block;
                           margin-bottom: 20px;
                           font-weight: bold;
@@ -923,14 +923,14 @@ if ($is_owner) {
                             <div>${item.date}</div>
                         </div>
                     </div>
-                    <button style="width: 100%; 
-                            padding: 14px; 
-                            background: linear-gradient(135deg, #ff006e, #00f5ff); 
-                            color: #fff; 
-                            border: none; 
-                            border-radius: 12px; 
-                            font-size: 1.1em; 
-                            cursor: pointer; 
+                    <button style="width: 100%;
+                            padding: 14px;
+                            background: linear-gradient(135deg, #ff006e, #00f5ff);
+                            color: #fff;
+                            border: none;
+                            border-radius: 12px;
+                            font-size: 1.1em;
+                            cursor: pointer;
                             margin-top: 30px;
                             transition: all 0.3s ease;
                             font-weight: bold;"

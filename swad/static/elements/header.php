@@ -774,7 +774,7 @@ $stmt->execute([
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Нормализация координат в диапазон -1..1
+
         const nx = (x / rect.width) * 2 - 1;
         const ny = (y / rect.height) * 2 - 1;
 
@@ -782,11 +782,11 @@ $stmt->execute([
         const rotateY = maxAngle * nx;
         const rotateX = -maxAngle * ny;
 
-        // Небольшой подъём и масштаб
+
         const translateY = -3; // в пикселях
         const scale = 1.04;
 
-        // Применяем все трансформации
+
         btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
     }
 
@@ -800,12 +800,12 @@ $stmt->execute([
     });
 })();
 
-// Скрываем прелоадер после полной загрузки страницы
+
 window.addEventListener('load', function() {
     const preloader = document.getElementById('preloader');
     if (preloader) {
         preloader.classList.add('hidden');
-        // Полностью удаляем из DOM после завершения анимации (опционально)
+
         setTimeout(() => preloader.remove(), 500);
     }
 });
