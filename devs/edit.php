@@ -260,7 +260,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         status = :status,
         game_zip_url = :game_zip_url,
         game_zip_size = :game_zip_size,
-        experts_approved = :experts_approved,
+        experts_approved = :experts_approved
         WHERE id = :id";
 
   try {

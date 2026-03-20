@@ -1,7 +1,6 @@
 <?php
 session_start();
-require_once('../constants.php');
-require_once(ROOT_DIR . '/swad/config.php');
+require_once(__DIR__ . '/../swad/config.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_id'])) {
     // Проверка авторизации

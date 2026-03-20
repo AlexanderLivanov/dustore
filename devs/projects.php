@@ -14,7 +14,7 @@
 </head>
 
 <body>
-  <?php 
+  <?php
   require_once('../swad/static/elements/sidebar.php');
   require_once('../swad/config.php');
   require_once('../swad/controllers/pm.php');
@@ -28,10 +28,10 @@
         </a>
         <h1 class="page-announce-text valign">// Мои проекты</h1>
       </div>
-        <?php 
-          $projmanage = new ProjectManagment();
-          $all_projects = $projmanage->getAllStudioGames($_SESSION['studio_id']);
-        ?>
+      <?php
+      $projmanage = new ProjectManagment();
+      $all_projects = $projmanage->getAllStudioGames($_SESSION['studio_id']);
+      ?>
       <div id="projects-table" class="container">
         <button class="btn blue waves-effect waves-light" onclick="location.href='new'">
           Новый проект
@@ -43,21 +43,23 @@
               <th>Название</th>
               <th>Дата создания</th>
               <th>Статус</th>
+              <th>Статус модерации</th>
               <th>Управление</th>
             </tr>
           </thead>
           <tbody>
-            <?php foreach($all_projects as $project): ?>
-            <tr>
-              <td><?= $project['name']; ?></td>
-              <td><?= date('d.m.Y', strtotime($project['release_date'])); ?></td>
-              <td><?= $project['status']; ?></td>
-              <td>
-                <button class="btn blue waves-effect waves-light edit-project" onclick="location.href='edit?id=<?= $project['id']; ?>'">
-                  <i class="material-icons">settings</i>
-                </button>
-              </td>
-            </tr>
+            <?php foreach ($all_projects as $project): ?>
+              <tr>
+                <td><?= $project['name']; ?></td>
+                <td><?= date('d.m.Y', strtotime($project['release_date'])); ?></td>
+                <td><?= $project['status']; ?></td>
+                <td><?= $project['moderation_status']; ?></td>
+                <td>
+                  <button class="btn blue waves-effect waves-light edit-project" onclick="location.href='edit?id=<?= $project['id']; ?>'">
+                    <i class="material-icons">settings</i>
+                  </button>
+                </td>
+              </tr>
             <?php endforeach; ?>
           </tbody>
         </table>

@@ -1,72 +1,15 @@
-<?php
-session_start();
-require_once('../swad/config.php');
-require_once('../swad/controllers/user.php');
-
-$db        = new Database();
-$pdo       = $db->connect();
-$desl4tpdo = $db->connect('desl4t');
-
-$my_bids = [];
-if (!empty($_SESSION['USERDATA']['id'])) {
-    $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE bidder_id = ? ORDER BY created_at DESC");
-    $stmt->execute([$_SESSION['USERDATA']['id']]);
-    $my_bids = $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-$curr_user = new User();
-$isOwner   = false;
-$userdata  = [];
-
-if (!empty($_GET['username'])) {
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR telegram_username = ?");
-    $stmt->execute([$_GET['username'], $_GET['username']]);
-    $userdata = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-    $isOwner  = !empty($_SESSION['USERDATA']['id'])
-        && (int)$_SESSION['USERDATA']['id'] === (int)($userdata['id'] ?? 0);
-} elseif (!empty($_SESSION['USERDATA']['id'])) {
-    $userdata = $_SESSION['USERDATA'];
-    $isOwner  = true;
-}
-
-$loggedIn  = !empty($userdata['id']);
-$user_orgs = $loggedIn ? $curr_user->getUO($userdata['id']) : [];
-
-// Парсим JSON-поля
-$l4t_exp      = json_decode($userdata['l4t_exp']      ?? '[]', true) ?: [];
-$l4t_files    = json_decode($userdata['l4t_files']    ?? '[]', true) ?: [];
-$l4t_projects = json_decode($userdata['l4t_projects'] ?? '[]', true) ?: [];
-$l4t_about    = $userdata['l4t_about'] ?? '';
-
-$bids_array = [
-    [1, "Howl-Growl",       1, "/path_to_cover", "CGI художник",      1, "non-free"],
-    [2, "Pigeon of Sorrow", 2, "/path_to_cover", "Unity программист", 1, "non-free"],
-    [3, "Solder Simulator", 3, "/path_to_cover", "Физик-ядерщик",     1, "non-free"],
-    [4, "Dustore",          4, "/path_to_cover", "Деньги",            1, "non-free"],
-    [4, "Dustore",          5, "/path_to_cover", "Деньги",            1, "non-free"],
-    [4, "Dustore",          6, "/path_to_cover", "Деньги",            1, "non-free"],
-    [4, "Dustore",          7, "/path_to_cover", "Деньги",            1, "non-free"],
-];
-
-// Превью «о себе» — 200 символов
-$aboutPreview = mb_substr($l4t_about, 0, 200);
-$aboutHasMore = mb_strlen($l4t_about) > 200;
-?>
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dustore L4T</title>
     <link rel="stylesheet" href="css/main.css">
     <style>
-        /* ── UTILITY ──────────────────────────────────────────── */
         .hidden {
             display: none !important;
         }
 
-        /* ── ЕДИНЫЙ СТИЛЬ ПОЛЕЙ ВВОДА ─────────────────────────── */
         .l4t-input,
         .l4t-select,
         .l4t-textarea {
@@ -105,7 +48,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             background-repeat: no-repeat;
         }
 
-        /* ── INLINE-РЕДАКТИРУЕМЫЙ ТЕКСТ ───────────────────────── */
         .editable-text {
             border-bottom: 1px dashed rgba(255, 255, 255, .35);
             cursor: pointer;
@@ -121,7 +63,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             border-color: #c32178;
         }
 
-        /* ── ТЕГИ ОПЫТА ───────────────────────────────────────── */
         .exp-tags-wrap {
             display: flex;
             flex-wrap: wrap;
@@ -181,7 +122,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             color: #f44336;
         }
 
-        /* ── ДОБАВИТЬ-КНОПКА (единый стиль) ─────────────────── */
         .l4t-add-btn {
             display: inline-flex;
             align-items: center;
@@ -202,7 +142,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             color: #e8ddf0;
         }
 
-        /* ── ФАЙЛЫ ────────────────────────────────────────────── */
         .files-wrap {
             display: flex;
             flex-wrap: wrap;
@@ -234,9 +173,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             opacity: .6;
         }
 
-        /* Tooltip через title — нативный, ничего не нужно */
-
-        /* ── ПРОЕКТЫ ──────────────────────────────────────────── */
         .projects-grid {
             display: flex;
             flex-wrap: wrap;
@@ -279,7 +215,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             opacity: 1;
         }
 
-        /* ── О СЕБЕ ───────────────────────────────────────────── */
         .about-block {
             font-size: .88rem;
             color: #e8ddf0;
@@ -322,7 +257,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             color: #e8ddf0;
         }
 
-        /* ── МОДАЛЬНОЕ ОКНО ───────────────────────────────────── */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -411,7 +345,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             background: rgba(255, 255, 255, .15);
         }
 
-        /* ── СТРОКИ ВНУТРИ МОДАЛКИ ────────────────────────────── */
         .modal-row {
             display: flex;
             align-items: center;
@@ -447,7 +380,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             margin-bottom: 4px;
         }
 
-        /* ── ПРЕВЬЮ ОБЛОЖКИ В МОДАЛКЕ ─────────────────────────── */
         .cover-preview {
             width: 100%;
             height: 110px;
@@ -485,7 +417,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
             display: none;
         }
 
-        /* ── СЧЁТЧИК СИМВОЛОВ ─────────────────────────────────── */
         .char-count {
             font-size: .7rem;
             color: rgba(255, 255, 255, .3);
@@ -496,14 +427,67 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
 </head>
 
 <body>
-    <?php require_once(__DIR__ . '/../swad/static/elements/header.php'); ?>
+    <?php
+
+    require_once('../swad/config.php');
+    require_once('../swad/controllers/user.php');
+    require_once(__DIR__ . '/../swad/static/elements/header.php');
+
+    $db        = new Database();
+    $pdo       = $db->connect();
+    $desl4tpdo = $db->connect('desl4t');
+
+    $my_bids = [];
+    if (!empty($_SESSION['USERDATA']['id'])) {
+        $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE bidder_id = ? ORDER BY created_at DESC");
+        $stmt->execute([$_SESSION['USERDATA']['id']]);
+        $my_bids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $curr_user = new User();
+    $isOwner   = false;
+    $userdata  = [];
+
+    if (!empty($_GET['username'])) {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR telegram_username = ?");
+        $stmt->execute([$_GET['username'], $_GET['username']]);
+        $userdata = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $isOwner  = !empty($_SESSION['USERDATA']['id'])
+            && (int)$_SESSION['USERDATA']['id'] === (int)($userdata['id'] ?? 0);
+    } elseif (!empty($_SESSION['USERDATA']['id'])) {
+        $userdata = $_SESSION['USERDATA'];
+        $isOwner  = true;
+    }
+
+    $loggedIn  = !empty($userdata['id']);
+    $user_orgs = $loggedIn ? $curr_user->getUO($userdata['id']) : [];
+
+    // Парсим JSON-поля
+    $l4t_exp      = json_decode($userdata['l4t_exp']      ?? '[]', true) ?: [];
+    $l4t_files    = json_decode($userdata['l4t_files']    ?? '[]', true) ?: [];
+    $l4t_projects = json_decode($userdata['l4t_projects'] ?? '[]', true) ?: [];
+    $l4t_about    = $userdata['l4t_about'] ?? '';
+
+    $bids_array = [
+        [1, "Howl-Growl",       1, "/path_to_cover", "CGI художник",      1, "non-free"],
+        [2, "Pigeon of Sorrow", 2, "/path_to_cover", "Unity программист", 1, "non-free"],
+        [3, "Solder Simulator", 3, "/path_to_cover", "Физик-ядерщик",     1, "non-free"],
+        [4, "Dustore",          4, "/path_to_cover", "Деньги",            1, "non-free"],
+        [4, "Dustore",          5, "/path_to_cover", "Деньги",            1, "non-free"],
+        [4, "Dustore",          6, "/path_to_cover", "Деньги",            1, "non-free"],
+        [4, "Dustore",          7, "/path_to_cover", "Деньги",            1, "non-free"],
+    ];
+
+    // Превью «о себе» — 200 символов
+    $aboutPreview = mb_substr($l4t_about, 0, 200);
+    $aboutHasMore = mb_strlen($l4t_about) > 200;
+    ?>
     <div class="main-container">
         <div class="header-container">
 
         </div>
         <div class="view-container">
 
-            <!-- ── БОКОВОЕ МЕНЮ ──────────────────────────────── -->
             <div class="left-side-menu">
                 <div class="avatar-canvas" id="btn-profile">
                     <div class="profile-image-container" style="
@@ -522,11 +506,9 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
                 </div>
             </div>
 
-            <!-- ── КОНТЕНТ ───────────────────────────────────── -->
             <div class="right-content-view">
                 <div class="content-background">
 
-                    <!-- ══ ПРОФИЛЬ ══════════════════════════════ -->
                     <?php if ($loggedIn): ?>
                         <div class="profile-page">
 
@@ -547,11 +529,7 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
                                 <div class="card-body">
                                     <div class="data-for">Данные для L4T</div>
                                     <div class="card-body-main">
-
-                                        <!-- ЛЕВАЯ КОЛОНКА -->
                                         <div class="left">
-
-                                            <!-- РОЛЬ -->
                                             <span class="label">Роль:</span>
                                             <div class="row role"
                                                 data-userid="<?= (int)$userdata['id'] ?>"
@@ -571,13 +549,11 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
                                                 <?php endif; ?>
                                             </div>
 
-                                            <!-- ОПЫТ -->
                                             <div class="row" style="margin-top:12px;">
                                                 <span class="label">Опыт:</span>
                                                 <div class="exp-tags-wrap" id="expTags"></div>
                                             </div>
 
-                                            <!-- ДОП. ДАННЫЕ -->
                                             <div class="row" style="margin-top:12px;">
                                                 <span class="label">Доп. данные:</span>
                                                 <div class="files-wrap" id="filesWrap">
@@ -596,12 +572,10 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
                                                 </div>
                                             </div>
 
-                                        </div><!-- /left -->
+                                        </div>
 
-                                        <!-- ПРАВАЯ КОЛОНКА -->
                                         <div class="right">
 
-                                            <!-- ПРОЕКТЫ -->
                                             <div class="projects-right">
                                                 <div class="label">Проекты:</div>
                                                 <div class="projects-grid" id="projGrid">
@@ -621,7 +595,6 @@ $aboutHasMore = mb_strlen($l4t_about) > 200;
                                                 </div>
                                             </div>
 
-                                            <!-- О СЕБЕ -->
                                             <div class="projects-right" style="margin-top:14px;flex-direction:column;align-items:flex-start;">
                                                 <div class="label">О себе:</div>
                                                 <?php if ($l4t_about): ?>
