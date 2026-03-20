@@ -9,17 +9,33 @@ $stmt = $pdo->prepare("SELECT id FROM experts WHERE user_id = ? AND status = 'ap
 $stmt->execute([$_SESSION['USERDATA']['id']]);
 $isExpert = (bool) $stmt->fetch();
 
-if(!$isExpert){
-    die('Доступ запрещён');
-}
+if (!$isExpert) die('Доступ запрещён');
 
 $gameId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if (!$gameId) die('Игра не найдена');
 
-$stmt = $pdo->prepare("SELECT * FROM games WHERE id=?");
+$stmt = $pdo->prepare("
+    SELECT 
+        g.*,
+        s.name AS studio_name,
+        s.tiker,
+        s.avatar_link,
+        s.website AS studio_website,
+        s.country,
+        s.city,
+        s.team_size,
+        s.specialization
+    FROM games g
+    LEFT JOIN studios s ON g.developer = s.id
+    WHERE g.id = ?
+");
 $stmt->execute([$gameId]);
 $game = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$game) die('Игра не найдена');
+
+$features = json_decode($game['features'] ?? '[]', true);
+$screenshots = json_decode($game['screenshots'] ?? '[]', true);
+$requirements = json_decode($game['requirements'] ?? '[]', true);
 
 $stmt = $pdo->prepare("
     SELECT r.*, u.username, e.rating AS expert_weight
@@ -27,38 +43,46 @@ $stmt = $pdo->prepare("
     JOIN experts e ON r.expert_id = e.id
     JOIN users u ON e.user_id = u.id
     WHERE r.game_id=?
-    ORDER BY r.created_at DESC
 ");
 $stmt->execute([$gameId]);
 $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$stmt = $pdo->prepare("SELECT id FROM experts WHERE user_id=? AND status='approved'");
+$stmt->execute([$_SESSION['USERDATA']['id']]);
+$expert = $stmt->fetch();
+
+if (!$expert) die('no access');
+
+$expertId = $expert['id'];
+
 $avgBugs = $avgGameplay = $avgGraphics = 0;
 if ($reviews) {
     foreach ($reviews as $r) {
-        $avgBugs     += $r['bugs'];
+        $avgBugs += $r['bugs'];
         $avgGameplay += $r['gameplay'];
         $avgGraphics += $r['graphics'];
     }
-    $avgBugs     /= count($reviews);
+    $avgBugs /= count($reviews);
     $avgGameplay /= count($reviews);
     $avgGraphics /= count($reviews);
 }
 
-$stmt = $pdo->prepare("SELECT id, name FROM games WHERE genre=? AND id<>? LIMIT 3");
-$stmt->execute([$game['genre'], $gameId]);
-$similarGames = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$totalExperts = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='approved'")->fetchColumn();
+// $progress = $totalExperts ? round(count($reviews) / max($totalExperts * 0.51, 1) * 100) : 0;
+// $progress = min($progress, 100);
 
-$expertId = $_SESSION['USERDATA']['id'] ?? null;
+$stmt = $pdo->prepare("
+    SELECT COUNT(DISTINCT expert_id) 
+    FROM moderation_reviews 
+    WHERE game_id=?
+");
+$stmt->execute([$gameId]);
+$reviewCount = $stmt->fetchColumn();
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'");
-$pendingExperts = $stmt->fetchColumn();
-$stmt = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'");
-$pendingGames = $stmt->fetchColumn();
+$progress = $reviewCount / ceil($totalExperts * 0.51) * 100;
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='approved'");
-$totalExperts = $stmt->fetchColumn();
-$progress = $totalExperts ? round(count($reviews) / max($totalExperts * 0.51, 1) * 100) : 0;
-$progress = min($progress, 100);
+$pendingExperts = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
+$pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -540,6 +564,29 @@ $progress = min($progress, 100);
             border-color: var(--accent);
             color: var(--accent);
         }
+
+        .block {
+            background: #131720;
+            border: 1px solid #232b3a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px
+        }
+
+        h2 {
+            margin-bottom: 10px
+        }
+
+        img {
+            max-width: 100%;
+            border-radius: 8px
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px
+        }
     </style>
 </head>
 
@@ -577,7 +624,7 @@ $progress = min($progress, 100);
             <div class="game-header">
                 <div class="game-cover-area">
                     <?php if (!empty($game['path_to_cover'])): ?>
-                        <img src="<?= htmlspecialchars($game['path_to_cover']) ?>" alt="Cover">
+                        <img onclick="window.open('<?= htmlspecialchars($game['path_to_cover']) ?>', '_blank')" style="cursor: pointer;" src="<?= htmlspecialchars($game['path_to_cover']) ?>" alt="Cover">
                     <?php else: ?>
                         🎮
                     <?php endif; ?>
@@ -590,7 +637,12 @@ $progress = min($progress, 100);
                     </div>
                     <div class="meta-item">
                         <div class="lbl">Студия</div>
-                        <div class="val"><?= htmlspecialchars($game['developer']) ?></div>
+                        <div class="val">
+                            <?= htmlspecialchars($game['studio_name'] ?? '—') ?>
+                            <?php if (!empty($game['tiker'])): ?>
+                                (<?= htmlspecialchars($game['tiker']) ?>)
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="meta-item">
                         <div class="lbl">Жанр</div>
@@ -608,72 +660,206 @@ $progress = min($progress, 100);
                         <div class="lbl">GQI</div>
                         <div class="val" style="font-family:'Syne',sans-serif;font-weight:800;color:var(--accent)"><?= $game['GQI'] ?? '—' ?></div>
                     </div>
+                    <div class="meta-item">
+                        <div class="lbl">
+                            Возрастной рейтинг
+                        </div>
+                        <div class="val">
+                            <?= $game['age_rating'] ?>+
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="lbl">
+                            Языки
+                        </div>
+                        <div class="val">
+                            <?= $game['languages'] ?>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="lbl">
+                            Цена
+                        </div>
+                        <div class="val">
+                            <?= $game['price'] ?: 'Бесплатно' ?>₽
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="lbl">
+                            GQI (Game Quality Index)
+                        </div>
+                        <div class="val">
+                            <?= $game['GQI'] ?> из 100
+                        </div>
+                    </div>
+
                 </div>
-                <?php if (!empty($game['short_description'])): ?>
-                    <div class="game-desc"><?= htmlspecialchars($game['short_description']) ?></div>
+                <?php if (!empty($game['studio_name'])): ?>
+                    <div style="padding:24px;border-top:1px solid var(--border);">
+                        <div class="section-title">Студия</div>
+
+                        <div style="display:flex;gap:16px;align-items:center;">
+                            <?php if (!empty($game['studio_avatar'])): ?>
+                                <img src="<?= htmlspecialchars($game['studio_avatar']) ?>"
+                                    style="width:60px;height:60px;border-radius:12px;object-fit:cover;">
+                            <?php endif; ?>
+
+                            <div>
+                                <div style="font-weight:700;">
+                                    <?= htmlspecialchars($game['studio_name']) ?>
+                                    <?php if (!empty($game['tiker'])): ?>
+                                        (<?= htmlspecialchars($game['tiker']) ?>)
+                                    <?php endif; ?>
+                                </div>
+
+                                <div style="font-size:.85rem;color:var(--muted);">
+                                    <?= htmlspecialchars(($game['country'] ?? '') . ' ' . ($game['city'] ?? '')) ?>
+                                </div>
+
+                                <?php if (!empty($game['team_size'])): ?>
+                                    <div style="font-size:.8rem;color:var(--muted);">
+                                        Команда: <?= $game['team_size'] ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <?php if (!empty($game['specialization'])): ?>
+                            <div style="margin-top:10px;font-size:.85rem;color:var(--muted);">
+                                <?= htmlspecialchars($game['specialization']) ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($game['studio_website'])): ?>
+                            <div style="margin-top:8px;">
+                                <a href="<?= htmlspecialchars($game['studio_website']) ?>" target="_blank" style="color:var(--accent2)">
+                                    Сайт студии →
+                                </a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
                 <?php if (!empty($game['trailer_url'])): ?>
                     <div style="padding:0 24px 20px;">
                         <a href="<?= htmlspecialchars($game['trailer_url']) ?>" target="_blank"
                             style="color:var(--accent2);font-size:.88rem;text-decoration:none;">▶ Смотреть трейлер →</a>
                     </div>
+                    <?php if (!empty($game['screenshots'])): ?>
+                        <?php $screens = json_decode($game['screenshots'], true); ?>
+                        <?php if ($screens): ?>
+                            <div style="padding:24px;">
+                                <div class="section-title">Скриншоты</div>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                    <?php foreach ($screens as $img): ?>
+                                        <img src="<?= htmlspecialchars($img) ?>" style="width:160px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 <?php endif; ?>
+                <?php if (!empty($game['short_description'])): ?>
+                    <div class="game-desc"><?= htmlspecialchars($game['short_description']) ?></div>
+                <?php endif; ?>
+                <?php if (!empty($game['full_description'])): ?>
+                    <div class="game-desc" style="border-top:1px solid var(--border);margin-top:10px;padding-top:20px;">
+                        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:10px;color:var(--text)">
+                            Полное описание
+                        </div>
+                        <?= nl2br(htmlspecialchars($game['full_description'])) ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="block">
+                <h2>Полное описание</h2>
+                <p><?= nl2br(htmlspecialchars($game['description'])) ?></p>
+            </div>
+
+            <?php if ($features): ?>
+                <div class="block">
+                    <h2>Фичи</h2>
+                    <ul>
+                        <?php foreach ($features as $f): ?>
+                            <li><?= htmlspecialchars($f['title'] ?? '') ?> — <?= htmlspecialchars($f['desc'] ?? '') ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($screenshots): ?>
+                <div class="block">
+                    <h2>Скриншоты</h2>
+                    <div class="grid">
+                        <?php foreach ($screenshots as $s): ?>
+                            <img src="<?= $s['path'] ?>">
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($requirements): ?>
+                <div class="block">
+                    <h2>Системные требования</h2>
+                    <ul>
+                        <?php foreach ($requirements as $r): ?>
+                            <li><?= htmlspecialchars($r['label'] ?? '') ?> — <?= htmlspecialchars($r['value'] ?? '') ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+
+            <div class="block">
+                <h2>Прогресс модерации</h2>
+                <p><?= count($reviews) ?> / <?= ceil($totalExperts * 0.51) ?></p>
+                <p><?= $progress ?>%</p>
+            </div>
+
+            <div class="block">
+                <h2>Оценки</h2>
+                <p>Баги: <?= round($avgBugs, 1) ?></p>
+                <p>Геймплей: <?= round($avgGameplay, 1) ?></p>
+                <p>Графика: <?= round($avgGraphics, 1) ?></p>
             </div>
 
             <!-- Progress -->
             <div class="progress-section">
                 <div class="progress-header">
                     <h3>Прогресс голосования</h3>
-                    <span><?= count($reviews) ?> из <?= ceil($totalExperts * 0.51) ?> голосов (51%)</span>
+                    <span><?= $reviewCount ?> из <?= ceil($totalExperts * 0.51) ?> голосов (<?= $reviewCount / ceil($totalExperts * 0.51) * 100 . "%" ?>)</span>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width:<?= $progress ?>%"></div>
                 </div>
-                <?php if ($reviews): ?>
-                    <div class="score-grid">
-                        <div class="score-item">
-                            <div class="s-lbl">Баги</div>
-                            <div class="s-val s-bugs"><?= round($avgBugs, 1) ?></div>
-                        </div>
-                        <div class="score-item">
-                            <div class="s-lbl">Геймплей</div>
-                            <div class="s-val s-play"><?= round($avgGameplay, 1) ?></div>
-                        </div>
-                        <div class="score-item">
-                            <div class="s-lbl">Графика</div>
-                            <div class="s-val s-gfx"><?= round($avgGraphics, 1) ?></div>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <p style="color:var(--muted);font-size:.9rem">Рецензий пока нет</p>
-                <?php endif; ?>
+                
             </div>
 
             <!-- Review Form -->
             <?php if ($expertId && $game['status'] != 'published'): ?>
                 <div class="form-section">
                     <div class="section-title">Оставить оценку</div>
-                    <form method="post" action="submit-review?id=<?= $gameId ?>">
+                    <form method="post" action="submit-moderation?id=<?= $gameId ?>">
                         <div class="score-inputs">
                             <div class="field">
-                                <label>Оценка (0–10)</label>
-                                <input type="number" name="score" min="0" max="10" required placeholder="0">
+                                <label>Оценка (0–100) <span style="color: coral;">*</span></label>
+                                <input type="number" name="score" min="0" max="100" required placeholder="0">
                             </div>
                             <div class="field">
-                                <label>Баги</label>
-                                <input type="number" name="bugs" min="0" max="10" required placeholder="0">
+                                <label>Найденные баги</label>
+                                <input type="number" name="bugs" min="0" max="10" placeholder="0">
                             </div>
                             <div class="field">
                                 <label>Геймплей</label>
-                                <input type="number" name="gameplay" min="0" max="10" required placeholder="0">
+                                <input type="number" name="gameplay" min="0" max="10" placeholder="0">
                             </div>
                             <div class="field">
                                 <label>Графика</label>
-                                <input type="number" name="graphics" min="0" max="10" required placeholder="0">
+                                <input type="number" name="graphics" min="0" max="10" placeholder="0">
                             </div>
                         </div>
                         <div class="field">
-                            <label>Анонимная рецензия</label>
+                            <label>Анонимная рецензия <span style="color: coral;">*</span></label>
                             <textarea name="review" required placeholder="Опишите своё мнение об игре..."></textarea>
                         </div>
                         <button type="submit" class="btn-submit">Отправить оценку →</button>
@@ -704,7 +890,7 @@ $progress = min($progress, 100);
             <?php endif; ?>
 
             <!-- Similar -->
-            <?php if ($similarGames): ?>
+            <!-- <?php if ($similarGames): ?>
                 <div>
                     <div class="section-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:12px;color:var(--muted)">Похожие игры</div>
                     <div class="similar-list">
@@ -713,7 +899,7 @@ $progress = min($progress, 100);
                         <?php endforeach; ?>
                     </div>
                 </div>
-            <?php endif; ?>
+            <?php endif; ?> -->
 
         </div>
     </main>

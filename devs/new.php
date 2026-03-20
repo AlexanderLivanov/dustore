@@ -2,6 +2,7 @@
 require_once('../swad/config.php');
 require_once('../swad/controllers/user.php');
 require_once('../swad/controllers/organization.php');
+require_once('../swad/controllers/s3.php');
 
 $db = new Database();
 $curr_user = new User();
@@ -27,7 +28,7 @@ $curr_user = new User();
   <?php require_once('../swad/static/elements/sidebar.php');
 
   // Проверка прав пользователя
-  if ($_SESSION['USERDATA']['global_role']!= -1 && $_SESSION['USERDATA']['global_role'] < 2) {
+  if ($_SESSION['USERDATA']['global_role'] != -1 && $_SESSION['USERDATA']['global_role'] < 2) {
     echo ("<script>alert('У вас нет прав на использование этой функции');</script>");
     exit();
   }
@@ -46,47 +47,128 @@ $curr_user = new User();
     $platforms = implode(',', $_POST['platform'] ?? []);
     $release_date = $_POST['release-date'];
     $game_website = $_POST['website'];
+    $game_exec = $_POST['game-exec'];
+    $trailer_url = $_POST['trailer'];
+    $languages = $_POST['languages'];
+    $age_rating = $_POST['age_rating'];
 
-    // Расчет GQI (Game Quality Index)
-    $gqi = 0;
-    $filled_fields = 0;
-    $total_fields = 8; // Всего полей в форме
+    $features = [];
 
-    if (!empty($project_name)) $filled_fields++;
-    if (!empty($genre)) $filled_fields++;
-    if (!empty($description)) $filled_fields++;
-    if (!empty($_POST['platform'])) $filled_fields++;
-    if (!empty($release_date)) $filled_fields++;
-    if (!empty($game_website)) $filled_fields++;
-    if (!empty($_FILES['cover-art']['name'])) $filled_fields++;
+    if (isset($_POST['feature_title'])) {
+      for ($i = 0; $i < count($_POST['feature_title']); $i++) {
+        if (!empty($_POST['feature_title'][$i])) {
+          $features[] = [
+            'icon' => $_POST['feature_icon'][$i],
+            'title' => $_POST['feature_title'][$i],
+            'description' => $_POST['feature_description'][$i]
+          ];
+        }
+      }
+    }
 
-    $gqi = ($filled_fields / $total_fields) * 100;
+    $features_json = json_encode($features);
+
+    $requirements = [];
+
+    if (isset($_POST['req_label'])) {
+      for ($i = 0; $i < count($_POST['req_label']); $i++) {
+        if (!empty($_POST['req_value'][$i])) {
+          $requirements[] = [
+            'label' => $_POST['req_label'][$i],
+            'value' => $_POST['req_value'][$i]
+          ];
+        }
+      }
+    }
+
+    $requirements_json = json_encode($requirements);
+
+    $game_zip_url = '';
+    $game_zip_size = 0;
+
+    if (!empty($_FILES['game_zip']['name'])) {
+      $s3Uploader = new S3Uploader();
+
+      $zip_path = "games/" . uniqid() . ".zip";
+      $uploaded = $s3Uploader->uploadFile($_FILES['game_zip']['tmp_name'], $zip_path);
+
+      if ($uploaded) {
+        $game_zip_url = $uploaded;
+        $game_zip_size = $_FILES['game_zip']['size'];
+      }
+    }
 
     // Обработка загрузки обложки
     $cover_path = '';
     if (!empty($_FILES['cover-art']['name'])) {
-      $upload_dir = ROOT_DIR . "/swad/usercontent/{$studio_name}/{$project_name}/";
+      $upload_dir = $_SERVER['DOCUMENT_ROOT'] . "/swad/usercontent/{$studio_name}/{$project_name}/";
 
-      // Создаем директории, если не существуют
       if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
       }
 
-      $file_extension = pathinfo($_FILES['cover-art']['name'], PATHINFO_EXTENSION);
       $cover_filename = "cover.jpg";
-      $cover_path = "/swad/usercontent/{$studio_name}/{$project_name}/{$cover_filename}";
-      $full_path = ROOT_DIR . $cover_path;
 
-      // Перемещаем загруженный файл
+      $full_path = $upload_dir . $cover_filename;
+      $cover_path = "/swad/usercontent/{$studio_name}/{$project_name}/{$cover_filename}";
+
       move_uploaded_file($_FILES['cover-art']['tmp_name'], $full_path);
     }
 
-    // Создание записи в базе данных с использованием PDO
-    $sql = "INSERT INTO games (badge, developer, publisher, name, genre, description, platforms, release_date, path_to_cover, game_website, status, GQI, rating_boost) 
-            VALUES (0, :developer, :publisher, :name, :genre, :description, :platforms, :release_date, :cover_path, :website, 'draft', :gqi, 0)";
+    $sql = "INSERT INTO games (
+                              badge,
+                              developer,
+                              publisher,
+                              name,
+                              genre,
+                              description,
+                              platforms,
+                              release_date,
+                              path_to_cover,
+                              banner_url,
+                              trailer_url,
+                              game_website,
+                              features,
+                              screenshots,
+                              requirements,
+                              languages,
+                              age_rating,
+                              game_exec,
+                              game_zip_url,
+                              game_zip_size,
+                              moderation_status,
+                              status,
+                              rating_boost
+                            ) VALUES (
+                              0,
+                              :developer,
+                              :publisher,
+                              :name,
+                              :genre,
+                              :description,
+                              :platforms,
+                              :release_date,
+                              :cover_path,
+                              :banner_url,
+                              :trailer_url,
+                              :website,
+                              :features,
+                              :screenshots,
+                              :requirements,
+                              :languages,
+                              :age_rating,
+                              :game_exec,
+                              :game_zip_url,
+                              :game_zip_size,
+                              'pending',
+                              'draft',
+                              0
+                            )";
 
     try {
       $stmt = $db->connect()->prepare($sql);
+      $banner_url = null;
+      $screenshots_json = json_encode([]);
 
       $stmt->bindParam(':developer', $studio_id, PDO::PARAM_INT);
       $stmt->bindParam(':publisher', $studio_id, PDO::PARAM_INT);
@@ -97,11 +179,20 @@ $curr_user = new User();
       $stmt->bindParam(':release_date', $release_date, PDO::PARAM_STR);
       $stmt->bindParam(':cover_path', $cover_path, PDO::PARAM_STR);
       $stmt->bindParam(':website', $game_website, PDO::PARAM_STR);
-      $stmt->bindParam(':gqi', $gqi, PDO::PARAM_INT);
-
+      $stmt->bindParam(':banner_url', $banner_url);
+      $stmt->bindParam(':trailer_url', $trailer_url);
+      $stmt->bindParam(':features', $features_json);
+      $stmt->bindParam(':screenshots', $screenshots_json);
+      $stmt->bindParam(':requirements', $requirements_json);
+      $stmt->bindParam(':languages', $languages);
+      $stmt->bindParam(':age_rating', $age_rating);
+      $stmt->bindParam(':game_exec', $game_exec);
+      $stmt->bindParam(':game_zip_url', $game_zip_url);
+      $stmt->bindParam(':game_zip_size', $game_zip_size);
       $stmt->execute();
 
       $project_id = $db->connect()->lastInsertId();
+      echo "<script>alert('Заявка отправлена на модерацию');</script>";
       echo ("<script>window.location.replace('projects')</script>");
       exit();
     } catch (PDOException $e) {
@@ -215,11 +306,77 @@ $curr_user = new User();
                   <div class="hint">Это может быть страница в ВК, канал в Telegram или официальный сайт</div>
                 </td>
               </tr>
+
+              <tr>
+                <td><label>Исполняемый файл:</label></td>
+                <td>
+                  <input type="text" name="game-exec" placeholder="game.exe" required>
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Трейлер:</label></td>
+                <td>
+                  <input type="url" name="trailer" placeholder="https://youtube.com/...">
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Языки:</label></td>
+                <td>
+                  <input type="text" name="languages" placeholder="Русский, English">
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Возрастной рейтинг:</label></td>
+                <td>
+                  <input type="number" name="age_rating" min="0" max="21">
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Баннер:</label></td>
+                <td>
+                  <input type="file" name="banner" accept="image/*">
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>ZIP архив:</label></td>
+                <td>
+                  <input type="file" name="game_zip" accept=".zip" required>
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Скриншоты:</label></td>
+                <td>
+                  <input type="file" name="screenshots[]" multiple accept="image/*">
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Особенности:</label></td>
+                <td>
+                  <div id="features-container"></div>
+                  <button type="button" onclick="addFeature()">Добавить</button>
+                </td>
+              </tr>
+
+              <tr>
+                <td><label>Системные требования:</label></td>
+                <td>
+                  <div id="requirements-container"></div>
+                  <button type="button" onclick="addRequirement()">Добавить</button>
+                </td>
+              </tr>
+
               <tr>
                 <td colspan="2">
                   <div class="form-footer">
                     <button class="btn btn-large waves-effect waves-light" type="submit">
-                      <i class="material-icons left">create</i> Создать черновик
+                      <i class="material-icons left">create</i> Отправить на модерацию
                     </button>
                     <a href="dashboard.php" class="btn btn-large grey lighten-1 waves-effect">
                       <i class="material-icons left">cancel</i> Отмена
@@ -230,16 +387,6 @@ $curr_user = new User();
             </tbody>
           </table>
         </form>
-      </div>
-      <div class="gqi-fixed-container">
-        <div class="container">
-          <div class="gqi-wrapper">
-            <span class="gqi-label">Индекс качества: <span id="gqi-value">0</span></span>
-            <div class="progress">
-              <div class="determinate" id="gqi-progress" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   </main>
@@ -289,72 +436,34 @@ $curr_user = new User();
         };
         reader.readAsDataURL(file);
       }
-      updateGQI();
     });
-  </script>
-  <script>
-    const fieldWeights = {
-      'badge': 10,
-      'project-name': 20,
-      'genre': 15,
-      'description': 10,
-      'platform[]': 15,
-      'release-date': 10,
-      'cover-art': 15,
-      'website': 15
-    };
 
-    function updateGQI() {
-      let newGQI = 0;
+    function addFeature() {
+      const container = document.getElementById('features-container');
 
-      Object.keys(fieldWeights).forEach(fieldId => {
-        const field = document.querySelector(`[name="${fieldId}"]`);
-        if (!field) {
-          console.error(`Field ${fieldId} not found!`);
-          return;
-        }
+      const block = document.createElement('div');
+      block.innerHTML = `
+        <input type="text" name="feature_icon[]" placeholder="🎮">
+        <input type="text" name="feature_title[]" placeholder="Название">
+        <textarea name="feature_description[]" placeholder="Описание"></textarea>
+        <hr>
+      `;
 
-        let isFilled = false;
-
-        switch (field.type) {
-          case 'checkbox':
-            isFilled = document.querySelectorAll(`[name="${fieldId}"]:checked`).length > 0;
-            break;
-          case 'file':
-            isFilled = !!field.files.length;
-            break;
-          case 'select-one':
-            isFilled = field.value !== '';
-            break;
-          default:
-            isFilled = field.value ? field.value.trim() !== '' : false;
-        }
-
-        if (isFilled) newGQI += fieldWeights[fieldId];
-      });
-
-      // Обновление интерфейса
-      totalGQI = Math.min(newGQI, 100);
-      document.getElementById('gqi-value').textContent = `${totalGQI}%`;
-      document.getElementById('gqi-progress').style.width = `${totalGQI}%`;
-
-      const progressBar = document.getElementById('gqi-progress');
-      progressBar.style.backgroundColor =
-        totalGQI >= 80 ? '#4CAF50' :
-        totalGQI >= 50 ? '#FFC107' :
-        '#F44336';
+      container.appendChild(block);
     }
 
-    // Инициализация слушателей
-    document.querySelectorAll('#game-project input, #game-project select, #game-project textarea').forEach(element => {
-      if (element) {
-        element.addEventListener('input', updateGQI);
-        element.addEventListener('change', updateGQI);
-      }
-    });
+    function addRequirement() {
+      const container = document.getElementById('requirements-container');
 
-    // Задержка инициализации для полной загрузки DOM
-    setTimeout(updateGQI, 100);
+      const block = document.createElement('div');
+      block.innerHTML = `
+        <input type="text" name="req_label[]" placeholder="CPU">
+        <input type="text" name="req_value[]" placeholder="Intel i5">
+        <hr>
+      `;
+
+      container.appendChild(block);
+    }
   </script>
 </body>
 

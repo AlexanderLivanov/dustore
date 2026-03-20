@@ -9,25 +9,44 @@ $stmt = $pdo->prepare("SELECT id FROM experts WHERE user_id = ? AND status = 'ap
 $stmt->execute([$_SESSION['USERDATA']['id']]);
 $isExpert = (bool) $stmt->fetch();
 
-if(!$isExpert){
+if (!$isExpert) {
     die('Доступ запрещён');
 }
 
+// получаем общее количество модеров
+$totalExperts = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='approved'")->fetchColumn();
+
+// игры
 $stmt = $pdo->query("
-    SELECT g.id, g.name, g.developer, g.created_at, g.genre, g.platforms, g.status, g.GQI,
-           IFNULL(COUNT(DISTINCT r.id),0) AS review_count
+        SELECT 
+        g.id,
+        g.name,
+        g.developer,
+        g.created_at,
+        g.genre,
+        g.platforms,
+        g.status,
+        g.moderation_status,
+        g.GQI,
+
+        COUNT(mr.id) as votes,
+        SUM(CASE WHEN mr.score > 51 THEN 1 ELSE 0 END) as positive_votes
+
     FROM games g
-    LEFT JOIN reviews r ON r.game_id = g.id
-    WHERE g.status='pending'
+    LEFT JOIN moderation_reviews mr ON mr.game_id = g.id
+
+    WHERE g.moderation_status = 'pending'
+
     GROUP BY g.id
     ORDER BY g.created_at DESC
 ");
+
 $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'");
-$pendingExperts = $stmt->fetchColumn();
-$stmt = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'");
-$pendingGames = $stmt->fetchColumn();
+
+// счетчики
+$pendingExperts = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
+$pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -456,9 +475,9 @@ $pendingGames = $stmt->fetchColumn();
                                 <?php if ($g['platforms']): ?><span class="tag"><?= htmlspecialchars($g['platforms']) ?></span><?php endif; ?>
                             </div>
                             <div class="game-footer">
-                                <span class="review-count">👥 <?= $g['review_count'] ?> рецензий</span>
+                                <span class="review-count">👥 <?= $g['votes'] ?? 0 ?> рецензий</span>
                                 <?php if ($g['GQI']): ?>
-                                    <span class="gqi-badge">GQI <?= htmlspecialchars($g['GQI']) ?></span>
+                                    <span class="gqi-badge">GQI <?= htmlspecialchars($g['GQI'] ?? '—') ?></span>
                                 <?php else: ?>
                                     <span style="font-size:.8rem;color:var(--muted)">GQI —</span>
                                 <?php endif; ?>
