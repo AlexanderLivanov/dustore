@@ -1128,7 +1128,7 @@ h2 {
     flex: 1;
     min-height: 0;
     width: 100%;
-    border-radius: 0;
+    border-radius: 15px;
     overflow: auto;
     position: relative;
     background: rgba(0, 0, 0, 0.18);
@@ -1944,7 +1944,7 @@ h2 {
 /* ── Кнопка дружбы ── */
 .friend-action-btn {
     flex-shrink: 0;
-    padding: 8px 20px;
+    padding: 6px 25px;
     border: none;
     border-radius: 20px;
     font-size: 0.88rem;
@@ -1953,9 +1953,9 @@ h2 {
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-    background: var(--primary, #c32178);
+    background: var(--primary, #ffffff20);
     color: #fff;
-    box-shadow: 0 4px 14px rgba(195, 33, 120, 0.35);
+    box-shadow: 0px 0px 0px 1px rgb(190 0 0);
 }
 
 .friend-action-btn:hover:not(:disabled) {
@@ -1975,9 +1975,9 @@ h2 {
 
 .friend-action-btn--muted {
     background: rgba(255,255,255,0.07);
-    color: rgba(255,255,255,0.4);
+    color: rgb(255 191 0);
     box-shadow: none;
-    cursor: default;
+    cursor: pointer;
 }
 
 .friend-action-btn--remove {
