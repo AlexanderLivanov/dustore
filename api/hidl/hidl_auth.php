@@ -19,5 +19,6 @@ $db->connect()->prepare("
     VALUES (?, ?, NOW())
 ")->execute([$user['id'], $token]);
 
-// редирект в приложение
-header("Location: http://127.0.0.1:51234/auth_success?token=$token");
+echo $token;
+header("Location: http://127.0.0.1:8000/auth_success?token=" . $token);
+exit;
