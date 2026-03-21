@@ -202,7 +202,11 @@ if ($is_owner) {
                             <img src="<?= !empty($user['profile_picture']) ? htmlspecialchars($user['profile_picture']) : '/swad/static/img/logo.svg' ?>"
                                 alt="Аватар" class="user-avatar">
                         </div>
-                        <a href="/me" class="edit-profile-btn"><svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg></a>
+                        <a href="/me" class="edit-profile-btn"><svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+                                <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+                            </svg></a>
                     </div>
 
                     <?php
@@ -327,10 +331,33 @@ if ($is_owner) {
 
                     <?php endif; ?>
 
+                    <!-- Достижения (иконки) -->
+                    <div class="achievements-container">
+                        <?php foreach ($achievements as $ach): ?>
+                            <?php
+                            $title = htmlspecialchars($ach['name']);
+                            $icon = htmlspecialchars($ach['icon_url'] ?? '🏆');
+                            ?>
+                            <div class="achievement-icon"
+                                title="<?= htmlspecialchars($title) ?>"
+                                onclick='showAchievementModal({
+                                        title: <?= json_encode($title) ?>,
+                                        description: <?= json_encode($ach["description"] ?? "") ?>,
+                                        icon: <?= json_encode($ach["icon_url"] ?? "🏆") ?>,
+                                        date: <?= json_encode($ach["awarded_at"] ?? "") ?>
+                                    })'>
+                                <?php if (!empty($ach["icon_url"])): ?>
+                                    <img src="<?= htmlspecialchars($ach["icon_url"]) ?>" alt="<?= htmlspecialchars($title) ?>" class="achievement-icon-img">
+                                <?php else: ?>
+                                    🏆
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <!-- Кнопки вкладок (теперь в левой колонке) -->
-                <div class="tabs";>
+                <div class="tabs" ;>
                     <button class="tab-button active" onclick="switchTab('games')">Коллекция</button>
                     <button class="tab-button" onclick="switchTab('profile')">Профиль</button>
                     <!--<button class="tab-button" onclick="switchTab('reviews')">Отзывы</button>-->
@@ -338,12 +365,34 @@ if ($is_owner) {
                     <button class="tab-button" onclick="switchTab('developer')">Безопасность</button>
                 </div>
             </div>
-
             <!-- Правая колонка: содержимое вкладок -->
             <div class="profile-right" style="flex: 1; min-width: 280px; color: white;">
                 <div class="profile-name-row">
                     <div>
-                        <h1><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></h1>
+                        <h1>
+                            <h1>
+                                <?php
+                                // Получаем активность пользователя
+                                $status_text = '<small style="color: red; font-size: 15px;">● Не в сети</small>'; // по умолчанию
+
+                                if (!empty($_SESSION['USERDATA']['id'])) {
+                                    $stmt = $pdo->prepare("SELECT current_app, last_seen FROM user_activity WHERE user_id = ? ORDER BY last_seen DESC LIMIT 1");
+                                    $stmt->execute([$user['id']]);
+                                    $activity = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    if ($activity && strtotime($activity['last_seen']) + 180 > time()) { // активен последние 3 минуты
+                                        $app = htmlspecialchars($activity['current_app'] ?? '');
+                                        if ($app) {
+                                            $status_text = '<small style="color: lightgreen; font-size: 15px;">● В сети (Играет в ' . $app . ')</small>';
+                                        } else {
+                                            $status_text = '<small style="color: lightgreen; font-size: 15px;">● В сети</small>';
+                                        }
+                                    }
+                                }
+                                ?>
+                                <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                                <?= $status_text ?>
+                            </h1>
+                        </h1>
                         <p>
                             <light>На платформе с:</light>
                             <?= date('d.m.Y', strtotime($user['added'])) ?>
@@ -385,9 +434,9 @@ if ($is_owner) {
                         </button>
                     <?php endif; ?>
                 </div>
-                   <!--<p>@<?= htmlspecialchars($user['username']) ?></p>-->
-                    <!--<h2><a style="color: white;" href="/l4t/<?= $username ?>">Профиль на L4T-->
-                            <!--<svg style="vertical-align: middle;"
+                <!--<p>@<?= htmlspecialchars($user['username']) ?></p>-->
+                <!--<h2><a style="color: white;" href="/l4t/<?= $username ?>">Профиль на L4T-->
+                <!--<svg style="vertical-align: middle;"
                             <!--<svg style="vertical-align: middle;"
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="32"
@@ -402,13 +451,12 @@ if ($is_owner) {
                                 <path d="M11 13l9 -9" />
                                 <path d="M15 4h5v5" />
                             </svg>-->
-                        </a></h2>
+                </a></h2>
                 <?php
                 $games_main   = array_slice($games, 0, 6);
                 $reviews_main = array_slice($reviews, 0, 3);
                 ?>
                 <div id="tab-profile" class="tab-content">
-                    <div class="profile-info-card">
                     <div class="pf-wrap">
 
                         <!-- ① Статистика -->
@@ -436,13 +484,19 @@ if ($is_owner) {
                             <!-- Meta справа -->
                             <div class="pf-meta">
                                 <?php if (!empty($user['city']) || !empty($user['country'])): ?>
-                                <span class="pf-meta-item">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                                    <?= htmlspecialchars(implode(', ', array_filter([$user['city'], $user['country']]))) ?>
-                                </span>
+                                    <span class="pf-meta-item">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z" />
+                                            <circle cx="12" cy="9" r="2.5" />
+                                        </svg>
+                                        <?= htmlspecialchars(implode(', ', array_filter([$user['city'], $user['country']]))) ?>
+                                    </span>
                                 <?php endif; ?>
                                 <span class="pf-meta-item">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                    </svg>
                                     <?= time_ago(getUserLastActivity($user['telegram_id'])) ?>
                                 </span>
                             </div>
@@ -450,104 +504,96 @@ if ($is_owner) {
 
                         <!-- ② Соцсети -->
                         <?php if (!empty($user['website']) || !empty($user['vk']) || !empty($user['telegram_username'])): ?>
-                        <div class="pf-socials">
-                            <?php if (!empty($user['website'])): ?>
-                            <a href="<?= htmlspecialchars($user['website']) ?>" class="pf-social-btn" target="_blank">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                Сайт
-                            </a>
-                            <?php endif; ?>
-                            <?php if (!empty($user['vk'])): ?>
-                            <a href="<?= htmlspecialchars($user['vk']) ?>" class="pf-social-btn" target="_blank">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14C20.67 22 22 20.67 22 15.07V8.93C22 3.33 20.67 2 15.07 2zm3.08 13.27h-1.56c-.59 0-.77-.47-1.83-1.54-.92-.9-1.33-.9-1.56-.9-.32 0-.41.09-.41.54v1.4c0 .38-.12.61-1.14.61-1.68 0-3.54-1.02-4.85-2.91C5.61 10.3 5 8.42 5 7.97c0-.23.09-.45.54-.45h1.56c.4 0 .56.18.72.63.79 2.29 2.12 4.3 2.67 4.3.2 0 .29-.09.29-.59V9.63c-.06-1.06-.62-1.15-.62-1.53 0-.18.15-.36.38-.36h2.45c.34 0 .45.18.45.56v3c0 .34.15.45.25.45.2 0 .38-.11.76-.49 1.17-1.31 2.01-3.33 2.01-3.33.11-.23.29-.45.69-.45h1.56c.47 0 .58.24.47.56-.2.92-2.12 3.63-2.12 3.63-.17.27-.23.38 0 .68.17.23.72.7 1.08 1.12.67.76 1.18 1.4 1.32 1.84.14.43-.09.65-.52.65z"/></svg>
-                                ВКонтакте
-                            </a>
-                            <?php endif; ?>
-                            <?php if (!empty($user['telegram_username'])): ?>
-                            <a href="https://t.me/<?= htmlspecialchars($user['telegram_username']) ?>" class="pf-social-btn" target="_blank">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.93.43l-2.58-1.9-1.24 1.2c-.14.13-.26.25-.53.25l.19-2.67 4.84-4.37c.21-.19-.05-.29-.32-.1L7.54 14.44l-2.52-.79c-.55-.17-.56-.55.11-.81l9.85-3.8c.46-.17.86.11.66.76z"/></svg>
-                                Telegram
-                            </a>
-                            <?php endif; ?>
-                        </div>
+                            <div class="pf-socials">
+                                <?php if (!empty($user['website'])): ?>
+                                    <a href="<?= htmlspecialchars($user['website']) ?>" class="pf-social-btn" target="_blank">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <line x1="2" y1="12" x2="22" y2="12" />
+                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                        </svg>
+                                        Сайт
+                                    </a>
+                                <?php endif; ?>
+                                <?php if (!empty($user['vk'])): ?>
+                                    <a href="<?= htmlspecialchars($user['vk']) ?>" class="pf-social-btn" target="_blank">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14C20.67 22 22 20.67 22 15.07V8.93C22 3.33 20.67 2 15.07 2zm3.08 13.27h-1.56c-.59 0-.77-.47-1.83-1.54-.92-.9-1.33-.9-1.56-.9-.32 0-.41.09-.41.54v1.4c0 .38-.12.61-1.14.61-1.68 0-3.54-1.02-4.85-2.91C5.61 10.3 5 8.42 5 7.97c0-.23.09-.45.54-.45h1.56c.4 0 .56.18.72.63.79 2.29 2.12 4.3 2.67 4.3.2 0 .29-.09.29-.59V9.63c-.06-1.06-.62-1.15-.62-1.53 0-.18.15-.36.38-.36h2.45c.34 0 .45.18.45.56v3c0 .34.15.45.25.45.2 0 .38-.11.76-.49 1.17-1.31 2.01-3.33 2.01-3.33.11-.23.29-.45.69-.45h1.56c.47 0 .58.24.47.56-.2.92-2.12 3.63-2.12 3.63-.17.27-.23.38 0 .68.17.23.72.7 1.08 1.12.67.76 1.18 1.4 1.32 1.84.14.43-.09.65-.52.65z" />
+                                        </svg>
+                                        ВКонтакте
+                                    </a>
+                                <?php endif; ?>
+                                <?php if (!empty($user['telegram_username'])): ?>
+                                    <a href="https://t.me/<?= htmlspecialchars($user['telegram_username']) ?>" class="pf-social-btn" target="_blank">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.93.43l-2.58-1.9-1.24 1.2c-.14.13-.26.25-.53.25l.19-2.67 4.84-4.37c.21-.19-.05-.29-.32-.1L7.54 14.44l-2.52-.79c-.55-.17-.56-.55.11-.81l9.85-3.8c.46-.17.86.11.66.76z" />
+                                        </svg>
+                                        Telegram
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         <?php endif; ?>
 
                         <!-- ③ Последние игры -->
                         <?php if (!empty($games_main)): ?>
-                        <div class="pf-section">
-                            <div class="pf-section-head">
-                                <span class="pf-section-title">Последние игры</span>
-                                <?php if (count($games) > 6): ?>
-                                <button onclick="switchTab('games')" class="pf-link-btn">Все игры →</button>
-                                <?php endif; ?>
+                            <div class="pf-section">
+                                <div class="pf-section-head">
+                                    <span class="pf-section-title">Последние игры</span>
+                                    <?php if (count($games) > 6): ?>
+                                        <button onclick="switchTab('games')" class="pf-link-btn">Все игры →</button>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="pf-games-scroll">
+                                    <?php foreach ($games_main as $game): ?>
+                                        <a href="/g/<?= $game['id'] ?>" class="pf-game-thumb">
+                                            <div class="pf-game-cover">
+                                                <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>" alt="">
+                                                <div class="pf-game-overlay">
+                                                    <span class="pf-game-rating">★ <?= number_format($game['rating'], 1) ?></span>
+                                                </div>
+                                            </div>
+                                            <span class="pf-game-name"><?= htmlspecialchars(mb_strimwidth($game['name'], 0, 18, '…')) ?></span>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
-                            <div class="pf-games-scroll">
-                                <?php foreach ($games_main as $game): ?>
-                                <a href="/g/<?= $game['id'] ?>" class="pf-game-thumb">
-                                    <div class="pf-game-cover">
-                                        <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>" alt="">
-                                        <div class="pf-game-overlay">
-                                            <span class="pf-game-rating">★ <?= number_format($game['rating'], 1) ?></span>
-                                        </div>
-                                    </div>
-                                    <span class="pf-game-name"><?= htmlspecialchars(mb_strimwidth($game['name'], 0, 18, '…')) ?></span>
-                                </a>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
                         <?php endif; ?>
 
                         <!-- ④ Последние отзывы -->
                         <?php if (!empty($reviews_main)): ?>
-                        <div class="pf-section">
-                            <div class="pf-section-head">
-                                <span class="pf-section-title">Последние отзывы</span>
-                                <?php if (count($reviews) > 3): ?>
-                                <button onclick="switchTab('reviews')" class="pf-link-btn">Все отзывы →</button>
-                                <?php endif; ?>
+                            <div class="pf-section">
+                                <div class="pf-section-head">
+                                    <span class="pf-section-title">Последние отзывы</span>
+                                    <?php if (count($reviews) > 3): ?>
+                                        <button onclick="switchTab('reviews')" class="pf-link-btn">Все отзывы →</button>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="pf-reviews">
+                                    <?php foreach ($reviews_main as $review): ?>
+                                        <a href="/g/<?= $review['game_id'] ?>" class="pf-review">
+                                            <img src="<?= !empty($review['game_cover']) ? htmlspecialchars($review['game_cover']) : '/assets/default-game-cover.png' ?>" class="pf-review-cover" alt="">
+                                            <div class="pf-review-body">
+                                                <div class="pf-review-top">
+                                                    <span class="pf-review-game"><?= htmlspecialchars($review['game_title']) ?></span>
+                                                    <span class="pf-review-score">★ <?= $review['rating'] ?>/10</span>
+                                                </div>
+                                                <p class="pf-review-text"><?= htmlspecialchars(mb_strimwidth($review['text'], 0, 120, '…')) ?></p>
+                                                <span class="pf-review-date"><?= date('d.m.Y', strtotime($review['created_at'])) ?></span>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
-                            <div class="pf-reviews">
-                                <?php foreach ($reviews_main as $review): ?>
-                                <a href="/g/<?= $review['game_id'] ?>" class="pf-review">
-                                    <img src="<?= !empty($review['game_cover']) ? htmlspecialchars($review['game_cover']) : '/assets/default-game-cover.png' ?>" class="pf-review-cover" alt="">
-                                    <div class="pf-review-body">
-                                        <div class="pf-review-top">
-                                            <span class="pf-review-game"><?= htmlspecialchars($review['game_title']) ?></span>
-                                            <span class="pf-review-score">★ <?= $review['rating'] ?>/10</span>
-                                        </div>
-                                        <p class="pf-review-text"><?= htmlspecialchars(mb_strimwidth($review['text'], 0, 120, '…')) ?></p>
-                                        <span class="pf-review-date"><?= date('d.m.Y', strtotime($review['created_at'])) ?></span>
-                                    </div>
-                                </a>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
                         <?php endif; ?>
 
-                    </div><!-- /.pf-wrap -->
-                    </div><!-- /.profile-info-card -->
+                    </div>
                 </div>
 
                 <!-- Вкладка "Игры" -->
                 <div id="tab-games" class="tab-content active">
                     <?php
-                    // ВРЕМЕННО: тестовые данные, если игр нет
-                    if (empty($games)) {
-                        $games = [];
-                        for ($i = 1; $i <= 10; $i++) {
-                            $games[] = [
-                                'id' => $i,
-                                'name' => 'Игра ' . $i,
-                                'description' => 'Описание игры',
-                                'path_to_cover' => '/assets/default-game-cover.png',
-                                'rating' => 4.5,
-                                'price' => 0
-                            ];
-                        }
-                    }
-                    // Для бесконечности сделаем массив больше (дублируем)
-                    $displayGames = array_merge($games, $games, $games); // три копии для плавной прокрутки
-                    $total = count($games); // реальное количество уникальных игр
+                    $displayGames = $games;
+                    $total = count($games);
                     ?>
 
                     <div class="profile-card games-profile-card">
@@ -561,14 +607,17 @@ if ($is_owner) {
                                 <!-- Сетка = витрина -->
                                 <button class="games-view-icon-btn" data-view="showcase" title="Витрина (сетка)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                                        <rect x="3" y="3" width="7" height="7" />
+                                        <rect x="14" y="3" width="7" height="7" />
+                                        <rect x="3" y="14" width="7" height="7" />
+                                        <rect x="14" y="14" width="7" height="7" />
                                     </svg>
                                 </button>
                                 <!-- Список = карусель -->
-                                <button class="games-view-icon-btn active" data-view="carousel" title="Карусель">
+                                <button class="games-view-icon-btn active" data-view="carousel" title="Карусель (список)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="18"/>
+                                        <rect x="3" y="3" width="7" height="18" />
+                                        <rect x="14" y="3" width="7" height="18" />
                                     </svg>
                                 </button>
                             </div>
@@ -584,7 +633,7 @@ if ($is_owner) {
                                             <a href="/g/<?= $game['id'] ?>" class="game-card-link" style="text-decoration: none; color: inherit;">
                                                 <div class="game-card-vertical">
                                                     <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/assets/default-game-cover.png' ?>"
-                                                         alt="Обложка игры" class="game-cover-vertical">
+                                                        alt="Обложка игры" class="game-cover-vertical">
                                                     <div class="game-info-vertical">
                                                         <h3 class="game-title-vertical"><?= htmlspecialchars($game['name']) ?></h3>
                                                         <div class="game-meta-vertical">
@@ -618,59 +667,37 @@ if ($is_owner) {
                                     $showcaseRows = array_chunk($showcaseSlots, $perRow);
                                     foreach ($showcaseRows as $rowIndex => $rowGames):
                                     ?>
-                                    <div class="showcase-shelf-row">
-                                        <?php foreach ($rowGames as $sg): ?>
-                                            <?php if ($sg): ?>
-                                                <div class="showcase-game-card"
-                                                     onclick="window.location.href='/g/<?= $sg['id'] ?>'"
-                                                     title="<?= htmlspecialchars($sg['name']) ?>">
-                                                    <?php if (!empty($sg['path_to_cover'])): ?>
-                                                        <img src="<?= htmlspecialchars($sg['path_to_cover']) ?>"
-                                                             alt="<?= htmlspecialchars($sg['name']) ?>">
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <div class="showcase-game-card showcase-game-empty"></div>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </div>
+                                        <div class="showcase-shelf-row">
+                                            <?php foreach ($rowGames as $sg): ?>
+                                                <?php if ($sg): ?>
+                                                    <div class="showcase-game-card"
+                                                        onclick="window.location.href='/g/<?= $sg['id'] ?>'"
+                                                        title="<?= htmlspecialchars($sg['name']) ?>">
+                                                        <?php if (!empty($sg['path_to_cover'])): ?>
+                                                            <img src="<?= htmlspecialchars($sg['path_to_cover']) ?>"
+                                                                alt="<?= htmlspecialchars($sg['name']) ?>">
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="showcase-game-card showcase-game-empty"></div>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </div>
                                     <?php endforeach; ?>
                                 </div>
                             </div>
 
-                            <!-- Достижения -->
-                            <div class="showcase-achievements-body" id="showcaseAchievementsBody" style="display: none;">
-                                <?php if (empty($achievements)): ?>
-                                    <div class="showcase-wip-inner">
-                                        <p class="showcase-wip-title">Достижений пока нет</p>
-                                        <p class="showcase-wip-sub">Играй, исследуй платформу и зарабатывай награды</p>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="achievements-grid">
-                                        <?php foreach ($achievements as $ach): ?>
-                                            <?php $title = htmlspecialchars($ach['name']); ?>
-                                            <div class="achievement-card"
-                                                onclick='showAchievementModal({
-                                                    title: <?= json_encode($title) ?>,
-                                                    description: <?= json_encode($ach["description"] ?? "") ?>,
-                                                    icon: <?= json_encode($ach["icon_url"] ?? "🏆") ?>,
-                                                    date: <?= json_encode($ach["awarded_at"] ?? "") ?>
-                                                })'>
-                                                <div class="achievement-card-icon">
-                                                    <?php if (!empty($ach["icon_url"])): ?>
-                                                        <img src="<?= htmlspecialchars($ach["icon_url"]) ?>" alt="<?= $title ?>">
-                                                    <?php else: ?>
-                                                        🏆
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div class="achievement-card-name"><?= $title ?></div>
-                                                <?php if (!empty($ach['awarded_at'])): ?>
-                                                    <div class="achievement-card-date"><?= date('d.m.Y', strtotime($ach['awarded_at'])) ?></div>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
+                            <!-- Достижения — в разработке -->
+                            <div class="showcase-achievements-wip" id="showcaseAchievementsBody" style="display: none;">
+                                <div class="showcase-wip-inner">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="showcase-wip-icon">
+                                        <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6" />
+                                        <path d="M11 13l9 -9" />
+                                        <path d="M15 4h5v5" />
+                                    </svg>
+                                    <p class="showcase-wip-title">В разработке</p>
+                                    <p class="showcase-wip-sub">Скоро здесь можно будет просматривать свои достижения</p>
+                                </div>
                             </div>
 
                         </div>
@@ -712,104 +739,70 @@ if ($is_owner) {
                     </div>
                 </div>
 
-                <!-- Вкладка "Коллекция" -->
+                <!-- Вкладка "Коллекция" (Теперь друзья) -->
+                <?php
+                // Получаем список друзей
+                $stmt = $pdo->prepare("
+                        SELECT 
+                            u.id, u.username, u.first_name, u.last_name, u.profile_picture,
+                            f.id as friendship_id
+                        FROM friends f
+                        JOIN users u ON u.id = CASE 
+                            WHEN f.player_id = :user_id THEN f.friend_id 
+                            ELSE f.player_id 
+                        END
+                        WHERE (f.player_id = :user_id OR f.friend_id = :user_id)
+                        AND f.status = 'accepted'
+                        ORDER BY u.first_name ASC
+                    ");
+                $stmt->execute([':user_id' => $user['id']]);
+                $friends = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                ?>
+                <!-- Вкладка "Друзья" -->
                 <div id="tab-collection" class="tab-content">
                     <div class="profile-card">
-                        <h2 class="section-title">Коллекция пользователя</h2>
+                        <h2 class="section-title">
+                            Друзья (<?= count($friends) ?>)
+                        </h2>
 
-                        <div class="shelf-container">
-                            <h3 class="shelf-title">🎮 Игры (<?= count($games_collection) ?>)</h3>
-                            <div class="shelf">
-                                <div class="shelf-bar"></div>
-                                <div class="collection-grid">
-                                    <?php if (empty($games_collection)): ?>
-                                        <div class="empty-state">
-                                            <p>Игр пока нет в коллекции</p>
-                                        </div>
-                                    <?php else: ?>
-                                        <?php foreach ($games_collection as $item): ?>
-                                            <?php
-                                            $rarity = $item['rarity'] ?? 0;
-                                            $cover = $item['cover_image'] ?? '/swad/static/img/default-game.jpg';
-                                            $title = $item['title'] ?? 'Игра #' . $item['id'];
-                                            $purchase_date = $item['date'] ?? $item['purchased'] ?? date('Y-m-d');
-                                            ?>
-                                            <div class="item-card"
-                                                data-rarity="<?= $rarity ?>"
-                                                onclick="window.location.href='/g/<?= $item['game_id'] ?>'">
-                                                <div class="item-cover" style="background-image: url('<?= htmlspecialchars($cover) ?>');">
-                                                    <div class="item-content">
-                                                        <span class="item-icon">🎮</span>
-                                                        <div class="item-title"><?= htmlspecialchars(mb_strimwidth($title, 0, 30, '...')) ?></div>
-                                                        <div class="item-rarity">
-                                                            <?=
-                                                            match ($rarity) {
-                                                                0 => 'Обычная',
-                                                                1 => 'Необычная',
-                                                                2 => 'Редкая',
-                                                                3 => 'Эпическая',
-                                                                4 => 'Легендарная',
-                                                                default => 'Обычная'
-                                                            }
-                                                            ?>
-                                                        </div>
-                                                    </div>
-                                                    <div class="item-purchase-info">
-                                                        <?= date('d.m.Y', strtotime($purchase_date)) ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
+                        <?php if (empty($friends)): ?>
+                            <div class="empty-state">
+                                <p>У пользователя пока нет друзей</p>
                             </div>
-
-                            <h3 class="shelf-title">🏆 Коллекционные предметы (<?= count($collectibles) ?>)</h3>
-                            <div class="shelf">
-                                <div class="shelf-bar"></div>
-                                <div class="collection-grid">
-                                    <?php if (empty($collectibles)): ?>
-                                        <div class="empty-state">
-                                            <p>Коллекционных предметов пока нет</p>
-                                        </div>
-                                    <?php else: ?>
-                                        <?php foreach ($collectibles as $item): ?>
-                                            <?php
-                                            $rarity = $item['rarity'] ?? 0;
-                                            $cover = '/swad/static/img/default-collectible.jpg';
-                                            $title = $item['title'] ?? 'Коллекционный предмет #' . $item['id'];
-                                            $purchase_date = $item['date'] ?? $item['purchased'] ?? date('Y-m-d');
-                                            ?>
-                                            <div class="item-card"
-                                                data-rarity="<?= $rarity ?>"
-                                                onclick="showItemModal(<?= htmlspecialchars(json_encode($item)) ?>)">
-                                                <div class="item-cover" style="background-image: url('<?= htmlspecialchars($cover) ?>');">
-                                                    <div class="item-content">
-                                                        <span class="item-icon">🏆</span>
-                                                        <div class="item-title"><?= htmlspecialchars(mb_strimwidth($title, 0, 30, '...')) ?></div>
-                                                        <div class="item-rarity">
-                                                            <?=
-                                                            match ($rarity) {
-                                                                0 => 'Обычный',
-                                                                1 => 'Необычный',
-                                                                2 => 'Редкий',
-                                                                3 => 'Эпический',
-                                                                4 => 'Легендарный',
-                                                                default => 'Обычный'
-                                                            }
-                                                            ?>
-                                                        </div>
-                                                    </div>
-                                                    <div class="item-purchase-info">
-                                                        <?= date('d.m.Y', strtotime($purchase_date)) ?>
-                                                    </div>
-                                                </div>
+                        <?php else: ?>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <?php foreach ($friends as $friend): ?>
+                                    <a href="/player/<?= htmlspecialchars($friend['username']) ?>"
+                                        style="display: flex; align-items: center; gap: 14px;
+                                            background: rgba(255,255,255,0.04);
+                                            border-radius: 12px; padding: 12px 16px;
+                                            text-decoration: none; color: white;
+                                            transition: background 0.2s;">
+                                        <img src="<?= !empty($friend['profile_picture'])
+                                                        ? htmlspecialchars($friend['profile_picture'])
+                                                        : '/swad/static/img/logo.svg' ?>"
+                                            alt="Аватар"
+                                            style="width: 46px; height: 46px;
+                                    border-radius: 50%;
+                                    object-fit: cover;
+                                    border: 2px solid rgba(255,255,255,0.1);">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 600; font-size: 0.97em;">
+                                                <?= htmlspecialchars(trim($friend['first_name'] . ' ' . $friend['last_name'])) ?>
                                             </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
+                                            <div style="font-size: 0.82em; color: #888; margin-top: 2px;">
+                                                @<?= htmlspecialchars($friend['username']) ?>
+                                            </div>
+                                        </div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="#555"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="9 18 15 12 9 6" />
+                                        </svg>
+                                    </a>
+                                <?php endforeach; ?>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -1040,8 +1033,8 @@ if ($is_owner) {
         });
 
         document.getElementById('friendActionBtn')?.addEventListener('click', async function() {
-            const btn    = this;
-            const text   = document.getElementById('friendActionBtnText');
+            const btn = this;
+            const text = document.getElementById('friendActionBtnText');
             const userId = btn.dataset.user;
             const action = btn.dataset.action;
 
@@ -1052,8 +1045,13 @@ if ($is_owner) {
             try {
                 const res = await fetch('/api/friends.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ action, user_id: userId })
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action,
+                        user_id: userId
+                    })
                 });
 
                 rawText = await res.text();
@@ -1066,30 +1064,30 @@ if ($is_owner) {
                 }
 
                 if (action === 'send') {
-                    text.textContent   = 'Отменить заявку';
+                    text.textContent = 'Отменить заявку';
                     btn.dataset.action = 'cancel';
-                    btn.className      = 'friend-action-btn friend-action-btn--muted';
+                    btn.className = 'friend-action-btn friend-action-btn--muted';
                     btn.removeAttribute('disabled');
                 }
 
                 if (action === 'cancel') {
-                    text.textContent   = 'Добавить в друзья';
+                    text.textContent = 'Добавить в друзья';
                     btn.dataset.action = 'send';
-                    btn.className      = 'friend-action-btn';
+                    btn.className = 'friend-action-btn';
                     btn.removeAttribute('disabled');
                 }
 
                 if (action === 'accept') {
-                    text.textContent   = 'Завершить дружбу';
+                    text.textContent = 'Завершить дружбу';
                     btn.dataset.action = 'remove';
-                    btn.className      = 'friend-action-btn friend-action-btn--remove';
+                    btn.className = 'friend-action-btn friend-action-btn--remove';
                     btn.removeAttribute('disabled');
                 }
 
                 if (action === 'remove') {
-                    text.textContent   = 'Добавить в друзья';
+                    text.textContent = 'Добавить в друзья';
                     btn.dataset.action = 'send';
-                    btn.className      = 'friend-action-btn';
+                    btn.className = 'friend-action-btn';
                     btn.removeAttribute('disabled');
                 }
 
@@ -1126,7 +1124,7 @@ if ($is_owner) {
             });
         });
     </script>
-<script>
+    <script>
         (function() {
             // Выбираем кнопки вкладок в левой колонке
             const tabButtons = document.querySelectorAll('.profile-left .tab-button');
@@ -1146,12 +1144,12 @@ if ($is_owner) {
                 const nx = (x / rect.width) * 2 - 1;
                 const ny = (y / rect.height) * 2 - 1;
 
-                const maxAngle = 8;               // мягкий наклон
+                const maxAngle = 8; // мягкий наклон
                 const rotateY = maxAngle * nx;
                 const rotateX = -maxAngle * ny;
 
-                const translateY = -3;             // подъём
-                const scale = 1.06;                 // лёгкое увеличение
+                const translateY = -3; // подъём
+                const scale = 1.06; // лёгкое увеличение
 
                 btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
             }
@@ -1176,7 +1174,7 @@ if ($is_owner) {
             const prevBtn = document.querySelector('.carousel-btn.prev');
             const nextBtn = document.querySelector('.carousel-btn.next');
             const itemWidth = items[0]?.getBoundingClientRect().width || 600;
-            const gap = 0 ; // должно совпадать с gap в CSS
+            const gap = 0; // должно совпадать с gap в CSS
 
             let currentIndex = 0; // индекс активного элемента
 
@@ -1189,157 +1187,188 @@ if ($is_owner) {
                 currentIndex = index;
 
                 // Сдвигаем трек так, чтобы активный элемент был по центру
-            const trackWidth = track.offsetWidth;
-            const containerWidth = track.parentElement.offsetWidth;
-            const targetX = -(currentIndex * (itemWidth + gap)) + (containerWidth / 2) - (itemWidth / 2);
-            track.style.transform = `translateX(${targetX}px)`;
+                const trackWidth = track.offsetWidth;
+                const containerWidth = track.parentElement.offsetWidth;
+                const targetX = -(currentIndex * (itemWidth + gap)) + (containerWidth / 2) - (itemWidth / 2);
+                track.style.transform = `translateX(${targetX}px)`;
 
-            // Обновляем класс active
-            items.forEach((item, i) => {
-                item.classList.toggle('active', i === currentIndex);
+                // Обновляем класс active
+                items.forEach((item, i) => {
+                    item.classList.toggle('active', i === currentIndex);
+                });
+            }
+
+            // Обработчики кнопок
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    updateCarousel(currentIndex - 1);
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    updateCarousel(currentIndex + 1);
+                });
+            }
+
+            // Инициализация
+            updateCarousel(0);
+
+            // При изменении размера окна пересчитываем
+            window.addEventListener('resize', () => {
+                // Пересчитываем ширину элемента (может измениться при адаптиве)
+                // Для простоты просто переинициализируем с текущим индексом
+                updateCarousel(currentIndex);
             });
-        }
+        })();
+    </script>
 
-        // Обработчики кнопок
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                updateCarousel(currentIndex - 1);
+    <script>
+        (function() {
+            const track = document.getElementById('carouselTrack');
+            if (!track) return;
+
+            const items = Array.from(track.children);
+            const itemCount = items.length;
+            let currentCenterIdx = 0;
+
+            function updatePositions(centerIndex) {
+                currentCenterIdx = ((centerIndex % itemCount) + itemCount) % itemCount;
+                items.forEach((item, idx) => {
+                    let offset = idx - currentCenterIdx;
+                    if (offset > itemCount / 2) offset -= itemCount;
+                    if (offset < -itemCount / 2) offset += itemCount;
+                    item.setAttribute('data-position', offset);
+                });
+            }
+
+            updatePositions(0);
+
+            const prevBtn = document.querySelector('.carousel-3d-btn.prev');
+            const nextBtn = document.querySelector('.carousel-3d-btn.next');
+            prevBtn?.addEventListener('click', () => updatePositions(currentCenterIdx - 1));
+            nextBtn?.addEventListener('click', () => updatePositions(currentCenterIdx + 1));
+
+            // ── Колёсико ───────────────────────────────────────────────
+            const stage = document.getElementById('carouselStage');
+            let wheelTimer = null;
+            stage.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                clearTimeout(wheelTimer);
+                wheelTimer = setTimeout(() => {
+                    updatePositions(currentCenterIdx + (e.deltaY > 0 || e.deltaX > 0 ? 1 : -1));
+                }, 30);
+            }, {
+                passive: false
             });
-        }
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                updateCarousel(currentIndex + 1);
+
+            // ── Drag ───────────────────────────────────────────────────
+            let dragStartX = null;
+            let dragMoved = false;
+            const THRESHOLD = 50;
+
+            // Запрещаем выделение текста во время тяги
+            function lockSelect() {
+                document.body.style.userSelect = 'none';
+            }
+
+            function unlockSelect() {
+                document.body.style.userSelect = '';
+            }
+
+            function onStart(x) {
+                dragStartX = x;
+                dragMoved = false;
+                lockSelect();
+            }
+
+            function onMove(x) {
+                if (dragStartX === null) return;
+                if (Math.abs(x - dragStartX) > 5) dragMoved = true;
+            }
+
+            function onEnd(x) {
+                if (dragStartX === null) return;
+                unlockSelect();
+                const diff = x - dragStartX;
+                if (Math.abs(diff) >= THRESHOLD) {
+                    updatePositions(currentCenterIdx + (diff < 0 ? 1 : -1));
+                }
+                dragStartX = null;
+            }
+
+            // Блокируем переход по ссылке если это был drag, а не click
+            stage.addEventListener('click', (e) => {
+                if (dragMoved) e.preventDefault();
+            }, true);
+
+            // Mouse
+            stage.style.cursor = 'grab';
+            stage.addEventListener('mousedown', (e) => {
+                stage.style.cursor = 'grabbing';
+                onStart(e.clientX);
             });
-        }
+            window.addEventListener('mousemove', (e) => onMove(e.clientX));
+            window.addEventListener('mouseup', (e) => {
+                stage.style.cursor = 'grab';
+                onEnd(e.clientX);
+            });
 
-        // Инициализация
-        updateCarousel(0);
+            // Touch
+            stage.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), {
+                passive: true
+            });
+            stage.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), {
+                passive: true
+            });
+            stage.addEventListener('touchend', (e) => onEnd(e.changedTouches[0].clientX));
 
-        // При изменении размера окна пересчитываем
-        window.addEventListener('resize', () => {
-            // Пересчитываем ширину элемента (может измениться при адаптиве)
-            // Для простоты просто переинициализируем с текущим индексом
-            updateCarousel(currentIndex);
+            // Отключаем нативный drag на картинках и ссылках
+            stage.querySelectorAll('img, a').forEach(el => el.setAttribute('draggable', 'false'));
+        })();
+    </script>
+    <script>
+        // Иконки сетка/список — переключение между каруселью и витриной
+        document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.games-view-icon-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const view = this.dataset.view;
+                const carousel = document.getElementById('carouselView');
+                const showcase = document.getElementById('showcaseView');
+
+                if (view === 'carousel') {
+                    carousel.style.display = 'block';
+                    showcase.style.display = 'none';
+                } else {
+                    carousel.style.display = 'none';
+                    showcase.style.display = 'block';
+                }
+            });
         });
-    })();
-</script>
+    </script>
+    <script>
+        // Переключение вкладок внутри витрины (Игры / Достижения)
+        document.querySelectorAll('.showcase-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
 
-<script>
-    (function() {
-        const track = document.getElementById('carouselTrack');
-        if (!track) return;
+                // Принудительно переключаемся в режим витрины
+                document.getElementById('carouselView').style.display = 'none';
+                document.getElementById('showcaseView').style.display = 'block';
 
-        const items = Array.from(track.children);
-        const totalUnique = <?= $total ?>; // количество уникальных игр
-        const itemCount = items.length;
+                // Обновляем активную иконку
+                document.querySelectorAll('.games-view-icon-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.view === 'showcase');
+                });
 
-        // Устанавливаем data-position для каждого элемента
-        function updatePositions(centerIndex) {
-            // centerIndex – абсолютный индекс элемента, который должен быть в центре
-            items.forEach((item, idx) => {
-                let offset = idx - centerIndex;
-                // Нормализуем offset для циклического эффекта (в пределах -floor(total/2) .. +floor(total/2))
-                // Но проще использовать offset как есть, но CSS обрабатывает любые значения
-                item.setAttribute('data-position', offset);
+                const target = this.dataset.showcase;
+                document.getElementById('showcaseGamesBody').style.display = target === 'games' ? 'flex' : 'none';
+                document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'flex' : 'none';
             });
-        }
-
-        // Начальное положение: центральный элемент с индексом 0 (первый)
-        updatePositions(0);
-
-        // Обработчики кнопок
-        const prevBtn = document.querySelector('.carousel-3d-btn.prev');
-        const nextBtn = document.querySelector('.carousel-3d-btn.next');
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                // Сдвигаем центр влево (увеличиваем offset для всех)
-                // Находим текущий центральный (data-position="0")
-                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
-                if (currentCenterIdx === -1) currentCenterIdx = 0;
-                let newCenterIdx = (currentCenterIdx - 1 + itemCount) % itemCount;
-                updatePositions(newCenterIdx);
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
-                if (currentCenterIdx === -1) currentCenterIdx = 0;
-                let newCenterIdx = (currentCenterIdx + 1) % itemCount;
-                updatePositions(newCenterIdx);
-            });
-        }
-    })();
-</script>
-<script>
-// Иконки сетка/список — переключение между каруселью и витриной
-(function() {
-    const STORAGE_KEY = 'games_view_mode'; // глобальный ключ — работает для всех профилей
-
-    function applyView(view) {
-        const carousel = document.getElementById('carouselView');
-        const showcase = document.getElementById('showcaseView');
-        if (!carousel || !showcase) return;
-
-        document.querySelectorAll('.games-view-icon-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.view === view);
         });
-
-        if (view === 'carousel') {
-            carousel.style.display = 'block';
-            showcase.style.display = 'none';
-        } else {
-            carousel.style.display = 'none';
-            showcase.style.display = 'block';
-        }
-    }
-
-    // Восстанавливаем сохранённый режим при загрузке
-    const saved = localStorage.getItem(STORAGE_KEY) || 'carousel';
-    applyView(saved);
-
-    // Сохраняем при переключении
-    document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const view = this.dataset.view;
-            localStorage.setItem(STORAGE_KEY, view);
-            applyView(view);
-        });
-    });
-})();
-</script>
-<script>
-// Переключение вкладок внутри витрины (Игры / Достижения)
-document.querySelectorAll('.showcase-tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-        document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-
-        // Принудительно переключаемся в режим витрины
-        document.getElementById('carouselView').style.display  = 'none';
-        document.getElementById('showcaseView').style.display  = 'block';
-
-        const target = this.dataset.showcase;
-
-        // Прячем иконки переключения режима на вкладке "Достижения"
-        const viewIcons = document.querySelector('.games-view-icons');
-        if (viewIcons) {
-            viewIcons.style.visibility = target === 'achievements' ? 'hidden' : 'visible';
-        }
-
-        // Обновляем активную иконку только для вкладки игр
-        if (target === 'games') {
-            document.querySelectorAll('.games-view-icon-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.view === 'showcase');
-            });
-        }
-
-        document.getElementById('showcaseGamesBody').style.display        = target === 'games'        ? 'flex' : 'none';
-        document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'block' : 'none';
-    });
-});
-</script>
+    </script>
 </body>
 
 </html>

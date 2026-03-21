@@ -943,7 +943,7 @@ h2 {
 .game-card-vertical {
     width: 100%;
     height: 45vh;
-    background: rgba(20, 4, 29, 0.8);
+    background: rgba(20, 4, 29);
     backdrop-filter: blur(5px);
     border-radius: 16px;
     overflow: hidden;

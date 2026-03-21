@@ -7,6 +7,7 @@ $gameController = new Game();
 $games = $gameController->getLatestGames();
 
 
+
 $games = array_filter($games, function ($game) {
     return isset($game['status']) && strtolower($game['status']) === 'published';
 });

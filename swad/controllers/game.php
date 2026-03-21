@@ -39,7 +39,7 @@ class Game
                 g.status,
                 g.age_rating,
                 g.release_date,
-                g.genre,                     -- ← добавляем жанр
+                g.genre,                     
                 s.name AS studio_name
             FROM games g
             JOIN studios s ON g.developer = s.id
