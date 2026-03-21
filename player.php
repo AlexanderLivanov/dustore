@@ -1365,7 +1365,7 @@ if ($is_owner) {
 
                 const target = this.dataset.showcase;
                 document.getElementById('showcaseGamesBody').style.display = target === 'games' ? 'flex' : 'none';
-                document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'flex' : 'none';
+                document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'body' : 'none';
             });
         });
     </script>
