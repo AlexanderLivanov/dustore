@@ -1323,6 +1323,40 @@ document.querySelectorAll('.showcase-tab').forEach(tab => {
     });
 });
 </script>
+<script>
+// 3D-наклон при наведении — как у кнопок в хедере
+(function() {
+    const SELECTORS = [
+        '#friendActionBtn',
+        '.showcase-tab',
+        '.profile-left .tab-button',
+    ];
+
+    function applyTilt(e) {
+        const btn  = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const nx   = ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
+        const ny   = ((e.clientY - rect.top)   / rect.height) * 2 - 1;
+        const maxAngle  = 15;
+        const rotateY   = maxAngle * nx;
+        const rotateX   = -maxAngle * ny;
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px) scale(1.04)`;
+    }
+
+    function resetTilt(e) {
+        e.currentTarget.style.transform = '';
+    }
+
+    SELECTORS.forEach(sel => {
+        document.querySelectorAll(sel).forEach(btn => {
+            btn.style.transformStyle = 'preserve-3d';
+            btn.style.willChange     = 'transform';
+            btn.addEventListener('mousemove',  applyTilt);
+            btn.addEventListener('mouseleave', resetTilt);
+        });
+    });
+})();
+</script>
 </body>
 
 </html>

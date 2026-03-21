@@ -1952,16 +1952,16 @@ h2 {
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    transition: background 1.2s, transform 1.2s, box-shadow 1.2s;
     background: var(--primary, #ffffff20);
     color: #fff;
-    box-shadow: 0px 0px 0px 1px rgb(190 0 0);
+    box-shadow: 0px 0px 0px 1px rgb(153 0 0);
 }
 
 .friend-action-btn:hover:not(:disabled) {
-    background: #e0278a;
+    background: var(--primary, #ffffff20);
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(195, 33, 120, 0.5);
+    box-shadow: 0px 0px 0px 1px rgb(255 0 0);
 }
 
 .friend-action-btn--accept {
@@ -2064,4 +2064,12 @@ h2 {
 .achievement-card-date {
     font-size: 0.65rem;
     color: rgba(255,255,255,0.3);
+}
+/* 3D-наклон — как у хедер-кнопок */
+#friendActionBtn,
+.showcase-tab,
+.profile-left .tab-button {
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.001s ease-out, background 0.2s, color 0.2s;
 }
