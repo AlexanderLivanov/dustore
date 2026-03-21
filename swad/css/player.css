@@ -1918,3 +1918,67 @@ h2 {
         padding: 5px !important;
     }
 }
+/* ── Шапка профиля: имя + кнопка ── */
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+/* ── Кнопка дружбы ── */
+.friend-action-btn {
+    flex-shrink: 0;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    background: var(--primary, #c32178);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(195, 33, 120, 0.35);
+}
+
+.friend-action-btn:hover:not(:disabled) {
+    background: #e0278a;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(195, 33, 120, 0.5);
+}
+
+.friend-action-btn--accept {
+    background: #1a7a3f;
+    box-shadow: 0 4px 14px rgba(26, 122, 63, 0.35);
+}
+
+.friend-action-btn--accept:hover:not(:disabled) {
+    background: #219a50;
+}
+
+.friend-action-btn--muted {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.4);
+    box-shadow: none;
+    cursor: default;
+}
+
+.friend-action-btn--remove {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: none;
+}
+
+.friend-action-btn--remove:hover:not(:disabled) {
+    background: rgba(195,33,120,0.15);
+    color: #ff6eb4;
+    border-color: rgba(195,33,120,0.4);
+    transform: translateY(-1px);
+}
+
+.friend-action-btn:disabled { cursor: default; pointer-events: none; }

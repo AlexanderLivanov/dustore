@@ -364,12 +364,50 @@ if ($is_owner) {
 
             <!-- Правая колонка: содержимое вкладок -->
             <div class="profile-right" style="flex: 1; min-width: 280px; color: white;">
-                <!-- Вкладка "Профиль" (информация и статистика) -->
-                    <h1><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></h1>
-                    <p>
-                        <light>На платформе с:</light>
-                        <?= date('d.m.Y', strtotime($user['added'])) ?>
-                    </p>
+                <div class="profile-name-row">
+                    <div>
+                        <h1><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></h1>
+                        <p>
+                            <light>На платформе с:</light>
+                            <?= date('d.m.Y', strtotime($user['added'])) ?>
+                        </p>
+                    </div>
+                    <?php if (!$is_owner && !empty($_SESSION['USERDATA']['id'])): ?>
+                        <?php
+                        $btnText     = 'Добавить в друзья';
+                        $btnAction   = 'send';
+                        $btnDisabled = '';
+                        $btnClass    = 'friend-action-btn';
+                        if ($status) {
+                            if ($status['status'] === 'pending') {
+                                if ($status['player_id'] == $_SESSION['USERDATA']['id']) {
+                                    $btnText   = 'Отменить заявку';
+                                    $btnAction = 'cancel';
+                                    $btnClass  = 'friend-action-btn friend-action-btn--muted';
+                                    // disabled убран — можно отменить
+                                } else {
+                                    $btnText   = 'Принять заявку';
+                                    $btnAction = 'accept';
+                                    $btnClass  = 'friend-action-btn friend-action-btn--accept';
+                                }
+                            }
+                            if ($status['status'] === 'accepted') {
+                                $btnText   = 'Завершить дружбу';
+                                $btnAction = 'remove';
+                                $btnClass  = 'friend-action-btn friend-action-btn--remove';
+                            }
+                        }
+                        ?>
+                        <button
+                            id="friendActionBtn"
+                            class="<?= $btnClass ?>"
+                            data-user="<?= $user['id'] ?>"
+                            data-action="<?= $btnAction ?>"
+                            <?= $btnDisabled ?>>
+                            <span id="friendActionBtnText"><?= $btnText ?></span>
+                        </button>
+                    <?php endif; ?>
+                </div>
                    <!--<p>@<?= htmlspecialchars($user['username']) ?></p>-->
                     <!--<h2><a style="color: white;" href="/l4t/<?= $username ?>">Профиль на L4T-->
                             <!--<svg style="vertical-align: middle;"
@@ -996,6 +1034,66 @@ if ($is_owner) {
 
             } catch (err) {
                 alert('Сеть отвалилась, как и твой энтузиазм');
+            }
+        });
+
+        document.getElementById('friendActionBtn')?.addEventListener('click', async function() {
+            const btn    = this;
+            const text   = document.getElementById('friendActionBtnText');
+            const userId = btn.dataset.user;
+            const action = btn.dataset.action;
+
+            if (btn.hasAttribute('disabled')) return;
+            btn.setAttribute('disabled', 'true');
+
+            let rawText = '';
+            try {
+                const res = await fetch('/api/friends.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action, user_id: userId })
+                });
+
+                rawText = await res.text();
+                const data = JSON.parse(rawText);
+
+                if (!data.success) {
+                    alert('Ошибка: ' + data.error);
+                    btn.removeAttribute('disabled');
+                    return;
+                }
+
+                if (action === 'send') {
+                    text.textContent   = 'Отменить заявку';
+                    btn.dataset.action = 'cancel';
+                    btn.className      = 'friend-action-btn friend-action-btn--muted';
+                    btn.removeAttribute('disabled');
+                }
+
+                if (action === 'cancel') {
+                    text.textContent   = 'Добавить в друзья';
+                    btn.dataset.action = 'send';
+                    btn.className      = 'friend-action-btn';
+                    btn.removeAttribute('disabled');
+                }
+
+                if (action === 'accept') {
+                    text.textContent   = 'Завершить дружбу';
+                    btn.dataset.action = 'remove';
+                    btn.className      = 'friend-action-btn friend-action-btn--remove';
+                    btn.removeAttribute('disabled');
+                }
+
+                if (action === 'remove') {
+                    text.textContent   = 'Добавить в друзья';
+                    btn.dataset.action = 'send';
+                    btn.className      = 'friend-action-btn';
+                    btn.removeAttribute('disabled');
+                }
+
+            } catch (err) {
+                alert('Ответ сервера: ' + rawText.substring(0, 300));
+                btn.removeAttribute('disabled');
             }
         });
 

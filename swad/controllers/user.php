@@ -468,13 +468,17 @@ class User
         ");
         $stmt->execute([$from_id, $to_id]);
 
-        $nc = new NotificationCenter();
-        $nc->sendNotifications(
-            [$to_id],
-            "Новая заявка в друзья",
-            "Пользователь хочет добавить вас в друзья",
-            "/notifications"
-        );
+        try {
+            $nc = new NotificationCenter();
+            $nc->sendNotifications(
+                [$to_id],
+                "Новая заявка в друзья",
+                "Пользователь хочет добавить вас в друзья",
+                "/notifications"
+            );
+        } catch (Throwable $e) {
+            error_log('NotificationCenter error: ' . $e->getMessage());
+        }
 
         return true;
     }
@@ -503,13 +507,17 @@ class User
         ");
         $stmt->execute([$req['id']]);
 
-        $nc = new NotificationCenter();
-        $nc->sendNotifications(
-            [$request_from_id],
-            "Заявка принята",
-            "Пользователь принял вашу заявку в друзья",
-            "/me"
-        );
+        try {
+            $nc = new NotificationCenter();
+            $nc->sendNotifications(
+                [$request_from_id],
+                "Заявка принята",
+                "Пользователь принял вашу заявку в друзья",
+                "/me"
+            );
+        } catch (Throwable $e) {
+            error_log('NotificationCenter error: ' . $e->getMessage());
+        }
 
         return true;
     }
@@ -554,5 +562,38 @@ class User
         $stmt->execute([$user1, $user2, $user2, $user1]);
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function removeFriend($user1, $user2)
+    {
+        $stmt = $this->db->prepare("
+            DELETE FROM friends
+            WHERE (player_id = ? AND friend_id = ?)
+               OR (player_id = ? AND friend_id = ?)
+        ");
+        $stmt->execute([$user1, $user2, $user2, $user1]);
+
+        if ($stmt->rowCount() === 0) {
+            throw new Exception("Дружба не найдена");
+        }
+
+        return true;
+    }
+
+    public function cancelFriendRequest($from_id, $to_id)
+    {
+        $stmt = $this->db->prepare("
+            DELETE FROM friends
+            WHERE player_id = ?
+              AND friend_id = ?
+              AND status = 'pending'
+        ");
+        $stmt->execute([$from_id, $to_id]);
+
+        if ($stmt->rowCount() === 0) {
+            throw new Exception("Заявка не найдена или уже обработана");
+        }
+
+        return true;
     }
 }
