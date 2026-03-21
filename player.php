@@ -256,6 +256,7 @@ if ($is_owner) {
                             }
                         }
                         ?>
+<<<<<<< HEAD
                         <a href="#" id="friendBtn" class="edit-profile-btn"
                             data-user="<?= $user['id'] ?>" data-action="<?= $btnAction ?>" <?= $disabled ?>>
                             <svg style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg"
@@ -264,6 +265,9 @@ if ($is_owner) {
                             </svg>
                             <span id="friendBtnText"><?= $btnText ?></span>
                         </a>
+=======
+
+>>>>>>> 33a8665d34fc503e2ecab96a9008457c467bbab1
                     <?php endif; ?>
 
                     <!-- Достижения (иконки) -->
@@ -1096,6 +1100,159 @@ if ($is_owner) {
         });
     </script>
 
+<<<<<<< HEAD
+=======
+<script>
+    (function() {
+        const track = document.getElementById('carouselTrack');
+        if (!track) return;
+
+        const items = Array.from(track.children);
+        const totalUnique = <?= $total ?>; // количество уникальных игр
+        const itemCount = items.length;
+
+        // Устанавливаем data-position для каждого элемента
+        function updatePositions(centerIndex) {
+            // centerIndex – абсолютный индекс элемента, который должен быть в центре
+            items.forEach((item, idx) => {
+                let offset = idx - centerIndex;
+                // Нормализуем offset для циклического эффекта (в пределах -floor(total/2) .. +floor(total/2))
+                // Но проще использовать offset как есть, но CSS обрабатывает любые значения
+                item.setAttribute('data-position', offset);
+            });
+        }
+
+        // Начальное положение: центральный элемент с индексом 0 (первый)
+        updatePositions(0);
+
+        // Обработчики кнопок
+        const prevBtn = document.querySelector('.carousel-3d-btn.prev');
+        const nextBtn = document.querySelector('.carousel-3d-btn.next');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                // Сдвигаем центр влево (увеличиваем offset для всех)
+                // Находим текущий центральный (data-position="0")
+                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
+                if (currentCenterIdx === -1) currentCenterIdx = 0;
+                let newCenterIdx = (currentCenterIdx - 1 + itemCount) % itemCount;
+                updatePositions(newCenterIdx);
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
+                if (currentCenterIdx === -1) currentCenterIdx = 0;
+                let newCenterIdx = (currentCenterIdx + 1) % itemCount;
+                updatePositions(newCenterIdx);
+            });
+        }
+    })();
+</script>
+<script>
+// Иконки сетка/список — переключение между каруселью и витриной
+(function() {
+    const STORAGE_KEY = 'games_view_mode'; // глобальный ключ — работает для всех профилей
+
+    function applyView(view) {
+        const carousel = document.getElementById('carouselView');
+        const showcase = document.getElementById('showcaseView');
+        if (!carousel || !showcase) return;
+
+        document.querySelectorAll('.games-view-icon-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === view);
+        });
+
+        if (view === 'carousel') {
+            carousel.style.display = 'block';
+            showcase.style.display = 'none';
+        } else {
+            carousel.style.display = 'none';
+            showcase.style.display = 'block';
+        }
+    }
+
+    // Восстанавливаем сохранённый режим при загрузке
+    const saved = localStorage.getItem(STORAGE_KEY) || 'carousel';
+    applyView(saved);
+
+    // Сохраняем при переключении
+    document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.dataset.view;
+            localStorage.setItem(STORAGE_KEY, view);
+            applyView(view);
+        });
+    });
+})();
+</script>
+<script>
+// Переключение вкладок внутри витрины (Игры / Достижения)
+document.querySelectorAll('.showcase-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+
+        // Принудительно переключаемся в режим витрины
+        document.getElementById('carouselView').style.display  = 'none';
+        document.getElementById('showcaseView').style.display  = 'block';
+
+        const target = this.dataset.showcase;
+
+        // Прячем иконки переключения режима на вкладке "Достижения"
+        const viewIcons = document.querySelector('.games-view-icons');
+        if (viewIcons) {
+            viewIcons.style.visibility = target === 'achievements' ? 'hidden' : 'visible';
+        }
+
+        // Обновляем активную иконку только для вкладки игр
+        if (target === 'games') {
+            document.querySelectorAll('.games-view-icon-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.view === 'showcase');
+            });
+        }
+
+        document.getElementById('showcaseGamesBody').style.display        = target === 'games'        ? 'flex' : 'none';
+        document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'block' : 'none';
+    });
+});
+</script>
+<script>
+// 3D-наклон при наведении — как у кнопок в хедере
+(function() {
+    const SELECTORS = [
+        '#friendActionBtn',
+        '.showcase-tab',
+        '.profile-left .tab-button',
+    ];
+
+    function applyTilt(e) {
+        const btn  = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const nx   = ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
+        const ny   = ((e.clientY - rect.top)   / rect.height) * 2 - 1;
+        const maxAngle  = 15;
+        const rotateY   = maxAngle * nx;
+        const rotateX   = -maxAngle * ny;
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px) scale(1.04)`;
+    }
+
+    function resetTilt(e) {
+        e.currentTarget.style.transform = '';
+    }
+
+    SELECTORS.forEach(sel => {
+        document.querySelectorAll(sel).forEach(btn => {
+            btn.style.transformStyle = 'preserve-3d';
+            btn.style.willChange     = 'transform';
+            btn.addEventListener('mousemove',  applyTilt);
+            btn.addEventListener('mouseleave', resetTilt);
+        });
+    });
+})();
+</script>
+>>>>>>> 33a8665d34fc503e2ecab96a9008457c467bbab1
 </body>
 
 </html>
