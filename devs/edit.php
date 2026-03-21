@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($status === 'published') {
     $experts_approved = 0;
 
-    $stmt = $db->connect()->prepare("DELETE FROM expert_reviews WHERE game_id = ?");
+    $stmt = $db->connect()->prepare("DELETE FROM reviews WHERE game_id = ?");
     $stmt->execute([$project_id]);
   } else {
     $experts_approved = $project_info['experts_approved'];
@@ -753,7 +753,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php
                 $expertReviews = $db->connect()->prepare("
                     SELECT er.*, u.username 
-                    FROM expert_reviews er
+                    FROM reviews er
                     LEFT JOIN users u ON u.id = er.expert_id
                     WHERE er.game_id = ?
                 ");

@@ -256,7 +256,6 @@ if ($is_owner) {
                             }
                         }
                         ?>
-<<<<<<< HEAD
                         <a href="#" id="friendBtn" class="edit-profile-btn"
                             data-user="<?= $user['id'] ?>" data-action="<?= $btnAction ?>" <?= $disabled ?>>
                             <svg style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg"
@@ -265,9 +264,6 @@ if ($is_owner) {
                             </svg>
                             <span id="friendBtnText"><?= $btnText ?></span>
                         </a>
-=======
-
->>>>>>> 33a8665d34fc503e2ecab96a9008457c467bbab1
                     <?php endif; ?>
 
                     <!-- Достижения (иконки) -->
@@ -1100,8 +1096,6 @@ if ($is_owner) {
         });
     </script>
 
-<<<<<<< HEAD
-=======
 <script>
     (function() {
         const track = document.getElementById('carouselTrack');
@@ -1252,7 +1246,6 @@ document.querySelectorAll('.showcase-tab').forEach(tab => {
     });
 })();
 </script>
->>>>>>> 33a8665d34fc503e2ecab96a9008457c467bbab1
 </body>
 
 </html>
