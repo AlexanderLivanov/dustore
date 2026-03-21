@@ -345,24 +345,206 @@ p {
 /* Адаптивность */
 @media (max-width: 768px) {
     h1 {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
     }
 
     h2 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        margin-bottom: 40px;
     }
 
+    h3 {
+        font-size: 1.3rem;
+    }
+
+    p {
+        font-size: 1rem;
+    }
+
+    section {
+        padding: 50px 0;
+    }
+
+    .container {
+        padding: 0 16px;
+    }
+
+    /* Hero */
     .hero {
-        padding-top: 100px;
+        padding-top: 80px;
+        min-height: auto;
+        padding-bottom: 50px;
+    }
+
+    .hero-content {
+        padding: 0 8px;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+        margin-bottom: 16px;
+    }
+
+    .hero p {
+        font-size: 1rem;
+        margin-bottom: 28px;
     }
 
     .hero-buttons {
         flex-direction: column;
         align-items: center;
+        gap: 12px;
+    }
+
+    .hero-buttons .btn {
+        min-width: unset;
+        width: 100%;
+        max-width: 320px;
+        text-align: center;
+    }
+
+    /* Platform grid */
+    .platform-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .platform-card {
+        padding: 20px 18px;
+    }
+
+    .platform-icon {
+        font-size: 2.2rem;
+        margin-bottom: 12px;
+    }
+
+    .platform-card h3 {
+        font-size: 1.3rem;
+        margin-bottom: 10px;
+    }
+
+    /* Stats */
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-item {
+        padding: 20px 10px;
+    }
+
+    .stat-number {
+        font-size: 2.8rem;
+    }
+
+    .stat-label {
+        font-size: 0.95rem;
+    }
+
+    /* Stats section hero-buttons (кнопка "Подробная статистика") */
+    .stats .hero-buttons {
+        margin-top: 24px;
+    }
+
+    /* How it works */
+    .steps {
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        margin-top: 24px;
+    }
+
+    .step {
+        min-width: unset;
+        max-width: 100%;
+        width: 100%;
+        text-align: center;
+    }
+
+    .step-number {
+        margin-bottom: 12px;
     }
 
     .step:not(:last-child):after {
         display: none;
+    }
+
+    /* How-it-works section h3 подзаголовки */
+    .how-it-works h3,
+    .platform h3,
+    section.hero h3 {
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+        margin-top: 8px;
+    }
+
+    /* CTA */
+    .cta {
+        padding: 60px 0;
+    }
+
+    .cta p {
+        font-size: 1rem;
+    }
+
+    /* Убираем лишние br-отступы на мобиле */
+    section br {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.7rem;
+    }
+
+    h2 {
+        font-size: 1.4rem;
+        margin-bottom: 30px;
+    }
+
+    h3 {
+        font-size: 1.15rem;
+    }
+
+    .hero h1 {
+        font-size: 1.7rem;
+    }
+
+    .hero {
+        padding-top: 70px;
+        padding-bottom: 40px;
+    }
+
+    .stats-container {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+    }
+
+    .stat-item {
+        padding: 14px 6px;
+    }
+
+    .platform-icon {
+        font-size: 1.8rem;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.95rem;
+    }
+
+    .step-number {
+        width: 42px;
+        height: 42px;
+        font-size: 1.2rem;
     }
 }
 
@@ -666,11 +848,15 @@ p {
 /* Адаптивность */
 @media (max-width: 768px) {
     h1 {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
     }
 
     h2 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+    }
+
+    .container {
+        padding: 0 16px;
     }
 
     .about-hero {
@@ -678,7 +864,40 @@ p {
     }
 
     .about-hero h1 {
-        font-size: 3rem;
+        font-size: 2.4rem;
+    }
+
+    .about-hero p {
+        font-size: 1.1rem;
+    }
+
+    .mission-statement {
+        font-size: 1.2rem;
+    }
+
+    .team-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        margin-top: 30px;
+    }
+
+    .team-member {
+        padding: 24px 20px;
+    }
+
+    .team-avatar {
+        width: 110px;
+        height: 110px;
+    }
+
+    .values-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        margin-top: 30px;
+    }
+
+    .value-card {
+        padding: 28px 20px;
     }
 
     .timeline-item {
@@ -686,6 +905,7 @@ p {
     }
 
     .timeline-date {
+        flex: unset;
         text-align: left;
         padding-right: 0;
         padding-bottom: 10px;
@@ -703,6 +923,37 @@ p {
     .timeline-content {
         border-left: none;
         padding-left: 0;
+    }
+
+    .timeline-title {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-hero h1 {
+        font-size: 1.9rem;
+    }
+
+    .about-hero {
+        padding: 100px 0 50px;
+    }
+
+    .team-avatar {
+        width: 90px;
+        height: 90px;
+    }
+
+    .team-name {
+        font-size: 1.2rem;
+    }
+
+    .value-icon {
+        font-size: 2.2rem;
+    }
+
+    .value-title {
+        font-size: 1.2rem;
     }
 }
 
@@ -843,16 +1094,36 @@ p {
 
 @media (max-width: 480px) {
     .slider-section {
-        height: 350px;
+        height: 320px;
     }
 
     .slide-content h2 {
-        font-size: 1.7rem;
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+    }
+
+    .slide-content p {
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+    }
+
+    .slide-content .btn {
+        padding: 9px 20px;
+        font-size: 0.95rem;
     }
 
     .slider-arrow {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
+    }
+
+    .slider-nav {
+        bottom: 10px;
+        gap: 7px;
+    }
+
+    .slider-dot {
+        width: 9px;
+        height: 9px;
     }
 }
-

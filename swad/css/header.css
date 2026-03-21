@@ -181,47 +181,143 @@ body {
     transition: transform 0.001s ease-out;
 }
 
-@media screen and (width < 900px) {
+@media screen and (max-width: 900px) {
+
+    /* Хедер чуть компактнее */
+    .header {
+        height: 64px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    /* Логотип */
+    .image img {
+        width: auto;
+        padding: 2px;
+        margin-left: 4px;
+        margin-right: 4px;
+        height: 46px;
+        transition: all .2s;
+        border-radius: 5px;
+    }
+
+    .image img:hover {
+        height: 45px;
+        filter: contrast(200%);
+    }
+
+    /* Бургер — показываем */
+    #burger {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        padding: 0 !important;
+        flex-shrink: 0;
+    }
+
+    #burger svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* Левая секция — бургер + дропдаун */
+    .left-section {
+        position: static;
+        flex: 0 0 auto;
+        margin-right: 0;
+        gap: 0;
+    }
+
+    /* Дропдаун навигации */
     .buttons-left {
         display: none;
-        position: absolute;
-        top: 100%;
+        position: fixed;
+        top: 64px;
         left: 0;
-        background: white;
+        right: 0;
         flex-direction: column;
-        width: 200px;
-        z-index: 1000;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        gap: 6px;
+        background: #1a0824;
+        border-top: 1px solid rgba(195, 33, 120, 0.3);
+        border-bottom: 1px solid rgba(195, 33, 120, 0.3);
+        padding: 12px;
+        z-index: 999;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        margin-top: 0;
+        border-radius: 0;
+        width: 100%;
     }
 
     .buttons-left.active {
         display: flex;
     }
 
-    #burger {
-        display: block;
+    .buttons-left .button {
+        width: 100%;
+        text-align: center;
+        padding: 12px 20px !important;
+        font-size: 14pt;
+        border-radius: 9px;
+    }
+
+    /* Центр — логотип по центру */
+    .section.center-section {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Правая секция */
+    .right-section {
+        flex: 0 0 auto;
+        margin-left: 0;
+        margin-right: 0;
+        justify-content: flex-end;
+        padding-right: 0;
+    }
+
+    /* Кнопки справа — сбрасываем инлайновый padding-left: 100px */
+    .buttons-right {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        gap: 4px;
+        margin-top: 0;
+    }
+
+    .buttons-right .button {
+        padding: 7px 12px;
+        font-size: 11pt;
+        white-space: nowrap;
+    }
+
+    /* Кнопка уведомлений */
+    .buttons-right .button[onclick*="notifications"] {
+        padding: 6px 8px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .header {
+        height: 58px;
+    }
+
+    .buttons-left {
+        top: 58px;
     }
 
     .image img {
-        width: auto;
-        padding: 2px;
-        margin-left: 5px;
-        margin-right: 5px;
-        height: 50px;
-        box-shadow: 0 0 10px rgba(255, 255, 255, 1);
-        transition: all .2s;
-        border-radius: 5px;
+        height: 38px;
     }
 
-    .image img:hover {
-        width: auto;
-        margin-left: 5px;
-        padding: 3px;
-        margin-right:5px;
-        height: 49px;
-        transition: all .2s;
-        box-shadow: 0 0 20px rgba(255, 255, 255, 1);
-        filter: contrast(200%);
+    .buttons-right .button {
+        padding: 6px 10px;
+        font-size: 10pt;
+    }
+
+    #burger {
+        width: 36px;
+        height: 36px;
     }
 }
 

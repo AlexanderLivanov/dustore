@@ -1,10 +1,30 @@
 <?php
+// Перехватываем все PHP-ошибки и возвращаем их как JSON
+ob_start();
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    ob_clean();
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'error'   => "PHP Error [$errno]: $errstr in $errfile:$errline"
+    ]);
+    exit;
+});
+set_exception_handler(function($e) {
+    ob_clean();
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'error'   => $e->getMessage()
+    ]);
+    exit;
+});
+
 session_start();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/../swad/controllers/user.php';
-require_once __DIR__ . '/../swad/controllers/NotificationCenter.php';
 
 $user = new User();
 
@@ -56,6 +76,30 @@ try {
             echo json_encode([
                 'success' => true,
                 'message' => 'request_declined'
+            ]);
+            break;
+
+        case 'remove':
+
+            $friendId = (int)($_POST['user_id'] ?? 0);
+
+            $user->removeFriend($currentUser, $friendId);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'friend_removed'
+            ]);
+            break;
+
+        case 'cancel':
+
+            $to = (int)($_POST['user_id'] ?? 0);
+
+            $user->cancelFriendRequest($currentUser, $to);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'request_cancelled'
             ]);
             break;
 

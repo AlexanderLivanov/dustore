@@ -2,14 +2,14 @@
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/../../controllers/user.php');
 
+
 $curr_user = new User();
 $db = new Database();
 
 $curr_user->checkAuth();
 
-// ВСЮ РАБОТУ С COOKIE ДЕЛАЕМ ДО ЛЮБОГО ВЫВОДА
 if (empty($_COOKIE['temp_id'])) {
-    setcookie("temp_id", rand(-10 ** 5, -10 ** 2), time() + 86400 * 30, "/"); // добавляем параметры
+    setcookie("temp_id", rand(-10 ** 5, -10 ** 2));
 }
 
 // Определяем сегодняшнюю дату
@@ -22,18 +22,21 @@ $exists = $conn->prepare("SELECT id FROM daily_stats WHERE date = ?");
 $exists->execute([$today]);
 if ($exists->rowCount() <= 0) {
     /* ---- Получение TOTAL ---- */
+
     $users_total = $conn->query("SELECT COUNT(*) FROM users")->fetchColumn();
     $studios_total = $conn->query("SELECT COUNT(*) FROM studios")->fetchColumn();
     $games_total = $conn->query("SELECT COUNT(*) FROM games")->fetchColumn();
     $published_total = $conn->query("SELECT COUNT(*) FROM games WHERE status = 'published'")->fetchColumn();
 
     /* ---- Получение NEW за сутки ---- */
+
     $users_new = $conn->query("SELECT COUNT(*) FROM users WHERE DATE(added) = '$today'")->fetchColumn();
     $studios_new = $conn->query("SELECT COUNT(*) FROM studios WHERE DATE(created_at) = '$today'")->fetchColumn();
     $games_new = $conn->query("SELECT COUNT(*) FROM games WHERE DATE(created_at) = '$today'")->fetchColumn();
     $published_new = $conn->query("SELECT COUNT(*) FROM games WHERE status='published' AND DATE(created_at)='$today'")->fetchColumn();
 
     /* ---- Добавляем ---- */
+
     $insert = $conn->prepare("
     INSERT INTO daily_stats (
         date,
@@ -42,7 +45,7 @@ if ($exists->rowCount() <= 0) {
         games_total, games_new,
         published_total, published_new
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+");
 
     $insert->execute([
         $today,
@@ -75,8 +78,6 @@ $stmt->execute([
     ':ts' => $hour,
     ':count' => $online_count
 ]);
-
-// ТОЛЬКО ПОСЛЕ ВСЕХ ОПЕРАЦИЙ С ЗАГОЛОВКАМИ НАЧИНАЕМ ВЫВОД
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -363,7 +364,7 @@ $stmt->execute([
                 }
                 ?>
 
-                <!--        <div class="update-progress">
+        <!--        <div class="update-progress">
                     <div class="update-percent" id="updatePercent">50%</div>
                     <div class="update-bar">
                         <div class="update-bar-fill" id="updateBarFill" style="width: 50%;"></div>
@@ -374,17 +375,17 @@ $stmt->execute([
                 <button class="button" style="padding: 6px;" onclick="location.href='/notifications'">
                     <!--<?= $unread_notif_count ?> -->
                     <svg xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        class="icon icon-tabler icons-tabler-filled icon-tabler-bell"
-                        style="vertical-align: middle;">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M14.235 19c.865 0 1.322 1.024 .745 1.668a3.992 3.992 0 0 1 -2.98 1.332a3.992 3.992 0 0 1 -2.98 -1.332c-.552 -.616 -.158 -1.579 .634 -1.661l.11 -.006h4.471z" />
-                        <path d="M12 2c1.358 0 2.506 .903 2.875 2.141l.046 .171l.008 .043a8.013 8.013 0 0 1 4.024 6.069l.028 .287l.019 .289v2.931l.021 .136a3 3 0 0 0 1.143 1.847l.167 .117l.162 .099c.86 .487 .56 1.766 -.377 1.864l-.116 .006h-16c-1.028 0 -1.387 -1.364 -.493 -1.87a3 3 0 0 0 1.472 -2.063l.021 -.143l.001 -2.97a8 8 0 0 1 3.821 -6.454l.248 -.146l.01 -.043a3.003 3.003 0 0 1 2.562 -2.29l.182 -.017l.176 -.004z" />
-                    </svg>
-                </button>
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="icon icon-tabler icons-tabler-filled icon-tabler-bell"
+                    style="vertical-align: middle;">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M14.235 19c.865 0 1.322 1.024 .745 1.668a3.992 3.992 0 0 1 -2.98 1.332a3.992 3.992 0 0 1 -2.98 -1.332c-.552 -.616 -.158 -1.579 .634 -1.661l.11 -.006h4.471z" />
+                    <path d="M12 2c1.358 0 2.506 .903 2.875 2.141l.046 .171l.008 .043a8.013 8.013 0 0 1 4.024 6.069l.028 .287l.019 .289v2.931l.021 .136a3 3 0 0 0 1.143 1.847l.167 .117l.162 .099c.86 .487 .56 1.766 -.377 1.864l-.116 .006h-16c-1.028 0 -1.387 -1.364 -.493 -1.87a3 3 0 0 0 1.472 -2.063l.021 -.143l.001 -2.97a8 8 0 0 1 3.821 -6.454l.248 -.146l.01 -.043a3.003 3.003 0 0 1 2.562 -2.29l.182 -.017l.176 -.004z" />
+                </svg>
+            </button>
                 <?php
                 $curr_user->checkAuth();
                 if (empty($_SESSION['USERDATA']['id'])) {
@@ -532,282 +533,284 @@ $stmt->execute([
         }
     </script>
 
-    <script>
-        (function() {
-            const gradientColors = ['#14041d', '#c32178', '#ffaa00']; // ЗАМЕНИ НА СВОИ
+<script>
+  (function() {
+)
+    const gradientColors = ['#14041d', '#c32178', '#ffaa00']; // ЗАМЕНИ НА СВОИ
 
-            const hero = document.querySelector('.hero');
-            const header = document.querySelector('.header');
+    const hero = document.querySelector('.hero');
+    const header = document.querySelector('.header');
 
-            if (!hero || !header) return;
+    if (!hero || !header) return;
 
-            header.style.transition = 'background-color 0.01s linear';
+    header.style.transition = 'background-color 0.01s linear';
 
-            function interpolateColor(color1, color2, factor) {
+    function interpolateColor(color1, color2, factor) {
 
-                const r1 = parseInt(color1.substring(1, 3), 16);
-                const g1 = parseInt(color1.substring(3, 5), 16);
-                const b1 = parseInt(color1.substring(5, 7), 16);
-                const r2 = parseInt(color2.substring(1, 3), 16);
-                const g2 = parseInt(color2.substring(3, 5), 16);
-                const b2 = parseInt(color2.substring(5, 7), 16);
+      const r1 = parseInt(color1.substring(1,3), 16);
+      const g1 = parseInt(color1.substring(3,5), 16);
+      const b1 = parseInt(color1.substring(5,7), 16);
+      const r2 = parseInt(color2.substring(1,3), 16);
+      const g2 = parseInt(color2.substring(3,5), 16);
+      const b2 = parseInt(color2.substring(5,7), 16);
 
-                const r = Math.round(r1 + factor * (r2 - r1));
-                const g = Math.round(g1 + factor * (g2 - g1));
-                const b = Math.round(b1 + factor * (b2 - b1));
+      const r = Math.round(r1 + factor * (r2 - r1));
+      const g = Math.round(g1 + factor * (g2 - g1));
+      const b = Math.round(b1 + factor * (b2 - b1));
 
-                return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-            }
+      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
 
-            function updateHeaderColor() {
-                const scrollY = window.scrollY;
-                const heroTop = hero.offsetTop;
-                const heroHeight = hero.offsetHeight;
-                const heroBottom = heroTop + heroHeight;
+    function updateHeaderColor() {
+      const scrollY = window.scrollY;
+      const heroTop = hero.offsetTop;
+      const heroHeight = hero.offsetHeight;
+      const heroBottom = heroTop + heroHeight;
 
-                let factor;
-                if (scrollY < heroTop) {
-                    factor = 0; // выше hero
-                } else if (scrollY > heroBottom) {
-                    factor = 1; // ниже hero
-                } else {
-                    factor = (scrollY - heroTop) / heroHeight; // внутри hero
-                }
+      let factor;
+      if (scrollY < heroTop) {
+        factor = 0;                     // выше hero
+      } else if (scrollY > heroBottom) {
+        factor = 1;                     // ниже hero
+      } else {
+        factor = (scrollY - heroTop) / heroHeight; // внутри hero
+      }
 
-                if (gradientColors.length === 2) {
+      if (gradientColors.length === 2) {
 
-                    const newColor = interpolateColor(gradientColors[0], gradientColors[1], factor);
-                    header.style.backgroundColor = newColor;
-                } else if (gradientColors.length > 2) {
+        const newColor = interpolateColor(gradientColors[0], gradientColors[1], factor);
+        header.style.backgroundColor = newColor;
+      } else if (gradientColors.length > 2) {
 
-                    const totalSegments = gradientColors.length - 1;
-                    const exactIndex = factor * totalSegments;
-                    const leftIndex = Math.floor(exactIndex);
-                    const rightIndex = Math.min(leftIndex + 1, totalSegments);
-                    const segmentFactor = exactIndex - leftIndex;
+        const totalSegments = gradientColors.length - 1;
+        const exactIndex = factor * totalSegments;
+        const leftIndex = Math.floor(exactIndex);
+        const rightIndex = Math.min(leftIndex + 1, totalSegments);
+        const segmentFactor = exactIndex - leftIndex;
 
-                    const newColor = interpolateColor(
-                        gradientColors[leftIndex],
-                        gradientColors[rightIndex],
-                        segmentFactor
-                    );
-                    header.style.backgroundColor = newColor;
-                }
-            }
+        const newColor = interpolateColor(
+          gradientColors[leftIndex],
+          gradientColors[rightIndex],
+          segmentFactor
+        );
+        header.style.backgroundColor = newColor;
+      }
+    }
 
-            window.addEventListener('scroll', updateHeaderColor);
-            window.addEventListener('resize', updateHeaderColor); // на случай изменения высоты hero
+    window.addEventListener('scroll', updateHeaderColor);
+    window.addEventListener('resize', updateHeaderColor); // на случай изменения высоты hero
 
-            updateHeaderColor();
-        })();
-    </script>
+    updateHeaderColor();
+  })();
+</script>
 
-    <script>
-        (function() {
+<script>
+  (function() {
 
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('Скрипт глобального изменения цвета запущен');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Скрипт глобального изменения цвета запущен');
 
-                const colorTop = '#2e0f32'; // цвет вверху страницы
-                const colorBottom = '#65154c'; // цвет внизу страницы
+      const colorTop = '#2e0f32';    // цвет вверху страницы
+      const colorBottom = '#65154c'; // цвет внизу страницы
 
-                const header = document.querySelector('.header');
-                if (!header) {
-                    console.warn('Header не найден');
-                    return;
-                }
+      const header = document.querySelector('.header');
+      if (!header) {
+        console.warn('Header не найден');
+        return;
+      }
 
-                header.style.transition = 'background-color 0.2s ease';
+      header.style.transition = 'background-color 0.2s ease';
 
-                function interpolateColor(color1, color2, factor) {
+      function interpolateColor(color1, color2, factor) {
 
-                    const r1 = parseInt(color1.substring(1, 3), 16);
-                    const g1 = parseInt(color1.substring(3, 5), 16);
-                    const b1 = parseInt(color1.substring(5, 7), 16);
-                    const r2 = parseInt(color2.substring(1, 3), 16);
-                    const g2 = parseInt(color2.substring(3, 5), 16);
-                    const b2 = parseInt(color2.substring(5, 7), 16);
+        const r1 = parseInt(color1.substring(1,3), 16);
+        const g1 = parseInt(color1.substring(3,5), 16);
+        const b1 = parseInt(color1.substring(5,7), 16);
+        const r2 = parseInt(color2.substring(1,3), 16);
+        const g2 = parseInt(color2.substring(3,5), 16);
+        const b2 = parseInt(color2.substring(5,7), 16);
 
-                    const r = Math.round(r1 + factor * (r2 - r1));
-                    const g = Math.round(g1 + factor * (g2 - g1));
-                    const b = Math.round(b1 + factor * (b2 - b1));
+        const r = Math.round(r1 + factor * (r2 - r1));
+        const g = Math.round(g1 + factor * (g2 - g1));
+        const b = Math.round(b1 + factor * (b2 - b1));
 
-                    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-                }
+        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+      }
 
-                function updateHeaderColor() {
-                    const scrollY = window.scrollY;
-                    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      function updateHeaderColor() {
+        const scrollY = window.scrollY;
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
 
-                    let factor;
-                    if (maxScroll <= 0) {
+        let factor;
+        if (maxScroll <= 0) {
 
-                        factor = 0;
-                    } else {
-                        factor = Math.min(1, Math.max(0, scrollY / maxScroll));
-                    }
+          factor = 0;
+        } else {
+          factor = Math.min(1, Math.max(0, scrollY / maxScroll));
+        }
 
-                    const newColor = interpolateColor(colorTop, colorBottom, factor);
-                    header.style.backgroundColor = newColor;
-                }
+        const newColor = interpolateColor(colorTop, colorBottom, factor);
+        header.style.backgroundColor = newColor;
+      }
 
-                window.addEventListener('scroll', updateHeaderColor);
-                window.addEventListener('resize', updateHeaderColor);
+      window.addEventListener('scroll', updateHeaderColor);
+      window.addEventListener('resize', updateHeaderColor);
 
-                updateHeaderColor();
-            });
-        })();
-    </script>
+      updateHeaderColor();
+    });
+  })();
+</script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const imageContainer = document.querySelector('.image');
-            const logoImg = document.querySelector('.image img');
-            if (!imageContainer || !logoImg) return;
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const imageContainer = document.querySelector('.image');
+        const logoImg = document.querySelector('.image img');
+        if (!imageContainer || !logoImg) return;
 
-            // Переменные для перетаскивания
-            let isDragging = false;
-            let startX, startY, originalX, originalY;
+        // Переменные для перетаскивания
+        let isDragging = false;
+        let startX, startY, originalX, originalY;
 
-            // Эффект наклона (голографический)
-            function handleTilt(e) {
-                if (isDragging) return; // при перетаскивании наклон не нужен
+        // Эффект наклона (голографический)
+        function handleTilt(e) {
+            if (isDragging) return; // при перетаскивании наклон не нужен
 
-                const rect = logoImg.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+            const rect = logoImg.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-                const nx = (x / rect.width) * 2 - 1;
-                const ny = (y / rect.height) * 2 - 1;
+            const nx = (x / rect.width) * 2 - 1;
+            const ny = (y / rect.height) * 2 - 1;
 
-                const maxAngle = 25;
-                const rotateY = maxAngle * nx;
-                const rotateX = -maxAngle * ny;
+            const maxAngle = 25;
+            const rotateY = maxAngle * nx;
+            const rotateX = -maxAngle * ny;
 
-                // Применяем наклон к картинке (без translate, т.к. при перетаскивании он сброшен)
-                logoImg.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+            // Применяем наклон к картинке (без translate, т.к. при перетаскивании он сброшен)
+            logoImg.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
 
-                // Голографический градиент
-                const bgX = (nx * 50) + 50;
-                const bgY = (ny * 50) + 50;
-                imageContainer.style.setProperty('--bg-x', `${bgX}%`);
-                imageContainer.style.setProperty('--bg-y', `${bgY}%`);
-            }
+            // Голографический градиент
+            const bgX = (nx * 50) + 50;
+            const bgY = (ny * 50) + 50;
+            imageContainer.style.setProperty('--bg-x', `${bgX}%`);
+            imageContainer.style.setProperty('--bg-y', `${bgY}%`);
+        }
 
-            // Сброс эффекта
-            function resetTilt() {
-                if (isDragging) return;
-                logoImg.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0)';
-                imageContainer.style.setProperty('--bg-x', '0%');
-                imageContainer.style.setProperty('--bg-y', '0%');
-            }
+        // Сброс эффекта
+        function resetTilt() {
+            if (isDragging) return;
+            logoImg.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0)';
+            imageContainer.style.setProperty('--bg-x', '0%');
+            imageContainer.style.setProperty('--bg-y', '0%');
+        }
 
-            // Отмена стандартного перетаскивания картинки браузером
-            logoImg.addEventListener('dragstart', (e) => e.preventDefault());
+        // Отмена стандартного перетаскивания картинки браузером
+        logoImg.addEventListener('dragstart', (e) => e.preventDefault());
 
-            // Начало перетаскивания
-            imageContainer.addEventListener('mousedown', (e) => {
-                e.preventDefault(); // чтобы не выделялось
-                isDragging = true;
+        // Начало перетаскивания
+        imageContainer.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // чтобы не выделялось
+            isDragging = true;
 
-                // Сохраняем начальную позицию мыши
-                startX = e.clientX;
-                startY = e.clientY;
+            // Сохраняем начальную позицию мыши
+            startX = e.clientX;
+            startY = e.clientY;
 
-                // Сохраняем текущее смещение (если уже было)
-                const transform = logoImg.style.transform;
-                // Простейший способ – сбросить наклон и запомнить translate
-                // Но мы просто будем двигать относительно исходного положения,
-                // поэтому сбрасываем transform и будем применять только translate
-                logoImg.style.transition = 'none'; // отключаем анимацию при перетаскивании
-                logoImg.style.transform = ''; // убираем наклон
-                originalX = 0;
-                originalY = 0;
-            });
-
-            // Перемещение
-            window.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-
-                // Перемещаем картинку
-                logoImg.style.transform = `translate(${dx}px, ${dy}px)`;
-            });
-
-            // Завершение перетаскивания
-            window.addEventListener('mouseup', (e) => {
-                if (!isDragging) return;
-                isDragging = false;
-
-                // Возвращаем transition
-                logoImg.style.transition = 'transform 0.3s ease-out';
-
-                // Плавно возвращаем на место
-                logoImg.style.transform = '';
-
-                // После окончания анимации можно вернуть наклон (но пока убираем)
-                setTimeout(() => {
-                    logoImg.style.transition = 'transform 0.01s ease-out'; // возвращаем быструю реакцию
-                }, 30); // время должно совпадать с transition
-            });
-
-            // Обработчики наклона
-            imageContainer.addEventListener('mousemove', handleTilt);
-            imageContainer.addEventListener('mouseleave', resetTilt);
+            // Сохраняем текущее смещение (если уже было)
+            const transform = logoImg.style.transform;
+            // Простейший способ – сбросить наклон и запомнить translate
+            // Но мы просто будем двигать относительно исходного положения,
+            // поэтому сбрасываем transform и будем применять только translate
+            logoImg.style.transition = 'none'; // отключаем анимацию при перетаскивании
+            logoImg.style.transform = ''; // убираем наклон
+            originalX = 0;
+            originalY = 0;
         });
 
-        (function() {
-            const headerButtons = document.querySelectorAll('.header .button');
-            if (!headerButtons.length) return;
+        // Перемещение
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
 
-            function resetTilt(btn) {
-                btn.style.transform = '';
-            }
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
 
-            function handleMouseMove(e) {
-                const btn = e.currentTarget;
-                const rect = btn.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                // Нормализация координат в диапазон -1..1
-                const nx = (x / rect.width) * 2 - 1;
-                const ny = (y / rect.height) * 2 - 1;
-
-                const maxAngle = 15; // мягкий наклон
-                const rotateY = maxAngle * nx;
-                const rotateX = -maxAngle * ny;
-
-                // Небольшой подъём и масштаб
-                const translateY = -3; // в пикселях
-                const scale = 1.04;
-
-                // Применяем все трансформации
-                btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-            }
-
-            function handleMouseLeave(e) {
-                resetTilt(e.currentTarget);
-            }
-
-            headerButtons.forEach(btn => {
-                btn.addEventListener('mousemove', handleMouseMove);
-                btn.addEventListener('mouseleave', handleMouseLeave);
-            });
-        })();
-
-        // Скрываем прелоадер после полной загрузки страницы
-        window.addEventListener('load', function() {
-            const preloader = document.getElementById('preloader');
-            if (preloader) {
-                preloader.classList.add('hidden');
-                // Полностью удаляем из DOM после завершения анимации (опционально)
-                setTimeout(() => preloader.remove(), 500);
-            }
+            // Перемещаем картинку
+            logoImg.style.transform = `translate(${dx}px, ${dy}px)`;
         });
-    </script>
+
+        // Завершение перетаскивания
+        window.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            // Возвращаем transition
+            logoImg.style.transition = 'transform 0.3s ease-out';
+
+            // Плавно возвращаем на место
+            logoImg.style.transform = '';
+
+            // После окончания анимации можно вернуть наклон (но пока убираем)
+            setTimeout(() => {
+                logoImg.style.transition = 'transform 0.01s ease-out'; // возвращаем быструю реакцию
+            }, 30); // время должно совпадать с transition
+        });
+
+        // Обработчики наклона
+        imageContainer.addEventListener('mousemove', handleTilt);
+        imageContainer.addEventListener('mouseleave', resetTilt);
+    });
+
+(function() {
+    const headerButtons = document.querySelectorAll('.header .button');
+    if (!headerButtons.length) return;
+
+    function resetTilt(btn) {
+        btn.style.transform = '';
+    }
+
+    function handleMouseMove(e) {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+
+        const maxAngle = 15; // мягкий наклон
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+
+
+        const translateY = -3; // в пикселях
+        const scale = 1.04;
+
+
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+
+    function handleMouseLeave(e) {
+        resetTilt(e.currentTarget);
+    }
+
+    headerButtons.forEach(btn => {
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
+
+
+window.addEventListener('load', function() {
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        preloader.classList.add('hidden');
+
+        setTimeout(() => preloader.remove(), 500);
+    }
+});
+
+</script>
 
 </body>
 

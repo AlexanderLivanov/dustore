@@ -85,10 +85,27 @@ if ($selectedGenre) {
                     </div>
                 </div>
 
-                <!-- Ряд с фильтрами и сеткой -->
-                <div class="content-row">
+                <!-- Обёртка: фильтры + грид -->
+                <div class="games-body">
                     <div class="games-controls">
-                        <div class="controls-left">
+
+                        <!-- Кнопка-тоггл (только мобайл) -->
+                        <button class="mobile-filter-toggle" id="filterToggle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+                            </svg>
+                            <span class="filter-label">
+                                <?= $selectedGenre ? htmlspecialchars($selectedGenre) : 'Все игры' ?>
+                            </span>
+                            <?php if ($selectedGenre): ?>
+                                <span class="active-badge">активен</span>
+                            <?php endif; ?>
+                            <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+
+                        <div class="controls-left" id="filterPanel">
                             <!-- Все игры (сброс жанра, остаёмся в текущей adult-секции) -->
                             <a href="?adult=<?= (int)$adultSection ?>" class="btn-filter <?= !isset($_GET['genre']) ? 'active' : '' ?>">Все игры</a>
 
@@ -108,7 +125,9 @@ if ($selectedGenre) {
                         </div>
                     </div>
 
-                    <div class="games-grid">
+                    <!-- Грид игр -->
+                    <div class="content-row">
+                        <div class="games-grid">
                         <?php if (empty($games)): ?>
                             <div class="no-games-message">
                                 <p>Игры еще не добавлены в каталог</p>
@@ -157,9 +176,10 @@ if ($selectedGenre) {
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
-                    </div>
-                </div>
-            </div>
+                        </div><!-- /.games-grid -->
+                    </div><!-- /.content-row -->
+                </div><!-- /.games-body -->
+            </div><!-- /.container -->
         </section>
     </main>
 
@@ -327,6 +347,35 @@ if ($selectedGenre) {
     filterButtons.forEach(btn => {
         btn.addEventListener('mousemove', handleMouseMove);
         btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
+
+// Мобильный тоггл фильтров
+(function() {
+    const toggle = document.getElementById('filterToggle');
+    const panel  = document.getElementById('filterPanel');
+    if (!toggle || !panel) return;
+
+    toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = panel.classList.toggle('open');
+        toggle.classList.toggle('open', isOpen);
+    });
+
+    // Закрыть при клике вне
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.games-controls')) {
+            panel.classList.remove('open');
+            toggle.classList.remove('open');
+        }
+    });
+
+    // Закрыть после выбора фильтра
+    panel.querySelectorAll('.btn-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            panel.classList.remove('open');
+            toggle.classList.remove('open');
+        });
     });
 })();
 

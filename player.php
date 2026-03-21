@@ -367,33 +367,73 @@ if ($is_owner) {
             </div>
             <!-- Правая колонка: содержимое вкладок -->
             <div class="profile-right" style="flex: 1; min-width: 280px; color: white;">
-                <!-- Вкладка "Профиль" (информация и статистика) -->
-                <h1>
-                    <?php
-                    // Получаем активность пользователя
-                    $status_text = '<small style="color: red;">● Не в сети</small>'; // по умолчанию
+                <div class="profile-name-row">
+                    <div>
+                        <h1>
+                            <h1>
+                                <?php
+                                // Получаем активность пользователя
+                                $status_text = '<small style="color: red; font-size: 15px;">● Не в сети</small>'; // по умолчанию
 
-                    if (!empty($_SESSION['USERDATA']['id'])) {
-                        $stmt = $pdo->prepare("SELECT current_app, last_seen FROM user_activity WHERE user_id = ? ORDER BY last_seen DESC LIMIT 1");
-                        $stmt->execute([$_SESSION['USERDATA']['id']]);
-                        $activity = $stmt->fetch(PDO::FETCH_ASSOC);
-                        if ($activity && strtotime($activity['last_seen']) + 180 > time()) { // активен последние 3 минуты
-                            $app = htmlspecialchars($activity['current_app'] ?? '');
-                            if ($app) {
-                                $status_text = '<small style="color: green;">● В сети (Играет в ' . $app . ')</small>';
-                            } else {
-                                $status_text = '<small style="color: green;">● В сети</small>';
+                                if (!empty($_SESSION['USERDATA']['id'])) {
+                                    $stmt = $pdo->prepare("SELECT current_app, last_seen FROM user_activity WHERE user_id = ? ORDER BY last_seen DESC LIMIT 1");
+                                    $stmt->execute([$user['id']]);
+                                    $activity = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    if ($activity && strtotime($activity['last_seen']) + 180 > time()) { // активен последние 3 минуты
+                                        $app = htmlspecialchars($activity['current_app'] ?? '');
+                                        if ($app) {
+                                            $status_text = '<small style="color: lightgreen; font-size: 15px;">● В сети (Играет в ' . $app . ')</small>';
+                                        } else {
+                                            $status_text = '<small style="color: lightgreen; font-size: 15px;">● В сети</small>';
+                                        }
+                                    }
+                                }
+                                ?>
+                                <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                                <?= $status_text ?>
+                            </h1>
+                        </h1>
+                        <p>
+                            <light>На платформе с:</light>
+                            <?= date('d.m.Y', strtotime($user['added'])) ?>
+                        </p>
+                    </div>
+                    <?php if (!$is_owner && !empty($_SESSION['USERDATA']['id'])): ?>
+                        <?php
+                        $btnText     = 'Добавить в друзья';
+                        $btnAction   = 'send';
+                        $btnDisabled = '';
+                        $btnClass    = 'friend-action-btn';
+                        if ($status) {
+                            if ($status['status'] === 'pending') {
+                                if ($status['player_id'] == $_SESSION['USERDATA']['id']) {
+                                    $btnText   = 'Отменить заявку';
+                                    $btnAction = 'cancel';
+                                    $btnClass  = 'friend-action-btn friend-action-btn--muted';
+                                    // disabled убран — можно отменить
+                                } else {
+                                    $btnText   = 'Принять заявку';
+                                    $btnAction = 'accept';
+                                    $btnClass  = 'friend-action-btn friend-action-btn--accept';
+                                }
+                            }
+                            if ($status['status'] === 'accepted') {
+                                $btnText   = 'Завершить дружбу';
+                                $btnAction = 'remove';
+                                $btnClass  = 'friend-action-btn friend-action-btn--remove';
                             }
                         }
-                    }
-                    ?>
-                    <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
-                    <?= $status_text ?>
-                </h1>
-                <p>
-                    <light>На платформе с:</light>
-                    <?= date('d.m.Y', strtotime($user['added'])) ?>
-                </p>
+                        ?>
+                        <button
+                            id="friendActionBtn"
+                            class="<?= $btnClass ?>"
+                            data-user="<?= $user['id'] ?>"
+                            data-action="<?= $btnAction ?>"
+                            <?= $btnDisabled ?>>
+                            <span id="friendActionBtnText"><?= $btnText ?></span>
+                        </button>
+                    <?php endif; ?>
+                </div>
                 <!--<p>@<?= htmlspecialchars($user['username']) ?></p>-->
                 <!--<h2><a style="color: white;" href="/l4t/<?= $username ?>">Профиль на L4T-->
                 <!--<svg style="vertical-align: middle;"
@@ -552,23 +592,8 @@ if ($is_owner) {
                 <!-- Вкладка "Игры" -->
                 <div id="tab-games" class="tab-content active">
                     <?php
-                    // ВРЕМЕННО: тестовые данные, если игр нет
-                    if (empty($games)) {
-                        $games = [];
-                        for ($i = 1; $i <= 10; $i++) {
-                            $games[] = [
-                                'id' => $i,
-                                'name' => 'Игра ' . $i,
-                                'description' => 'Описание игры',
-                                'path_to_cover' => '/assets/default-game-cover.png',
-                                'rating' => 4.5,
-                                'price' => 0
-                            ];
-                        }
-                    }
-                    // Для бесконечности сделаем массив больше (дублируем)
-                    $displayGames = array_merge($games, $games, $games); // три копии для плавной прокрутки
-                    $total = count($games); // реальное количество уникальных игр
+                    $displayGames = $games;
+                    $total = count($games);
                     ?>
 
                     <div class="profile-card games-profile-card">
@@ -714,104 +739,70 @@ if ($is_owner) {
                     </div>
                 </div>
 
-                <!-- Вкладка "Коллекция" -->
+                <!-- Вкладка "Коллекция" (Теперь друзья) -->
+                <?php
+                // Получаем список друзей
+                $stmt = $pdo->prepare("
+                        SELECT 
+                            u.id, u.username, u.first_name, u.last_name, u.profile_picture,
+                            f.id as friendship_id
+                        FROM friends f
+                        JOIN users u ON u.id = CASE 
+                            WHEN f.player_id = :user_id THEN f.friend_id 
+                            ELSE f.player_id 
+                        END
+                        WHERE (f.player_id = :user_id OR f.friend_id = :user_id)
+                        AND f.status = 'accepted'
+                        ORDER BY u.first_name ASC
+                    ");
+                $stmt->execute([':user_id' => $user['id']]);
+                $friends = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                ?>
+                <!-- Вкладка "Друзья" -->
                 <div id="tab-collection" class="tab-content">
                     <div class="profile-card">
-                        <h2 class="section-title">Коллекция пользователя</h2>
+                        <h2 class="section-title">
+                            Друзья (<?= count($friends) ?>)
+                        </h2>
 
-                        <div class="shelf-container">
-                            <h3 class="shelf-title">🎮 Игры (<?= count($games_collection) ?>)</h3>
-                            <div class="shelf">
-                                <div class="shelf-bar"></div>
-                                <div class="collection-grid">
-                                    <?php if (empty($games_collection)): ?>
-                                        <div class="empty-state">
-                                            <p>Игр пока нет в коллекции</p>
-                                        </div>
-                                    <?php else: ?>
-                                        <?php foreach ($games_collection as $item): ?>
-                                            <?php
-                                            $rarity = $item['rarity'] ?? 0;
-                                            $cover = $item['cover_image'] ?? '/swad/static/img/default-game.jpg';
-                                            $title = $item['title'] ?? 'Игра #' . $item['id'];
-                                            $purchase_date = $item['date'] ?? $item['purchased'] ?? date('Y-m-d');
-                                            ?>
-                                            <div class="item-card"
-                                                data-rarity="<?= $rarity ?>"
-                                                onclick="window.location.href='/g/<?= $item['game_id'] ?>'">
-                                                <div class="item-cover" style="background-image: url('<?= htmlspecialchars($cover) ?>');">
-                                                    <div class="item-content">
-                                                        <span class="item-icon">🎮</span>
-                                                        <div class="item-title"><?= htmlspecialchars(mb_strimwidth($title, 0, 30, '...')) ?></div>
-                                                        <div class="item-rarity">
-                                                            <?=
-                                                            match ($rarity) {
-                                                                0 => 'Обычная',
-                                                                1 => 'Необычная',
-                                                                2 => 'Редкая',
-                                                                3 => 'Эпическая',
-                                                                4 => 'Легендарная',
-                                                                default => 'Обычная'
-                                                            }
-                                                            ?>
-                                                        </div>
-                                                    </div>
-                                                    <div class="item-purchase-info">
-                                                        <?= date('d.m.Y', strtotime($purchase_date)) ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
+                        <?php if (empty($friends)): ?>
+                            <div class="empty-state">
+                                <p>У пользователя пока нет друзей</p>
                             </div>
-
-                            <h3 class="shelf-title">🏆 Коллекционные предметы (<?= count($collectibles) ?>)</h3>
-                            <div class="shelf">
-                                <div class="shelf-bar"></div>
-                                <div class="collection-grid">
-                                    <?php if (empty($collectibles)): ?>
-                                        <div class="empty-state">
-                                            <p>Коллекционных предметов пока нет</p>
-                                        </div>
-                                    <?php else: ?>
-                                        <?php foreach ($collectibles as $item): ?>
-                                            <?php
-                                            $rarity = $item['rarity'] ?? 0;
-                                            $cover = '/swad/static/img/default-collectible.jpg';
-                                            $title = $item['title'] ?? 'Коллекционный предмет #' . $item['id'];
-                                            $purchase_date = $item['date'] ?? $item['purchased'] ?? date('Y-m-d');
-                                            ?>
-                                            <div class="item-card"
-                                                data-rarity="<?= $rarity ?>"
-                                                onclick="showItemModal(<?= htmlspecialchars(json_encode($item)) ?>)">
-                                                <div class="item-cover" style="background-image: url('<?= htmlspecialchars($cover) ?>');">
-                                                    <div class="item-content">
-                                                        <span class="item-icon">🏆</span>
-                                                        <div class="item-title"><?= htmlspecialchars(mb_strimwidth($title, 0, 30, '...')) ?></div>
-                                                        <div class="item-rarity">
-                                                            <?=
-                                                            match ($rarity) {
-                                                                0 => 'Обычный',
-                                                                1 => 'Необычный',
-                                                                2 => 'Редкий',
-                                                                3 => 'Эпический',
-                                                                4 => 'Легендарный',
-                                                                default => 'Обычный'
-                                                            }
-                                                            ?>
-                                                        </div>
-                                                    </div>
-                                                    <div class="item-purchase-info">
-                                                        <?= date('d.m.Y', strtotime($purchase_date)) ?>
-                                                    </div>
-                                                </div>
+                        <?php else: ?>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <?php foreach ($friends as $friend): ?>
+                                    <a href="/player/<?= htmlspecialchars($friend['username']) ?>"
+                                        style="display: flex; align-items: center; gap: 14px;
+                                            background: rgba(255,255,255,0.04);
+                                            border-radius: 12px; padding: 12px 16px;
+                                            text-decoration: none; color: white;
+                                            transition: background 0.2s;">
+                                        <img src="<?= !empty($friend['profile_picture'])
+                                                        ? htmlspecialchars($friend['profile_picture'])
+                                                        : '/swad/static/img/logo.svg' ?>"
+                                            alt="Аватар"
+                                            style="width: 46px; height: 46px;
+                                    border-radius: 50%;
+                                    object-fit: cover;
+                                    border: 2px solid rgba(255,255,255,0.1);">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 600; font-size: 0.97em;">
+                                                <?= htmlspecialchars(trim($friend['first_name'] . ' ' . $friend['last_name'])) ?>
                                             </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
+                                            <div style="font-size: 0.82em; color: #888; margin-top: 2px;">
+                                                @<?= htmlspecialchars($friend['username']) ?>
+                                            </div>
+                                        </div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="#555"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="9 18 15 12 9 6" />
+                                        </svg>
+                                    </a>
+                                <?php endforeach; ?>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -942,10 +933,10 @@ if ($is_owner) {
                         🏆
                     </div>
                     <h2 style="color: #00f5ff; margin-bottom: 10px; font-size: 1.8em;">${item.title}</h2>
-                    <div style="background: ${rarityInfo.color}; 
-                          color: #000; 
-                          padding: 8px 20px; 
-                          border-radius: 20px; 
+                    <div style="background: ${rarityInfo.color};
+                          color: #000;
+                          padding: 8px 20px;
+                          border-radius: 20px;
                           display: inline-block;
                           margin-bottom: 20px;
                           font-weight: bold;
@@ -965,14 +956,14 @@ if ($is_owner) {
                             <div>${item.date}</div>
                         </div>
                     </div>
-                    <button style="width: 100%; 
-                            padding: 14px; 
-                            background: linear-gradient(135deg, #ff006e, #00f5ff); 
-                            color: #fff; 
-                            border: none; 
-                            border-radius: 12px; 
-                            font-size: 1.1em; 
-                            cursor: pointer; 
+                    <button style="width: 100%;
+                            padding: 14px;
+                            background: linear-gradient(135deg, #ff006e, #00f5ff);
+                            color: #fff;
+                            border: none;
+                            border-radius: 12px;
+                            font-size: 1.1em;
+                            cursor: pointer;
                             margin-top: 30px;
                             transition: all 0.3s ease;
                             font-weight: bold;"
@@ -1038,6 +1029,71 @@ if ($is_owner) {
 
             } catch (err) {
                 alert('Сеть отвалилась, как и твой энтузиазм');
+            }
+        });
+
+        document.getElementById('friendActionBtn')?.addEventListener('click', async function() {
+            const btn = this;
+            const text = document.getElementById('friendActionBtnText');
+            const userId = btn.dataset.user;
+            const action = btn.dataset.action;
+
+            if (btn.hasAttribute('disabled')) return;
+            btn.setAttribute('disabled', 'true');
+
+            let rawText = '';
+            try {
+                const res = await fetch('/api/friends.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action,
+                        user_id: userId
+                    })
+                });
+
+                rawText = await res.text();
+                const data = JSON.parse(rawText);
+
+                if (!data.success) {
+                    alert('Ошибка: ' + data.error);
+                    btn.removeAttribute('disabled');
+                    return;
+                }
+
+                if (action === 'send') {
+                    text.textContent = 'Отменить заявку';
+                    btn.dataset.action = 'cancel';
+                    btn.className = 'friend-action-btn friend-action-btn--muted';
+                    btn.removeAttribute('disabled');
+                }
+
+                if (action === 'cancel') {
+                    text.textContent = 'Добавить в друзья';
+                    btn.dataset.action = 'send';
+                    btn.className = 'friend-action-btn';
+                    btn.removeAttribute('disabled');
+                }
+
+                if (action === 'accept') {
+                    text.textContent = 'Завершить дружбу';
+                    btn.dataset.action = 'remove';
+                    btn.className = 'friend-action-btn friend-action-btn--remove';
+                    btn.removeAttribute('disabled');
+                }
+
+                if (action === 'remove') {
+                    text.textContent = 'Добавить в друзья';
+                    btn.dataset.action = 'send';
+                    btn.className = 'friend-action-btn';
+                    btn.removeAttribute('disabled');
+                }
+
+            } catch (err) {
+                alert('Ответ сервера: ' + rawText.substring(0, 300));
+                btn.removeAttribute('disabled');
             }
         });
 
@@ -1172,46 +1228,102 @@ if ($is_owner) {
             if (!track) return;
 
             const items = Array.from(track.children);
-            const totalUnique = <?= $total ?>; // количество уникальных игр
             const itemCount = items.length;
+            let currentCenterIdx = 0;
 
-            // Устанавливаем data-position для каждого элемента
             function updatePositions(centerIndex) {
-                // centerIndex – абсолютный индекс элемента, который должен быть в центре
+                currentCenterIdx = ((centerIndex % itemCount) + itemCount) % itemCount;
                 items.forEach((item, idx) => {
-                    let offset = idx - centerIndex;
-                    // Нормализуем offset для циклического эффекта (в пределах -floor(total/2) .. +floor(total/2))
-                    // Но проще использовать offset как есть, но CSS обрабатывает любые значения
+                    let offset = idx - currentCenterIdx;
+                    if (offset > itemCount / 2) offset -= itemCount;
+                    if (offset < -itemCount / 2) offset += itemCount;
                     item.setAttribute('data-position', offset);
                 });
             }
 
-            // Начальное положение: центральный элемент с индексом 0 (первый)
             updatePositions(0);
 
-            // Обработчики кнопок
             const prevBtn = document.querySelector('.carousel-3d-btn.prev');
             const nextBtn = document.querySelector('.carousel-3d-btn.next');
+            prevBtn?.addEventListener('click', () => updatePositions(currentCenterIdx - 1));
+            nextBtn?.addEventListener('click', () => updatePositions(currentCenterIdx + 1));
 
-            if (prevBtn) {
-                prevBtn.addEventListener('click', () => {
-                    // Сдвигаем центр влево (увеличиваем offset для всех)
-                    // Находим текущий центральный (data-position="0")
-                    let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
-                    if (currentCenterIdx === -1) currentCenterIdx = 0;
-                    let newCenterIdx = (currentCenterIdx - 1 + itemCount) % itemCount;
-                    updatePositions(newCenterIdx);
-                });
+            // ── Колёсико ───────────────────────────────────────────────
+            const stage = document.getElementById('carouselStage');
+            let wheelTimer = null;
+            stage.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                clearTimeout(wheelTimer);
+                wheelTimer = setTimeout(() => {
+                    updatePositions(currentCenterIdx + (e.deltaY > 0 || e.deltaX > 0 ? 1 : -1));
+                }, 30);
+            }, {
+                passive: false
+            });
+
+            // ── Drag ───────────────────────────────────────────────────
+            let dragStartX = null;
+            let dragMoved = false;
+            const THRESHOLD = 50;
+
+            // Запрещаем выделение текста во время тяги
+            function lockSelect() {
+                document.body.style.userSelect = 'none';
             }
 
-            if (nextBtn) {
-                nextBtn.addEventListener('click', () => {
-                    let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
-                    if (currentCenterIdx === -1) currentCenterIdx = 0;
-                    let newCenterIdx = (currentCenterIdx + 1) % itemCount;
-                    updatePositions(newCenterIdx);
-                });
+            function unlockSelect() {
+                document.body.style.userSelect = '';
             }
+
+            function onStart(x) {
+                dragStartX = x;
+                dragMoved = false;
+                lockSelect();
+            }
+
+            function onMove(x) {
+                if (dragStartX === null) return;
+                if (Math.abs(x - dragStartX) > 5) dragMoved = true;
+            }
+
+            function onEnd(x) {
+                if (dragStartX === null) return;
+                unlockSelect();
+                const diff = x - dragStartX;
+                if (Math.abs(diff) >= THRESHOLD) {
+                    updatePositions(currentCenterIdx + (diff < 0 ? 1 : -1));
+                }
+                dragStartX = null;
+            }
+
+            // Блокируем переход по ссылке если это был drag, а не click
+            stage.addEventListener('click', (e) => {
+                if (dragMoved) e.preventDefault();
+            }, true);
+
+            // Mouse
+            stage.style.cursor = 'grab';
+            stage.addEventListener('mousedown', (e) => {
+                stage.style.cursor = 'grabbing';
+                onStart(e.clientX);
+            });
+            window.addEventListener('mousemove', (e) => onMove(e.clientX));
+            window.addEventListener('mouseup', (e) => {
+                stage.style.cursor = 'grab';
+                onEnd(e.clientX);
+            });
+
+            // Touch
+            stage.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), {
+                passive: true
+            });
+            stage.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), {
+                passive: true
+            });
+            stage.addEventListener('touchend', (e) => onEnd(e.changedTouches[0].clientX));
+
+            // Отключаем нативный drag на картинках и ссылках
+            stage.querySelectorAll('img, a').forEach(el => el.setAttribute('draggable', 'false'));
         })();
     </script>
     <script>
