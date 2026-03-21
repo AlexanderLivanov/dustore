@@ -10,8 +10,7 @@ $stmt = $pdo->prepare("SELECT id, name, description, avatar_link, website, creat
 $stmt->execute();
 $studios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Получаем пользователей (ограничим 100)
-$stmt = $pdo->prepare("SELECT id, first_name, last_name, telegram_username, username, profile_picture, added, country, city, website, email FROM users ORDER BY id DESC LIMIT 100");
+$stmt = $pdo->prepare("SELECT id, first_name, last_name, telegram_username, username, profile_picture, added, country, city, website, email FROM users ORDER BY id DESC");
 $stmt->execute();
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
