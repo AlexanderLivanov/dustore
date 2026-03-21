@@ -327,29 +327,6 @@ if ($is_owner) {
 
                     <?php endif; ?>
 
-                    <!-- Достижения (иконки) -->
-                    <div class="achievements-container">
-                        <?php foreach ($achievements as $ach): ?>
-                            <?php
-                            $title = htmlspecialchars($ach['name']);
-                            $icon = htmlspecialchars($ach['icon_url'] ?? '🏆');
-                            ?>
-                            <div class="achievement-icon"
-                                title="<?= htmlspecialchars($title) ?>"
-                                onclick='showAchievementModal({
-                                        title: <?= json_encode($title) ?>,
-                                        description: <?= json_encode($ach["description"] ?? "") ?>,
-                                        icon: <?= json_encode($ach["icon_url"] ?? "🏆") ?>,
-                                        date: <?= json_encode($ach["awarded_at"] ?? "") ?>
-                                    })'>
-                                <?php if (!empty($ach["icon_url"])): ?>
-                                    <img src="<?= htmlspecialchars($ach["icon_url"]) ?>" alt="<?= htmlspecialchars($title) ?>" class="achievement-icon-img">
-                                <?php else: ?>
-                                    🏆
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
                 </div>
 
                 <!-- Кнопки вкладок (теперь в левой колонке) -->
@@ -431,6 +408,7 @@ if ($is_owner) {
                 $reviews_main = array_slice($reviews, 0, 3);
                 ?>
                 <div id="tab-profile" class="tab-content">
+                    <div class="profile-info-card">
                     <div class="pf-wrap">
 
                         <!-- ① Статистика -->
@@ -546,7 +524,8 @@ if ($is_owner) {
                         </div>
                         <?php endif; ?>
 
-                    </div>
+                    </div><!-- /.pf-wrap -->
+                    </div><!-- /.profile-info-card -->
                 </div>
 
                 <!-- Вкладка "Игры" -->
@@ -587,7 +566,7 @@ if ($is_owner) {
                                     </svg>
                                 </button>
                                 <!-- Список = карусель -->
-                                <button class="games-view-icon-btn active" data-view="carousel" title="Карусель (список)">
+                                <button class="games-view-icon-btn active" data-view="carousel" title="Карусель">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                         <rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="18"/>
                                     </svg>
@@ -659,16 +638,39 @@ if ($is_owner) {
                                 </div>
                             </div>
 
-                            <!-- Достижения — в разработке -->
-                            <div class="showcase-achievements-wip" id="showcaseAchievementsBody" style="display: none;">
-                                <div class="showcase-wip-inner">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="showcase-wip-icon">
-                                        <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/>
-                                        <path d="M11 13l9 -9"/><path d="M15 4h5v5"/>
-                                    </svg>
-                                    <p class="showcase-wip-title">В разработке</p>
-                                    <p class="showcase-wip-sub">Скоро здесь можно будет просматривать свои достижения</p>
-                                </div>
+                            <!-- Достижения -->
+                            <div class="showcase-achievements-body" id="showcaseAchievementsBody" style="display: none;">
+                                <?php if (empty($achievements)): ?>
+                                    <div class="showcase-wip-inner">
+                                        <p class="showcase-wip-title">Достижений пока нет</p>
+                                        <p class="showcase-wip-sub">Играй, исследуй платформу и зарабатывай награды</p>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="achievements-grid">
+                                        <?php foreach ($achievements as $ach): ?>
+                                            <?php $title = htmlspecialchars($ach['name']); ?>
+                                            <div class="achievement-card"
+                                                onclick='showAchievementModal({
+                                                    title: <?= json_encode($title) ?>,
+                                                    description: <?= json_encode($ach["description"] ?? "") ?>,
+                                                    icon: <?= json_encode($ach["icon_url"] ?? "🏆") ?>,
+                                                    date: <?= json_encode($ach["awarded_at"] ?? "") ?>
+                                                })'>
+                                                <div class="achievement-card-icon">
+                                                    <?php if (!empty($ach["icon_url"])): ?>
+                                                        <img src="<?= htmlspecialchars($ach["icon_url"]) ?>" alt="<?= $title ?>">
+                                                    <?php else: ?>
+                                                        🏆
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="achievement-card-name"><?= $title ?></div>
+                                                <?php if (!empty($ach['awarded_at'])): ?>
+                                                    <div class="achievement-card-date"><?= date('d.m.Y', strtotime($ach['awarded_at'])) ?></div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                         </div>
@@ -1272,14 +1274,17 @@ if ($is_owner) {
 </script>
 <script>
 // Иконки сетка/список — переключение между каруселью и витриной
-document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.games-view-icon-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
+(function() {
+    const STORAGE_KEY = 'games_view_mode'; // глобальный ключ — работает для всех профилей
 
-        const view = this.dataset.view;
+    function applyView(view) {
         const carousel = document.getElementById('carouselView');
         const showcase = document.getElementById('showcaseView');
+        if (!carousel || !showcase) return;
+
+        document.querySelectorAll('.games-view-icon-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === view);
+        });
 
         if (view === 'carousel') {
             carousel.style.display = 'block';
@@ -1288,8 +1293,21 @@ document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
             carousel.style.display = 'none';
             showcase.style.display = 'block';
         }
+    }
+
+    // Восстанавливаем сохранённый режим при загрузке
+    const saved = localStorage.getItem(STORAGE_KEY) || 'carousel';
+    applyView(saved);
+
+    // Сохраняем при переключении
+    document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.dataset.view;
+            localStorage.setItem(STORAGE_KEY, view);
+            applyView(view);
+        });
     });
-});
+})();
 </script>
 <script>
 // Переключение вкладок внутри витрины (Игры / Достижения)
@@ -1302,14 +1320,23 @@ document.querySelectorAll('.showcase-tab').forEach(tab => {
         document.getElementById('carouselView').style.display  = 'none';
         document.getElementById('showcaseView').style.display  = 'block';
 
-        // Обновляем активную иконку
-        document.querySelectorAll('.games-view-icon-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.view === 'showcase');
-        });
-
         const target = this.dataset.showcase;
-        document.getElementById('showcaseGamesBody').style.display       = target === 'games'        ? 'flex' : 'none';
-        document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'flex' : 'none';
+
+        // Прячем иконки переключения режима на вкладке "Достижения"
+        const viewIcons = document.querySelector('.games-view-icons');
+        if (viewIcons) {
+            viewIcons.style.visibility = target === 'achievements' ? 'hidden' : 'visible';
+        }
+
+        // Обновляем активную иконку только для вкладки игр
+        if (target === 'games') {
+            document.querySelectorAll('.games-view-icon-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.view === 'showcase');
+            });
+        }
+
+        document.getElementById('showcaseGamesBody').style.display        = target === 'games'        ? 'flex' : 'none';
+        document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'block' : 'none';
     });
 });
 </script>
