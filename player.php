@@ -154,6 +154,56 @@ if ($is_owner) {
     $user_data = $_SESSION['USERDATA'];
     $userID    = $user['id'];
 }
+
+// ── Вспомогательные функции ──────────────────────────────────────────────────
+
+/**
+ * Склонение числительных для русского языка
+ */
+function ngettext_ru(int $n, string $one, string $few, string $many): string
+{
+    $n  = abs($n) % 100;
+    $n1 = $n % 10;
+    if ($n >= 11 && $n <= 19) return $many;
+    if ($n1 === 1) return $one;
+    if ($n1 >= 2 && $n1 <= 4) return $few;
+    return $many;
+}
+
+/**
+ * Человекочитаемое "был N назад" с улучшенными метками.
+ * Формат даты: dd.mm при том же годе, dd.mm.yy при другом.
+ */
+function format_last_seen(int $ts): string
+{
+    $diff = time() - $ts;
+
+    if ($diff < 60) {
+        return 'только что';
+    }
+    if ($diff < 120) {
+        return 'минуту назад';
+    }
+    if ($diff < 3600) {
+        $m = floor($diff / 60);
+        return $m . ' ' . ngettext_ru($m, 'минуту', 'минуты', 'минут') . ' назад';
+    }
+    if ($diff < 7200) {
+        return 'час назад';
+    }
+    if ($diff < 86400) {
+        $h = floor($diff / 3600);
+        return $h . ' ' . ngettext_ru($h, 'час', 'часа', 'часов') . ' назад';
+    }
+    if ($diff < 172800) {
+        return 'вчера в ' . date('H:i', $ts);
+    }
+    // Старше 2 суток — дата
+    if (date('Y', $ts) === date('Y')) {
+        return date('d.m', $ts) . ' в ' . date('H:i', $ts);
+    }
+    return date('d.m.y', $ts) . ' в ' . date('H:i', $ts);
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -164,6 +214,48 @@ if ($is_owner) {
     <title>Профиль <?= htmlspecialchars($user['username']) ?> | Dustore</title>
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="/swad/css/player.css">
+    <style>
+        /* ── Аватар + кнопка редактирования ── */
+        .avatar-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .avatar-frame {
+            display: block;
+        }
+
+        /* Кнопка "редактировать профиль" — только у владельца, снизу по центру */
+        .edit-profile-btn {
+            position: absolute;
+            bottom: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 20, 40, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #fff;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 12px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s, transform 0.2s;
+            z-index: 2;
+        }
+
+        .edit-profile-btn:hover {
+            background: rgba(195, 33, 120, 0.75);
+            transform: translateX(-50%) translateY(-2px);
+        }
+
+        .edit-profile-btn svg {
+            flex-shrink: 0;
+        }
+    </style>
 </head>
 
 <body>
@@ -180,16 +272,19 @@ if ($is_owner) {
                             <img src="<?= !empty($user['profile_picture']) ? htmlspecialchars($user['profile_picture']) : '/swad/static/img/logo.svg' ?>"
                                 alt="Аватар" class="user-avatar">
                         </div>
-                        <a href="/me" class="edit-profile-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="1"
-                                stroke-linecap="round" stroke-linejoin="round"
-                                class="icon icon-tabler icons-tabler-outline icon-tabler-refresh">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
-                                <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
-                            </svg>
-                        </a>
+                        <?php if ($is_owner): ?>
+                            <!-- Кнопка редактирования — только у владельца, снизу по центру -->
+                            <a href="/me" class="edit-profile-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+                                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+                                </svg>
+                                Мой профиль
+                            </a>
+                        <?php endif; ?>
                     </div>
 
                     <?php
@@ -214,7 +309,7 @@ if ($is_owner) {
                         $incomingRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         ?>
                         <?php if (!empty($incomingRequests)): ?>
-                            <div class="profile-card" style="border: 1px solid #c32178;">
+                            <div class="profile-card" style="border: 1px solid #c32178; margin-top: 24px;">
                                 <h3>Входящие заявки в друзья</h3>
                                 <?php foreach ($incomingRequests as $req): ?>
                                     <div style="display:flex;align-items:center;gap:12px;margin:10px 0;background:rgba(255,255,255,.05);padding:10px;border-radius:10px;">
@@ -256,7 +351,7 @@ if ($is_owner) {
                             }
                         }
                         ?>
-                        <a href="#" id="friendBtn" class="edit-profile-btn"
+                        <a href="#" id="friendBtn" class="edit-profile-btn" style="position:static;transform:none;margin-top:12px;"
                             data-user="<?= $user['id'] ?>" data-action="<?= $btnAction ?>" <?= $disabled ?>>
                             <svg style="vertical-align:middle" xmlns="http://www.w3.org/2000/svg"
                                 width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -266,23 +361,8 @@ if ($is_owner) {
                         </a>
                     <?php endif; ?>
 
-                    <!-- Достижения (иконки) -->
-                    <div class="achievements-container">
-                        <?php foreach ($achievements as $ach): ?>
-                            <?php $title = htmlspecialchars($ach['name']); ?>
-                            <div class="achievement-icon" title="<?= $title ?>"
-                                onclick='showAchievementModal({
-                                     title: <?= json_encode($title) ?>,
-                                     description: <?= json_encode($ach["description"] ?? "") ?>,
-                                     icon: <?= json_encode($ach["icon_url"] ?? "🏆") ?>,
-                                     date: <?= json_encode($ach["awarded_at"] ?? "") ?>
-                                 })'>
-                                <?php if (!empty($ach["icon_url"])): ?>
-                                    <img src="<?= htmlspecialchars($ach["icon_url"]) ?>" alt="<?= $title ?>" class="achievement-icon-img">
-                                    <?php else: ?>🏆<?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <!-- УБРАНЫ: ачивки на аватарке (.achievements-container под аватаркой) -->
+
                 </div>
 
                 <!-- Кнопки вкладок -->
@@ -299,16 +379,33 @@ if ($is_owner) {
                 <div class="profile-name-row">
                     <div>
                         <?php
+                        // ── Статус онлайн/оффлайн ────────────────────────────────
                         $status_text = '<small style="color:red;font-size:15px;">● Не в сети</small>';
+
                         if (!empty($_SESSION['USERDATA']['id'])) {
                             $stmt = $pdo->prepare("SELECT current_app, last_seen FROM user_activity WHERE user_id = ? ORDER BY last_seen DESC LIMIT 1");
                             $stmt->execute([$user['id']]);
                             $activity = $stmt->fetch(PDO::FETCH_ASSOC);
-                            if ($activity && strtotime($activity['last_seen']) + 180 > time()) {
-                                $app = htmlspecialchars($activity['current_app'] ?? '');
+
+                            $stmt = $pdo->prepare("SELECT updated FROM users WHERE id = ? LIMIT 1");
+                            $stmt->execute([$user['id']]);
+                            $webactivity = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                            $launcher_time = $activity    ? strtotime($activity['last_seen'])    : 0;
+                            $web_time      = $webactivity ? strtotime($webactivity['updated'])   : 0;
+                            $last_active   = max($launcher_time, $web_time);
+
+                            $is_online_launcher = $launcher_time && ($launcher_time + 60 > time());
+                            $is_online_web      = $web_time      && ($web_time      + 60 > time());
+
+                            if ($is_online_launcher || $is_online_web) {
+                                $app = $is_online_launcher ? htmlspecialchars($activity['current_app'] ?? '') : '';
                                 $status_text = $app
                                     ? '<small style="color:lightgreen;font-size:15px;">● В сети (Играет в ' . $app . ')</small>'
                                     : '<small style="color:lightgreen;font-size:15px;">● В сети</small>';
+                            } elseif ($last_active > 0) {
+                                $ago = format_last_seen($last_active);
+                                $status_text = '<small style="color:gray;font-size:15px;">● Был ' . $ago . '</small>';
                             }
                         }
                         ?>
@@ -432,6 +529,31 @@ if ($is_owner) {
                                 </div>
                             <?php endif; ?>
 
+                            <!-- Ачивки на вкладке профиля (перенесены сюда из-под аватарки) -->
+                            <?php if (!empty($achievements)): ?>
+                                <div class="pf-section">
+                                    <div class="pf-section-head">
+                                        <span class="pf-section-title">Достижения</span>
+                                    </div>
+                                    <div class="achievements-container" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+                                        <?php foreach ($achievements as $ach): ?>
+                                            <?php $title = htmlspecialchars($ach['name']); ?>
+                                            <div class="achievement-icon" title="<?= $title ?>"
+                                                onclick='showAchievementModal({
+                                                     title: <?= json_encode($title) ?>,
+                                                     description: <?= json_encode($ach["description"] ?? "") ?>,
+                                                     icon: <?= json_encode($ach["icon_url"] ?? "🏆") ?>,
+                                                     date: <?= json_encode($ach["awarded_at"] ?? "") ?>
+                                                 })'>
+                                                <?php if (!empty($ach["icon_url"])): ?>
+                                                    <img src="<?= htmlspecialchars($ach["icon_url"]) ?>" alt="<?= $title ?>" class="achievement-icon-img">
+                                                    <?php else: ?>🏆<?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
                             <!-- Последние игры -->
                             <?php if (!empty($games_main)): ?>
                                 <div class="pf-section">
@@ -550,7 +672,6 @@ if ($is_owner) {
 
                         <!-- Режим "Витрина" -->
                         <div class="showcase-container" id="showcaseView" style="display: none;">
-                            <!-- Игры -->
                             <div class="showcase-body" id="showcaseGamesBody">
                                 <div class="showcase-shelves" id="showcaseShelves">
                                     <?php
@@ -686,27 +807,95 @@ if ($is_owner) {
                     </div>
                 </div>
 
-                <!-- ── Вкладка "Безопасность / Разработчик" ── -->
-                <?php if ($is_owner): ?>
-                    <div id="tab-developer" class="tab-content">
-                        <div class="profile-card">
-                            <h2 class="section-title">Для разработчиков</h2>
-                            <div class="info-grid" style="display:grid;gap:20px;">
-                                <div class="info-card" style="background:rgba(255,255,255,0.03);padding:20px;border-radius:10px;">
+                <!-- ── Вкладка "Безопасность" ── -->
+                <div id="tab-developer" class="tab-content">
+                    <div class="profile-card">
+                        <?php if ($is_owner): ?>
+                            <h2 class="section-title">Безопасность и аккаунт</h2>
+
+                            <div style="display:grid;gap:20px;">
+
+                                <!-- Привязка / смена пароля -->
+                                <div style="background:rgba(255,255,255,0.03);padding:20px;border-radius:10px;">
+                                    <?php
+                                    $owner_data = $_SESSION['USERDATA'];
+                                    ?>
+                                    <?php if (empty($owner_data['email'])): ?>
+                                        <h3 style="margin-top:0;">Привязка почты</h3>
+                                        <p style="color:#888;font-size:0.9em;">Для тех, кто скучает по 2007</p>
+                                        <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+                                            <input type="email" name="email" required placeholder="Email"
+                                                style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:white;">
+                                            <input type="password" name="password" required placeholder="Пароль"
+                                                style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:white;">
+                                            <input type="password" name="confirm_password" required placeholder="Повторите пароль"
+                                                style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:white;">
+                                            <button name="bind_email"
+                                                style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.95em;">
+                                                Привязать почту
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
+                                        <h3 style="margin-top:0;">Почта</h3>
+                                        <p>Email: <b><?= htmlspecialchars($owner_data['email']) ?></b></p>
+                                        <?php if (!$owner_data['email_verified']): ?>
+                                            <div style="color:#f4a53a;background:rgba(244,165,58,0.1);border:1px solid rgba(244,165,58,0.3);padding:10px;border-radius:8px;margin-bottom:15px;">
+                                                ⚠️ Почта не подтверждена
+                                            </div>
+                                        <?php endif; ?>
+                                        <h3>Смена пароля</h3>
+                                        <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+                                            <input type="password" name="new_password" required placeholder="Новый пароль"
+                                                style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:white;">
+                                            <input type="password" name="confirm_password" required placeholder="Повторите пароль"
+                                                style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:white;">
+                                            <button name="change_password"
+                                                style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.95em;">
+                                                Обновить пароль
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- Завершение сеанса -->
+                                <div style="background:rgba(255,255,255,0.03);padding:20px;border-radius:10px;">
+                                    <h3 style="margin-top:0;">Завершение сеанса</h3>
+                                    <p style="color:#888;font-size:0.9em;line-height:1.5;">
+                                        Выход прекратит доступ к профилю на этом устройстве. Для повторного входа потребуется авторизация через Telegram или passphrase.
+                                    </p>
+                                    <form action="/swad/controllers/logout.php" method="POST"
+                                        onsubmit="return confirm('Вы уверены, что хотите выйти?')">
+                                        <button type="submit"
+                                            style="padding:10px 20px;background:#d9534f;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.95em;width:100%;">
+                                            Выйти из аккаунта
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Для разработчиков -->
+                                <div style="background:rgba(255,255,255,0.03);padding:20px;border-radius:10px;">
+                                    <h3 style="margin-top:0;">Разработчик</h3>
                                     <?php
                                     if ($curr_user->getUO($userID)) {
-                                        echo "<h1>Студия " . $curr_user->getUO($userID)[0]['name'] . "</h1>";
-                                        echo "<p><a href='/devs/select' style='color:var(--primary);text-decoration:none;'>>>> Вход в консоль для разработчиков</a></p>";
+                                        echo "<p>Студия <b>" . htmlspecialchars($curr_user->getUO($userID)[0]['name']) . "</b></p>";
+                                        echo "<p><a href='/devs/select' style='color:#c32178;text-decoration:none;'>>>> Вход в консоль для разработчиков</a></p>";
                                     } else {
-                                        echo "<h1>У вас ещё нет аккаунта разработчика</h1>";
-                                        echo "<p><a href='/devs/regorg' style='color:var(--primary);text-decoration:none;'>>>>Зарегистрируйте его бесплатно!</a></p>";
+                                        echo "<p style='color:#888;'>У вас ещё нет аккаунта разработчика</p>";
+                                        echo "<p><a href='/devs/regorg' style='color:#c32178;text-decoration:none;'>>>> Зарегистрируйте его бесплатно!</a></p>";
                                     }
                                     ?>
                                 </div>
+
                             </div>
-                        </div>
+
+                        <?php else: ?>
+                            <!-- Не владелец — вкладка скрыта, но на случай прямого доступа -->
+                            <div class="empty-state">
+                                <p>Этот раздел доступен только владельцу профиля.</p>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+                </div>
 
             </div><!-- /.profile-right -->
         </div>
@@ -957,7 +1146,6 @@ if ($is_owner) {
         (function() {
             const track = document.getElementById('carouselTrack');
             if (!track) return;
-
             const items = Array.from(track.children);
             const itemCount = items.length;
             let currentCenterIdx = 0;
@@ -977,7 +1165,6 @@ if ($is_owner) {
             document.querySelector('.carousel-3d-btn.prev')?.addEventListener('click', () => updatePositions(currentCenterIdx - 1));
             document.querySelector('.carousel-3d-btn.next')?.addEventListener('click', () => updatePositions(currentCenterIdx + 1));
 
-            // Колёсико
             const stage = document.getElementById('carouselStage');
             let wheelTimer = null;
             stage.addEventListener('wheel', e => {
@@ -990,42 +1177,30 @@ if ($is_owner) {
                 passive: false
             });
 
-            // Drag
-            let dragStartX = null;
-            let dragMoved = false;
+            let dragStartX = null,
+                dragMoved = false;
             const THRESHOLD = 50;
-
-            function lockSelect() {
-                document.body.style.userSelect = 'none';
-            }
-
-            function unlockSelect() {
-                document.body.style.userSelect = '';
-            }
-
-            function onStart(x) {
+            const lockSelect = () => document.body.style.userSelect = 'none';
+            const unlockSelect = () => document.body.style.userSelect = '';
+            const onStart = x => {
                 dragStartX = x;
                 dragMoved = false;
                 lockSelect();
-            }
-
-            function onMove(x) {
+            };
+            const onMove = x => {
                 if (dragStartX !== null && Math.abs(x - dragStartX) > 5) dragMoved = true;
-            }
-
-            function onEnd(x) {
+            };
+            const onEnd = x => {
                 if (dragStartX === null) return;
                 unlockSelect();
                 const diff = x - dragStartX;
                 if (Math.abs(diff) >= THRESHOLD) updatePositions(currentCenterIdx + (diff < 0 ? 1 : -1));
                 dragStartX = null;
-            }
+            };
 
-            // Блокируем переход по ссылке если это был drag
             stage.addEventListener('click', e => {
                 if (dragMoved) e.preventDefault();
             }, true);
-
             stage.style.cursor = 'grab';
             stage.addEventListener('mousedown', e => {
                 stage.style.cursor = 'grabbing';
@@ -1036,7 +1211,6 @@ if ($is_owner) {
                 stage.style.cursor = 'grab';
                 onEnd(e.clientX);
             });
-
             stage.addEventListener('touchstart', e => onStart(e.touches[0].clientX), {
                 passive: true
             });
@@ -1044,7 +1218,6 @@ if ($is_owner) {
                 passive: true
             });
             stage.addEventListener('touchend', e => onEnd(e.changedTouches[0].clientX));
-
             stage.querySelectorAll('img, a').forEach(el => el.setAttribute('draggable', 'false'));
         })();
     </script>
@@ -1062,9 +1235,7 @@ if ($is_owner) {
                 carousel.style.display = view === 'carousel' ? 'block' : 'none';
                 showcase.style.display = view === 'showcase' ? 'block' : 'none';
             }
-
             applyView(localStorage.getItem(STORAGE_KEY) || 'carousel');
-
             document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     localStorage.setItem(STORAGE_KEY, this.dataset.view);
@@ -1078,174 +1249,46 @@ if ($is_owner) {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
-
                 document.getElementById('carouselView').style.display = 'none';
                 document.getElementById('showcaseView').style.display = 'block';
-
                 const target = this.dataset.showcase;
                 const viewIcons = document.querySelector('.games-view-icons');
                 if (viewIcons) viewIcons.style.visibility = target === 'achievements' ? 'hidden' : 'visible';
-
                 if (target === 'games') {
                     document.querySelectorAll('.games-view-icon-btn').forEach(b => b.classList.toggle('active', b.dataset.view === 'showcase'));
                 }
-
                 document.getElementById('showcaseGamesBody').style.display = target === 'games' ? 'flex' : 'none';
                 document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'block' : 'none';
             });
         });
     </script>
 
-<script>
-    (function() {
-        const track = document.getElementById('carouselTrack');
-        if (!track) return;
+    <script>
+        // ── 3D-наклон при наведении ─────────────────────────────────
+        (function() {
+            const SELECTORS = ['#friendActionBtn', '.showcase-tab', '.profile-left .tab-button'];
 
-        const items = Array.from(track.children);
-        const totalUnique = <?= $total ?>; // количество уникальных игр
-        const itemCount = items.length;
+            function applyTilt(e) {
+                const btn = e.currentTarget;
+                const rect = btn.getBoundingClientRect();
+                const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+                btn.style.transform = `perspective(400px) rotateX(${-15*ny}deg) rotateY(${15*nx}deg) translateY(-3px) scale(1.04)`;
+            }
 
-        // Устанавливаем data-position для каждого элемента
-        function updatePositions(centerIndex) {
-            // centerIndex – абсолютный индекс элемента, который должен быть в центре
-            items.forEach((item, idx) => {
-                let offset = idx - centerIndex;
-                // Нормализуем offset для циклического эффекта (в пределах -floor(total/2) .. +floor(total/2))
-                // Но проще использовать offset как есть, но CSS обрабатывает любые значения
-                item.setAttribute('data-position', offset);
+            function resetTilt(e) {
+                e.currentTarget.style.transform = '';
+            }
+            SELECTORS.forEach(sel => {
+                document.querySelectorAll(sel).forEach(btn => {
+                    btn.style.transformStyle = 'preserve-3d';
+                    btn.style.willChange = 'transform';
+                    btn.addEventListener('mousemove', applyTilt);
+                    btn.addEventListener('mouseleave', resetTilt);
+                });
             });
-        }
-
-        // Начальное положение: центральный элемент с индексом 0 (первый)
-        updatePositions(0);
-
-        // Обработчики кнопок
-        const prevBtn = document.querySelector('.carousel-3d-btn.prev');
-        const nextBtn = document.querySelector('.carousel-3d-btn.next');
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                // Сдвигаем центр влево (увеличиваем offset для всех)
-                // Находим текущий центральный (data-position="0")
-                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
-                if (currentCenterIdx === -1) currentCenterIdx = 0;
-                let newCenterIdx = (currentCenterIdx - 1 + itemCount) % itemCount;
-                updatePositions(newCenterIdx);
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                let currentCenterIdx = items.findIndex(item => item.getAttribute('data-position') === '0');
-                if (currentCenterIdx === -1) currentCenterIdx = 0;
-                let newCenterIdx = (currentCenterIdx + 1) % itemCount;
-                updatePositions(newCenterIdx);
-            });
-        }
-    })();
-</script>
-<script>
-// Иконки сетка/список — переключение между каруселью и витриной
-(function() {
-    const STORAGE_KEY = 'games_view_mode'; // глобальный ключ — работает для всех профилей
-
-    function applyView(view) {
-        const carousel = document.getElementById('carouselView');
-        const showcase = document.getElementById('showcaseView');
-        if (!carousel || !showcase) return;
-
-        document.querySelectorAll('.games-view-icon-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.view === view);
-        });
-
-        if (view === 'carousel') {
-            carousel.style.display = 'block';
-            showcase.style.display = 'none';
-        } else {
-            carousel.style.display = 'none';
-            showcase.style.display = 'block';
-        }
-    }
-
-    // Восстанавливаем сохранённый режим при загрузке
-    const saved = localStorage.getItem(STORAGE_KEY) || 'carousel';
-    applyView(saved);
-
-    // Сохраняем при переключении
-    document.querySelectorAll('.games-view-icon-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const view = this.dataset.view;
-            localStorage.setItem(STORAGE_KEY, view);
-            applyView(view);
-        });
-    });
-})();
-</script>
-<script>
-// Переключение вкладок внутри витрины (Игры / Достижения)
-document.querySelectorAll('.showcase-tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-        document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-
-        // Принудительно переключаемся в режим витрины
-        document.getElementById('carouselView').style.display  = 'none';
-        document.getElementById('showcaseView').style.display  = 'block';
-
-        const target = this.dataset.showcase;
-
-        // Прячем иконки переключения режима на вкладке "Достижения"
-        const viewIcons = document.querySelector('.games-view-icons');
-        if (viewIcons) {
-            viewIcons.style.visibility = target === 'achievements' ? 'hidden' : 'visible';
-        }
-
-        // Обновляем активную иконку только для вкладки игр
-        if (target === 'games') {
-            document.querySelectorAll('.games-view-icon-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.view === 'showcase');
-            });
-        }
-
-        document.getElementById('showcaseGamesBody').style.display        = target === 'games'        ? 'flex' : 'none';
-        document.getElementById('showcaseAchievementsBody').style.display = target === 'achievements' ? 'block' : 'none';
-    });
-});
-</script>
-<script>
-// 3D-наклон при наведении — как у кнопок в хедере
-(function() {
-    const SELECTORS = [
-        '#friendActionBtn',
-        '.showcase-tab',
-        '.profile-left .tab-button',
-    ];
-
-    function applyTilt(e) {
-        const btn  = e.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const nx   = ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
-        const ny   = ((e.clientY - rect.top)   / rect.height) * 2 - 1;
-        const maxAngle  = 15;
-        const rotateY   = maxAngle * nx;
-        const rotateX   = -maxAngle * ny;
-        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px) scale(1.04)`;
-    }
-
-    function resetTilt(e) {
-        e.currentTarget.style.transform = '';
-    }
-
-    SELECTORS.forEach(sel => {
-        document.querySelectorAll(sel).forEach(btn => {
-            btn.style.transformStyle = 'preserve-3d';
-            btn.style.willChange     = 'transform';
-            btn.addEventListener('mousemove',  applyTilt);
-            btn.addEventListener('mouseleave', resetTilt);
-        });
-    });
-})();
-</script>
+        })();
+    </script>
 </body>
 
 </html>
