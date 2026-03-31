@@ -609,11 +609,13 @@
                 "></div>
                     <div class="image-subtitle">Профиль L4T</div>
                 </div>
+                <?php if ($isOwner): ?>
                 <div class="buttons-container">
                     <div class="left-side-button">Биржа</div>
                     <hr style="width:50%;margin:0 25%;opacity:20%">
                     <div class="left-side-button1">Создать заявку</div>
                 </div>
+                <?php endif; ?>
             </div>
 
             <div class="right-content-view">
@@ -1067,7 +1069,7 @@
                 });
             });
 
-            showView(localStorage.getItem('activeView') || 'profile');
+            showView(<?= $isOwner ? "localStorage.getItem('activeView') || 'profile'" : "'profile'" ?>);
             const savedSub = localStorage.getItem('createSubTab');
             if (savedSub)
                 document.querySelector(`#view-create .filter-item[data-filter="${savedSub}"]`)?.click();
