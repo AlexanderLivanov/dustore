@@ -71,7 +71,7 @@ require_once('swad/controllers/email_auth.php');
 
             <input type="hidden" name="action" value="register">
 
-            <div class="form-group"><input type="text" name="username" placeholder="Имя пользователя" required></div>
+            <div class="form-group"><input type="text" name="username" placeholder="Имя пользователя" <input type="text" pattern="[A-Za-z](?:[A-Za-z._]*[A-Za-z])?" /> required></div>
             <div class="form-group"><input type="email" name="email" placeholder="Email" required></div>
             <div class="form-group"><input type="password" name="password" placeholder="Пароль" required></div>
 

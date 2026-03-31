@@ -39,10 +39,10 @@ $posts_7d = (int)$pdo->query("
     WHERE created_at >= NOW() - INTERVAL 7 DAY
 ")->fetchColumn();
 
-$comments_7d = (int)$pdo->query("
-    SELECT COUNT(*) FROM comments
-    WHERE created_at >= NOW() - INTERVAL 7 DAY
-")->fetchColumn();
+// $comments_7d = (int)$pdo->query("
+//     SELECT COUNT(*) FROM comments
+//     WHERE created_at >= NOW() - INTERVAL 7 DAY
+// ")->fetchColumn();
 
 $likes_7d = (int)$pdo->query("
     SELECT COUNT(*) FROM likes
@@ -277,7 +277,7 @@ $games_all_time = cumulative($games_all_time);
             </div>
         </div>
 
-        <div class="section-2">
+        <!-- <div class="section-2">
             <h2>Активность за неделю</h2>
             <div class="stats-grid">
                 <div class="stat-item">
@@ -293,7 +293,7 @@ $games_all_time = cumulative($games_all_time);
                     <div class="stat-label">Лайков</div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <div class="section-2 grid-2">
             <div class="card">

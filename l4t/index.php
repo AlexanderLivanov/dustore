@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -423,6 +424,121 @@
             text-align: right;
             margin-top: 3px;
         }
+
+        .bid-card-item {
+            background: rgba(0, 0, 0, .25);
+            border: 1px solid rgba(255, 255, 255, .1);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 10px;
+        }
+
+        .bid-badge {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .bid-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .bid-icon.user {
+            background: rgba(195, 33, 120, .15);
+        }
+
+        .bid-icon.studio {
+            background: rgba(33, 195, 120, .15);
+        }
+
+        .bid-type {
+            font-size: 11px;
+            color: rgba(255, 255, 255, .35);
+        }
+
+        .bid-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bid-role {
+            font-size: 15px;
+            font-weight: 500;
+            color: #e8ddf0;
+            margin-bottom: 4px;
+        }
+
+        .bid-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .bid-tag {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 5px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, .6);
+        }
+
+        .bid-desc {
+            font-size: 13px;
+            color: rgba(255, 255, 255, .5);
+            line-height: 1.5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 400px;
+        }
+
+        .bid-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .bid-date {
+            font-size: 11px;
+            color: rgba(255, 255, 255, .3);
+        }
+
+        .bid-stats {
+            font-size: 11px;
+            color: rgba(255, 255, 255, .3);
+            display: flex;
+            gap: 8px;
+        }
+
+        .respond-btn {
+            font-size: 12px;
+            padding: 5px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(195, 33, 120, .4);
+            background: rgba(195, 33, 120, .1);
+            color: #e8ddf0;
+            cursor: pointer;
+            transition: background .15s;
+        }
+
+        .respond-btn:hover {
+            background: rgba(195, 33, 120, .25);
+        }
     </style>
 </head>
 
@@ -468,15 +584,9 @@
     $l4t_projects = json_decode($userdata['l4t_projects'] ?? '[]', true) ?: [];
     $l4t_about    = $userdata['l4t_about'] ?? '';
 
-    $bids_array = [
-        [1, "Howl-Growl",       1, "/path_to_cover", "CGI художник",      1, "non-free"],
-        [2, "Pigeon of Sorrow", 2, "/path_to_cover", "Unity программист", 1, "non-free"],
-        [3, "Solder Simulator", 3, "/path_to_cover", "Физик-ядерщик",     1, "non-free"],
-        [4, "Dustore",          4, "/path_to_cover", "Деньги",            1, "non-free"],
-        [4, "Dustore",          5, "/path_to_cover", "Деньги",            1, "non-free"],
-        [4, "Dustore",          6, "/path_to_cover", "Деньги",            1, "non-free"],
-        [4, "Dustore",          7, "/path_to_cover", "Деньги",            1, "non-free"],
-    ];
+    $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE stage = 'open' ORDER BY created_at DESC");
+    $stmt->execute();
+    $bids_array = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Превью «о себе» — 200 символов
     $aboutPreview = mb_substr($l4t_about, 0, 200);
@@ -670,7 +780,45 @@
                         </div>
                         <div id="market-projects" class="market-view active">
                             <?php foreach ($bids_array as $bid): ?>
-                                <div class="bid-container"></div>
+                                <div class="bid-card-item">
+                                    <div class="bid-badge">
+                                        <div class="bid-icon <?= $bid['owner_type'] === 'studio' ? 'studio' : 'user' ?>">
+                                            <?= $bid['owner_type'] === 'studio' ? '🏢' : '👤' ?>
+                                        </div>
+                                        <div class="bid-type"><?= $bid['owner_type'] === 'studio' ? 'студия' : 'пользователь' ?></div>
+                                    </div>
+                                    <div class="bid-main">
+                                        <div class="bid-role"><?= htmlspecialchars($bid['search_role']) ?></div>
+                                        <div class="bid-meta">
+                                            <?php if ($bid['search_spec']): ?><span class="bid-tag"><?= htmlspecialchars($bid['search_spec']) ?></span><?php endif; ?>
+                                            <?php if ($bid['experience']): ?><span class="bid-tag"><?= htmlspecialchars($bid['experience']) ?></span><?php endif; ?>
+                                            <?php if ($bid['conditions']): ?><span class="bid-tag"><?= htmlspecialchars($bid['conditions']) ?></span><?php endif; ?>
+                                            <?php if ($bid['goal']): ?><span class="bid-tag"><?= mb_substr($bid['goal'], 0, 20) ?></span><?php endif; ?>
+                                        </div>
+                                        <div class="bid-desc"><?= htmlspecialchars(mb_substr($bid['details'] ?? '', 0, 120)) ?></div>
+                                    </div>
+                                    <div class="bid-right">
+                                        <div class="bid-date"><?= date('d.m.Y', strtotime($bid['created_at'])) ?></div>
+                                        <div class="bid-stats">
+                                            <span>👁 <?= (int)$bid['views'] ?></span>
+                                            <span>💬 <?= (int)$bid['responses'] ?></span>
+                                        </div>
+                                        <button class="respond-btn"
+                                            data-bid="<?= (int)$bid['id'] ?>"
+                                            data-role="<?= htmlspecialchars($bid['search_role']) ?>"
+                                            data-spec="<?= htmlspecialchars($bid['search_spec'] ?? '') ?>"
+                                            data-exp="<?= htmlspecialchars($bid['experience'] ?? '') ?>"
+                                            data-cond="<?= htmlspecialchars($bid['conditions'] ?? '') ?>"
+                                            data-goal="<?= htmlspecialchars($bid['goal'] ?? '') ?>"
+                                            data-details="<?= htmlspecialchars($bid['details'] ?? '') ?>"
+                                            data-type="<?= htmlspecialchars($bid['owner_type'] ?? 'user') ?>"
+                                            data-date="<?= date('d.m.Y', strtotime($bid['created_at'])) ?>"
+                                            data-views="<?= (int)$bid['views'] ?>"
+                                            data-responses="<?= (int)$bid['responses'] ?>">
+                                            Откликнуться
+                                        </button>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
                         </div>
                         <div id="market-people" class="market-view">
@@ -860,6 +1008,10 @@
             close() {
                 document.getElementById('globalModal').classList.add('hidden');
                 document.getElementById('modalBody').innerHTML = '';
+                // сбрасываем кнопку после отклика
+                const saveBtn = document.getElementById('modalSave');
+                saveBtn.textContent = 'Сохранить';
+                saveBtn.disabled = false;
                 this._onSave = null;
             },
 
@@ -1400,6 +1552,66 @@
                     const len = document.getElementById('aboutTA').value.length;
                     document.getElementById('aboutCount').textContent = `${len} / 10000`;
                 });
+            }
+
+            // ════════════════════════════════════════════════════════
+            // ПРОСМОТР ЗАЯВКИ + ОТКЛИК
+            // ════════════════════════════════════════════════════════
+            document.getElementById('market-projects')?.addEventListener('click', e => {
+                const btn = e.target.closest('.respond-btn');
+                if (!btn) return;
+
+                const d = btn.dataset;
+                const typeLabel = d.type === 'studio' ? 'Студия' : 'Пользователь';
+                const typeIcon = d.type === 'studio' ? '🏢' : '👤';
+
+                function row(label, val) {
+                    if (!val) return '';
+                    return `<div style="display:flex;gap:10px;margin-bottom:8px;">
+            <span style="color:rgba(255,255,255,.4);font-size:.75rem;min-width:90px;padding-top:2px;">${label}</span>
+            <span style="color:#e8ddf0;font-size:.88rem;">${esc(val)}</span>
+        </div>`;
+                }
+
+                const bodyHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.08);">
+            <div style="width:36px;height:36px;border-radius:8px;background:${d.type === 'studio' ? 'rgba(33,195,120,.15)' : 'rgba(195,33,120,.15)'};display:flex;align-items:center;justify-content:center;font-size:16px;">${typeIcon}</div>
+            <span style="font-size:.78rem;color:rgba(255,255,255,.4);">${typeLabel}</span>
+            <span style="margin-left:auto;font-size:.75rem;color:rgba(255,255,255,.3);">${esc(d.date)} &nbsp;·&nbsp; 👁 ${esc(d.views)} &nbsp;·&nbsp; 💬 ${esc(d.responses)}</span>
+        </div>
+        ${row('Специальность', d.role)}
+        ${row('Уровень', d.spec)}
+        ${row('Опыт', d.exp)}
+        ${row('Условия', d.cond)}
+        ${row('Цель', d.goal)}
+        ${d.details ? `
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);">
+            <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:6px;">Описание</div>
+            <div style="font-size:.88rem;color:#e8ddf0;line-height:1.7;white-space:pre-wrap;">${esc(d.details)}</div>
+        </div>` : ''}
+        <div style="margin-top:18px;" id="respondFormWrap"></div>
+    `;
+
+                Modal.open(`Заявка #${d.bid}`, bodyHTML, () => submitRespond(d.bid), {
+                    hideSave: false
+                });
+
+                // Переименовываем кнопку «Сохранить» → «Откликнуться»
+                document.getElementById('modalSave').textContent = 'Откликнуться';
+            });
+
+            function submitRespond(bidId) {
+                apiPost('/swad/controllers/l4t/respond_bid.php', {
+                        bid_id: bidId
+                    })
+                    .then(d => {
+                        if (d.success) {
+                            document.getElementById('modalSave').textContent = '✓ Отклик отправлен';
+                            document.getElementById('modalSave').disabled = true;
+                        } else {
+                            alert(d.message || 'Не удалось отправить отклик');
+                        }
+                    });
             }
 
         }); // end DOMContentLoaded
