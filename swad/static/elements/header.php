@@ -316,7 +316,7 @@ $stmt->execute([
                 <!--<button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>-->
                 <button class="button" onclick="location.href='/about'">О нас</button>
                 <button class="button" onclick="location.href='/search'">Поиск</button>
-                <button class="button disabled-btn tooltip">L4T<span class="tooltiptext">Скоро</span></button>
+                <button class="button tooltip" onclick="location.href='/l4t'">L4T<span class="tooltiptext">Уже тут.</span></button>
             </div>
         </div>
         <div class="section center-section">

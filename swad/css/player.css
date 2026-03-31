@@ -584,15 +584,6 @@ h2 {
     }
 }
 
-.achievements-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-    /* justify-content: center; */
-    position: relative;
-    z-index: 2;
-}
 
 .achievement-icon {
     width: 40px;
@@ -2072,4 +2063,42 @@ h2 {
     transform-style: preserve-3d;
     will-change: transform;
     transition: transform 0.001s ease-out, background 0.2s, color 0.2s;
+}
+/* ── Кнопка L4T ── */
+.pf-l4t-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    background: linear-gradient(135deg, rgba(195, 33, 120, 0.18), rgba(116, 21, 93, 0.25));
+    border: 1px solid rgba(195, 33, 120, 0.5);
+    border-radius: 24px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s, transform 0.18s, box-shadow 0.2s;
+    align-self: flex-start;
+    box-shadow: 0 2px 12px rgba(195, 33, 120, 0.2);
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.pf-l4t-btn:hover {
+    background: linear-gradient(135deg, rgba(195, 33, 120, 0.32), rgba(116, 21, 93, 0.4));
+    border-color: rgba(195, 33, 120, 0.85);
+    box-shadow: 0 4px 20px rgba(195, 33, 120, 0.4);
+    transform: translateY(-2px);
+}
+
+.pf-l4t-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(195, 33, 120, 0.35);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 7px;
+    border-radius: 8px;
+    border: 1px solid rgba(195, 33, 120, 0.4);
 }
