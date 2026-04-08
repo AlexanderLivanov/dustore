@@ -525,7 +525,7 @@ $stmt->execute([
                 });
 
                 const data = await response.json();
-                console.log("Response from PHP:", data); // ✅ ответ сервера
+                console.log("Response from PHP:", data);
                 alert("Подписка сохранена");
             } catch (err) {
                 console.error("Push subscription failed:", err);
@@ -535,8 +535,7 @@ $stmt->execute([
 
 <script>
   (function() {
-)
-    const gradientColors = ['#14041d', '#c32178', '#ffaa00']; // ЗАМЕНИ НА СВОИ
+    const gradientColors = ['#14041d', '#c32178', '#ffaa00']; 
 
     const hero = document.querySelector('.hero');
     const header = document.querySelector('.header');

@@ -540,211 +540,30 @@
             background: rgba(195, 33, 120, .25);
         }
 
-        /* ── Поиск и фильтры в "Созданные заявки" ── */
-        .my-bids-toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .my-bids-search {
-            flex: 1;
-            min-width: 160px;
-            background: rgba(0, 0, 0, .4);
-            border: 1px solid rgba(255, 255, 255, .15);
-            border-radius: 7px;
-            color: #e8ddf0;
-            padding: 6px 10px 6px 30px;
-            font-family: inherit;
-            font-size: .85rem;
-            outline: none;
-            transition: border-color .15s;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,.35)' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: 8px center;
-        }
-
-        .my-bids-search:focus {
-            border-color: #c32178;
-        }
-
-        .my-bids-filter-tags {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-
-        .my-bids-ftag {
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .14);
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: .78rem;
-            color: rgba(255, 255, 255, .55);
-            cursor: pointer;
-            transition: background .12s, border-color .12s, color .12s;
-            font-family: inherit;
-        }
-
-        .my-bids-ftag.active {
-            background: rgba(195, 33, 120, .18);
-            border-color: rgba(195, 33, 120, .45);
-            color: #e8ddf0;
-        }
-
-        .my-bids-ftag:hover {
-            border-color: rgba(195, 33, 120, .35);
-            color: #e8ddf0;
-        }
-
-        /* ── Индикатор редактирования заявки ── */
-        .editing-banner {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(195, 33, 120, .12);
-            border: 1px solid rgba(195, 33, 120, .3);
-            border-radius: 8px;
-            padding: 8px 14px;
-            margin-bottom: 12px;
-            font-size: .84rem;
-            color: #e8ddf0;
-        }
-
-        .editing-banner .cancel-edit {
-            margin-left: auto;
-            cursor: pointer;
-            color: rgba(255, 255, 255, .4);
-            font-size: .78rem;
-            background: none;
-            border: none;
-            font-family: inherit;
-            transition: color .12s;
-        }
-
-        .editing-banner .cancel-edit:hover {
-            color: #f44336;
-        }
-
-        /* Кнопка «Отправить» — серая по умолчанию, активная после изменений */
-        .ok-btn {
+        .ok-btn.disabled {
             opacity: 0.4;
             pointer-events: none;
-            transition: background .2s, opacity .2s;
-            background: #555 !important;
+            background: gray;
         }
 
-        .ok-btn.dirty {
-            opacity: 1;
-            pointer-events: all;
-            background: #c32178 !important;
+        form.editing {
+            border: 1px solid #c32178;
+            box-shadow: 0 0 10px rgba(195, 33, 120, 0.3);
         }
 
-        /* ── Вкладка Отклики ── */
-        .tab-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #c32178;
-            color: #fff;
-            border-radius: 10px;
-            font-size: .65rem;
-            font-weight: 600;
-            min-width: 16px;
-            height: 16px;
-            padding: 0 4px;
-            margin-left: 4px;
-            line-height: 1;
-        }
-
-        .tab-badge.zero {
-            display: none;
-        }
-
-        /* Подвкладки откликов */
-        .resp-sub-tabs {
-            display: flex;
-            gap: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, .1);
-            margin-bottom: 14px;
-        }
-
-        .resp-sub-tab {
-            padding: 6px 16px;
-            font-size: .83rem;
-            color: rgba(255, 255, 255, .45);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: color .12s, border-color .12s;
-            margin-bottom: -1px;
-        }
-
-        .resp-sub-tab.active {
-            color: #e8ddf0;
-            border-bottom-color: #c32178;
-        }
-
-        .resp-sub-tab:hover {
-            color: #e8ddf0;
-        }
-
-        .resp-pane {
-            display: none;
-        }
-
-        .resp-pane.active {
-            display: block;
-        }
-
-        .resp-card {
-            background: rgba(0, 0, 0, .22);
-            border: 1px solid rgba(255, 255, 255, .09);
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-        }
-
-        .resp-card-title {
-            font-size: .9rem;
-            color: #e8ddf0;
-            margin-bottom: 4px;
-        }
-
-        .resp-card-meta {
-            font-size: .75rem;
-            color: rgba(255, 255, 255, .35);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .resp-card-meta .rc-status {
-            color: #c32178;
-        }
-
-        /* ── Профиль — фикс прокрутки ── */
         .profile-page {
-            padding-right: 4px;
+            max-height: 100%;
+            overflow-y: auto;
         }
 
         .right-content-view {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .content-background {
+            height: 100%;
             overflow-y: auto;
-            max-height: calc(100vh - 80px);
-        }
-
-        .right-content-view::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .right-content-view::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .right-content-view::-webkit-scrollbar-thumb {
-            background: rgba(195, 33, 120, .3);
-            border-radius: 4px;
         }
     </style>
 </head>
@@ -798,38 +617,6 @@
     // Превью «о себе» — 200 символов
     $aboutPreview = mb_substr($l4t_about, 0, 200);
     $aboutHasMore = mb_strlen($l4t_about) > 200;
-
-    // Мои отклики
-    $my_responds = [];
-    $incoming_responds = [];
-    if (!empty($_SESSION['USERDATA']['id'])) {
-        try {
-            $stmt2 = $desl4tpdo->prepare("
-                SELECT r.*, b.search_role, b.search_spec, b.conditions, b.created_at AS bid_date
-                FROM responds r
-                LEFT JOIN bids b ON b.id = r.bid_id
-                WHERE r.user_id = ?
-                ORDER BY r.created_at DESC
-            ");
-            $stmt2->execute([$_SESSION['USERDATA']['id']]);
-            $my_responds = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt3 = $desl4tpdo->prepare("
-                SELECT r.*, b.search_role, b.search_spec, b.conditions,
-                       u.username, u.telegram_username
-                FROM responds r
-                LEFT JOIN bids b ON b.id = r.bid_id
-                LEFT JOIN users u ON u.id = r.user_id
-                WHERE b.bidder_id = ?
-                ORDER BY r.created_at DESC
-            ");
-            $stmt3->execute([$_SESSION['USERDATA']['id']]);
-            $incoming_responds = $stmt3->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            $my_responds = [];
-            $incoming_responds = [];
-        }
-    }
     ?>
     <div class="main-container">
         <div class="header-container">
@@ -1015,6 +802,10 @@
 
                     <!-- ══ БИРЖА ══════════════════════════════════ -->
                     <div id="view-market" class="content-view">
+                        <div style="display:flex; gap:10px; margin-bottom:10px;">
+                            <input type="text" id="searchInput" placeholder="Поиск..." class="l4t-input">
+                            <input type="text" id="tagFilter" placeholder="Фильтр по тегам..." class="l4t-input">
+                        </div>
                         <div class="content-filter">
                             <div class="filter-item active" data-filter="projects">Проекты</div>
                             <div class="filter-item" data-filter="people">Люди</div>
@@ -1075,15 +866,9 @@
                         <div class="content-filter">
                             <div class="filter-item active" data-filter="new_reqs">Новые заявки</div>
                             <div class="filter-item" data-filter="my_reqs">Созданные заявки</div>
-                            <div class="filter-item" data-filter="responses">Отклики <span class="tab-badge" id="respBadge">0</span></div>
                         </div>
 
                         <div id="tab-new" class="req-view active">
-                            <!-- Баннер редактирования (скрыт по умолчанию) -->
-                            <div class="editing-banner hidden" id="editingBanner">
-                                ✏️ <span>Редактирование заявки <strong id="editingBidLabel">#—</strong></span>
-                                <button class="cancel-edit" id="cancelEditBtn">✕ отменить</button>
-                            </div>
                             <div class="switch-row">
                                 <?php if (!empty($user_orgs)): ?>
                                     <span>Студия (<?= htmlspecialchars($user_orgs[0]['name']) ?>)</span>
@@ -1152,112 +937,38 @@
                                     <label>Детальное описание:</label>
                                     <div class="desc-wrap">
                                         <textarea name="details">Ищу бойца в команду для крутого проекта...</textarea>
-                                        <button type="submit" class="ok-btn">✓</button>
+                                        <button type="submit" class="ok-btn disabled" disabled>✓</button>
                                     </div>
                                 </div>
                             </form>
                         </div>
 
                         <div id="tab-my" class="req-view">
-                            <!-- Toolbar поиска и фильтрации -->
-                            <div class="my-bids-toolbar">
-                                <input class="my-bids-search" type="text" id="myBidsSearch" placeholder="Поиск по названию или ключевым словам…">
-                                <div class="my-bids-filter-tags" id="myBidsFilterTags">
-                                    <button class="my-bids-ftag active" data-tag="">Все</button>
-                                    <?php
-                                    $seen_tags = [];
-                                    foreach ($my_bids as $bid) {
-                                        foreach (['search_spec', 'experience', 'conditions'] as $col) {
-                                            $v = trim($bid[$col] ?? '');
-                                            if ($v && !in_array($v, $seen_tags)) {
-                                                $seen_tags[] = $v;
-                                                echo '<button class="my-bids-ftag" data-tag="' . htmlspecialchars($v, ENT_QUOTES) . '">' . htmlspecialchars($v) . '</button>';
-                                            }
-                                        }
-                                    }
-                                    ?>
-                                </div>
-                            </div>
-                            <div id="myBidsList">
-                                <?php foreach ($my_bids as $bid): ?>
-                                    <div class="my-bid"
-                                        data-role="<?= htmlspecialchars($bid['search_role'] ?? '', ENT_QUOTES) ?>"
-                                        data-spec="<?= htmlspecialchars($bid['search_spec'] ?? '', ENT_QUOTES) ?>"
-                                        data-exp="<?= htmlspecialchars($bid['experience'] ?? '', ENT_QUOTES) ?>"
-                                        data-cond="<?= htmlspecialchars($bid['conditions'] ?? '', ENT_QUOTES) ?>"
-                                        data-details="<?= htmlspecialchars(mb_substr($bid['details'] ?? '', 0, 200), ENT_QUOTES) ?>">
-                                        <div class="my-bid-main">
-                                            <div>
-                                                <strong><?= htmlspecialchars($bid['search_role']) ?></strong>
-                                                <div class="bid-date">
-                                                    <?= date('d.m.Y H:i', strtotime($bid['created_at'])) ?>
-                                                    <span class="stats">👁 <?= (int)$bid['views'] ?> | 💬 <?= (int)$bid['responses'] ?></span>
-                                                </div>
+                            <?php foreach ($my_bids as $bid): ?>
+                                <div class="my-bid">
+                                    <div class="my-bid-main">
+                                        <div>
+                                            <strong><?= htmlspecialchars($bid['search_role']) ?></strong>
+                                            <div class="bid-date">
+                                                <?= date('d.m.Y H:i', strtotime($bid['created_at'])) ?>
+                                                <span class="stats">👁 <?= (int)$bid['views'] ?> | 💬 <?= (int)$bid['responses'] ?></span>
                                             </div>
-                                            <button class="submit-btn edit-btn"
-                                                data-id="<?= (int)$bid['id'] ?>"
-                                                data-role="<?= htmlspecialchars($bid['search_role']) ?>"
-                                                data-spec="<?= htmlspecialchars($bid['search_spec']  ?? '') ?>"
-                                                data-exp="<?= htmlspecialchars($bid['experience']    ?? '') ?>"
-                                                data-cond="<?= htmlspecialchars($bid['conditions']   ?? '') ?>"
-                                                data-goal="<?= htmlspecialchars($bid['goal']         ?? '') ?>"
-                                                data-details="<?= htmlspecialchars($bid['details']   ?? '') ?>">
-                                                Редактировать
-                                            </button>
                                         </div>
+                                        <button class="submit-btn edit-btn"
+                                            data-id="<?= (int)$bid['id'] ?>"
+                                            data-role="<?= htmlspecialchars($bid['search_role']) ?>"
+                                            data-spec="<?= htmlspecialchars($bid['search_spec']  ?? '') ?>"
+                                            data-exp="<?= htmlspecialchars($bid['experience']    ?? '') ?>"
+                                            data-cond="<?= htmlspecialchars($bid['conditions']   ?? '') ?>"
+                                            data-goal="<?= htmlspecialchars($bid['goal']         ?? '') ?>"
+                                            data-details="<?= htmlspecialchars($bid['details']   ?? '') ?>">
+                                            Редактировать
+                                        </button>
                                     </div>
-                                <?php endforeach; ?>
-                            </div><!-- /myBidsList -->
-                        </div><!-- /tab-my -->
-
-                        <!-- ══ ОТКЛИКИ ══════════════════════════── -->
-                        <div id="tab-responses" class="req-view">
-                            <div class="resp-sub-tabs">
-                                <div class="resp-sub-tab active" data-resp="mine">Мои отклики</div>
-                                <div class="resp-sub-tab" data-resp="incoming">Отклики на мои заявки</div>
-                            </div>
-                            <div id="resp-mine" class="resp-pane active">
-
-                                <?php if (empty($my_responds)): ?>
-                                    <div style="color:rgba(255,255,255,.35);font-size:.85rem;padding:20px 0;">Вы ещё не откликались на заявки</div>
-                                <?php else: ?>
-                                    <?php foreach ($my_responds as $r): ?>
-                                        <div class="resp-card">
-                                            <div class="resp-card-title"><?= htmlspecialchars($r['search_role'] ?? '—') ?></div>
-                                            <div class="resp-card-meta">
-                                                <?php if ($r['search_spec']): ?><span><?= htmlspecialchars($r['search_spec']) ?></span><?php endif; ?>
-                                                <?php if ($r['conditions']): ?><span><?= htmlspecialchars($r['conditions']) ?></span><?php endif; ?>
-                                                <span>Отклик: <?= date('d.m.Y H:i', strtotime($r['created_at'])) ?></span>
-                                                <span class="rc-status"><?= htmlspecialchars($r['status'] ?? 'ожидает') ?></span>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
-                            <div id="resp-incoming" class="resp-pane">
-
-                                <?php if (empty($incoming_responds)): ?>
-                                    <div style="color:rgba(255,255,255,.35);font-size:.85rem;padding:20px 0;">На ваши заявки пока нет откликов</div>
-                                <?php else: ?>
-                                    <?php foreach ($incoming_responds as $r): ?>
-                                        <div class="resp-card">
-                                            <div class="resp-card-title">
-                                                <?= htmlspecialchars($r['username'] ?? ('@' . $r['telegram_username'])) ?>
-                                                <span style="color:rgba(255,255,255,.35);font-size:.78rem;margin-left:6px;">→ <?= htmlspecialchars($r['search_role'] ?? '—') ?></span>
-                                            </div>
-                                            <div class="resp-card-meta">
-                                                <?php if ($r['search_spec']): ?><span><?= htmlspecialchars($r['search_spec']) ?></span><?php endif; ?>
-                                                <?php if ($r['conditions']): ?><span><?= htmlspecialchars($r['conditions']) ?></span><?php endif; ?>
-                                                <span><?= date('d.m.Y H:i', strtotime($r['created_at'])) ?></span>
-                                                <span class="rc-status"><?= htmlspecialchars($r['status'] ?? 'новый') ?></span>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
-                        </div><!-- /tab-responses -->
-
-                    </div><!-- /view-create -->
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
 
                 </div><!-- /content-background -->
             </div>
@@ -1277,6 +988,10 @@
     </div>
 
     <script>
+        if (location.search.includes('tab=my')) {
+            document.querySelector('[data-filter="my_reqs"]')?.click();
+        }
+
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
         const USER_ID = <?= (int)($userdata['id'] ?? 0) ?>;
         let expModel = <?= json_encode($l4t_exp) ?>;
@@ -1365,8 +1080,6 @@
             };
 
             function showView(name) {
-                // Fallback — если сохранено невалидное имя (напр. 'responses')
-                if (!views[name]) name = 'profile';
                 Object.values(views).forEach(v => {
                     if (v) v.style.display = 'none';
                 });
@@ -1382,49 +1095,21 @@
             buttons.create?.addEventListener('click', () => showView('create'));
             buttons.profile?.addEventListener('click', () => showView('profile'));
 
-            // ── Переключение вкладок Новые / Созданные / Отклики ──
-            function showCreateTab(filter) {
-                document.querySelectorAll('#view-create .filter-item').forEach(b => b.classList.remove('active'));
-                const target = document.querySelector(`#view-create .filter-item[data-filter="${filter}"]`);
-                if (target) target.classList.add('active');
-                document.getElementById('tab-new').classList.toggle('active', filter === 'new_reqs');
-                document.getElementById('tab-my').classList.toggle('active', filter === 'my_reqs');
-                document.getElementById('tab-responses').classList.toggle('active', filter === 'responses');
-                localStorage.setItem('createSubTab', filter);
-            }
-
             document.querySelectorAll('#view-create .filter-item').forEach(btn => {
-                btn.addEventListener('click', () => showCreateTab(btn.dataset.filter));
-            });
-
-            // Счётчик откликов на бейдже
-            (function updateRespBadge() {
-                const mineCount = document.querySelectorAll('#resp-mine  .resp-card').length;
-                const incomingCount = document.querySelectorAll('#resp-incoming .resp-card').length;
-                const total = mineCount + incomingCount;
-                const badge = document.getElementById('respBadge');
-                if (badge) {
-                    badge.textContent = total;
-                    badge.classList.toggle('zero', total === 0);
-                }
-            })();
-
-            // Подвкладки Отклики
-            document.querySelectorAll('.resp-sub-tab').forEach(t => {
-                t.addEventListener('click', () => {
-                    document.querySelectorAll('.resp-sub-tab').forEach(x => x.classList.remove('active'));
-                    t.classList.add('active');
-                    const pane = t.dataset.resp;
-                    document.getElementById('resp-mine').classList.toggle('active', pane === 'mine');
-                    document.getElementById('resp-incoming').classList.toggle('active', pane === 'incoming');
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#view-create .filter-item').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const isNew = btn.dataset.filter === 'new_reqs';
+                    document.getElementById('tab-new').classList.toggle('active', isNew);
+                    document.getElementById('tab-my').classList.toggle('active', !isNew);
+                    localStorage.setItem('createSubTab', btn.dataset.filter);
                 });
             });
 
             showView(<?= $isOwner ? "localStorage.getItem('activeView') || 'profile'" : "'profile'" ?>);
             const savedSub = localStorage.getItem('createSubTab');
-            const validSubs = ['new_reqs', 'my_reqs', 'responses'];
-            if (savedSub && validSubs.includes(savedSub)) showCreateTab(savedSub);
-            else showCreateTab('new_reqs');
+            if (savedSub)
+                document.querySelector(`#view-create .filter-item[data-filter="${savedSub}"]`)?.click();
 
             const typeToggle = document.getElementById('typeToggle');
 
@@ -1438,129 +1123,31 @@
             typeToggle?.addEventListener('change', updateOwner);
             updateOwner();
 
-            // ── Кнопка «✓» — dirty-state ──
-            const okBtn = document.querySelector('.ok-btn');
-            let formDirty = false;
-            let editingBidId = null;
-
-            // Снимки исходных значений формы (для определения изменений при редактировании)
-            function getFormSnapshot() {
-                return {
-                    role: document.querySelector('[name="role"]')?.value,
-                    spec: document.querySelector('[name="spec"]')?.value,
-                    exp: document.querySelector('[name="exp"]')?.value,
-                    cond: document.querySelector('[name="cond"]')?.value,
-                    goal: document.querySelector('[name="goal"]')?.value,
-                    details: document.querySelector('[name="details"]')?.value,
-                };
-            }
-            let formSnapshot = null;
-
-            function checkDirty() {
-                if (!formSnapshot) return;
-                const curr = getFormSnapshot();
-                const changed = Object.keys(curr).some(k => curr[k] !== formSnapshot[k]);
-                if (changed && !formDirty) {
-                    formDirty = true;
-                    okBtn?.classList.add('dirty');
-                }
-            }
-
-            function setDirty() {
-                formDirty = true;
-                okBtn?.classList.add('dirty');
-            }
-
-            function resetDirty(snap) {
-                formDirty = false;
-                formSnapshot = snap || getFormSnapshot();
-                okBtn?.classList.remove('dirty');
-            }
-
-            // Слушаем изменения полей формы
-            document.querySelectorAll('#tab-new select, #tab-new textarea').forEach(el => {
-                el.addEventListener('change', checkDirty);
-                el.addEventListener('input', checkDirty);
-            });
-
-            // Сброс dirty после успешной отправки (через перезагрузку страница и так обновится,
-            // но на случай если форма отправляется аяксом — добавим хук)
-            document.querySelector('#tab-new form')?.addEventListener('submit', () => {
-                resetDirty(null);
-                editingBidId = null;
-                document.getElementById('editingBanner')?.classList.add('hidden');
-            });
-
-            // Инициализируем снимок
-            formSnapshot = getFormSnapshot();
-
-            // ── Кнопка отмены редактирования ──
-            document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
-                editingBidId = null;
-                document.getElementById('bid_id').value = '';
-                document.getElementById('editingBanner')?.classList.add('hidden');
-                // Сброс полей к дефолту
-                document.querySelector('[name="role"]').selectedIndex = 0;
-                document.querySelector('[name="spec"]').selectedIndex = 0;
-                document.querySelector('[name="exp"]').selectedIndex = 0;
-                document.querySelector('[name="cond"]').selectedIndex = 0;
-                document.querySelector('[name="goal"]').selectedIndex = 0;
-                document.querySelector('[name="details"]').value = 'Ищу бойца в команду для крутого проекта...';
-                resetDirty(getFormSnapshot());
-            });
-
-            // ── Редактирование заявки ──
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    showView('create');
-                    showCreateTab('new_reqs');
-                    editingBidId = btn.dataset.id;
+
+                    const form = document.querySelector('#tab-new form');
+
                     document.getElementById('bid_id').value = btn.dataset.id;
-                    document.querySelector('[name="role"]').value = btn.dataset.role;
-                    document.querySelector('[name="spec"]').value = btn.dataset.spec;
-                    document.querySelector('[name="exp"]').value = btn.dataset.exp;
-                    document.querySelector('[name="cond"]').value = btn.dataset.cond;
-                    document.querySelector('[name="goal"]').value = btn.dataset.goal;
-                    document.querySelector('[name="details"]').value = btn.dataset.details;
-                    // Показываем баннер
-                    const banner = document.getElementById('editingBanner');
-                    const label = document.getElementById('editingBidLabel');
-                    if (banner) banner.classList.remove('hidden');
-                    if (label) label.textContent = '#' + btn.dataset.id;
-                    // Сброс dirty — форма ещё не изменялась
-                    resetDirty(getFormSnapshot());
-                });
-            });
 
-            // ── Поиск и фильтрация в "Созданные заявки" ──
-            const myBidsList = document.getElementById('myBidsList');
-            const myBidsSearch = document.getElementById('myBidsSearch');
+                    form.role.value = btn.dataset.role;
+                    form.spec.value = btn.dataset.spec;
+                    form.exp.value = btn.dataset.exp;
+                    form.cond.value = btn.dataset.cond;
+                    form.goal.value = btn.dataset.goal;
+                    form.details.value = btn.dataset.details;
 
-            function applyMyBidsFilter() {
-                const query = (myBidsSearch?.value || '').toLowerCase().trim();
-                const activeTag = document.querySelector('.my-bids-ftag.active')?.dataset.tag || '';
-                myBidsList?.querySelectorAll('.my-bid').forEach(card => {
-                    const role = (card.dataset.role || '').toLowerCase();
-                    const spec = (card.dataset.spec || '').toLowerCase();
-                    const exp = (card.dataset.exp || '').toLowerCase();
-                    const cond = (card.dataset.cond || '').toLowerCase();
-                    const details = (card.dataset.details || '').toLowerCase();
-                    const text = role + ' ' + spec + ' ' + exp + ' ' + cond + ' ' + details;
-                    const matchSearch = !query || text.includes(query);
-                    const matchTag = !activeTag || spec === activeTag.toLowerCase() ||
-                        exp === activeTag.toLowerCase() ||
-                        cond === activeTag.toLowerCase();
-                    card.style.display = (matchSearch && matchTag) ? '' : 'none';
-                });
-            }
+                    // сброс
+                    isDirty = false;
 
-            myBidsSearch?.addEventListener('input', applyMyBidsFilter);
+                    const submitBtn = form.querySelector('.ok-btn');
+                    submitBtn.classList.add('disabled');
+                    submitBtn.disabled = true;
 
-            document.querySelectorAll('.my-bids-ftag').forEach(tag => {
-                tag.addEventListener('click', () => {
-                    document.querySelectorAll('.my-bids-ftag').forEach(t => t.classList.remove('active'));
-                    tag.classList.add('active');
-                    applyMyBidsFilter();
+                    form.classList.add('editing');
+
+                    // переключение вкладки
+                    document.querySelector('[data-filter="new_reqs"]').click();
                 });
             });
 
@@ -2081,6 +1668,40 @@
             }
 
         }); // end DOMContentLoaded
+        function applyFilters() {
+            const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const tag = document.getElementById('tagFilter')?.value.toLowerCase() || '';
+
+            document.querySelectorAll('.bid-card-item').forEach(card => {
+                const role = card.querySelector('.bid-role')?.textContent.toLowerCase() || '';
+                const desc = card.querySelector('.bid-desc')?.textContent.toLowerCase() || '';
+
+                const tags = [...card.querySelectorAll('.bid-tag')]
+                    .map(t => t.textContent.toLowerCase())
+                    .join(' ');
+
+                const textMatch = (role + ' ' + desc).includes(search);
+                const tagMatch = tags.includes(tag);
+
+                card.style.display = (textMatch && tagMatch) ? '' : 'none';
+            });
+        }
+
+        document.getElementById('searchInput')?.addEventListener('input', applyFilters);
+        document.getElementById('tagFilter')?.addEventListener('input', applyFilters);
+
+        const form = document.querySelector('#tab-new form');
+        const submitBtn = form?.querySelector('.ok-btn');
+
+        let isDirty = false;
+
+        form?.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('input', () => {
+                isDirty = true;
+                submitBtn.classList.remove('disabled');
+                submitBtn.disabled = false;
+            });
+        });
     </script>
 </body>
 

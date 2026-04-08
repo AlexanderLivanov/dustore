@@ -54,5 +54,8 @@ if (!empty($data['bid_id'])) {
     ]);
 }
 
-echo ("<script>alert('Ваша заявка успешно создана!')</script>");
-header("Location: /l4t");
+// echo ("<script>alert('Ваша заявка успешно создана!')</script>");
+// header("Location: /l4t");
+
+header("Location: /l4t/?tab=my");
+exit;
