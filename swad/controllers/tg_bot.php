@@ -1,5 +1,7 @@
 <?php
-function send_private_message($uid, $message){
+
+function send_private_message($uid, $message)
+{
     $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
 
     $data = [
@@ -9,25 +11,47 @@ function send_private_message($uid, $message){
     ];
 
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $data,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+    ]);
+
     $response = curl_exec($ch);
+
+    if ($response === false) {
+        $err = curl_error($ch);
+        curl_close($ch);
+        return "CURL ERROR: " . $err;
+    }
+
     curl_close($ch);
 
     $responseData = json_decode($response, true);
+
     if ($responseData && $responseData['ok']) {
-        $result = "Сообщение успешно отправлено!";
-    } else {
-        $result = "Ошибка отправки: " . ($responseData['description'] ?? 'неизвестная ошибка');
+        return "Сообщение успешно отправлено!";
     }
 
-    return $result;
+    return "Ошибка отправки: " . ($responseData['description'] ?? 'неизвестная ошибка');
 }
 
-function send_group_message($group_id, $message, $keyboard_flag, $link){
-    if($keyboard_flag == true and $link != ""){
+
+function send_group_message($group_id, $message, $keyboard_flag, $link)
+{
+    $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
+
+    $data = [
+        'chat_id' => $group_id,
+        'text' => $message,
+        'parse_mode' => 'HTML',
+        'disable_web_page_preview' => true
+    ];
+
+    if ($keyboard_flag && $link !== "") {
         $keyboard = [
             'inline_keyboard' => [
                 [
@@ -36,41 +60,37 @@ function send_group_message($group_id, $message, $keyboard_flag, $link){
             ]
         ];
 
-        $data = [
-            'chat_id' => $group_id,
-            'text' => $message,
-            'parse_mode' => 'HTML',
-            'reply_markup' => json_encode($keyboard),
-            'disable_web_page_preview' => true
-        ];
-    }else{
-        $data = [
-            'chat_id' => $group_id,
-            'text' => $message,
-            'parse_mode' => 'HTML',
-            'disable_web_page_preview' => true
-        ];
+        $data['reply_markup'] = json_encode($keyboard);
     }
 
-
-    $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
     $ch = curl_init();
+
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $data,
-        CURLOPT_RETURNTRANSFER => true
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+
+        CURLOPT_PROXY => "213.165.37.31:1080",
+        CURLOPT_PROXYTYPE => CURLPROXY_SOCKS5_HOSTNAME
     ]);
+
     $response = curl_exec($ch);
+
+    if ($response === false) {
+        $err = curl_error($ch);
+        curl_close($ch);
+        return "CURL ERROR: " . $err;
+    }
+
     curl_close($ch);
 
     $result = json_decode($response, true);
-    if ($result['ok']) {
-        $res = "Уведомление отправлено в группу!";
-    } else {
-        $res = "Ошибка: " . $result['description'];
+
+    if (!$result) {
+        return "INVALID RESPONSE: " . $response;
     }
 
-    return $res;
+    return "Ошибка: " . ($result['description'] ?? 'неизвестная ошибка');
 }
-?>

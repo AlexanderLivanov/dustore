@@ -111,7 +111,36 @@
                     </div>
                 </div>
                 <div style="margin-top: 50px;"></div>
+
+                <h1>А также...</h1>
+                <div class="team-grid">
+                    <div class="team-member">
+                        <!-- <img src="" alt="?" class="team-avatar"> -->
+                        <h3 class="team-name">Игорь</h3>
+                        <p class="team-role">Финансовый директор</p>
+                        <p>Мотивирует добрыми словами, сигаретами и бьёт подушкой</p>
+                        <!-- <a class="team-link" href=""></a> -->
+                    </div>
+                    <div class="team-member">
+                        <!-- <img src="" alt="?" class="team-avatar"> -->
+                        <h3 class="team-name">Наташа</h3>
+                        <p class="team-role">Заместитель директора</p>
+                        <p>Вкусно готовит и ищет баги</p>
+                        <!-- <a class="team-link" href=""></a> -->
+                    </div>
+                    <div class="team-member">
+                        <!-- <img src="" alt="?" class="team-avatar"> -->
+                        <h3 class="team-name">Остин</h3>
+                        <p class="team-role">Кот. Просто кот.</p>
+                        <p>Помогает программистам. Без него бы тут ничего не работало</p>
+                        <!-- <a class="team-link" href=""></a> -->
+                    </div>
+                    
+                </div>
             </div>
+
+            <br>
+
 
             <h1>Партнёры</h1>
             <p>Тут могли бы быть вы</p>
