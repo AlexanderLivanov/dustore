@@ -155,31 +155,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $game_zip_url = $project_info['game_zip_url'] ?? '';
   $game_zip_size = $project_info['game_zip_size'] ?? 0;
 
-  // Если загружается новый ZIP через основную форму (не AJAX)
-  if (!empty($_FILES['game_zip']['name']) && $_FILES['game_zip']['error'] == UPLOAD_ERR_OK) {
-    $mime = mime_content_type($_FILES['game_zip']['tmp_name']);
-    $extension = strtolower(pathinfo($_FILES['game_zip']['name'], PATHINFO_EXTENSION));
-
-    if ($mime === 'application/zip' || $extension === 'zip') {
-      $safe_org_name = preg_replace('/[^a-z0-9]/i', '-', $org_name);
-      $safe_project_name = preg_replace('/[^a-z0-9]/i', '-', $project_name);
-      $zip_path = "{$safe_org_name}/{$safe_project_name}/game-" . uniqid() . ".zip";
-
-      // Удаляем старый ZIP
-      if (!empty($game_zip_url)) {
-        $s3Uploader->deleteFile($game_zip_url);
-      }
-
-      // Загружаем новый ZIP
-      $uploaded_zip = $s3Uploader->uploadFile($_FILES['game_zip']['tmp_name'], $zip_path);
-      if ($uploaded_zip) {
-        $game_zip_url = $uploaded_zip;
-        $game_zip_size = $_FILES['game_zip']['size'];
-      }
-    }
-  }
-
-
   $org_info = $curr_user->getOrgData($_SESSION['studio_id']);
   $org_name = $org_info['name'];
 
