@@ -178,7 +178,7 @@ $org = new Organization();
                 <?php $staff = $org->getAllStaff($_SESSION['STUDIODATA']['id']); ?>
                 <?php foreach ($staff as $s): ?>
                   <tr>
-                    <td><?php echo htmlspecialchars($curr_user->getUsername($s['telegram_id']) ?? 'Не указано'); ?></td>
+                    <td><?php echo htmlspecialchars($curr_user->getUsername($s['id']) ?? 'Не указано'); ?></td>
                     <td><?php echo htmlspecialchars($s['role'] ?? 'Не назначена'); ?></td>
                     <td>-</td>
                   </tr>

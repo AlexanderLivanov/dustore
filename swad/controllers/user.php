@@ -26,7 +26,7 @@ class User
 
     public function getUsername($id)
     {
-        $query = 'SELECT telegram_username FROM ' . $this->table . ' WHERE telegram_id = :id LIMIT 1';
+        $query = 'SELECT username FROM ' . $this->table . ' WHERE id = :id LIMIT 1';
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':id', $id);
         $stmt->execute();

@@ -753,8 +753,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php
                 $expertReviews = $db->connect()->prepare("
                     SELECT er.*, u.username 
-                    FROM reviews er
-                    LEFT JOIN users u ON u.id = er.expert_id
+                    FROM game_reviews er
+                    LEFT JOIN users u ON u.id = er.user_id
                     WHERE er.game_id = ?
                 ");
                 $expertReviews->execute([$project_id]);
@@ -763,10 +763,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <?php foreach ($reviews as $review): ?>
                   <div class="card-panel">
-                    <strong><?= htmlspecialchars($review['name']) ?></strong>
-                    <p>Оценка: <?= $review['score'] ?>/100</p>
-                    <p><?= nl2br(htmlspecialchars($review['review'])) ?></p>
-                    <p>Статус: <?= $review['status'] ?></p>
+                    <strong><?= $curr_user->getUsername(htmlspecialchars($review['id'])) ?></strong>
+                    <p>Оценка: <?= $review['rating'] ?>/10</p>
+                    <p><?= nl2br(htmlspecialchars($review['text'])) ?></p>
+                    <p>Дата: <?= $review['updated_at'] ?></p>
                   </div>
                 <?php endforeach; ?>
                 <div class="card-panel"></div>

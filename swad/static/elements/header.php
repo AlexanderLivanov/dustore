@@ -171,11 +171,11 @@ $stmt->execute([
 </head>
 
 <body>
-    <div id="preloader" class="preloader">
+    <!-- <div id="preloader" class="preloader">
         <div class="preloader-content">
             <img src="/swad/static/img/logo_new.png" alt="Dustore" class="preloader-logo">
         </div>
-    </div>
+    </div> -->
     <!-- <div id="push-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#333; color:#fff; padding:15px; text-align:center; z-index:1000;">
         🔔 Хотите получать уведомления? Так вы не пропустите ничего нового...
         <button id="enable-push" style="margin-left:10px; padding:5px 10px;">Включить</button>
