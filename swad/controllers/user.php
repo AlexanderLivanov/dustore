@@ -26,13 +26,13 @@ class User
 
     public function getUsername($id)
     {
-        $query = 'SELECT username FROM ' . $this->table . ' WHERE id = :id LIMIT 1';
+        $query = 'SELECT username, telegram_username FROM ' . $this->table . ' WHERE id = :id LIMIT 1';
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':id', $id);
         $stmt->execute();
 
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ? $result['telegram_username'] : null;
+        return $result['username'] ? $result['telegram_username'] : null;
     }
 
     public function getUserByUsername($username)

@@ -763,13 +763,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <?php foreach ($reviews as $review): ?>
                   <div class="card-panel">
-                    <strong><?= $curr_user->getUsername(htmlspecialchars($review['id'])) ?></strong>
+                    <strong><?= $curr_user->getUsername(htmlspecialchars($review['user_id'])) ?></strong>
                     <p>Оценка: <?= $review['rating'] ?>/10</p>
                     <p><?= nl2br(htmlspecialchars($review['text'])) ?></p>
                     <p>Дата: <?= $review['updated_at'] ?></p>
                   </div>
                 <?php endforeach; ?>
-                <div class="card-panel"></div>
 
 
               <?php endif; ?>
