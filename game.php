@@ -189,8 +189,86 @@ function formatFileSize($bytes)
         #review-stars span.highlighted {
             color: #ffcc00;
         }
+
+        .steam-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px;
+
+            background: linear-gradient(45deg, #0f1c30, #1385b6);
+            color: #fff;
+
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+
+            font-size: 14px;
+            font-weight: 600;
+
+            transition: 0.2s;
+        }
+
+        .steam-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .steam-btn:hover {
+            background: linear-gradient(90deg, #0f1c30, #1385b6);
+            transform: translateY(-1px);
+        }
+
+        .steam-btn:active {
+            transform: translateY(0);
+            opacity: 0.9;
+        }
+
+        .steam-wrapper {
+            position: relative;
+        }
+
+        .steam-tooltip {
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+
+            background: rgba(15, 28, 48, 0.95);
+            color: #fff;
+
+            padding: 6px 10px;
+            border-radius: 6px;
+
+            font-size: 12px;
+            white-space: nowrap;
+
+            opacity: 0;
+            pointer-events: none;
+
+            transition: 0.2s ease;
+        }
+
+        /* стрелочка */
+        .steam-tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(15, 28, 48, 0.95) transparent transparent transparent;
+        }
+
+        .steam-wrapper:hover .steam-tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
     </style>
-    <script src="/swad/js/CartManager.js"></script>
 </head>
 
 <body>
@@ -363,52 +441,29 @@ function formatFileSize($bytes)
                                 </div>
 
                                 <?php
-                                // 2.
-                                // Оплата заданной суммы с выбором валюты на сайте ROBOKASSA
-                                // Payment of the set sum with a choice of currency on site ROBOKASSA
-
-                                // регистрационная информация (логин, пароль #1)
-                                // registration info (login, password #1)
-                                $mrh_login = $studio_payment_data['merchant_login'];
-                                $mrh_pass1 = $studio_payment_data['merchant_password'];
-
-                                // номер заказа
-                                // number of order
-                                $inv_id = time();
-                                $IsTest = 1;
-
-                                // описание заказа
-                                // order description
-                                $inv_desc = $game['description'];
-
-                                // сумма заказа
-                                // sum of order
-                                $out_summ = $game['price'];
-
-                                // id игры
-                                // code of goods
-                                $shp_item = $game_id;
-
-                                // предлагаемая валюта платежа
-                                // default payment e-currency
-                                $in_curr = "ru";
-
-                                // язык
-                                // language
-                                $culture = "ru";
-
-                                $encrypted_mrh_passwd = bin2hex(xorStrings($mrh_pass1, PASSWD_FOR_PASSWDS));
-
-                                // формирование подписи
-                                // generate signature
-                                // echo bin2hex($encrypted_mrh_passwd);
-                                $crc  = md5("$mrh_login:$out_summ:$inv_id:$mrh_pass1:Shp_enc_mrh_pass=$encrypted_mrh_passwd:Shp_item=$shp_item");
-
                                 // форма оплаты товара
                                 // payment form
-                                print '<script src="https://integrationjs.tbank.ru/integration.js"></script>
-                                        <button onclick="pay(1)">Оплатить</button>';
+                                print '<button class="btn" style="width:100%; margin-bottom:15px;"
+                                            onclick="openPaymentModal()">
+                                        Купить за ' . number_format($game['price'], 0, ',', ' ') . ' ₽
+                                    </button>';
                                 ?>
+
+                                <div class="steam-wrapper">
+                                    <button class="steam-btn">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M16.5 5a4.5 4.5 0 1 1 -.653 8.953l-4.347 3.009l0 .038a3 3 0 0 1 -2.824 3l-.176 0a3 3 0 0 1 -2.94 -2.402l-2.56 -1.098v-3.5l3.51 1.755a2.989 2.989 0 0 1 2.834 -.635l2.727 -3.818a4.5 4.5 0 0 1 4.429 -5.302" />
+                                            <path d="M15.5 9.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" fill="currentColor" />
+                                        </svg>
+                                        Добавить в Steam®
+                                    </button>
+
+                                    <div class="steam-tooltip">
+                                        Данная кнопка позволяет добавить игру в библиотеку Steam,<br> но это не значит, что игра опубликована в Steam. <br> Для запуска требуется HidL на вашем компьютере.
+                                    </div>
+                                </div>
 
                                 <!-- <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button> -->
 
@@ -685,8 +740,6 @@ function formatFileSize($bytes)
     </main>
 
     <?php require_once('swad/static/elements/footer.php'); ?>
-
-    <script src="https://integrationjs.tbank.ru/integration.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1032,36 +1085,9 @@ function formatFileSize($bytes)
             }
         });
     </script>
-    <script>
-        async function pay(productId) {
-            const res = await fetch('/finv2/create_payment.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    product_id: productId
-                })
-            });
-
-            const data = await res.json();
-
-            if (!data.PaymentURL) {
-                alert('Ошибка оплаты');
-                return;
-            }
-
-            // Вариант 1 — редирект
-            window.location.href = data.PaymentURL;
-
-            // Вариант 2 — iframe через integration.js
-            /*
-            PaymentIntegration.open({
-                paymentId: data.PaymentId
-            });
-            */
-        }
-    </script>
+    <?php if ($game['price'] > 0): ?>
+        <?php require_once('finv2/payment_modal.php'); ?>
+    <?php endif; ?>
 </body>
 
 </html>

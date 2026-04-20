@@ -203,14 +203,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   $screenshots_json = json_encode($new_screenshots);
 
-  if ($status === 'published') {
-    $experts_approved = 0;
+  // if ($status === 'published') {
+  //   $experts_approved = 0;
 
-    $stmt = $db->connect()->prepare("DELETE FROM reviews WHERE game_id = ?");
-    $stmt->execute([$project_id]);
-  } else {
-    $experts_approved = $project_info['experts_approved'];
-  }
+  //   $stmt = $db->connect()->prepare("DELETE FROM game_reviews WHERE game_id = ?");
+  //   $stmt->execute([$project_id]);
+  // } else {
+  //   $experts_approved = $project_info['experts_approved'];
+  // }
 
   // Обновление данных в базе
   $sql = "UPDATE games SET 
@@ -234,9 +234,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         in_subscription = :in_subscription,
         status = :status,
         game_zip_url = :game_zip_url,
-        game_zip_size = :game_zip_size,
-        experts_approved = :experts_approved
+        game_zip_size = :game_zip_size
         WHERE id = :id";
+  // -- experts_approved = :experts_approved
 
   try {
     $stmt = $db->connect()->prepare($sql);
@@ -261,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindParam(':id', $project_id);
     $stmt->bindParam(':status', $status);
     $stmt->bindParam(':game_zip_url', $game_zip_url);
-    $stmt->bindParam(':experts_approved', $experts_approved);
+    // $stmt->bindParam(':experts_approved', $experts_approved);
     $stmt->bindParam(':game_zip_size', $game_zip_size);
     $stmt->execute();
 

@@ -64,10 +64,18 @@
 
         /* Лента */
         .feed {
-            max-width: 700px;
+            max-width: 900px;
+            width: 100%;
             margin: 0 auto;
             padding: 20px;
             box-sizing: border-box;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            position: relative;
+            height: calc(100vh - 80px);
         }
 
         .card {
@@ -150,6 +158,33 @@
         .card .actions i:hover {
             color: #fff;
         }
+
+        .swipe-card {
+            position: absolute;
+            width: 100%;
+            max-width: 700px;
+            transition: transform 0.3s ease, opacity 0.3s;
+            cursor: grab;
+        }
+
+        .swipe-card.removed {
+            opacity: 0;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+
+            .feed {
+                max-width: 100%;
+                padding: 10px;
+            }
+
+            .swipe-card {
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -171,77 +206,120 @@
 
         <div class="feed">
 
-            <div class="card">
+            <div class="card swipe-card">
                 <div class="post-header">
-                    <img src="https://via.placeholder.com/40" alt="аватар">
+                    <img src="https://via.placeholder.com/40">
                     <div class="author">
                         <span class="name">ИгровойЖурнал</span>
                         <span class="subtitle">Студия • 2ч назад</span>
                     </div>
                 </div>
-                <img src="https://via.placeholder.com/700x300.png?text=Видео+обзор" alt="">
+                <img src="https://via.placeholder.com/700x300.png?text=Видео+обзор">
                 <div class="content">
                     <h3>Видео-обзор: “Секретный мир”</h3>
-                    <p>Краткий обзор новой RPG, советы по прокачке и самые интересные локации.</p>
-                    <div class="tags"><span class="new-badge">Новое</span>RPG, MMO, Видео</div>
-                </div>
-                <div class="actions">
-                    <i class="fas fa-heart"></i> 123
-                    <i class="fas fa-share"></i>
-                    <i class="fas fa-comment"></i> 45
-                    <i class="fas fa-eye"></i> 2.3k
+                    <p>Краткий обзор новой RPG.</p>
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card swipe-card">
                 <div class="post-header">
-                    <img src="https://via.placeholder.com/40" alt="аватар">
+                    <img src="https://via.placeholder.com/40">
                     <div class="author">
                         <span class="name">IndieDev</span>
                         <span class="subtitle">Пользователь • 5ч назад</span>
                     </div>
                 </div>
-                <img src="https://via.placeholder.com/700x250.png?text=Скриншот+игры" alt="">
+                <img src="https://via.placeholder.com/700x250.png?text=Скриншот">
                 <div class="content">
-                    <h3>Скриншот дня: “Инди-платформа”</h3>
-                    <p>Уникальный момент из прохождения нового инди-платформера.</p>
-                    <div class="tags">Инди, Платформа, Скриншот</div>
-                </div>
-                <div class="actions">
-                    <i class="fas fa-heart"></i> 56
-                    <i class="fas fa-share"></i>
-                    <i class="fas fa-comment"></i> 12
-                    <i class="fas fa-eye"></i> 1.1k
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="post-header">
-                    <img src="https://via.placeholder.com/40" alt="аватар">
-                    <div class="author">
-                        <span class="name">MMOHelper</span>
-                        <span class="subtitle">Пользователь • вчера</span>
-                    </div>
-                </div>
-                <div style="background:#2a2a2a; width:100%; height:300px; display:flex; align-items:center; justify-content:center;">
-                    <p style="color:#888;">Мини-гайд или событие</p>
-                </div>
-                <div class="content">
-                    <h3>Мини-гайд: Как собрать команду в MMO</h3>
-                    <p>Короткая инструкция для быстрого старта и кооперации с друзьями.</p>
-                    <div class="tags">MMO, Гайд, Совет</div>
-                </div>
-                <div class="actions">
-                    <i class="fas fa-heart"></i> 89
-                    <i class="fas fa-share"></i>
-                    <i class="fas fa-comment"></i> 20
-                    <i class="fas fa-eye"></i> 1.5k
+                    <h3>Скриншот дня</h3>
+                    <p>Инди-платформер.</p>
                 </div>
             </div>
 
         </div>
     </div>
+    <script>
+        const cards = document.querySelectorAll('.swipe-card');
 
+        cards.forEach((card, index) => {
+            let startX = 0;
+            let currentX = 0;
+            let isDragging = false;
+
+            card.style.zIndex = cards.length - index;
+
+            const onMove = (x) => {
+                currentX = x - startX;
+                card.style.transform = `translateX(${currentX}px) rotate(${currentX/10}deg)`;
+            };
+
+            const onEnd = () => {
+                isDragging = false;
+
+                if (currentX > 120) {
+                    card.style.transform = "translateX(1000px) rotate(20deg)";
+                    card.classList.add('removed');
+                } else if (currentX < -120) {
+                    card.style.transform = "translateX(-1000px) rotate(-20deg)";
+                    card.classList.add('removed');
+                } else {
+                    card.style.transform = "";
+                }
+            };
+
+            // мышка
+            card.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                card.style.transition = "none";
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                onMove(e.clientX);
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isDragging) return;
+                card.style.transition = "";
+                onEnd();
+            });
+
+            // тач
+            card.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                startX = e.touches[0].clientX;
+                card.style.transition = "none";
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                onMove(e.touches[0].clientX);
+            });
+
+            window.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                card.style.transition = "";
+                onEnd();
+            });
+        });
+
+        // стрелки клавиатуры
+        document.addEventListener('keydown', (e) => {
+            const card = document.querySelector('.swipe-card:not(.removed)');
+            if (!card) return;
+
+            if (e.key === "ArrowRight") {
+                card.style.transform = "translateX(1000px) rotate(20deg)";
+                card.classList.add('removed');
+            }
+
+            if (e.key === "ArrowLeft") {
+                card.style.transform = "translateX(-1000px) rotate(-20deg)";
+                card.classList.add('removed');
+            }
+        });
+    </script>
 </body>
 
 </html>
