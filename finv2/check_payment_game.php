@@ -1,13 +1,5 @@
 <?php
 
-/**
- * check_payment_game.php
- * GET /finv2/check_payment_game.php?payment_id=...
- * Response: { "status": "pending"|"succeeded"|"canceled" }
- *
- * Used by the frontend to poll payment status after redirect.
- */
-
 require_once('../vendor/autoload.php');
 require_once('../swad/config.php');
 
@@ -31,22 +23,30 @@ if (empty($paymentId)) {
     exit;
 }
 
-/* ── Fast path: check DB first ── */
+/* ── DB ── */
 $db  = new Database();
 $pdo = $db->connect();
 
-$stmt = $pdo->prepare("SELECT status FROM game_orders WHERE payment_id = ? AND user_id = ?");
+/* ── Fast path: DB check ── */
+$stmt = $pdo->prepare("
+    SELECT id, status 
+    FROM game_orders 
+    WHERE payment_id = ? AND user_id = ?
+");
 $stmt->execute([$paymentId, (int)$_SESSION['USERDATA']['id']]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($row && $row['status'] === 'succeeded') {
-    // Webhook already processed this — no need to hit YooKassa API
     echo json_encode(['status' => 'succeeded']);
     exit;
 }
 
-/* Also check infrastructure payments */
-$stmt2 = $pdo->prepare("SELECT status FROM infra_payments WHERE payment_id = ? AND user_id = ?");
+/* ── Infra payments check ── */
+$stmt2 = $pdo->prepare("
+    SELECT status 
+    FROM infra_payments 
+    WHERE payment_id = ? AND user_id = ?
+");
 $stmt2->execute([$paymentId, (int)$_SESSION['USERDATA']['id']]);
 $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
 
@@ -55,51 +55,55 @@ if ($row2 && $row2['status'] === 'succeeded') {
     exit;
 }
 
-/* ── Fallback: ask YooKassa ── */
+/* ── Fallback: YooKassa API ── */
 try {
     $client = new Client();
     $client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SHOP_KEY);
 
     $payment = $client->getPaymentInfo($paymentId);
-    $status  = $payment->getStatus(); // pending | waiting_for_capture | succeeded | canceled
+    $status  = $payment->getStatus();
 
-    // Normalize to what frontend expects
     if ($status === 'succeeded') {
-        // Optionally sync DB here if webhook was slow
-        if ($row && $row['status'] !== 'succeeded') {
-            syncGamePurchaseFromApi($pdo, $paymentId, $payment);
-        }
+
+        // 🔥 ВАЖНО: всегда синхронизируем БД
+        syncGamePurchaseFromApi($pdo, $paymentId, $payment);
+
         echo json_encode(['status' => 'succeeded']);
     } elseif ($status === 'canceled') {
         echo json_encode(['status' => 'canceled']);
     } else {
         echo json_encode(['status' => 'pending']);
     }
+
 } catch (Exception $e) {
     error_log('check_payment_game error: ' . $e->getMessage());
-    // Don't expose error — just say pending so polling continues
     echo json_encode(['status' => 'pending']);
 }
 
+
 /**
- * Fallback: activate purchase directly from API response
- * (webhook may not have arrived yet)
+ * Синхронизация покупки напрямую из API
  */
 function syncGamePurchaseFromApi(PDO $pdo, string $paymentId, $payment): void
 {
     $metadata = $payment->getMetadata();
-    $orderId  = $metadata['order_id'] ?? null;
-    $gameId   = $metadata['game_id']  ?? null;
-    $userId   = $metadata['user_id']  ?? null;
+
+    $orderId = $metadata['order_id'] ?? null;
+    $gameId  = $metadata['game_id']  ?? null;
+    $userId  = $metadata['user_id']  ?? null;
 
     if (!$orderId || !$gameId || !$userId) return;
 
-    // Add to library (ignore duplicates)
+    /* ── Добавляем игру ── */
     $pdo->prepare("
-        INSERT IGNORE INTO library (player_id, game_id, purchased_at)
-        VALUES (?, ?, NOW())
+        INSERT IGNORE INTO library (player_id, game_id, purchased, date)
+        VALUES (?, ?, 1, NOW())
     ")->execute([(int)$userId, (int)$gameId]);
 
-    $pdo->prepare("UPDATE game_orders SET status = 'succeeded' WHERE id = ?")
-        ->execute([(int)$orderId]);
+    /* ── Обновляем заказ ── */
+    $pdo->prepare("
+        UPDATE game_orders 
+        SET status = 'succeeded', completed_at = NOW()
+        WHERE payment_id = ?
+    ")->execute([$paymentId]);
 }

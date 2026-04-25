@@ -1,0 +1,41 @@
+Array
+(
+    [post] => Array
+        (
+        )
+
+    [input] => {"exp":[]}
+    [session] => Array
+        (
+            [auth_token] => eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Ijg0MzkxMTUxMyIsImlhdCI6MTc3MTg4MTI2OCwiZXhwIjoxNzcyMTQwNDY4fQ==.pXn+5gQX7mW8jybrShxD9pRkcVNIMj1Vj3csVQVW+yg=
+            [USERDATA] => Array
+                (
+                    [id] => 2
+                    [first_name] => Эsh
+                    [last_name] => 
+                    [telegram_id] => 843911513
+                    [telegram_username] => AshTheStar
+                    [telegram_token] => eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Ijg0MzkxMTUxMyIsImlhdCI6MTc3MTg4MTI2OCwiZXhwIjoxNzcyMTQwNDY4fQ==.pXn+5gQX7mW8jybrShxD9pRkcVNIMj1Vj3csVQVW+yg=
+                    [username] => Eshward_Williams
+                    [passphrase] => 
+                    [profile_picture] => https://t.me/i/userpic/320/G3cwvNjadTucJGqBnZKk36RyCFPmYepLJlP3sjkml6A.jpg
+                    [auth_date] => 1771881268
+                    [added] => 2025-05-23 12:38:13
+                    [updated] => 2026-02-24 22:31:41
+                    [last_activity] => 2026-02-24 19:31:41
+                    [global_role] => -1
+                    [local_role] => 
+                    [country] => 
+                    [city] => 
+                    [vk] => 
+                    [website] => 
+                    [email] => 
+                    [password] => 
+                    [email_verified] => 0
+                    [verification_token] => 
+                    [l4t_role] => CEO Dustore, Teamlead Dust Game Studio
+                )
+
+        )
+
+)

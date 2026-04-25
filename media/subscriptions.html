@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подписки — MySocial</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullPage.js/4.0.24/fullpage.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="logo">MySocial</div>
+    <input class="search" placeholder="Искать среди подписок">
+  </header>
+
+  <div id="fullpage">
+    <section class="section">
+      <article class="post-card">
+        <div class="post-head">
+          <img class="avatar" src="https://picsum.photos/seed/s1/80" alt="avatar">
+          <div class="author-name">Подписка: @travel_girl</div>
+          <button class="follow-btn">Вы подписаны</button>
+        </div>
+        <div class="post-body with-image">
+          <img class="post-image" src="https://picsum.photos/seed/simg1/600/400" alt="photo">
+          <div>
+            <div class="post-text">Лучшие пляжи сентября. Куда слетать за 200€...</div>
+            <button class="read-more" data-read-more>Читать полностью</button>
+          </div>
+        </div>
+        <div class="post-foot">
+          <div class="actions">
+            <button class="icon-btn">👍</button>
+            <button class="icon-btn">👎</button>
+            <button class="icon-btn">💬</button>
+            <button class="icon-btn">↗</button>
+          </div>
+          <div class="meta">15.08.2025 • 2.3K просмотров</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="section">
+      <article class="post-card">
+        <div class="post-head">
+          <img class="avatar" src="https://picsum.photos/seed/s2/80" alt="avatar">
+          <div class="author-name">Подписка: @tech_daily</div>
+          <button class="follow-btn">Вы подписаны</button>
+        </div>
+        <div class="post-body">
+          <div class="post-text" data-full="Подборка новостей технологий за день... подробный лонгрид.">
+            Ежедневная сводка о технологиях. Сжатый обзор и ссылки.
+          </div>
+          <button class="read-more" data-read-more>Читать полностью</button>
+        </div>
+        <div class="post-foot">
+          <div class="actions">
+            <button class="icon-btn">👍</button>
+            <button class="icon-btn">👎</button>
+            <button class="icon-btn">💬</button>
+            <button class="icon-btn">↗</button>
+          </div>
+          <div class="meta">16.08.2025 • 890 просмотров</div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <nav class="app-footer">
+    <button data-nav="index.html">🏠 Лента</button>
+    <button class="active" data-nav="subscriptions.html">⭐ Подписки</button>
+    <button data-nav="news.html">📰 Новости</button>
+    <button data-nav="profile.html">👤 Профиль</button>
+  </nav>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fullPage.js/4.0.24/fullpage.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

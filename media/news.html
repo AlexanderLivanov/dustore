@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Новости — MySocial</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="logo">MySocial</div>
+    <input class="search" placeholder="Новости, темы, источники">
+  </header>
+
+  <main class="page" id="newsPage">
+    <article class="post-card">
+      <div class="post-head">
+        <img class="avatar" src="https://picsum.photos/seed/n1/80" alt="avatar">
+        <div class="author-name">Новости дня</div>
+        <span class="badge">ТОП</span>
+      </div>
+      <div class="post-body">
+        <div class="post-text" data-full="Большой лонгрид новости: аналитика, цитаты, графики...">
+          Короткий дайджест: курс валют, важные события, анонсы. Нажмите, чтобы прочитать подробнее.
+        </div>
+        <button class="read-more" data-read-more>Читать полностью</button>
+      </div>
+      <div class="post-foot">
+        <div class="actions">
+          <button class="icon-btn">👍</button>
+          <button class="icon-btn">👎</button>
+          <button class="icon-btn">💬</button>
+          <button class="icon-btn">↗</button>
+        </div>
+        <div class="meta">17.08.2025 • 4.1K просмотров</div>
+      </div>
+    </article>
+
+    <article class="post-card">
+      <div class="post-head">
+        <img class="avatar" src="https://picsum.photos/seed/n2/80" alt="avatar">
+        <div class="author-name">Быстрая лента</div>
+        <span class="badge">LIVE</span>
+      </div>
+      <div class="post-body with-image">
+        <img class="post-image" src="https://picsum.photos/seed/nimg1/600/400" alt="photo">
+        <div>
+          <div class="post-text">Фото с места событий. Кратко о происходящем...</div>
+          <button class="read-more" data-read-more>Читать полностью</button>
+        </div>
+      </div>
+      <div class="post-foot">
+        <div class="actions">
+          <button class="icon-btn">👍</button>
+          <button class="icon-btn">👎</button>
+          <button class="icon-btn">💬</button>
+          <button class="icon-btn">↗</button>
+        </div>
+        <div class="meta">17.08.2025 • 2.0K просмотров</div>
+      </div>
+    </article>
+  </main>
+
+  <nav class="app-footer">
+    <button data-nav="index.html">🏠 Лента</button>
+    <button data-nav="subscriptions.html">⭐ Подписки</button>
+    <button class="active" data-nav="news.html">📰 Новости</button>
+    <button data-nav="profile.html">👤 Профиль</button>
+  </nav>
+
+  <script src="script.js"></script>
+</body>
+</html>

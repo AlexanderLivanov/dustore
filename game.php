@@ -268,6 +268,17 @@ function formatFileSize($bytes)
             opacity: 1;
             transform: translateX(-50%) translateY(-4px);
         }
+
+        .owned-badge {
+            display: inline-block;
+            padding: 6px 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: rgba(0, 255, 153, 0.12);
+            color: #00ff99;
+            font-size: 13px;
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -432,27 +443,71 @@ function formatFileSize($bytes)
 
                     </div>
 
+                    <?php
+                        $isOwned = false;
+
+                        if (!empty($_SESSION['USERDATA']['id'])) {
+                            $stmt = $pdo->prepare("
+                                SELECT 1, date 
+                                FROM library 
+                                WHERE player_id = ? AND game_id = ?
+                                LIMIT 1
+                            ");
+                            $stmt->execute([$_SESSION['USERDATA']['id'], $game_id]);
+                            $res = $stmt->fetch();
+                            $isOwned = $res['1'];
+                            $purchasedDate = $res['date'];
+                        }
+                    ?>
+
                     <div class="game-sidebar">
                         <div class="purchase-section">
-                            <?php if ($game['price'] > 0): ?>
-                                <div class="game-price"><?= number_format($game['price'], 0, ',', ' ') ?> ₽</div>
-                                <div class="cart-controls" id="cart-controls-<?= $game_id ?>">
-                                    <!-- Будет заполнено JavaScript -->
-                                </div>
 
+                        <?php if ($game['price'] > 0): ?>
+
+                            <?php if ($isOwned): ?>
                                 <?php
-                                // форма оплаты товара
-                                // payment form
-                                print '<button class="btn" style="width:100%; margin-bottom:15px;"
-                                            onclick="openPaymentModal()">
-                                        Купить за ' . number_format($game['price'], 0, ',', ' ') . ' ₽
-                                    </button>';
+                                    if ($purchasedDate) {
+                                        $dt = new DateTime($purchasedDate);
+                                        $purchasedDate = $dt->format('d F Y');
+                                        $months = [
+                                            'January' => 'января',
+                                            'February' => 'февраля',
+                                            'March' => 'марта',
+                                            'April' => 'апреля',
+                                            'May' => 'мая',
+                                            'June' => 'июня',
+                                            'July' => 'июля',
+                                            'August' => 'августа',
+                                            'September' => 'сентября',
+                                            'October' => 'октября',
+                                            'November' => 'ноября',
+                                            'December' => 'декабря',
+                                        ];
+
+                                        $dt = new DateTime($purchasedDate);
+                                        $day = $dt->format('d');
+                                        $month = $months[$dt->format('F')];
+                                        $year = $dt->format('Y');
+
+                                        $purchasedDate = "$day $month $year";
+                                    }
                                 ?>
+                                <div class="owned-badge">✔ В библиотеке c <?= htmlspecialchars($purchasedDate) ?></div>
+                                <br>
+                                <!-- ✔ ИГРА УЖЕ КУПЛЕНА -->
+                                <button class="btn" style="width:100%; margin-bottom:10px;"
+                                    onclick="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
+                                    Скачать игру
+                                </button>
 
                                 <div class="steam-wrapper">
                                     <button class="steam-btn">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                            viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                             <path d="M16.5 5a4.5 4.5 0 1 1 -.653 8.953l-4.347 3.009l0 .038a3 3 0 0 1 -2.824 3l-.176 0a3 3 0 0 1 -2.94 -2.402l-2.56 -1.098v-3.5l3.51 1.755a2.989 2.989 0 0 1 2.834 -.635l2.727 -3.818a4.5 4.5 0 0 1 4.429 -5.302" />
                                             <path d="M15.5 9.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" fill="currentColor" />
@@ -461,104 +516,43 @@ function formatFileSize($bytes)
                                     </button>
 
                                     <div class="steam-tooltip">
-                                        Данная кнопка позволяет добавить игру в библиотеку Steam,<br> но это не значит, что игра опубликована в Steam. <br> Для запуска требуется HidL на вашем компьютере.
+                                        Данная кнопка добавляет игру в библиотеку Steam,<br>
+                                        но не означает публикацию в Steam.
                                     </div>
-                                </div>
-
-                                <!-- <button class="btn" style="width: 100%; margin-bottom: 15px;" onclick="location.href='/checkout'">Купить сейчас</button> -->
-
-                                <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
-                                    <?php if ($game['in_subscription']): ?>
-                                        <p>✔️ Есть в подписке</p><br>
-
-                                    <?php endif; ?>
-                                    <!-- <p>✔️ Высокий рейтинг</p> -->
-
-                                    <?php if (!empty($game['game_zip_size'])): ?>
-                                        <div style="font-size: 0.9rem; opacity: 0.8;">
-                                            Размер: <?= htmlspecialchars(formatFileSize((int)$game['game_zip_size'])) ?>
-                                            <br>
-                                            Купили: <?= $downloaded ?> раз(а)
-                                        </div>
-                                    <?php else: ?>
-                                        <p style="color: orange;">Файл игры пока не загружен</p>
-                                    <?php endif; ?>
                                 </div>
 
                             <?php else: ?>
-                                <!-- Бесплатная игра -->
-                                <div style="text-align: center;">
-                                    <div class="game-price" style="font-size: 1.4rem; color: #00ff99; margin-bottom: 10px;">
-                                        Бесплатно
-                                    </div>
 
-                                    <?php if (!empty($game['game_zip_url'])): ?>
-                                        <?php if ($game['platforms'] == 'web'): ?>
-                                            <button class="btn" style="width: 100%; margin-bottom: 10px;"
-                                                onclick="window.location.href='/webplayer?id=<?= $game_id ?>'">
-                                                Запустить игру в браузере
-                                            </button>
-                                        <?php else: ?>
-                                            <button class="btn" style="width: 100%; margin-bottom: 10px;"
-                                                onclick="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
-                                                Скачать игру
-                                            </button>
-
-                                            <!-- <button onclick="downloadGame(123)">Скачать игру</button>
-
-                                            <script>
-                                                function downloadGame(gameId) {
-                                                    fetch(`http://127.0.0.1:5000/download_game?game_id=${gameId}`)
-                                                        .then(r => r.json())
-                                                        .then(res => {
-                                                            if (res.ok) {
-                                                                alert("Игра скачана и распакована!");
-                                                            } else {
-                                                                alert("Ошибка: " + res.error);
-                                                            }
-                                                        }).catch(err => alert("Не удалось обратиться к лаунчеру"));
-                                                }
-                                            </script>
-
-                                            <button onclick="launchGame('ach.exe')">Запустить игру</button>
-
-                                            <script>
-                                                function launchGame(path) {
-                                                    fetch(`http://127.0.0.1:5000/launch_game?path=${encodeURIComponent(path)}`)
-                                                        .then(r => r.json())
-                                                        .then(res => {
-                                                            if (res.ok) {
-                                                                alert("Игра запущена!");
-                                                            } else {
-                                                                alert("Ошибка: " + res.error);
-                                                            }
-                                                        }).catch(err => alert("Не удалось обратиться к лаунчеру"));
-                                                }
-                                            </script> -->
-
-
-                                        <?php endif; ?>
-
-                                        <?php if (!empty($game['game_zip_size'])): ?>
-                                            <?php if ($game['platforms'] == 'web'): ?>
-                                                <div style="font-size: 0.9rem; opacity: 0.8;">
-                                                    Это веб игра. Она не требует скачивания.
-                                                    <br>
-                                                    <!-- Сыграли: <?= $downloaded ?> раз(а) -->
-                                                </div>
-                                            <?php else: ?>
-                                                <div style="font-size: 0.9rem; opacity: 0.8;">
-                                                    Размер: <?= htmlspecialchars(formatFileSize((int)$game['game_zip_size'])) ?>
-                                                    <br>
-                                                    Скачали: <?= $downloaded ?> раз(а)
-                                                </div>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <p style="color: orange;">Файл игры пока не загружен</p>
-                                    <?php endif; ?>
+                                <!-- 💰 ПОКУПКА -->
+                                <div class="game-price">
+                                    <?= number_format($game['price'], 0, ',', ' ') ?> ₽
                                 </div>
+
+                                <?php
+                                print '<button class="btn" style="width:100%; margin-bottom:15px;"
+                                            onclick="openPaymentModal()">
+                                        Купить за ' . number_format($game['price'], 0, ',', ' ') . ' ₽
+                                    </button>';
+                                ?>
+
                             <?php endif; ?>
+
+                        <?php else: ?>
+
+                            <!-- БЕСПЛАТНАЯ -->
+                            <div style="text-align:center;">
+                                <div class="game-price" style="color:#00ff99;">
+                                    Бесплатно
+                                </div>
+
+                                <button class="btn" style="width:100%; margin-top:10px;"
+                                    onclick="window.location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
+                                    Скачать игру
+                                </button>
+                            </div>
+
+                        <?php endif; ?>
+
                         </div>
 
 

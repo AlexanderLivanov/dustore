@@ -36,3 +36,4 @@ php_value max_input_vars 3000
 
 # Для chunked upload
 php_value enable_post_data_reading 1
+

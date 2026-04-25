@@ -87,7 +87,7 @@ $infra_amount   = max(10, round($game['price'] * 0.05)); // 5% or min 10₽
                     <h3 class="pm-heading pm-heading--sm">Инфраструктурный<br>налог</h3>
 
                     <p class="pm-side-desc">
-                        Платформа не берёт комиссию с разработчиков. Серверы, домен, поддержка и развитие существуют на добровольные взносы игроков.
+                        Платформа не берёт комиссию с разработчиков. Серверы, домен, поддержка и развитие существуют на личные средства администрации и добровольные взносы игроков.
                     </p>
                     <p class="pm-side-desc">
                         Оплатив инфраструктурный налог, вы помогаете нам снижать стоимость игр, поддерживать бесплатный хостинг для инди-авторов и держать комиссию на уровне <strong>0%</strong>.
@@ -108,7 +108,7 @@ $infra_amount   = max(10, round($game['price'] * 0.05)); // 5% or min 10₽
                     <div class="pm-donate-row pm-donate-row--stacked">
                         <div class="pm-donate-title">Задонатить платформе</div>
                         <div class="pm-donate-sub">Любую сумму — по желанию.</div>
-                        <a href="https://pay.cloudtips.ru/p/dustore" target="_blank" class="pm-btn pm-btn--donate pm-btn--sm" style="margin-top:10px;">
+                        <a href="https://pay.cloudtips.ru/p/088ed6e1" target="_blank" class="pm-btn pm-btn--donate pm-btn--sm" style="margin-top:10px;">
                             🙌 Поддержать Dustore
                         </a>
                     </div>
@@ -620,7 +620,7 @@ $infra_amount   = max(10, round($game['price'] * 0.05)); // 5% or min 10₽
         } catch (err) {
             btn.disabled = false;
             btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Оплатить ${GAME_PRICE.toLocaleString('ru-RU')} ₽`;
-            console.error('Ошибка: ' + err.message);
+            alert('Ошибка: ' + err.message);
         }
     }
 

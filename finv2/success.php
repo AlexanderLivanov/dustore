@@ -43,12 +43,12 @@ if ($paymentId) {
                     ->execute([$order['id']]);
                 $order['status'] = 'succeeded';
 
-                $pdo->prepare("INSERT IGNORE INTO library (player_id, game_id, purchased_at) VALUES (?, ?, NOW())")
+                $pdo->prepare("INSERT IGNORE INTO library (player_id, game_id, purchased, rarity, date) VALUES (?, ?, 1, 1, NOW())")
                     ->execute([$order['user_id'], $order['game_id']]);
             }
         }
     } catch (Exception $e) {
-        error_log("YooKassa success_game.php error: " . $e->getMessage());
+        error_log("YooKassa success.php error: " . $e->getMessage());
     }
 }
 
@@ -558,7 +558,7 @@ $isPaid = $order && $order['status'] === 'succeeded';
         <?php endif; ?>
 
         <div class="actions">
-            <a href="/library" class="btn btn-primary">
+            <a href="/player/<?= $_SESSION['USERDATA']['username'] ?>" class="btn btn-primary">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />

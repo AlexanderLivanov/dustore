@@ -21,8 +21,7 @@ $userEmail = $_SESSION['USERDATA']['email'] ?? null;
 
 /* ── Input ── */
 $body   = json_decode(file_get_contents('php://input'), true);
-// $gameId = (int)($body['game_id'] ?? 0);
-$gameId = 1;
+$gameId = (int)($body['game_id'] ?? 0);
 
 if ($gameId <= 0) {
     http_response_code(400);
@@ -35,9 +34,10 @@ $db  = new Database();
 $pdo = $db->connect();
 
 /* ── Get game ── */
-$stmt = $pdo->prepare("SELECT id, name, price FROM games WHERE id = ? AND status = 'published'");
+$stmt = $pdo->prepare("SELECT id, developer, name, price FROM games WHERE id = ? AND status = 'published'");
 $stmt->execute([$gameId]);
 $game = $stmt->fetch(PDO::FETCH_ASSOC);
+$devID = $game['developer'];
 
 if (!$game) {
     http_response_code(404);
@@ -60,6 +60,8 @@ if ($stmt->fetch()) {
     exit;
 }
 
+
+
 /* ── Email required for receipt ── */
 if (empty($userEmail)) {
     http_response_code(422);
@@ -77,11 +79,17 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId, $gameId, $game['price']]);
 $orderId = $pdo->lastInsertId();
 
+// получить платежные данные разработчика
+$stmt = $pdo->prepare("SELECT yookassa_shopid, yookassa_secret FROM studios WHERE id = ?");
+$stmt->execute([$devID]);
+$developerYookassaData = $stmt->fetch(PDO::FETCH_ASSOC);
+$dyd = $developerYookassaData;
+
 /* ── YooKassa ── */
 $client = new Client();
-$client->setAuth(YOOKASSA_SHOP_ID, YOOKASSA_SHOP_KEY);
+$client->setAuth($dyd['yookassa_shopid'], $dyd['yookassa_secret']);
 
-$returnUrl = 'https://dustore.ru/finv2/success_game.php?order=' . $orderId;
+$returnUrl = 'https://dustore.ru/finv2/success?order=' . $orderId;
 
 try {
     $payment = $client->createPayment(
@@ -114,7 +122,7 @@ try {
                             'value'    => $amount,
                             'currency' => 'RUB',
                         ],
-                        'vat_code'       => 1,   // 1 = без НДС; уточните у своего бухгалтера
+                        'vat_code'       => 1,
                         'payment_subject' => 'intellectual_activity',
                         'payment_mode'   => 'full_payment',
                     ],

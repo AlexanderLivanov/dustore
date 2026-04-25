@@ -5,6 +5,7 @@
 
 require_once('pass.php');
 
+define('REGISTRATION_ENABLED', true);
 
 class Database {
 
