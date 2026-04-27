@@ -1,697 +1,635 @@
 <?php
-$game_price_rub = number_format($game['price'], 0, ',', ' ');
-$infra_amount   = max(10, round($game['price'] * 0.05)); // 5% or min 10₽
+/**
+ * payment_modal.php
+ * Expects: $game_id, $game (price, name, path_to_cover),
+ *          $studio_payment_data (donate_link)
+ */
+$game_price   = (int)$game['price'];
+$max_platform = max(500, $game_price);
+$default_plat = min(50, (int)round($game_price * 0.08));
 ?>
 
-<div id="paymentModal" class="pm-overlay" role="dialog" aria-modal="true" aria-labelledby="pm-title">
+<div id="paymentModal" class="pm-overlay" role="dialog" aria-modal="true">
     <div class="pm-sheet">
 
-        <!-- Close -->
-        <button class="pm-close" onclick="closePaymentModal()" aria-label="Закрыть">✕</button>
+        <button class="pm-x" onclick="closePaymentModal()" aria-label="Закрыть">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
 
-        <div class="pm-body">
+        <!-- ─── TOP BAR ─── -->
+        <div class="pm-top">
+            <div class="pm-game-row">
+                <?php if (!empty($game['path_to_cover'])): ?>
+                    <img class="pm-cover" src="<?= htmlspecialchars($game['path_to_cover']) ?>" alt="">
+                <?php else: ?>
+                    <div class="pm-cover pm-cover-ph">🎮</div>
+                <?php endif; ?>
+                <div>
+                    <div class="pm-game-name"><?= htmlspecialchars($game['name']) ?></div>
+                    <div class="pm-game-sub">Цифровая копия · навсегда в библиотеке</div>
+                </div>
+            </div>
+            <div class="pm-total-wrap">
+                <div class="pm-total-lbl">Итого</div>
+                <div class="pm-total-val" id="pm-total">— ₽</div>
+            </div>
+        </div>
 
-            <div class="pm-col pm-col--main" id="pm-game-col">
-                <div class="pm-col-inner">
+        <!-- ─── SLIDER ZONE ─── -->
+        <div class="pm-slider-zone">
 
-                    <div class="pm-section-label">Основной платёж</div>
-                    <h2 id="pm-title" class="pm-heading">Купить игру</h2>
-                    <br>
-                    <p class="pm-sub"><?= htmlspecialchars($game['name']) ?></p>
-
-                    <div class="pm-price-tag">
-                        <span class="pm-price-amount"><?= $game_price_rub ?> ₽</span>
-                        <span class="pm-price-note">100% стоимости уходит разработчику</span>
-                    </div>
-
-                    <ul class="pm-benefits">
-                        <li><span class="pm-check">✓</span> Игра навсегда в вашей библиотеке</li>
-                        <li><span class="pm-check">✓</span> Комиссия платформы — 0%</li>
-                        <li><span class="pm-check">✓</span> Оплата через ЮКасса</li>
-                    </ul>
-
-                    <!-- State: idle -->
-                    <div id="pm-idle-state">
-                        <button class="pm-btn pm-btn--primary" id="pm-pay-game-btn" onclick="startGamePayment()">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="1" y="4" width="22" height="16" rx="2" />
-                                <line x1="1" y1="10" x2="23" y2="10" />
-                            </svg>
-                            Оплатить <?= $game_price_rub ?> ₽
-                        </button>
-                        <p class="pm-hint">Откроется страница ЮКасса. Вернитесь после оплаты.</p>
-                    </div>
-
-                    <!-- State: waiting -->
-                    <div id="pm-waiting-state" style="display:none">
-                        <div class="pm-spinner-wrap">
-                            <div class="pm-spinner"></div>
-                            <span>Ожидаем подтверждения оплаты…</span>
-                        </div>
-                        <button class="pm-btn pm-btn--ghost" onclick="startGamePayment()" style="margin-top:12px; font-size:.85rem;">
-                            Не перешли на страницу оплаты? Открыть снова
-                        </button>
-                    </div>
-
-                    <!-- State: success -->
-                    <div id="pm-success-state" style="display:none">
-                        <div class="pm-success-badge">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                        </div>
-                        <p class="pm-success-text">Оплата прошла! Игра добавлена в библиотеку.</p>
-                        <a href="/explore" class="pm-btn pm-btn--ghost" style="margin-top:8px;">К каталогу</a>
-                    </div>
-
-                    <div class="pm-divider"></div>
-
-                    <?php if (!empty($studio_payment_data['donate_link'])): ?>
-                        <div class="pm-donate-row">
-                            <div>
-                                <div class="pm-donate-title">Поддержать разработчика</div>
-                                <div class="pm-donate-sub">Необязательно. Каждая копейка важна независимым авторам.</div>
-                            </div>
-                            <a href="<?= htmlspecialchars($studio_payment_data['donate_link']) ?>" target="_blank" class="pm-btn pm-btn--donate">
-                                💝 Задонатить
-                            </a>
-                        </div>
-                    <?php endif; ?>
+            <!-- Amounts row -->
+            <div class="pm-amounts">
+                <div class="pm-amt pm-amt--dev">
+                    <div class="pm-amt-val" id="pm-dev-val">— ₽</div>
+                    <div class="pm-amt-lbl">Разработчику</div>
+                </div>
+                <div class="pm-amt pm-amt--plat">
+                    <div class="pm-amt-val" id="pm-plat-val">— ₽</div>
+                    <div class="pm-amt-lbl">Платформе</div>
                 </div>
             </div>
 
-            <div class="pm-col pm-col--side">
-                <div class="pm-col-inner">
+            <!-- Visual track -->
+            <div class="pm-track-wrap">
+                <div class="pm-track">
+                    <div class="pm-track-dev"  id="pm-track-dev"></div>
+                    <div class="pm-track-plat" id="pm-track-plat"></div>
+                </div>
+                <input
+                    type="range"
+                    id="pm-slider"
+                    class="pm-slider"
+                    min="0"
+                    max="<?= $max_platform ?>"
+                    step="10"
+                    value="<?= $default_plat ?>"
+                    oninput="pmUpdate(this.value)"
+                >
+            </div>
 
-                    <div class="pm-section-label pm-section-label--dim">Необязательно</div>
-                    <h3 class="pm-heading pm-heading--sm">Инфраструктурный<br>налог</h3>
+            <div class="pm-track-labels">
+                <span>◀ Меньше платформе</span>
+                <span>Больше платформе ▶</span>
+            </div>
+        </div>
 
-                    <p class="pm-side-desc">
-                        Платформа не берёт комиссию с разработчиков. Серверы, домен, поддержка и развитие существуют на личные средства администрации и добровольные взносы игроков.
-                    </p>
-                    <p class="pm-side-desc">
-                        Оплатив инфраструктурный налог, вы помогаете нам снижать стоимость игр, поддерживать бесплатный хостинг для инди-авторов и держать комиссию на уровне <strong>0%</strong>.
-                    </p>
+        <!-- ─── SPLIT BODY ─── -->
+        <div class="pm-body">
 
-                    <div class="pm-infra-amount"><?= number_format($infra_amount, 0, ',', ' ') ?> ₽</div>
+            <!-- LEFT: Developer -->
+            <div class="pm-half pm-half--dev">
+                <div class="pm-half-chip pm-half-chip--dev">Разработчику</div>
+                <div class="pm-half-heading">Покупка игры</div>
+                <p class="pm-half-desc">
+                    100% суммы уходит разработчику. Платформа не берёт комиссию —
+                    это наш принцип поддержки инди-авторов.
+                </p>
 
-                    <button class="pm-btn pm-btn--secondary" id="pm-pay-infra-btn" onclick="startInfraPayment()">
-                        Оплатить поддержку
-                    </button>
+                <?php if (!empty($studio_payment_data['donate_link'])): ?>
+                    <a class="pm-extra-link" href="<?= htmlspecialchars($studio_payment_data['donate_link']) ?>" target="_blank">
+                        💝 Задонатить разработчику сверх
+                    </a>
+                <?php endif; ?>
 
-                    <div id="pm-infra-success" style="display:none" class="pm-infra-ok">
-                        ✓ Спасибо! Вы помогаете платформе.
+                <div class="pm-actions">
+                    <!-- STEP 1: idle — pay for game -->
+                    <div id="pm-idle">
+                        <button class="pm-btn-pay" id="pm-pay-btn" onclick="pmStartPayment()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                            </svg>
+                            Оплатить
+                        </button>
                     </div>
 
-                    <div class="pm-divider pm-divider--subtle"></div>
+                    <!-- STEP 1: waiting for game payment -->
+                    <div id="pm-waiting" style="display:none">
+                        <div class="pm-spin-row">
+                            <div class="pm-spinner"></div>
+                            <span>Ожидаем подтверждения…</span>
+                        </div>
+                        <button class="pm-btn-ghost" onclick="pmStartPayment()">Открыть страницу снова</button>
+                    </div>
 
-                    <div class="pm-donate-row pm-donate-row--stacked">
-                        <div class="pm-donate-title">Задонатить платформе</div>
-                        <div class="pm-donate-sub">Любую сумму — по желанию.</div>
-                        <a href="https://pay.cloudtips.ru/p/088ed6e1" target="_blank" class="pm-btn pm-btn--donate pm-btn--sm" style="margin-top:10px;">
-                            🙌 Поддержать Dustore
-                        </a>
+                    <!-- STEP 2: game paid, now platform -->
+                    <div id="pm-game-ok" style="display:none">
+                        <div class="pm-ok" style="margin-bottom:12px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Игра оплачена!
+                        </div>
+                        <!-- shown only if platform amount > 0 -->
+                        <div id="pm-plat-step">
+                            <p class="pm-plat-prompt">Теперь вы можете поддержать платформу:</p>
+                            <button class="pm-btn-pay pm-btn-pay--plat" id="pm-pay-plat-btn" onclick="pmStartPlatPayment()">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                                Поддержать платформу <span id="pm-plat-btn-amt"></span>
+                            </button>
+                            <div id="pm-plat-waiting" style="display:none">
+                                <div class="pm-spin-row">
+                                    <div class="pm-spinner"></div>
+                                    <span>Ожидаем оплату платформе…</span>
+                                </div>
+                                <button class="pm-btn-ghost" onclick="pmStartPlatPayment()">Открыть страницу снова</button>
+                            </div>
+                            <div id="pm-plat-ok" style="display:none" class="pm-ok pm-ok--plat">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                Спасибо за поддержку!
+                            </div>
+                            <button class="pm-btn-ghost" id="pm-skip-plat" onclick="pmShowDone()" style="margin-top:6px;">
+                                Пропустить →
+                            </button>
+                        </div>
+                        <!-- shown if platform = 0 or after platform paid/skipped -->
+                        <div id="pm-goto-lib" style="display:none">
+                            <a href="/library" class="pm-btn-pay" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+                                Перейти в библиотеку →
+                            </a>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- RIGHT: Platform -->
+            <div class="pm-half pm-half--plat">
+                <div class="pm-half-chip pm-half-chip--plat">Платформе</div>
+                <div class="pm-half-heading">Поддержка Dustore</div>
+                <p class="pm-half-desc">
+                    Необязательно. Помогает содержать серверы, снижать стоимость игр
+                    и держать комиссию для авторов на уровне <strong style="color:#c4b5fd;">0%</strong>.
+                </p>
+
+                <div class="pm-perks">
+                    <div class="pm-perk">🖥️ Серверы и инфраструктура</div>
+                    <div class="pm-perk">📉 Снижение цен на игры</div>
+                    <div class="pm-perk">💸 0% комиссии для инди-авторов</div>
+                </div>
+
+                <div id="pm-zero-note" class="pm-zero-note" style="display:none">
+                    Платить платформе необязательно — вы всё равно получите игру.
+                </div>
+
+                <a class="pm-extra-link" href="https://pay.cloudtips.ru/p/dustore" target="_blank">
+                    🙌 Задонатить платформе отдельно
+                </a>
             </div>
 
         </div><!-- /.pm-body -->
-    </div><!-- /.pm-sheet -->
-</div><!-- /.pm-overlay -->
+    </div>
+</div>
 
-
-<!-- ═══════════════════════════════════════════════════
-     STYLES
-═══════════════════════════════════════════════════ -->
+<!-- ═══════════ STYLES ═══════════ -->
 <style>
-    /* ── Overlay ── */
-    .pm-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        background: rgba(10, 3, 18, 0.85);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        animation: pmFadeIn .2s ease;
-    }
+.pm-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 9999;
+    background: rgba(4, 0, 14, .85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    align-items: center; justify-content: center;
+    padding: 16px;
+}
+.pm-overlay.is-open { display: flex; }
 
-    .pm-overlay.is-open {
-        display: flex;
-    }
+.pm-sheet {
+    position: relative;
+    width: 100%; max-width: 820px;
+    max-height: 92vh; overflow-y: auto;
+    border-radius: 22px;
+    background: linear-gradient(160deg, #140228 0%, #0e0118 100%);
+    border: 1px solid rgba(255,255,255,.07);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.02) inset, 0 40px 100px rgba(0,0,0,.65);
+    animation: pmIn .35s cubic-bezier(.22,1,.36,1);
+}
+@keyframes pmIn {
+    from { opacity:0; transform:translateY(20px) scale(.97); }
+    to   { opacity:1; transform:translateY(0)    scale(1); }
+}
 
-    @keyframes pmFadeIn {
-        from {
-            opacity: 0;
-        }
+/* Close */
+.pm-x {
+    position: absolute; top:14px; right:14px;
+    width:30px; height:30px; border-radius:50%;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+    color: rgba(255,255,255,.4); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:.18s; z-index:5;
+}
+.pm-x:hover { background:rgba(195,33,120,.25); color:#fff; }
 
-        to {
-            opacity: 1;
-        }
-    }
+/* ── TOP ── */
+.pm-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    flex-wrap: wrap;
+}
+.pm-game-row { display:flex; align-items:center; gap:13px; }
+.pm-cover {
+    width:48px; height:48px; border-radius:9px;
+    object-fit:cover; flex-shrink:0;
+    border:1px solid rgba(255,255,255,.1);
+}
+.pm-cover-ph {
+    background: rgba(195,33,120,.08);
+    display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+}
+.pm-game-name { font-weight:700; font-size:.95rem; color:#fff; }
+.pm-game-sub  { font-size:.72rem; color:rgba(255,255,255,.3); margin-top:2px; }
+.pm-total-wrap { text-align:right; }
+.pm-total-lbl  { font-size:.68rem; color:rgba(255,255,255,.35); text-transform:uppercase; letter-spacing:.08em; }
+.pm-total-val  {
+    font-size:1.9rem; font-weight:800; color:#fff;
+    letter-spacing:-.03em; line-height:1;
+    transition: color .25s;
+}
 
-    /* ── Sheet ── */
-    .pm-sheet {
-        position: relative;
-        width: 100%;
-        max-width: 900px;
-        max-height: 92vh;
-        overflow-y: auto;
-        border-radius: 24px;
-        background: linear-gradient(145deg, #1a0626 0%, #200830 50%, #1a0626 100%);
-        border: 1px solid rgba(195, 33, 120, 0.25);
-        box-shadow:
-            0 40px 80px rgba(0, 0, 0, .6),
-            0 0 0 1px rgba(255, 255, 255, .04) inset;
-        animation: pmSlideUp .3s cubic-bezier(.22, 1, .36, 1);
-    }
+/* ── SLIDER ZONE ── */
+.pm-slider-zone {
+    padding: 20px 28px 4px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+}
 
-    @keyframes pmSlideUp {
-        from {
-            transform: translateY(30px);
-            opacity: 0;
-        }
+.pm-amounts {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.pm-amt { display:flex; flex-direction:column; }
+.pm-amt--plat { align-items:flex-end; }
+.pm-amt-val {
+    font-size:1.4rem; font-weight:800; letter-spacing:-.02em; line-height:1;
+    transition: all .2s;
+}
+.pm-amt--dev  .pm-amt-val { color: #fff; }
+.pm-amt--plat .pm-amt-val { color: #a78bfa; }
+.pm-amt-lbl { font-size:.7rem; color:rgba(255,255,255,.3); margin-top:4px; }
 
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
+/* Track */
+.pm-track-wrap { position:relative; margin-bottom:6px; }
 
-    /* ── Close button ── */
-    .pm-close {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        width: 36px;
-        height: 36px;
-        border: none;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, .08);
-        color: rgba(255, 255, 255, .6);
-        font-size: 16px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background .2s, color .2s;
-        z-index: 10;
-    }
+.pm-track {
+    height: 8px; border-radius:8px;
+    overflow: hidden; display:flex;
+    background: rgba(255,255,255,.06);
+    margin-bottom: 10px;
+}
+.pm-track-dev  { background: linear-gradient(to right, #c32178, #9b1760); transition:width .12s; }
+.pm-track-plat { background: linear-gradient(to right, #7c3aed, #a78bfa); transition:width .12s; }
 
-    .pm-close:hover {
-        background: rgba(195, 33, 120, .4);
-        color: #fff;
-    }
+.pm-slider {
+    -webkit-appearance: none; appearance: none;
+    width:100%; height:4px; border-radius:4px;
+    background: rgba(255,255,255,.08);
+    outline:none; cursor:pointer; display:block;
+}
+.pm-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width:24px; height:24px; border-radius:50%;
+    background:#fff;
+    border:3px solid #c32178;
+    box-shadow: 0 2px 12px rgba(195,33,120,.45), 0 0 0 4px rgba(195,33,120,.1);
+    cursor: grab;
+    transition: transform .15s, box-shadow .15s;
+}
+.pm-slider::-webkit-slider-thumb:active {
+    cursor:grabbing; transform:scale(1.25);
+    box-shadow: 0 4px 24px rgba(195,33,120,.65), 0 0 0 8px rgba(195,33,120,.12);
+}
+.pm-slider::-moz-range-thumb {
+    width:24px; height:24px; border-radius:50%;
+    background:#fff; border:3px solid #c32178; cursor:grab;
+}
 
-    /* ── Body ── */
-    .pm-body {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        min-height: 480px;
-    }
+.pm-track-labels {
+    display:flex; justify-content:space-between;
+    font-size:.65rem; color:rgba(255,255,255,.2);
+    letter-spacing:.04em; padding-bottom:6px;
+}
 
-    /* ── Columns ── */
-    .pm-col {
-        padding: 40px 36px;
-    }
+/* ── BODY ── */
+.pm-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
 
-    .pm-col--main {
-        border-right: 1px solid rgba(255, 255, 255, .07);
-    }
+.pm-half {
+    padding: 24px 28px 28px;
+    display: flex; flex-direction: column; gap: 0;
+}
+.pm-half--plat {
+    background: rgba(0,0,0,.12);
+    border-left: 1px solid rgba(255,255,255,.05);
+    border-radius: 0 0 22px 0;
+}
+.pm-half--dev { border-radius: 0 0 0 22px; }
 
-    .pm-col--side {
-        background: rgba(0, 0, 0, .15);
-        border-radius: 0 24px 24px 0;
-    }
+.pm-half-chip {
+    display: inline-flex; align-items:center;
+    padding: 3px 10px; border-radius:20px;
+    font-size:.68rem; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; margin-bottom:10px; width:fit-content;
+}
+.pm-half-chip--dev {
+    background: rgba(195,33,120,.12);
+    border: 1px solid rgba(195,33,120,.25);
+    color: #e88fc0;
+}
+.pm-half-chip--plat {
+    background: rgba(124,58,237,.12);
+    border: 1px solid rgba(124,58,237,.3);
+    color: #c4b5fd;
+}
 
-    .pm-col-inner {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-    }
+.pm-half-heading {
+    font-size:1.05rem; font-weight:700; color:#fff;
+    margin-bottom:8px;
+}
+.pm-half-desc {
+    font-size:.82rem; color:rgba(255,255,255,.4);
+    line-height:1.65; margin-bottom:16px;
+}
 
-    /* Success state for left column */
-    #pm-game-col.is-paid {
-        background: linear-gradient(145deg, rgba(0, 200, 100, .08), rgba(0, 160, 80, .05));
-        border-right-color: rgba(0, 200, 100, .2);
-        transition: background .6s ease;
-    }
+.pm-perks {
+    display:flex; flex-direction:column; gap:8px;
+    margin-bottom:18px;
+}
+.pm-perk {
+    font-size:.8rem; color:rgba(167,139,250,.75);
+    display:flex; align-items:center; gap:7px;
+}
 
-    /* ── Section label ── */
-    .pm-section-label {
-        font-size: .7rem;
-        font-weight: 700;
-        letter-spacing: .12em;
-        text-transform: uppercase;
-        color: #c32178;
-        margin-bottom: 8px;
-    }
+.pm-zero-note {
+    background: rgba(245,158,11,.06);
+    border: 1px solid rgba(245,158,11,.15);
+    border-radius:8px; padding:8px 12px;
+    font-size:.77rem; color:rgba(245,158,11,.7);
+    margin-bottom:12px; line-height:1.5;
+}
 
-    .pm-section-label--dim {
-        color: rgba(255, 255, 255, .3);
-    }
+.pm-extra-link {
+    font-size:.77rem; color:rgba(255,255,255,.28);
+    text-decoration:none; margin-top:auto;
+    transition:color .18s; display:inline-block;
+}
+.pm-extra-link:hover { color:rgba(255,255,255,.6); }
 
-    /* ── Headings ── */
-    .pm-heading {
-        font-size: 1.7rem;
-        font-weight: 700;
-        color: #fff;
-        margin: 0 0 4px;
-        line-height: 1.2;
-    }
+/* Actions */
+.pm-actions { margin-top:auto; padding-top:16px; }
 
-    .pm-heading--sm {
-        font-size: 1.25rem;
-        margin-bottom: 16px;
-    }
+.pm-btn-pay {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:13px 20px;
+    border:none; border-radius:12px;
+    background: linear-gradient(135deg,#c32178,#74155d);
+    color:#fff; font-weight:700; font-size:.92rem;
+    cursor:pointer; font-family:inherit;
+    box-shadow: 0 4px 18px rgba(195,33,120,.35);
+    transition: box-shadow .18s, transform .12s;
+}
+.pm-btn-pay:hover { box-shadow: 0 6px 26px rgba(195,33,120,.52); }
+.pm-btn-pay:active { transform:scale(.97); }
 
-    .pm-sub {
-        color: rgba(255, 255, 255, .5);
-        font-size: .9rem;
-        margin: 0 0 24px;
-    }
+.pm-btn-ghost {
+    display:block; width:100%; margin-top:8px;
+    padding:8px; background:transparent;
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:8px; color:rgba(255,255,255,.35);
+    font-size:.78rem; cursor:pointer; font-family:inherit;
+    transition:.18s;
+}
+.pm-btn-ghost:hover { color:#fff; border-color:rgba(255,255,255,.22); }
 
-    /* ── Price tag ── */
-    .pm-price-tag {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        margin-bottom: 20px;
-        padding: 16px 20px;
-        background: rgba(195, 33, 120, .1);
-        border: 1px solid rgba(195, 33, 120, .25);
-        border-radius: 14px;
-    }
+.pm-spin-row {
+    display:flex; align-items:center; gap:10px;
+    font-size:.83rem; color:rgba(255,255,255,.45); padding:10px 0;
+}
+.pm-spinner {
+    width:18px; height:18px; flex-shrink:0;
+    border:2px solid rgba(195,33,120,.2);
+    border-top-color:#c32178; border-radius:50%;
+    animation:pmSpin .75s linear infinite;
+}
+@keyframes pmSpin { to { transform:rotate(360deg); } }
 
-    .pm-price-amount {
-        font-size: 2rem;
-        font-weight: 800;
-        color: #fff;
-        letter-spacing: -.02em;
-    }
+.pm-btn-pay--plat {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    box-shadow: 0 4px 18px rgba(124,58,237,.35);
+}
+.pm-btn-pay--plat:hover { box-shadow: 0 6px 26px rgba(124,58,237,.52); }
 
-    .pm-price-note {
-        font-size: .8rem;
-        color: rgba(255, 255, 255, .5);
-    }
+.pm-ok--plat {
+    background: rgba(167,139,250,.08);
+    border-color: rgba(167,139,250,.2);
+    color: #c4b5fd;
+}
 
-    /* ── Benefits ── */
-    .pm-benefits {
-        list-style: none;
-        padding: 0;
-        margin: 0 0 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
+.pm-plat-prompt {
+    font-size: .8rem;
+    color: rgba(255,255,255,.35);
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
 
-    .pm-benefits li {
-        font-size: .9rem;
-        color: rgba(255, 255, 255, .65);
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .pm-check {
-        color: #00c46a;
-        font-weight: 700;
-    }
-
-    /* ── Buttons ── */
-    .pm-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 14px 24px;
-        border-radius: 12px;
-        border: none;
-        font-size: 1rem;
-        font-weight: 700;
-        cursor: pointer;
-        text-decoration: none;
-        transition: transform .15s, box-shadow .15s, background .2s;
-        width: 100%;
-    }
-
-    .pm-btn:active {
-        transform: scale(.97);
-    }
-
-    .pm-btn--primary {
-        background: linear-gradient(135deg, #c32178, #74155d);
-        color: #fff;
-        box-shadow: 0 4px 20px rgba(195, 33, 120, .35);
-    }
-
-    .pm-btn--primary:hover {
-        box-shadow: 0 6px 28px rgba(195, 33, 120, .55);
-        background: linear-gradient(135deg, #e02e8e, #8c1a70);
-    }
-
-    .pm-btn--secondary {
-        background: rgba(255, 255, 255, .07);
-        border: 1px solid rgba(255, 255, 255, .15);
-        color: rgba(255, 255, 255, .85);
-    }
-
-    .pm-btn--secondary:hover {
-        background: rgba(255, 255, 255, .12);
-    }
-
-    .pm-btn--ghost {
-        background: transparent;
-        border: 1px solid rgba(255, 255, 255, .2);
-        color: rgba(255, 255, 255, .6);
-        font-size: .85rem;
-    }
-
-    .pm-btn--ghost:hover {
-        border-color: rgba(255, 255, 255, .4);
-        color: #fff;
-    }
-
-    .pm-btn--donate {
-        background: rgba(255, 100, 150, .1);
-        border: 1px solid rgba(255, 100, 150, .25);
-        color: rgba(255, 180, 210, 1);
-        padding: 10px 18px;
-        border-radius: 10px;
-        font-size: .85rem;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        transition: background .2s;
-        width: auto;
-    }
-
-    .pm-btn--donate:hover {
-        background: rgba(255, 100, 150, .2);
-    }
-
-    .pm-btn--sm {
-        padding: 8px 16px;
-        font-size: .8rem;
-    }
-
-    /* ── Hint ── */
-    .pm-hint {
-        margin: 10px 0 0;
-        font-size: .78rem;
-        color: rgba(255, 255, 255, .3);
-        text-align: center;
-    }
-
-    /* ── Spinner ── */
-    .pm-spinner-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 14px;
-        padding: 24px;
-        color: rgba(255, 255, 255, .6);
-        font-size: .9rem;
-    }
-
-    .pm-spinner {
-        width: 36px;
-        height: 36px;
-        border: 3px solid rgba(195, 33, 120, .2);
-        border-top-color: #c32178;
-        border-radius: 50%;
-        animation: pmSpin .8s linear infinite;
-    }
-
-    @keyframes pmSpin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    /* ── Success ── */
-    .pm-success-badge {
-        width: 64px;
-        height: 64px;
-        background: rgba(0, 200, 100, .12);
-        border: 2px solid rgba(0, 200, 100, .4);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 16px;
-        color: #00c46a;
-        animation: pmPop .4s cubic-bezier(.22, 1, .36, 1);
-    }
-
-    @keyframes pmPop {
-        from {
-            transform: scale(0);
-            opacity: 0;
-        }
-
-        to {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .pm-success-text {
-        text-align: center;
-        color: #00c46a;
-        font-weight: 600;
-        font-size: 1rem;
-        margin: 0;
-    }
-
-    /* ── Divider ── */
-    .pm-divider {
-        height: 1px;
-        background: rgba(255, 255, 255, .08);
-        margin: 24px 0;
-    }
-
-    .pm-divider--subtle {
-        background: rgba(255, 255, 255, .04);
-    }
-
-    /* ── Donate row ── */
-    .pm-donate-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-    }
-
-    .pm-donate-row--stacked {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .pm-donate-title {
-        font-size: .9rem;
-        font-weight: 600;
-        color: rgba(255, 255, 255, .75);
-    }
-
-    .pm-donate-sub {
-        font-size: .78rem;
-        color: rgba(255, 255, 255, .35);
-        margin-top: 3px;
-    }
-
-    /* ── Side column ── */
-    .pm-side-desc {
-        font-size: .85rem;
-        color: rgba(255, 255, 255, .45);
-        line-height: 1.6;
-        margin: 0 0 14px;
-    }
-
-    .pm-side-desc strong {
-        color: rgba(255, 255, 255, .7);
-    }
-
-    .pm-infra-amount {
-        font-size: 1.6rem;
-        font-weight: 800;
-        color: rgba(255, 255, 255, .75);
-        margin: 0 0 16px;
-        letter-spacing: -.02em;
-    }
-
-    .pm-infra-ok {
-        margin-top: 12px;
-        padding: 10px 14px;
-        background: rgba(0, 200, 100, .1);
-        border: 1px solid rgba(0, 200, 100, .25);
-        border-radius: 10px;
-        color: #00c46a;
-        font-size: .85rem;
-        font-weight: 600;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 700px) {
-        .pm-body {
-            grid-template-columns: 1fr;
-        }
-
-        .pm-col {
-            padding: 28px 22px;
-        }
-
-        .pm-col--main {
-            border-right: none;
-            border-bottom: 1px solid rgba(255, 255, 255, .07);
-        }
-
-        .pm-col--side {
-            border-radius: 0 0 24px 24px;
-        }
-
-        .pm-heading {
-            font-size: 1.4rem;
-        }
-    }
+/* ── MOBILE ── */
+@media (max-width:640px) {
+    .pm-body { grid-template-columns:1fr; }
+    .pm-half--plat { border-left:none; border-top:1px solid rgba(255,255,255,.05); border-radius:0 0 22px 22px; }
+    .pm-half--dev  { border-radius:0; }
+    .pm-top { padding:16px 18px 14px; }
+    .pm-slider-zone { padding:16px 18px 4px; }
+    .pm-half { padding:20px 18px 22px; }
+    .pm-total-val { font-size:1.5rem; }
+    .pm-amt-val   { font-size:1.15rem; }
+}
 </style>
 
-
-<!-- ═══════════════════════════════════════════════════
-     JAVASCRIPT
-═══════════════════════════════════════════════════ -->
+<!-- ═══════════ SCRIPT ═══════════ -->
 <script>
-    /* ── Open / close ── */
-    function openPaymentModal() {
+(function() {
+    const GAME_PRICE   = <?= $game_price ?>;
+    const MAX_PLATFORM = <?= $max_platform ?>;
+    let   platAmt      = <?= $default_plat ?>;
+    let   gamePollTimer = null;
+    let   platPollTimer = null;
+    let   gamePaymentId = null;
+    let   platPaymentId = null;
+
+    window.openPaymentModal = function() {
         document.getElementById('paymentModal').classList.add('is-open');
         document.body.style.overflow = 'hidden';
-    }
-
-    function closePaymentModal() {
+        pmUpdate(platAmt);
+    };
+    window.closePaymentModal = function() {
         document.getElementById('paymentModal').classList.remove('is-open');
         document.body.style.overflow = '';
-        clearInterval(window._pmPollTimer);
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('paymentModal').addEventListener('click', function(e) {
-            if (e.target === this) closePaymentModal();
-        });
+        clearInterval(gamePollTimer);
+        clearInterval(platPollTimer);
+    };
+    document.getElementById('paymentModal').addEventListener('click', function(e) {
+        if (e.target === this) closePaymentModal();
     });
 
-    const GAME_ID = <?= (int)$game_id ?>;
-    const GAME_PRICE = <?= (int)$game['price'] ?>;
-    const INFRA_AMT = <?= (int)$infra_amount ?>;
+    window.pmUpdate = function(val) {
+        val = parseInt(val) || 0;
+        platAmt = val;
 
-    /* ── Start game payment ── */
-    async function startGamePayment() {
-        const btn = document.getElementById('pm-pay-game-btn');
+        const total  = GAME_PRICE + val;
+        const devPct = total > 0 ? (GAME_PRICE / total) * 100 : 100;
+
+        document.getElementById('pm-total').textContent     = total.toLocaleString('ru-RU') + ' ₽';
+        document.getElementById('pm-dev-val').textContent   = GAME_PRICE.toLocaleString('ru-RU') + ' ₽';
+        document.getElementById('pm-plat-val').textContent  = (val > 0 ? '+\u202F' : '') + val.toLocaleString('ru-RU') + ' ₽';
+
+        document.getElementById('pm-track-dev').style.width  = devPct + '%';
+        document.getElementById('pm-track-plat').style.width = (100 - devPct) + '%';
+
+        const pct = (val / MAX_PLATFORM) * 100;
+        document.getElementById('pm-slider').style.background =
+            `linear-gradient(to right,rgba(195,33,120,.5) 0%,rgba(124,58,237,.5) ${pct}%,rgba(255,255,255,.08) ${pct}%)`;
+
+        document.getElementById('pm-total').style.color = val > 0 ? '#c4b5fd' : '#fff';
+        document.getElementById('pm-zero-note').style.display = val === 0 ? '' : 'none';
+
+        // update pay button
+        const btn = document.getElementById('pm-pay-btn');
+        if (btn) btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Оплатить ${GAME_PRICE.toLocaleString('ru-RU')} ₽`;
+
+        // update platform button amount label
+        const pba = document.getElementById('pm-plat-btn-amt');
+        if (pba) pba.textContent = val > 0 ? '— ' + val.toLocaleString('ru-RU') + ' ₽' : '';
+    };
+
+    /* ── STEP 1: pay for game ── */
+    window.pmStartPayment = async function() {
+        const btn = document.getElementById('pm-pay-btn');
         btn.disabled = true;
         btn.textContent = 'Создаём платёж…';
 
         try {
-            const res = await fetch('../finv2/create_payment_game.php', {
+            const res  = await fetch('/finv2/create_payment_game.php', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    game_id: GAME_ID
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game_id: <?= (int)$game_id ?>, platform_tip: 0 })
             });
             const data = await res.json();
+            if (!data.payment_url || !data.payment_id) throw new Error(data.error || 'Нет ответа');
 
-            if (!data.payment_url || !data.payment_id) {
-                throw new Error(data.error || 'Не удалось создать платёж');
-            }
-
-            window._pmPaymentId = data.payment_id;
+            gamePaymentId = data.payment_id;
             window.open(data.payment_url, '_blank');
 
-            document.getElementById('pm-idle-state').style.display = 'none';
-            document.getElementById('pm-waiting-state').style.display = '';
+            document.getElementById('pm-idle').style.display    = 'none';
+            document.getElementById('pm-waiting').style.display = '';
 
-            startPollGame(data.payment_id);
-
-        } catch (err) {
-            btn.disabled = false;
-            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Оплатить ${GAME_PRICE.toLocaleString('ru-RU')} ₽`;
-            alert('Ошибка: ' + err.message);
-        }
-    }
-
-    function startPollGame(paymentId) {
-        clearInterval(window._pmPollTimer);
-        window._pmPollTimer = setInterval(async () => {
-            try {
-                const res = await fetch('/finv2/check_payment_game.php?payment_id=' + encodeURIComponent(paymentId));
-                const data = await res.json();
-
-                if (data.status === 'succeeded') {
-                    clearInterval(window._pmPollTimer);
-                    onGamePaymentSuccess();
-                } else if (data.status === 'canceled') {
-                    clearInterval(window._pmPollTimer);
-                    document.getElementById('pm-waiting-state').style.display = 'none';
-                    document.getElementById('pm-idle-state').style.display = '';
-                    const btn = document.getElementById('pm-pay-game-btn');
-                    btn.disabled = false;
-                    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Попробовать снова`;
-                    alert('Платёж отменён. Попробуйте ещё раз.');
-                }
-            } catch (_) {}
-        }, 3000);
-    }
-
-    function onGamePaymentSuccess() {
-        document.getElementById('pm-game-col').classList.add('is-paid');
-        document.getElementById('pm-waiting-state').style.display = 'none';
-        document.getElementById('pm-success-state').style.display = '';
-    }
-
-    /* ── Infra payment ── */
-    async function startInfraPayment() {
-        const btn = document.getElementById('pm-pay-infra-btn');
-        btn.disabled = true;
-        btn.textContent = 'Создаём платёж…';
-
-        try {
-            const res = await fetch('/finv2/create_infra_payment.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    amount: INFRA_AMT,
-                    game_id: GAME_ID
-                })
-            });
-            const data = await res.json();
-
-            if (!data.payment_url) throw new Error(data.error || 'Ошибка');
-
-            window.open(data.payment_url, '_blank');
-
-            let infraPoll = setInterval(async () => {
+            gamePollTimer = setInterval(async () => {
                 try {
-                    const r = await fetch('/finv2/check_payment_game.php?payment_id=' + encodeURIComponent(data.payment_id));
+                    const r = await fetch('/finv2/check_payment_game.php?payment_id=' + encodeURIComponent(gamePaymentId));
                     const d = await r.json();
                     if (d.status === 'succeeded') {
-                        clearInterval(infraPoll);
-                        btn.style.display = 'none';
-                        document.getElementById('pm-infra-success').style.display = '';
+                        clearInterval(gamePollTimer);
+                        onGamePaid();
+                    } else if (d.status === 'canceled') {
+                        clearInterval(gamePollTimer);
+                        document.getElementById('pm-waiting').style.display = 'none';
+                        document.getElementById('pm-idle').style.display    = '';
+                        btn.disabled = false;
+                        pmUpdate(platAmt);
                     }
-                } catch (_) {}
+                } catch(_) {}
             }, 3000);
 
-        } catch (err) {
+        } catch(err) {
             btn.disabled = false;
-            btn.textContent = 'Оплатить поддержку';
+            pmUpdate(platAmt);
             alert('Ошибка: ' + err.message);
         }
+    };
+
+    /* ── STEP 2: game paid → show platform step ── */
+    function onGamePaid() {
+        document.getElementById('pm-waiting').style.display  = 'none';
+        document.getElementById('pm-game-ok').style.display  = '';
+
+        if (platAmt > 0) {
+            // show platform payment step
+            document.getElementById('pm-plat-step').style.display = '';
+            document.getElementById('pm-goto-lib').style.display  = 'none';
+        } else {
+            // no platform fee — go straight to done
+            pmShowDone();
+        }
     }
+
+    /* ── STEP 2b: pay platform ── */
+    window.pmStartPlatPayment = async function() {
+        const btn = document.getElementById('pm-pay-plat-btn');
+        btn.disabled = true;
+        btn.textContent = 'Создаём платёж…';
+
+        document.getElementById('pm-skip-plat').style.display = 'none';
+
+        try {
+            const res  = await fetch('/finv2/create_infra_payment.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: platAmt, game_id: <?= (int)$game_id ?> })
+            });
+            const data = await res.json();
+            if (!data.payment_url || !data.payment_id) throw new Error(data.error || 'Нет ответа');
+
+            platPaymentId = data.payment_id;
+            window.open(data.payment_url, '_blank');
+
+            btn.style.display = 'none';
+            document.getElementById('pm-plat-waiting').style.display = '';
+
+            platPollTimer = setInterval(async () => {
+                try {
+                    const r = await fetch('/finv2/check_payment_game.php?payment_id=' + encodeURIComponent(platPaymentId));
+                    const d = await r.json();
+                    if (d.status === 'succeeded') {
+                        clearInterval(platPollTimer);
+                        document.getElementById('pm-plat-waiting').style.display = 'none';
+                        document.getElementById('pm-plat-ok').style.display      = '';
+                        setTimeout(pmShowDone, 1200);
+                    } else if (d.status === 'canceled') {
+                        clearInterval(platPollTimer);
+                        document.getElementById('pm-plat-waiting').style.display = 'none';
+                        btn.style.display  = '';
+                        btn.disabled = false;
+                        btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Попробовать снова`;
+                        document.getElementById('pm-skip-plat').style.display = '';
+                    }
+                } catch(_) {}
+            }, 3000);
+
+        } catch(err) {
+            btn.disabled = false;
+            btn.textContent = 'Поддержать платформу';
+            document.getElementById('pm-skip-plat').style.display = '';
+            alert('Ошибка: ' + err.message);
+        }
+    };
+
+    /* ── STEP 3: done ── */
+    window.pmShowDone = function() {
+        document.getElementById('pm-plat-step').style.display = 'none';
+        document.getElementById('pm-goto-lib').style.display  = '';
+    };
+
+    document.addEventListener('DOMContentLoaded', () => pmUpdate(platAmt));
+})();
 </script>
