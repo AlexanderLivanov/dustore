@@ -1,230 +1,127 @@
-<!DOCTYPE html>
-<html>
+<?php
+$page_title = 'Новые организации';
+$active_nav = 'recentorgs';
+require_once(__DIR__ . '/includes/header.php');
 
-<head>
-  <meta charset="UTF-8">
-  <title>Control Panel</title>
-  <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet" type="text/css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/css/materialize.min.css">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
-  <link href="assets/css/custom.css" rel="stylesheet" type="text/css" />
-</head>
-
-<body>
-  <?php
-  require_once('../swad/static/elements/sidebar.php');
-  require_once('../swad/config.php');
-  require_once('../swad/controllers/tg_bot.php');
-
-  $db = new Database();
-
-  if ($_SESSION['USERDATA']['global_role'] != -1 && $_SESSION['USERDATA']['global_role'] < 3) {
-    echo ("<script>alert('У вас нет прав на использование этой функции');</script>");
+if (!$is_admin) {
+    echo '<div class="alert alert-err"><span class="material-icons" style="font-size:16px;vertical-align:middle;">lock</span> Доступно только администраторам платформы.</div>';
+    require_once __DIR__ . '/includes/footer.php';
     exit();
-  }
+}
 
-  if (isset($_GET['approve'])) {
-    $org_id = (int)$_GET['approve'];
-    $tg_id = $_GET['tg_id'];
-    $org_name = $_GET['name'];
+$conn = $db->connect();
 
-    $stmt = $db->connect()->prepare("UPDATE studios SET status = 'active' WHERE id = ?");
-    $stmt->execute([$org_id]);
+// Обработка смены статуса
+$action_msg = '';
+$action_err = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $target_studio = (int)($_POST['studio_id'] ?? 0);
+    $new_status    = $_POST['new_status'] ?? '';
+    $ban_reason    = trim($_POST['ban_reason'] ?? '');
 
-    $stmt = $db->connect()->prepare("UPDATE users SET global_role = 2 WHERE id = (SELECT owner_id FROM studios WHERE id = ?)");
-    $stmt->execute([$org_id]);
+    if ($target_studio && in_array($new_status, ['active', 'banned', 'pending'])) {
+        $conn->prepare("UPDATE studios SET status=?, ban_reason=? WHERE id=?")
+            ->execute([$new_status, $ban_reason, $target_studio]);
+        $action_msg = "Статус студии #{$target_studio} изменён на «{$new_status}».";
+    } else {
+        $action_err = 'Неверные параметры.';
+    }
+}
 
-    send_private_message($tg_id, "Ваша студия была подтверждена. Теперь вы можете создать свой первый проект!\n\nБлагодарим за регистрацию на нашей платформе! ❤");
-    send_group_message(-1002916906978, "<i>❗ #подтверждение</i>\n@" . $_SESSION['USERDATA']['telegram_username'] . " (" . $curr_user->getRoleName($_SESSION['USERDATA']['global_role']) . ") подтвердил студию " . $org_name . " (" . $org_id . ").", false, "");
-    echo ("<script>alert('Студия успешно подтверждена!'); window.location.href = 'recentorgs';</script>");
-    exit();
-  }
+// Студии — последние 50
+$studios = $conn->query("
+    SELECT s.*, u.username AS owner_name, u.telegram_username,
+           COUNT(g.id) AS games_count
+    FROM studios s
+    LEFT JOIN users u ON u.id = s.owner_id
+    LEFT JOIN games g ON g.developer = s.id
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+    LIMIT 50
+")->fetchAll(PDO::FETCH_ASSOC);
 
-  if (isset($_GET['reject'])) {
-    $org_id = (int)$_GET['reject'];
-    $tg_id = $_GET['tg_id'];
-    $org_name = $_GET['name'];
-    $reason = isset($_GET['reject_reason']) ? trim($_GET['reject_reason']) : '';
+$status_cfg = [
+    'active'  => ['badge-pub', 'Активна'],
+    'banned'  => ['badge-err', 'Заблокирована'],
+    'pending' => ['badge-rev', 'На проверке'],
+];
+?>
 
-    $stmt = $db->connect()->prepare("UPDATE studios SET status = 'suspended', ban_reason = ? WHERE id = ?");
-    $stmt->execute([$reason, $org_id]);
+<?php if ($action_msg): ?><div class="alert alert-ok"><?= htmlspecialchars($action_msg) ?></div><?php endif; ?>
+<?php if ($action_err): ?><div class="alert alert-err"><?= htmlspecialchars($action_err) ?></div><?php endif; ?>
 
-    send_group_message(-1002916906978, "<i>❗ #отказ</i>\n@" . $_SESSION['USERDATA']['telegram_username'] . "(" . $curr_user->getRoleName($_SESSION['USERDATA']['global_role']) . ") отклонил студию " . $org_name . " (" . $org_id . ") по причине: " . $reason . ".", false, "");
-    send_private_message($tg_id, "Ваша заявка на регистрацию студии была отклонена. Причина отклонения: <i>" . trim($_GET['reject_reason']) . "</i>. Вы можете изменить вашу заявку на странице https://dustore.ru/devs/regorg и отправить её заново!");
-    echo ("<script>alert('Студия отклонена!'); window.location.href = 'recentorgs';</script>");
-    exit();
-  }
-  ?>
+<div class="sec-head" style="margin-bottom:16px;">
+    <div class="sec-title"><?= count($studios) ?> последних студий</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="search-inp" placeholder="Поиск..." style="background:var(--elev);border:1px solid var(--bd);border-radius:8px;padding:6px 12px;color:#fff;font-size:12px;width:200px;outline:none;" oninput="filterStudios(this.value)">
+    </div>
+</div>
 
-  <main>
-    <section class="content">
-      <div class="page-announce valign-wrapper">
-        <a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only">
-          <i class="material-icons">menu</i>
-        </a>
-        <h1 class="page-announce-text valign">// Управление студиями</h1>
-      </div>
-
-      <div class="container">
-        <!-- Вкладки -->
-        <ul class="tabs">
-          <li class="tab col s6"><a class="active" href="#pending">Новые студии</a></li>
-          <li class="tab col s6"><a href="#active">Активные студии</a></li>
-        </ul>
-      </div>
-
-      <!-- Таблица pending -->
-      <div id="pending" class="container">
-        <h5>Новые студии (ожидают подтверждения)</h5>
-        <table class="responsive-table striped hover centered">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Название</th>
-              <th>Дата регистрации</th>
-              <th>Владелец (telegram_id, @username)</th>
-              <th>Ссылка VK</th>
-              <th>Город</th>
-              <th>Email</th>
-              <th>Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php
-            $stmt = $db->connect()->prepare("
-            SELECT s.*, u.telegram_id, u.telegram_username 
-            FROM studios s
-            JOIN users u ON s.owner_id = u.id
-            WHERE s.status = 'pending'
-          ");
-            $stmt->execute();
-            $pending = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            if ($pending):
-              foreach ($pending as $org): ?>
-                <tr>
-                  <td><?= $org['id'] ?></td>
-                  <td><?= htmlspecialchars($org['name']) ?></td>
-                  <td><?= date('Y-m-d', strtotime($org['created_at'])) ?></td>
-                  <td><?= $org['telegram_id'] ?>, @<?= htmlspecialchars($org['telegram_username']) ?></td>
-                  <td>
-                    <?php if (!empty($org['vk_link'])): ?>
-                      <a href="<?= htmlspecialchars($org['vk_link']) ?>" target="_blank">Ссылка</a>
-                    <?php else: ?>
-                      Не указана
+<div style="display:flex;flex-direction:column;gap:8px;" id="studios-list">
+    <?php foreach ($studios as $s):
+        [$scls, $slbl] = $status_cfg[$s['status'] ?? 'pending'] ?? ['badge-rev', 'На проверке'];
+    ?>
+        <div class="card studio-row" style="padding:14px;" data-name="<?= htmlspecialchars(strtolower($s['name'])) ?>">
+            <div style="display:flex;align-items:flex-start;gap:14px;">
+                <!-- Avatar -->
+                <div style="width:44px;height:44px;border-radius:10px;flex-shrink:0;background:var(--elev);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;">
+                    <?php if (!empty($s['avatar_link'])): ?>
+                        <img src="<?= htmlspecialchars($s['avatar_link']) ?>" style="width:100%;height:100%;object-fit:cover;">
+                        <?php else: ?><?= mb_strtoupper(mb_substr($s['name'], 0, 2)) ?><?php endif; ?>
+                </div>
+                <!-- Info -->
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-size:14px;font-weight:600;"><?= htmlspecialchars($s['name']) ?></span>
+                        <?php if ($s['tiker']): ?><span style="font-size:10px;color:var(--tm);background:var(--elev);padding:1px 6px;border-radius:4px;"><?= htmlspecialchars($s['tiker']) ?></span><?php endif; ?>
+                        <span class="badge <?= $scls ?>"><?= $slbl ?></span>
+                    </div>
+                    <div style="font-size:11px;color:var(--tm);margin-top:3px;">
+                        Владелец: <?= htmlspecialchars($s['owner_name'] ?? '—') ?>
+                        <?php if ($s['telegram_username']): ?> · @<?= htmlspecialchars($s['telegram_username']) ?><?php endif; ?>
+                            · Проектов: <?= (int)$s['games_count'] ?>
+                            · Зарегистрирована: <?= $s['created_at'] ? date('d.m.Y', strtotime($s['created_at'])) : '—' ?>
+                    </div>
+                    <?php if (!empty($s['ban_reason'])): ?>
+                        <div style="font-size:11px;color:var(--err);margin-top:3px;">Причина блокировки: <?= htmlspecialchars($s['ban_reason']) ?></div>
                     <?php endif; ?>
-                  </td>
-                  <td><?= htmlspecialchars($org['city'] ?? '-') ?></td>
-                  <td><?= htmlspecialchars($org['contact_email'] ?? '-') ?></td>
-                  <td>
-                    <a href="?approve=<?= $org['id'] ?>&tg_id=<?= $org['telegram_id'] ?>&name=<?= $org['name'] ?>" class="btn green"><i class="material-icons">done</i></a>
-                    <a href="?reject=<?= $org['id'] ?>&tg_id=<?= $org['telegram_id'] ?>&name=<?= $org['name'] ?>" class="btn red btn-reject"><i class="material-icons">remove</i></a>
-                  </td>
-                </tr>
-              <?php endforeach;
-            else: ?>
-              <tr>
-                <td colspan="8">Нет новых студий</td>
-              </tr>
-            <?php endif; ?>
-          </tbody>
-        </table>
-      </div>
+                </div>
+                <!-- Actions -->
+                <div style="flex-shrink:0;">
+                    <button onclick="toggleForm(<?= $s['id'] ?>)" class="btn btn-g" style="padding:5px 12px;font-size:12px;">
+                        <span class="material-icons" style="font-size:14px;">manage_accounts</span>Управление
+                    </button>
+                </div>
+            </div>
+            <!-- Collapsible action form -->
+            <div id="form-<?= $s['id'] ?>" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);">
+                <form method="POST" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+                    <input type="hidden" name="studio_id" value="<?= $s['id'] ?>">
+                    <div class="field" style="margin:0;flex:1;min-width:140px;">
+                        <label>Новый статус</label>
+                        <select name="new_status">
+                            <option value="active" <?= $s['status'] === 'active' ? ' selected' : '' ?>>active</option>
+                            <option value="pending" <?= $s['status'] === 'pending' ? ' selected' : '' ?>>pending</option>
+                            <option value="banned" <?= $s['status'] === 'banned' ? ' selected' : '' ?>>banned</option>
+                        </select>
+                    </div>
+                    <div class="field" style="margin:0;flex:2;min-width:200px;">
+                        <label>Причина (для блокировки)</label>
+                        <input type="text" name="ban_reason" value="<?= htmlspecialchars($s['ban_reason'] ?? '') ?>" placeholder="Нарушение правил...">
+                    </div>
+                    <button type="submit" class="btn btn-p" style="padding:7px 14px;font-size:12px;margin-bottom:0;">
+                        <span class="material-icons" style="font-size:14px;">save</span>Применить
+                    </button>
+                </form>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
 
-      <!-- Таблица active -->
-      <div id="active" class="container">
-        <h5>Активные студии</h5>
-        <table class="responsive-table striped hover centered">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Название</th>
-              <th>Дата регистрации</th>
-              <th>Владелец (telegram_id, @username)</th>
-              <th>Ссылка VK</th>
-              <th>Город</th>
-              <th>Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php
-            $stmt = $db->connect()->prepare("
-            SELECT s.*, u.telegram_id, u.telegram_username 
-            FROM studios s
-            JOIN users u ON s.owner_id = u.id
-            WHERE s.status = 'active'
-          ");
-            $stmt->execute();
-            $active = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            if ($active):
-              foreach ($active as $org): ?>
-                <tr>
-                  <td><?= $org['id'] ?></td>
-                  <td><?= htmlspecialchars($org['name']) ?></td>
-                  <td><?= date('Y-m-d', strtotime($org['created_at'])) ?></td>
-                  <td><?= $org['telegram_id'] ?>, @<?= htmlspecialchars($org['telegram_username']) ?></td>
-                  <td>
-                    <?php if (!empty($org['vk_link'])): ?>
-                      <a href="<?= htmlspecialchars($org['vk_link']) ?>" target="_blank">Ссылка</a>
-                    <?php else: ?>
-                      Не указана
-                    <?php endif; ?>
-                  </td>
-                  <td><?= htmlspecialchars($org['city'] ?? '-') ?></td>
-                  <td><?= htmlspecialchars($org['contact_email'] ?? '-') ?></td>
-                </tr>
-              <?php endforeach;
-            else: ?>
-              <tr>
-                <td colspan="7">Нет активных студий</td>
-              </tr>
-            <?php endif; ?>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-  <?php require_once('footer.php'); ?>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
-  <script>
-    // Инициализация компонентов
-    $(document).ready(function() {
-      $('.button-collapse').sideNav({
-        menuWidth: 300,
-        edge: 'left',
-        closeOnClick: false,
-        draggable: true
-      });
-
-      $('.tooltipped').tooltip({
-        delay: 50
-      });
-
-      $('select').material_select();
-      $('.collapsible').collapsible();
-    });
-  </script>
-
-  <script>
-    $(document).ready(function() {
-      $('ul.tabs').tabs();
-
-      $('.btn-reject').click(function(e) {
-        e.preventDefault();
-        let url = $(this).attr('href');
-        let reason = prompt('Укажите причину отклонения студии:');
-        if (reason !== null && reason.trim() !== '') {
-          window.location.href = url + '&reject_reason=' + encodeURIComponent(reason);
-        }
-      });
-    });
-  </script>
-</body>
-
-</html>
+<?php
+$extra_js = '<script>
+function toggleForm(id){const f=document.getElementById("form-"+id);f.style.display=f.style.display==="none"?"block":"none";}
+function filterStudios(q){document.querySelectorAll(".studio-row").forEach(r=>{r.style.display=r.dataset.name.includes(q.toLowerCase())?"":"none";});}
+</script>';
+require_once(__DIR__ . '/includes/footer.php');
+?>

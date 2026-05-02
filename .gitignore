@@ -16,3 +16,6 @@ node_modules
 indicator
 package-lock.json
 package.json
+uploads
+devs_old
+devs/uploads/

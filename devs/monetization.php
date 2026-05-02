@@ -1,205 +1,167 @@
 <?php
-require_once('../swad/config.php');
-require_once('../swad/controllers/user.php');
+$page_title = 'Монетизация';
+$active_nav = 'monetization';
+require_once(__DIR__ . '/includes/header.php');
 
-$db = new Database();
-$curr_user = new User();
-?>
+$conn = $db->connect();
 
-<!DOCTYPE html>
-<html>
+// Добавляем колонки YooKassa если ещё нет (idempotent)
+try {
+    $conn->exec("ALTER TABLE studios ADD COLUMN IF NOT EXISTS yookassa_shop_id VARCHAR(32) DEFAULT NULL");
+    $conn->exec("ALTER TABLE studios ADD COLUMN IF NOT EXISTS yookassa_token VARCHAR(128) DEFAULT NULL");
+} catch (PDOException $e) { /* уже существуют */
+}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Dustore.Devs - Настройки монетизации</title>
-    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/css/materialize.min.css">
-    <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="assets/css/custom.css" rel="stylesheet" />
-    <style>
-        .token-warning {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 4px;
+$stmt = $conn->prepare("SELECT * FROM studios WHERE id=?");
+$stmt->execute([$studio_id]);
+$pay = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$success_msg = '';
+$error_msg   = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $section = $_POST['section'] ?? '';
+
+    if ($section === 'yookassa') {
+        $shop_id = preg_replace('/[^0-9]/', '', $_POST['yookassa_shop_id'] ?? '');
+        $token   = trim($_POST['yookassa_token'] ?? '');
+        // Обновляем только если заполнены (токен скрываем — не перезаписываем пустым)
+        if (!empty($shop_id)) {
+            $conn->prepare("UPDATE studios SET yookassa_shop_id=? WHERE id=?")->execute([$shop_id, $studio_id]);
         }
-    </style>
-</head>
+        if (!empty($token)) {
+            $conn->prepare("UPDATE studios SET yookassa_token=? WHERE id=?")->execute([$token, $studio_id]);
+        }
+        $success_msg = 'Настройки ЮКасса сохранены.';
+    } elseif ($section === 'bank') {
+        $bank_name = substr($_POST['bank_name'] ?? '', 0, 64);
+        $BIC       = preg_replace('/[^0-9]/', '', $_POST['BIC'] ?? '');
+        $acc_num   = preg_replace('/[^0-9]/', '', $_POST['acc_num'] ?? '');
+        $INN       = preg_replace('/[^0-9]/', '', $_POST['INN'] ?? '');
+        $conn->prepare("UPDATE studios SET bank_name=?,BIC=?,acc_num=?,INN=? WHERE id=?")
+            ->execute([$bank_name, $BIC, $acc_num, $INN, $studio_id]);
+        $success_msg = 'Банковские реквизиты сохранены.';
+    }
 
-<body>
-    <?php
-    require_once('../swad/static/elements/sidebar.php');
-
-    $curr_user->checkAuth();
-    $studio_id = $_SESSION['studio_id'];
-
-    $stmt = $db->connect()->prepare("SELECT * FROM studios WHERE id = ?");
+    // Перечитываем
     $stmt->execute([$studio_id]);
     $pay = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
-    // Обработка формы
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $merchant_login      = preg_replace("/[^A-Za-z0-9_-]/", '', $_POST['merchant_login']);
-        $merchant_password   =  $_POST['merchant_password'];
-        if (empty($merchant_password)) {
-            $merchant_password = $pay['merchant_password'];
-        }
-        $culture             = preg_replace("/[^A-Za-z]/", '', $_POST['culture']);
-        $encoding            = preg_replace("/[^A-Za-z0-9-]/", '', $_POST['encoding']);
-        $bank_name = $_POST['bank_name'] ?? null;
-        $BIC       = $_POST['BIC'] ?? null;
-        $acc_num   = $_POST['acc_num'] ?? null;
-        $INN       = $_POST['INN'] ?? null;
-        $customer_email      = filter_var($_POST['customer_email'], FILTER_SANITIZE_EMAIL);
-        $Shp_item            = substr($_POST['Shp_item'], 0, 60);
+$yk_ok   = !empty($pay['yookassa_shop_id']) && !empty($pay['yookassa_token']);
+$bank_ok = !empty($pay['bank_name']) && !empty($pay['BIC']);
 
-        $sql = "UPDATE studios SET 
-            merchant_login = :merchant_login,
-            merchant_password = :merchant_password,
-            culture = :culture,
-            encoding = :encoding,
-            customer_email = :customer_email,
-            Shp_item = :Shp_item,
-            bank_name = :bank_name,
-            BIC = :BIC,
-            acc_num = :acc_num,
-            INN = :INN
-            WHERE id = :id";
+function pv($a, $k)
+{
+    return htmlspecialchars($a[$k] ?? '');
+}
+?>
 
-        try {
-            $stmt = $db->connect()->prepare($sql);
-            $stmt->execute([
-                ':merchant_login' => $merchant_login,
-                ':merchant_password' => $merchant_password,
-                ':culture' => $culture,
-                ':encoding' => $encoding,
-                ':customer_email' => $customer_email,
-                ':Shp_item' => $Shp_item,
-                ':id' => $studio_id,
-                ':bank_name' => $bank_name,
-                ':BIC' => $BIC,
-                ':acc_num' => $acc_num,
-                ':INN' => $INN
-            ]);
+<?php if ($success_msg): ?><div class="alert alert-ok"><?= htmlspecialchars($success_msg) ?></div><?php endif; ?>
+<?php if ($error_msg):   ?><div class="alert alert-err"><?= htmlspecialchars($error_msg) ?></div><?php endif; ?>
 
-            echo ("<script>window.location.replace('monetization?success=1');</script>");
-            exit();
-        } catch (PDOException $e) {
-            $error_message = "Ошибка при сохранении настроек: " . $e->getMessage();
-        }
-    }
-    ?>
-    <main>
-        <section class="content">
-            <div class="page-announce valign-wrapper">
-                <a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only">
-                    <i class="material-icons">menu</i>
-                </a>
-                <h1 class="page-announce-text valign">// Настройки монетизации</h1>
+<!-- Status row -->
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <div class="card" style="flex:1;min-width:200px;display:flex;align-items:center;gap:12px;padding:14px;">
+        <span class="material-icons" style="font-size:24px;color:<?= $yk_ok ? 'var(--ok)' : 'var(--tm)' ?>;">
+            <?= $yk_ok ? 'check_circle' : 'radio_button_unchecked' ?>
+        </span>
+        <div>
+            <div style="font-size:13px;font-weight:600;">ЮКасса</div>
+            <div style="font-size:11px;color:var(--tm);">
+                <?= $yk_ok ? 'Подключена · магазин #' . pv($pay, 'yookassa_shop_id') : 'Не настроена' ?>
             </div>
+        </div>
+    </div>
+    <div class="card" style="flex:1;min-width:200px;display:flex;align-items:center;gap:12px;padding:14px;">
+        <span class="material-icons" style="font-size:24px;color:<?= $bank_ok ? 'var(--ok)' : 'var(--tm)' ?>;">
+            <?= $bank_ok ? 'check_circle' : 'radio_button_unchecked' ?>
+        </span>
+        <div>
+            <div style="font-size:13px;font-weight:600;">Банковские реквизиты</div>
+            <div style="font-size:11px;color:var(--tm);"><?= $bank_ok ? pv($pay, 'bank_name') : 'Не заполнены' ?></div>
+        </div>
+    </div>
+</div>
 
-            <div class="container">
+<div class="grid-2" style="gap:16px;align-items:start;">
 
-                <?php if (isset($_GET['success'])): ?>
-                    <div class="alert alert-success">
-                        Настройки успешно сохранены!
-                    </div>
-                <?php endif; ?>
+    <!-- ЮКасса -->
+    <div class="card">
+        <div class="card-title">
+            <span class="material-icons">payment</span>ЮКасса
+            <a href="https://yookassa.ru" target="_blank"
+                style="margin-left:auto;font-size:11px;color:var(--p);text-decoration:none;">yookassa.ru ↗</a>
+        </div>
 
-                <?php if (isset($error_message)): ?>
-                    <div class="alert alert-error">
-                        <?= $error_message ?>
-                    </div>
-                <?php endif; ?>
+        <div class="alert" style="background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.15);color:var(--ts);font-size:12px;margin-bottom:16px;line-height:1.6;">
+            <strong style="color:var(--ok);">Рекомендуется.</strong>
+            ЮКасса поддерживает оплату картой, СБП, ЮMoney и другими методами. Комиссия от 2.8%.
+        </div>
 
-                <form method="POST">
-                    <div class="row">
-                        <div class="col s12 m6">
-                            <h5>Данные <a href="https://robokassa.ru">Robokassa</a>:</h5>
-                            <div class="input-field">
-                                <input type="text" name="merchant_login" minlength="3" maxlength="32"
-                                    value="<?= htmlspecialchars($pay['merchant_login']) ?>" required>
-                                <label>Merchant Login (ваш идентификатор магазина в Robokassa)</label>
-                            </div>
-
-                            <div class="input-field">
-                                <input type="password" name="merchant_password" minlength="6" maxlength="64"
-                                    placeholder="<?= !empty($pay['merchant_password']) ? 'Установлен' : 'Введите пароль' ?>">
-                                <label>Пароль №1 (password_1)</label>
-
-                                <div class="token-warning">
-                                    <i class="material-icons left">warning</i>
-                                    <span>Сохраните пароль в надежном месте. После сохранения он будет скрыт.</span>
-                                </div>
-                            </div>
-
-                            <div class="input-field">
-                                <input type="email" name="customer_email"
-                                    value="<?= htmlspecialchars($pay['customer_email']) ?>" maxlength="32">
-                                <label>Email покупателя по умолчанию (оставьте пустым)</label>
-                            </div>
-                        </div>
-
-                        <div class="col s12 m6">
-                            <div class="input-field">
-                                <input type="text" name="culture" value="<?= htmlspecialchars($pay['culture']) ?>" maxlength="6">
-                                <label>Язык (culture), по умолчанию ru</label>
-                            </div>
-
-                            <div class="input-field">
-                                <input type="text" name="encoding" value="<?= htmlspecialchars($pay['encoding']) ?>" maxlength="12">
-                                <label>Кодировка (encoding), по умолчанию UTF-8</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h5>Банковские реквизиты:</h5>
-                    <div class="input-field">
-                        <input type="text" name="bank_name" value="<?= htmlspecialchars($pay['bank_name']) ?>" maxlength="24">
-                        <label>Название банка</label>
-                    </div>
-
-                    <div class="input-field">
-                        <input type="text" name="BIC" value="<?= htmlspecialchars($pay['BIC']) ?>" maxlength="9">
-                        <label>БИК банка</label>
-                    </div>
-
-                    <div class="input-field">
-                        <input type="text" name="acc_num" value="<?= htmlspecialchars($pay['acc_num']) ?>" maxlength="20">
-                        <label>Номер счёта</label>
-                    </div>
-
-                    <div class="input-field">
-                        <input type="text" name="INN" value="<?= htmlspecialchars($pay['INN']) ?>" maxlength="12">
-                        <label>ИНН</label>
-                    </div>
-
-
-                    <div class="row">
-                        <div class="col s12 center-align">
-                            <button class="btn waves-effect waves-light" type="submit">
-                                <i class="material-icons left">save</i> Сохранить настройки
-                            </button>
-                            <a href="dashboard" class="btn grey">
-                                <i class="material-icons left">cancel</i> Назад
-                            </a>
-                        </div>
-                    </div>
-
-                </form>
+        <form method="POST">
+            <input type="hidden" name="section" value="yookassa">
+            <div class="field">
+                <label>Идентификатор магазина (shopId)</label>
+                <input type="text" name="yookassa_shop_id"
+                    value="<?= pv($pay, 'yookassa_shop_id') ?>"
+                    placeholder="123456" maxlength="32">
             </div>
-        </section>
-    </main>
+            <div class="field">
+                <label><?= !empty($pay['yookassa_token']) ? 'Секретный ключ (установлен — оставьте пустым чтобы не менять)' : 'Секретный ключ' ?></label>
+                <input type="password" name="yookassa_token"
+                    placeholder="<?= !empty($pay['yookassa_token']) ? '••••••••' : 'live_XXXXXX...' ?>"
+                    maxlength="128" autocomplete="new-password">
+            </div>
+            <?php if (!empty($pay['yookassa_token'])): ?>
+                <div class="alert alert-warn" style="font-size:12px;margin-bottom:12px;">
+                    ⚠️ Ключ установлен. Введите новый только если хотите его заменить.
+                </div>
+            <?php endif; ?>
+            <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;">
+                <span class="material-icons">save</span>Сохранить ЮКассу
+            </button>
+        </form>
 
-    <?php require_once('footer.php'); ?>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
-    <script>
-        $(document).ready(() => $('select').material_select());
-    </script>
-</body>
+        <!-- Robokassa — отключена -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span class="material-icons" style="font-size:16px;color:var(--tm);">block</span>
+                <span style="font-size:13px;font-weight:600;color:var(--tm);">Robokassa</span>
+                <span style="font-size:10px;background:var(--elev);color:var(--tm);padding:1px 8px;border-radius:4px;border:1px solid var(--bd);">недоступна</span>
+            </div>
+            <div style="font-size:12px;color:var(--tm);line-height:1.6;">
+                Robokassa временно отключена. Используйте ЮКассу — она поддерживает аналогичные методы оплаты.
+            </div>
+        </div>
+    </div>
 
-</html>
+    <!-- Банк -->
+    <div class="card">
+        <div class="card-title"><span class="material-icons">account_balance</span>Банковские реквизиты</div>
+        <div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:14px;">
+            Используются для выплат и формирования платёжных документов.
+        </div>
+        <form method="POST">
+            <input type="hidden" name="section" value="bank">
+            <div class="field"><label>Название банка</label>
+                <input type="text" name="bank_name" value="<?= pv($pay, 'bank_name') ?>" maxlength="64" placeholder='АО «Сбербанк»'>
+            </div>
+            <div class="field"><label>БИК</label>
+                <input type="text" name="BIC" value="<?= pv($pay, 'BIC') ?>" maxlength="9" placeholder="044525225">
+            </div>
+            <div class="field"><label>Расчётный счёт</label>
+                <input type="text" name="acc_num" value="<?= pv($pay, 'acc_num') ?>" maxlength="20" placeholder="40702810...">
+            </div>
+            <div class="field"><label>ИНН</label>
+                <input type="text" name="INN" value="<?= pv($pay, 'INN') ?>" maxlength="12" placeholder="7700000000">
+            </div>
+            <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;">
+                <span class="material-icons">save</span>Сохранить реквизиты
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<?php require_once(__DIR__ . '/includes/footer.php'); ?>

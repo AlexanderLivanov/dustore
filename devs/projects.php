@@ -1,105 +1,71 @@
-<!DOCTYPE html>
-<html>
+<?php
+$page_title = 'Мои проекты';
+$active_nav = 'projects';
+require_once(__DIR__ . '/includes/header.php');
+require_once(__DIR__ . '/../swad/controllers/pm.php');
 
-<head>
-  <meta charset="UTF-8">
-  <title>Dustore.Devs - Мои проекты</title>
-  <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet" type="text/css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/css/materialize.min.css">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
-  <link href="assets/css/custom.css" rel="stylesheet" type="text/css" />
-</head>
+$pm = new ProjectManagment();
+$all_projects = $pm->getAllStudioGames($studio_id);
 
-<body>
-  <?php
-  require_once('../swad/static/elements/sidebar.php');
-  require_once('../swad/config.php');
-  require_once('../swad/controllers/pm.php');
-  ?>
+$status_map = [
+    'published' => ['badge-pub',   'Опубликован'],
+    'pending'   => ['badge-rev',   'На модерации'],
+    'draft'     => ['badge-draft', 'Черновик'],
+    'rejected'  => ['badge-err',   'Отклонён'],
+];
+?>
 
-  <main>
-    <section class="content">
-      <div class="page-announce valign-wrapper">
-        <a href="#" data-activates="slide-out" class="button-collapse valign hide-on-large-only">
-          <i class="material-icons">menu</i>
-        </a>
-        <h1 class="page-announce-text valign">// Мои проекты</h1>
-      </div>
-      <?php
-      $projmanage = new ProjectManagment();
-      $all_projects = $projmanage->getAllStudioGames($_SESSION['studio_id']);
-      ?>
-      <div id="projects-table" class="container">
-        <button class="btn blue waves-effect waves-light" onclick="location.href='new'">
-          Новый проект
-          <i class="material-icons">task</i>
-        </button>
-        <table class="responsive-table striped hover centered">
-          <thead>
-            <tr>
-              <th>Название</th>
-              <th>Дата создания</th>
-              <th>Статус</th>
-              <th>Статус модерации</th>
-              <th>Управление</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($all_projects as $project): ?>
-              <tr>
-                <td><?= $project['name']; ?></td>
-                <td><?= date('d.m.Y', strtotime($project['release_date'])); ?></td>
-                <td><?= $project['status']; ?></td>
-                <td><?= $project['moderation_status']; ?></td>
-                <td>
-                  <button class="btn blue waves-effect waves-light edit-project" onclick="location.href='edit?id=<?= $project['id']; ?>'">
-                    <i class="material-icons">settings</i>
-                  </button>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-  <?php require_once('footer.php'); ?>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div>
+        <div style="font-size:22px;font-weight:700;"><?= count($all_projects) ?> <?= count($all_projects) === 1 ? 'проект' : 'проекта' ?></div>
+        <div style="font-size:13px;color:var(--ts);margin-top:2px;">Все ваши проекты на платформе</div>
+    </div>
+    <a href="/devs/new" class="btn btn-p"><span class="material-icons">add</span>Новый проект</a>
+</div>
+<?php if (empty($all_projects)): ?>
+    <div class="card" style="text-align:center;padding:60px;">
+        <span class="material-icons" style="font-size:48px;color:var(--p);display:block;margin-bottom:12px;">videogame_asset</span>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Нет проектов</div>
+        <p style="color:var(--ts);margin-bottom:20px;font-size:14px;">Загрузите свою первую игру на платформу Dustore</p>
+        <a href="/devs/new" class="btn btn-p"><span class="material-icons">add</span>Создать проект</a>
+    </div>
+<?php else: ?>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+        <?php foreach ($all_projects as $p):
+            [$cls, $lbl] = $status_map[$p['status'] ?? 'draft'] ?? ['badge-draft', 'Черновик'];
+            $cover = htmlspecialchars($p['path_to_cover'] ?? '');
+            $zip_mb = !empty($p['game_zip_size']) ? round($p['game_zip_size'] / 1048576, 1) . ' МБ' : '—';
+        ?>
+            <div class="card" style="display:flex;align-items:center;gap:16px;padding:16px;">
+                <div style="width:60px;height:60px;border-radius:12px;flex-shrink:0;background:var(--elev)<?= $cover ? ';background-image:url(\'' . $cover . '\');background-size:cover;background-position:center' : '' ?>;">
+                    <?php if (!$cover): ?><span class="material-icons" style="font-size:28px;color:var(--tm);margin:16px auto;display:block;text-align:center;">image</span><?php endif; ?>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+                        <div style="font-size:15px;font-weight:600;"><?= htmlspecialchars($p['name']) ?></div>
+                        <span class="badge <?= $cls ?>"><?= $lbl ?></span>
+                    </div>
+                    <div style="font-size:12px;color:var(--ts);">
+                        <?= htmlspecialchars($p['genre'] ?? '') ?>
+                        <?php if (!empty($p['platforms'])): ?> · <?= htmlspecialchars($p['platforms']) ?><?php endif; ?>
+                            <?php if (!empty($p['release_date'])): ?> · <?= htmlspecialchars($p['release_date']) ?><?php endif; ?>
+                    </div>
+                    <div style="font-size:12px;color:var(--tm);margin-top:2px;">
+                        ZIP: <?= $zip_mb ?>
+                        <?php if (!empty($p['GQI'])): ?> · GQI: <?= $p['GQI'] ?><?php endif; ?>
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <a href="/devs/edit?id=<?= (int)$p['id'] ?>" class="btn btn-g" style="padding:6px 12px;font-size:12px;">
+                        <span class="material-icons" style="font-size:15px;">edit</span>Изменить
+                    </a>
+                    <a href="/g/<?= (int)$p['id'] ?>" target="_blank" class="icon-btn" title="Открыть на Dustore">
+                        <span class="material-icons">open_in_new</span>
+                    </a>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
-  <script>
-    // Hide sideNav
-    $('.button-collapse').sideNav({
-      menuWidth: 300, // Default is 300
-      edge: 'left', // Choose the horizontal origin
-      closeOnClick: false, // Closes side-nav on <a> clicks, useful for Angular/Meteor
-      draggable: true // Choose whether you can drag to open on touch screens
-    });
-    $(document).ready(function() {
-      $('.tooltipped').tooltip({
-        delay: 50
-      });
-    });
-    $('select').material_select();
-    $('.collapsible').collapsible();
-  </script>
-  <div class="fixed-action-btn horizontal tooltipped" data-position="top" dattooltipped" data-position="top" data-delay="50" data-tooltip="Quick Links">
-    <a class="btn-floating btn-large red">
-      <i class="large material-icons">mode_edit</i>
-    </a>
-    <ul>
-      <li><a class="btn-floating red tooltipped" data-position="top" data-delay="50" data-tooltip="Handbook" href="#"><i class="material-icons">insert_chart</i></a></li>
-      <li><a class="btn-floating yellow darken-1 tooltipped" data-position="top" data-delay="50" data-tooltip="Staff Applications" href="#"><i class="material-icons">format_quote</i></a></li>
-      <li><a class="btn-floating green tooltipped" data-position="top" data-delay="50" data-tooltip="Name Guidelines" href="#"><i class="material-icons">publish</i></a></li>"
-      <li><a class="btn-floating blue tooltipped" data-position="top" data-delay="50" data-tooltip="Issue Tracker" href="#"><i class="material-icons">attach_file</i></a></li>
-      <li><a class="btn-floating orange tooltipped" data-position="top" data-delay="50" data-tooltip="Support" href="#"><i class="material-icons">person</i></a></li>
-    </ul>
-  </div>
-  </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-</body>
-
-</html>
+<?php require_once(__DIR__ . '/includes/footer.php'); ?>
