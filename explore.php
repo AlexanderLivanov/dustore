@@ -160,7 +160,7 @@ if ($selectedGenre) {
                                             ? htmlspecialchars($game['path_to_cover'])
                                             : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
                                             alt="<?= htmlspecialchars($game['name']) ?>"
-                                            style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 60%, rgba(0, 0, 0, 0) 100%);">
+                                            style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);">
                                         <?php if ($badge): ?>
                                             <div class="game-badge <?= $badgeClass ?>"><?= $badge ?></div>
                                         <?php endif; ?>
