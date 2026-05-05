@@ -144,23 +144,23 @@
                     </div>
                     <div class="platform-card">
                         <div class="platform-icon">🚀</div>
-                        <h3>Dustore.Launcher</h3>
-                        <p>(в разработке) Собственный лаунчер, через который можно скачивать игры.</p>
+                        <h3>HidL</h3>
+                        <p>(в разработке) Собственный лаунчер, который вы даже не увидите. Можно будет связать со Steam, чтобы игры добавлялись в библиотеку Steam.</p>
                     </div>
                     <div class="platform-card">
                         <div class="platform-icon">💵</div>
-                        <h3>Dustore.Finance</h3>
-                        <p>(в разработке) Площадка для приёма платежей. Через неё разработчики могут монетизировать свои проекты.</p>
+                        <h3>FinV2</h3>
+                        <p>Площадка для приёма платежей. Через неё разработчики монетизируют свои проекты, можно продавать свои ассеты, а также оплатить услуги исполнителя на L4T.</p>
                     </div>
                     <div class="platform-card">
-                        <div class="platform-icon">✅</div>
-                        <h3>Dustore.Connect</h3>
-                        <p>(в разработке) Единый вход для всех сервисов в экосистеме. Используйте свой аккаунт в Telegram или ключевую фразу для входа. Это быстро, современно и безопасно.</p>
+                        <div class="platform-icon">🍀</div>
+                        <h3>Dustore.L4T</h3>
+                        <p>Looking For a Team — наше решение для поиска команд на джемы, партнёров в проекты и исполнителей для решения своих задач.</p>
                     </div>
                     <div class="platform-card">
                         <div class="platform-icon">👨‍🎓</div>
-                        <h3>Dustore.Edu</h3>
-                        <p>(в разработке) Форум, посвящённый разработке игр и публикации их на Платформе. Тут происходит обмен знаниями.</p>
+                        <h3>GDDB</h3>
+                        <p>(в разработке) Gamedev Database — единая база данных со всеми ресурсами по геймдеву. Каждый может добавить свою статью или ссылку.</p>
                     </div>
                     <div class="platform-card">
                         <div class="platform-icon">📸</div>
@@ -169,8 +169,8 @@
                     </div>
                     <div class="platform-card">
                         <div class="platform-icon">🌐</div>
-                        <h3>Dustore.GIB (games in browser)</h3>
-                        <p>(в разработке) Помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать.</p>
+                        <h3>Dustore.GIB</h3>
+                        <p>(в разработке) Games In Browser — помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать. Что-то общее между WebGL и Instant Play.</p>
                     </div>
                     <div class="platform-card">
                         <div class="platform-icon">👩‍💻</div>
@@ -178,9 +178,24 @@
                         <p>Портал для разработчиков из студий. Публикация проектов, аналитика, монетизация.</p>
                     </div>
                     <div class="platform-card">
-                        <div class="platform-icon">🥙</div>
-                        <h3>shaurMA</h3>
-                        <p>Собственная консоль для разработчиков, через которую вы можете полностью управлять своей студией.</p>
+                        <div class="platform-icon">💔</div>
+                        <h3>"Битый Пиксель"</h3>
+                        <p>(В разработке) Наш сервис для отправки отчётов об уязвимостях и багрепортов.</p>
+                    </div>
+                    <div class="platform-card">
+                        <div class="platform-icon">🕹</div>
+                        <h3>Джемы</h3>
+                        <p>Тут можно проводить джемы.</p>
+                    </div>
+                    <div class="platform-card">
+                        <div class="platform-icon">🛠</div>
+                        <h3>DustAsset</h3>
+                        <p>Собственный ассетстор для разработчиков. Думаем, тут скоро каждый найдет что ищет.</p>
+                    </div>
+                    <div class="platform-card">
+                        <div class="platform-icon">Ⓜ</div>
+                        <h3>Dustore.Mobile</h3>
+                        <p>Здесь можно выложить игру или приложение (в т.ч. платное) для мобильных устройств.</p>
                     </div>
                 </div>
             </div>
@@ -304,7 +319,7 @@
                 </div>
                 <br>
                 <br>
-                <h3>А вот, какие фичи мы планируем внедрить:</h3>
+                <!-- <h3>А вот, какие фичи мы планируем внедрить:</h3>
                 <div class="platform-grid">
                     <div class="platform-card" onclick="window.location.replace('https:/\/github.com/AlexanderLivanov/dustore-docs');" style="cursor: pointer;">
                         <h3>Полный список</h3>
@@ -312,7 +327,7 @@
                         </p>
                     </div>
 
-                </div>
+                </div> -->
             </div>
         </section>
 
@@ -325,7 +340,7 @@
                     <div class="step">
                         <div class="step-number">1</div>
                         <h3>Регистрация</h3>
-                        <p>Создайте бесплатный аккаунт игрока за секунду, авторизовавшись через Telegram...</p>
+                        <p>Создайте бесплатный аккаунт игрока за секунду, авторизовавшись на Платформе...</p>
                     </div>
                     <div class="step">
                         <div class="step-number">2</div>

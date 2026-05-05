@@ -1,29 +1,52 @@
 {
     "name": "Dustore - российская игровая платформа",
     "short_name": "Dustore",
-    "description": "Dustore - российская игровая платформа",
+    "description": "Dustore - российская игровая платформа. Скачивайте инди-игры от российских разработчиков.",
     "start_url": "/",
-    "version": "1.6",
+    "version": "1.7",
     "lang": "ru-RU",
-    "theme_color": "#74155d",
-    "background_color": "#74155d",
+    "theme_color": "#14041d",
+    "background_color": "#14041d",
     "display": "standalone",
     "display_override": [
         "window-controls-overlay"
     ],
     "orientation": "portrait",
+    "categories": [
+        "games",
+        "entertainment"
+    ],
     "icons": [
         {
-            "purpose": "any",
-            "src": "/swad/static/img/icon_512x512.svg",
+            "src": "/swad/static/img/icon_512x512.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/swad/static/img/icon_512x512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ],
     "shortcuts": [
         {
             "name": "Каталог игр",
+            "short_name": "Каталог",
             "url": "/games",
+            "icons": [
+                {
+                    "src": "/swad/static/img/icon_512x512.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        },
+        {
+            "name": "Скачать приложение",
+            "short_name": "Скачать APK",
+            "url": "/app",
             "icons": [
                 {
                     "src": "/swad/static/img/icon_512x512.png",
@@ -37,20 +60,23 @@
         {
             "src": "/swad/static/img/screenshots/screenshot1.jpg",
             "sizes": "1080x2340",
-            "type": "image/png",
-            "form_factor": "portrait"
+            "type": "image/jpeg",
+            "form_factor": "narrow",
+            "label": "Главная страница"
         },
         {
             "src": "/swad/static/img/screenshots/screenshot2.jpg",
             "sizes": "1080x2340",
-            "type": "image/png",
-            "form_factor": "portrait"
+            "type": "image/jpeg",
+            "form_factor": "narrow",
+            "label": "Каталог игр"
         },
         {
             "src": "/swad/static/img/screenshots/screenshot3.jpg",
             "sizes": "1080x2340",
-            "type": "image/png",
-            "form_factor": "portrait"
+            "type": "image/jpeg",
+            "form_factor": "narrow",
+            "label": "Страница игры"
         }
     ],
     "capture_links": "existing_client_event",

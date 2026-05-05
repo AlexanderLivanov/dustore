@@ -5,11 +5,11 @@ require_once __DIR__ . '/../../swad/config.php';
 function checkModeration($pdo, $gameId)
 {
 
-    $stmt = $pdo->prepare("SELECT created_at, status FROM games WHERE id=?");
+    $stmt = $pdo->prepare("SELECT created_at, moderation_status FROM games WHERE id=?");
     $stmt->execute([$gameId]);
     $game = $stmt->fetch();
 
-    if (!$game || $game['status'] !== 'pending') return;
+    if (!$game || $game['moderation_status'] !== 'pending') return;
 
     $created = strtotime($game['created_at']);
     $expired = (time() - $created) >= 172800;
@@ -32,10 +32,15 @@ function checkModeration($pdo, $gameId)
         : 0;
 
     if ($positivePercent >= 51) {
-        $pdo->prepare("UPDATE games SET status='approved' WHERE id=?")
-            ->execute([$gameId]);
+        try {
+        $stmt = $pdo->prepare("UPDATE games SET moderation_status='approved' WHERE id=?");
+        $stmt->execute([$gameId]);
+        echo "UPDATE OK, affected: " . $stmt->rowCount();
+    } catch (Exception $e) {
+        echo "ERROR: " . $e->getMessage();
+    }
     } elseif ($expired) {
-        $pdo->prepare("UPDATE games SET status='rejected' WHERE id=?")
+        $pdo->prepare("UPDATE games SET moderation_status='rejected' WHERE id=?")
             ->execute([$gameId]);
     }
 }
@@ -67,6 +72,5 @@ $stmt = $pdo->prepare("
 
 $stmt->execute([$gameId, $expertId, $score, $comment]);
 checkModeration($pdo, $gameId);
-
 header("Location: moderation-game?id=" . $gameId);
 exit;

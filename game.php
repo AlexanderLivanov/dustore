@@ -84,7 +84,8 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 
 $ratingData = $gameController->getAverageRating($game_id);
 
-$isWeb = ($platforms === ['web']) || (count($platforms) === 1 && trim($platforms[0]) === 'web');
+$isWeb      = in_array('web', array_map(fn($p) => strtolower(trim($p)), $platforms)) && count(array_filter($platforms, fn($p) => strtolower(trim($p)) !== 'web')) === 0;
+$hasAndroid = in_array('android', array_map(fn($p) => strtolower(trim($p)), $platforms));
 
 function formatFileSize($bytes)
 {
@@ -116,6 +117,7 @@ $platformStr = implode(', ', array_map(
     <link rel="stylesheet" href="/swad/css/gamepage.css">
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <script src="/swad/js/CartManager.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         /* ═══════════════════════════════════════
        RESET & BASE
@@ -937,7 +939,66 @@ $platformStr = implode(', ', array_map(
             font-size: .85rem;
             margin-bottom: 8px;
         }
-    </style>
+    
+        /* ── Android button ─────────────────────────────────── */
+        .gp-btn-android {
+            display:flex;align-items:center;justify-content:center;gap:10px;
+            width:100%;padding:13px 20px;
+            background:linear-gradient(135deg,#16a34a,#15803d);
+            color:#fff;font-size:.95rem;font-weight:700;
+            border:none;border-radius:var(--radius);cursor:pointer;
+            text-decoration:none;font-family:inherit;
+            transition:transform .15s,box-shadow .15s;
+            box-shadow:0 4px 18px rgba(22,163,74,.3);
+        }
+        .gp-btn-android:hover{box-shadow:0 6px 26px rgba(22,163,74,.5);}
+        .gp-btn-android:active{transform:scale(.97);}
+
+        /* QR popup */
+        .gp-apk-btn-wrap{position:relative;margin-bottom:8px;}
+        .gp-qr-popup{
+            position:absolute;bottom:calc(100% + 12px);left:50%;
+            transform:translateX(-50%) translateY(6px);
+            background:#fff;border-radius:14px;padding:14px 14px 10px;
+            text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.5);
+            z-index:200;width:210px;
+            opacity:0;pointer-events:none;
+            transition:opacity .2s,transform .2s;
+        }
+        .gp-qr-popup::after{
+            content:'';position:absolute;top:100%;left:50%;
+            transform:translateX(-50%);
+            border:8px solid transparent;border-top-color:#fff;
+        }
+        @media(hover:hover) and (pointer:fine){
+            .gp-apk-btn-wrap:hover .gp-qr-popup{
+                opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;
+            }
+        }
+        .gp-qr-title{font-size:.72rem;font-weight:700;color:#1a0a2a;margin-bottom:10px;line-height:1.3;}
+        #apkQrCode canvas,#apkQrCode img{border-radius:6px;display:block;margin:0 auto;}
+        .gp-qr-hint{font-size:.65rem;color:#888;margin-top:8px;}
+
+        /* Progress */
+        .gp-apk-progress{display:none;flex-direction:column;gap:6px;margin-bottom:8px;}
+        .gp-apk-progress.show{display:flex;}
+        .gp-apk-track{height:5px;background:rgba(255,255,255,.1);border-radius:100px;overflow:hidden;}
+        .gp-apk-fill{height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:100px;width:0%;transition:width .25s;}
+        .gp-apk-label{font-size:.75rem;color:var(--muted);text-align:center;}
+
+        /* Steps */
+        .gp-android-steps{display:flex;flex-direction:column;gap:7px;padding-top:4px;border-top:1px solid rgba(66,211,125,.12);}
+        .gp-android-step{display:flex;align-items:flex-start;gap:8px;font-size:.78rem;color:var(--muted);line-height:1.4;}
+        .gp-android-step em{color:rgba(255,255,255,.6);font-style:normal;}
+        .step-n{flex-shrink:0;width:18px;height:18px;background:rgba(66,211,125,.15);border:1px solid rgba(66,211,125,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#5eed9f;margin-top:1px;}
+
+        /* Android card (multiplatform) */
+        .gp-android-card{background:rgba(66,211,125,.06);border:1px solid rgba(66,211,125,.18);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;}
+        .gp-android-header{display:flex;align-items:center;gap:10px;}
+        .gp-android-icon{font-size:1.6rem;flex-shrink:0;}
+        .gp-android-title{font-weight:700;font-size:.9rem;color:#5eed9f;}
+        .gp-android-sub{font-size:.75rem;color:var(--muted);margin-top:1px;}
+</style>
 </head>
 
 <body>
@@ -1029,7 +1090,62 @@ $platformStr = implode(', ', array_map(
                                         onclick="location.href='/webplayer?id=<?= $game_id ?>'">
                                         ▶ Запустить в браузере
                                     </button>
+                                <?php elseif ($hasAndroid && count(array_filter($platforms, fn($p) => !in_array(strtolower(trim($p)), ['android', 'web']))) === 0): ?>
+                                    <!-- ТОЛЬКО ANDROID -->
+                                    <div class="gp-apk-btn-wrap" id="apkBtnWrap">
+                                        <a class="gp-btn gp-btn-android" id="apkMainBtn"
+                                           href="/swad/controllers/download_apk.php?game_id=<?= $game_id ?>"
+                                           onclick="handleApkClick(event)">
+                                            <span>📲</span><span>Получить для Android</span>
+                                        </a>
+                                        <div class="gp-qr-popup">
+                                            <div class="gp-qr-title">Сканируй&nbsp;— и скачаешь прямо на&nbsp;телефон</div>
+                                            <div id="apkQrCode"></div>
+                                            <div class="gp-qr-hint">Открой камеру и наведи на код</div>
+                                        </div>
+                                    </div>
+                                    <div class="gp-apk-progress" id="apkProgress">
+                                        <div class="gp-apk-track"><div class="gp-apk-fill" id="apkFill"></div></div>
+                                        <div class="gp-apk-label" id="apkLabel">Подготовка&hellip;</div>
+                                    </div>
+                                    <div class="gp-android-steps" style="margin-top:4px">
+                                        <div class="gp-android-step"><span class="step-n">1</span><span>Скачай APK на устройство</span></div>
+                                        <div class="gp-android-step"><span class="step-n">2</span><span>Не выдавайте разрешения приложению, если не доверяеете разработчику</em></span></div>
+                                    </div>
+                                <?php elseif ($hasAndroid): ?>
+                                    <!-- МУЛЬТИПЛАТФОРМА: ПК + Android -->
+                                    <button class="gp-btn gp-btn-primary"
+                                        onclick="location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
+                                        ⬇ Скачать для ПК
+                                    </button>
+                                    <div class="gp-android-card" style="margin-top:8px">
+                                        <div class="gp-android-header">
+                                            <span class="gp-android-icon">🤖</span>
+                                            <div>
+                                                <div class="gp-android-title">Также доступно на Android</div>
+                                                <div class="gp-android-sub">APK &middot; прямая загрузка</div>
+                                            </div>
+                                        </div>
+                                        <div class="gp-apk-btn-wrap">
+                                            <a class="gp-btn gp-btn-android"
+                                               href="/swad/controllers/download_apk.php?game_id=<?= $game_id ?>"
+                                               onclick="handleApkClick(event)">
+                                                <span>📲</span>
+                                                <span>Скачать APK<?= !empty($game['game_zip_size']) ? ' (' . formatFileSize((int)$game['game_zip_size']) . ')' : '' ?></span>
+                                            </a>
+                                            <div class="gp-qr-popup">
+                                                <div class="gp-qr-title">Сканируй&nbsp;— и скачаешь прямо на&nbsp;телефон</div>
+                                                <div id="apkQrCode"></div>
+                                                <div class="gp-qr-hint">Открой камеру и наведи на код</div>
+                                            </div>
+                                        </div>
+                                        <div class="gp-apk-progress" id="apkProgress">
+                                            <div class="gp-apk-track"><div class="gp-apk-fill" id="apkFill"></div></div>
+                                            <div class="gp-apk-label" id="apkLabel">Подготовка&hellip;</div>
+                                        </div>
+                                    </div>
                                 <?php else: ?>
+                                    <!-- ТОЛЬКО ПК -->
                                     <button class="gp-btn gp-btn-primary"
                                         onclick="location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">
                                         ⬇ Скачать игру
@@ -1040,7 +1156,7 @@ $platformStr = implode(', ', array_map(
                             <?php endif; ?>
 
                             <!-- Steam + Launcher -->
-                            <div class="gp-steam-row">
+                            <!-- <div class="gp-steam-row">
                                 <div class="steam-wrapper" style="flex:1;">
                                     <button class="steam-btn">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -1063,7 +1179,7 @@ $platformStr = implode(', ', array_map(
                                     </button>
                                     <div class="steam-tooltip">Добавить в лаунчер Dustore</div>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <!-- Size / downloads -->
                             <?php if (!empty($game['game_zip_size'])): ?>
@@ -1553,6 +1669,39 @@ $platformStr = implode(', ', array_map(
             btn.addEventListener('click', install);
             setState('ready');
         })();
+        /* ── APK + QR ── */
+        (function() {
+            const apkUrl = window.location.origin + '/swad/controllers/download_apk.php?game_id=<?= (int)$game_id ?>';
+            const qrEl = document.getElementById('apkQrCode');
+            if (qrEl && typeof QRCode !== 'undefined') {
+                new QRCode(qrEl, {
+                    text: apkUrl,
+                    width: 170, height: 170,
+                    colorDark: '#1a0a2a', colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+        })();
+
+        window.handleApkClick = function(e) {
+            const progress = document.getElementById('apkProgress');
+            const fill     = document.getElementById('apkFill');
+            const label    = document.getElementById('apkLabel');
+            if (!progress) return;
+            progress.classList.add('show');
+            let pct = 0;
+            const iv = setInterval(() => {
+                pct += Math.random() * 10 + 4;
+                if (pct >= 100) {
+                    pct = 100; clearInterval(iv);
+                    label.textContent = 'Готово! Проверьте папку Загрузки.';
+                    setTimeout(() => progress.classList.remove('show'), 4000);
+                } else {
+                    label.textContent = 'Скачивание… ' + Math.round(pct) + '%';
+                }
+                fill.style.width = pct + '%';
+            }, 200);
+        };
     </script>
 </body>
 

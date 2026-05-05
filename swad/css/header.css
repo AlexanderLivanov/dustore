@@ -491,3 +491,81 @@ body {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
 }
+
+/* ── Dropdown «Для разработчиков» ── */
+.nav-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.nav-dropdown__trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-dropdown__arrow {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.nav-dropdown.open .nav-dropdown__arrow {
+    transform: rotate(180deg);
+}
+
+.nav-dropdown__menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 180px;
+    background: var(--dark, #1a0a1e);
+    border: 1px solid rgba(195, 33, 120, 0.25);
+    border-radius: 10px;
+    padding: 6px;
+    list-style: none;
+    z-index: 200;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    animation: dropdownIn 0.18s ease;
+}
+
+.nav-dropdown.open .nav-dropdown__menu {
+    display: block;
+}
+
+@keyframes dropdownIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.nav-dropdown__item {
+    display: block;
+    padding: 9px 14px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.nav-dropdown__item:hover {
+    background: rgba(195, 33, 120, 0.18);
+    color: #fff;
+}
+
+/* Закрываем dropdown при схлопывании мобильного меню */
+@media (max-width: 900px) {
+    .nav-dropdown__menu {
+        position: static;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        padding: 0 0 0 12px;
+        animation: none;
+    }
+    .nav-dropdown.open .nav-dropdown__menu {
+        display: block;
+    }
+}

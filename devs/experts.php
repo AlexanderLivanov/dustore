@@ -315,7 +315,7 @@ $tab = $_GET['tab'] ?? 'applications';
                                 </div>
                             <?php endif; ?>
                         </div>
-                        <a href="/expert/moderation-game?id=<?= $g['id'] ?>" target="_blank"
+                        <a href="/expert/admin/moderation-game?id=<?= $g['id'] ?>" target="_blank"
                             class="btn btn-g" style="padding:6px 14px;font-size:12px;flex-shrink:0;">
                             <span class="material-icons" style="font-size:14px;">open_in_new</span>Открыть
                         </a>

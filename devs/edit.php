@@ -144,8 +144,12 @@ $status_labels = [
 ];
 [$status_cls, $status_lbl] = $status_labels[$game['status'] ?? 'draft'] ?? ['badge-draft', 'Черновик'];
 $platforms_saved = array_filter(array_map('trim', explode(',', $game['platforms'] ?? '')));
-$has_zip     = !empty($game['game_zip_url']);
-$is_chunked  = $has_zip && str_ends_with((string)$game['game_zip_url'], 'manifest.json');
+$has_zip       = !empty($game['game_zip_url']);
+$is_chunked    = $has_zip && str_ends_with((string)$game['game_zip_url'], 'manifest.json');
+$is_android    = in_array('Android', $platforms_saved);
+$only_android  = $platforms_saved === ['Android'];
+// Тип файла: apk если единственная платформа Android
+$file_type     = $only_android ? 'apk' : 'zip';
 
 function ev(array $a, string $k): string {
     return htmlspecialchars($a[$k] ?? '');
@@ -295,15 +299,28 @@ function ev(array $a, string $k): string {
                      style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
                      onmouseover="this.style.borderColor='var(--p)'"
                      onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                    <span class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;">upload_file</span>
-                    <span style="font-size:13px;color:var(--ts);display:block;">
-                        <?= $has_zip ? 'Заменить файл игры' : 'Загрузить ZIP-архив' ?>
+                    <span id="drop-icon" class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;">
+                        <?= $only_android ? 'android' : 'upload_file' ?>
                     </span>
-                    <span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
-                        До 500 МБ — прямая загрузка &nbsp;·&nbsp; Больше 500 МБ — чанки + manifest.json
+                    <span id="drop-label" style="font-size:13px;color:var(--ts);display:block;">
+                        <?php if ($has_zip): ?>
+                            <?= $only_android ? 'Заменить APK-файл' : 'Заменить файл игры' ?>
+                        <?php else: ?>
+                            <?= $only_android ? 'Загрузить APK-файл' : 'Загрузить ZIP-архив' ?>
+                        <?php endif; ?>
+                    </span>
+                    <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
+                        <?php if ($only_android): ?>
+                            Android APK · до 4 ГБ
+                        <?php else: ?>
+                            До 500 МБ — прямая загрузка &nbsp;·&nbsp; Больше 500 МБ — чанки + manifest.json
+                        <?php endif; ?>
                     </span>
                 </div>
-                <input type="file" id="zip-input" accept=".zip" style="display:none;">
+                <input type="file" id="zip-input"
+                       accept="<?= $only_android ? '.apk' : '.zip' ?>"
+                       style="display:none;"
+                       data-android="<?= $only_android ? '1' : '0' ?>">
 
                 <div id="zip-progress" style="display:none;margin-top:14px;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
@@ -387,12 +404,52 @@ function ev(array $a, string $k): string {
 <?php
 $extra_js = <<<JS
 <script>
-const LARGE  = 500 * 1024 * 1024;
-const SMALL_CHUNK = 5  * 1024 * 1024;
-const LARGE_CHUNK = 50 * 1024 * 1024;
+const LARGE       = 500 * 1024 * 1024;
+const SMALL_CHUNK = 5   * 1024 * 1024;
+const LARGE_CHUNK = 50  * 1024 * 1024;
 const PID = {$project_id};
 
-// ── ZIP upload ─────────────────────────────────────────────────────────────
+// ── Реакция на смену платформ ──────────────────────────────────────────────
+function syncUploadZone() {
+    const checkboxes = document.querySelectorAll('input[name="platform[]"]');
+    const selected   = Array.from(checkboxes).filter(c => c.checked).map(c => c.value);
+    const onlyAndroid = selected.length === 1 && selected[0] === 'Android';
+    const hasAndroid  = selected.includes('Android');
+
+    const input  = document.getElementById('zip-input');
+    const icon   = document.getElementById('drop-icon');
+    const label  = document.getElementById('drop-label');
+    const hint   = document.getElementById('drop-hint');
+
+    if (onlyAndroid) {
+        input.accept       = '.apk';
+        input.dataset.android = '1';
+        icon.textContent   = 'android';
+        icon.style.color   = '#a4c639';
+        label.textContent  = 'Загрузить APK-файл';
+        hint.textContent   = 'Android APK · до 4 ГБ · загружается напрямую на S3';
+    } else if (hasAndroid) {
+        input.accept       = '.zip,.apk';
+        input.dataset.android = '0';
+        icon.textContent   = 'upload_file';
+        icon.style.color   = 'var(--p)';
+        label.textContent  = 'Загрузить ZIP или APK';
+        hint.textContent   = 'ZIP (все платформы) или APK (Android) · до 500 МБ прямая загрузка';
+    } else {
+        input.accept       = '.zip';
+        input.dataset.android = '0';
+        icon.textContent   = 'upload_file';
+        icon.style.color   = 'var(--p)';
+        label.textContent  = 'Загрузить ZIP-архив';
+        hint.textContent   = 'До 500 МБ — прямая загрузка · Больше 500 МБ — чанки + manifest.json';
+    }
+}
+
+document.querySelectorAll('input[name="platform[]"]').forEach(cb =>
+    cb.addEventListener('change', syncUploadZone)
+);
+
+// ── ZIP / APK upload ───────────────────────────────────────────────────────
 document.getElementById('zip-drop').addEventListener('click', () =>
     document.getElementById('zip-input').click()
 );
@@ -400,20 +457,35 @@ document.getElementById('zip-drop').addEventListener('click', () =>
 document.getElementById('zip-input').addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
-    const big  = file.size >= LARGE;
-    const hint = document.getElementById('upload-mode-hint');
-    hint.style.display    = 'block';
-    hint.style.background = big ? 'rgba(195,33,120,.08)' : 'rgba(0,214,143,.06)';
-    hint.style.border     = big ? '1px solid rgba(195,33,120,.2)' : '1px solid rgba(0,214,143,.15)';
-    hint.style.color      = big ? 'var(--pl)' : 'var(--ok)';
-    hint.textContent      = big
-        ? '📦 ' + (file.size/1048576).toFixed(1) + ' МБ — чанкованная загрузка (50 МБ/чанк)'
-        : '⚡ ' + (file.size/1048576).toFixed(1) + ' МБ — прямая загрузка';
-    uploadFile(file);
+
+    const isApk    = file.name.toLowerCase().endsWith('.apk');
+    const big      = !isApk && file.size >= LARGE;
+    const hint     = document.getElementById('upload-mode-hint');
+
+    hint.style.display = 'block';
+    if (isApk) {
+        hint.style.background = 'rgba(164,198,57,.08)';
+        hint.style.border     = '1px solid rgba(164,198,57,.2)';
+        hint.style.color      = '#a4c639';
+        hint.textContent      = '🤖 APK · ' + (file.size/1048576).toFixed(1) + ' МБ — прямая загрузка на S3';
+    } else if (big) {
+        hint.style.background = 'rgba(195,33,120,.08)';
+        hint.style.border     = '1px solid rgba(195,33,120,.2)';
+        hint.style.color      = 'var(--pl)';
+        hint.textContent      = '📦 ' + (file.size/1048576).toFixed(1) + ' МБ — чанкованная загрузка (50 МБ/чанк)';
+    } else {
+        hint.style.background = 'rgba(0,214,143,.06)';
+        hint.style.border     = '1px solid rgba(0,214,143,.15)';
+        hint.style.color      = 'var(--ok)';
+        hint.textContent      = '⚡ ZIP · ' + (file.size/1048576).toFixed(1) + ' МБ — прямая загрузка';
+    }
+
+    uploadFile(file, isApk);
 });
 
-async function uploadFile(file) {
-    const big    = file.size >= LARGE;
+async function uploadFile(file, isApk = false) {
+    // APK и маленькие ZIP — всегда прямая загрузка чанками по 5 МБ (без сборки на сервере)
+    const big    = !isApk && file.size >= LARGE;
     const chunk  = big ? LARGE_CHUNK : SMALL_CHUNK;
     const total  = Math.ceil(file.size / chunk);
     const prog   = document.getElementById('zip-progress');
@@ -423,7 +495,7 @@ async function uploadFile(file) {
     const detail = document.getElementById('zip-detail');
 
     prog.style.display   = 'block';
-    bar.style.background = 'var(--p)';
+    bar.style.background = isApk ? '#a4c639' : 'var(--p)';
 
     for (let i = 0; i < total; i++) {
         const last = i === total - 1;
@@ -431,11 +503,11 @@ async function uploadFile(file) {
         if (last && total > 1) {
             status.textContent = big
                 ? '⏳ Последний чанк + создаём manifest.json...'
-                : '⏳ Финализируем загрузку...';
+                : (isApk ? '⏳ Завершаем загрузку APK...' : '⏳ Финализируем загрузку...');
         } else {
             bar.style.width  = Math.round(i / total * 100) + '%';
             pct.textContent  = Math.round(i / total * 100) + '%';
-            status.textContent = 'Чанк ' + (i+1) + ' из ' + total;
+            status.textContent = (isApk ? '🤖 APK · часть ' : 'Чанк ') + (i+1) + ' из ' + total;
         }
 
         const fd = new FormData();
@@ -445,6 +517,7 @@ async function uploadFile(file) {
         fd.append('file_name',    file.name);
         fd.append('file_size',    file.size);
         fd.append('project_id',   PID);
+        if (isApk) fd.append('file_type', 'apk');
 
         let data;
         try {
@@ -463,12 +536,14 @@ async function uploadFile(file) {
             pct.textContent      = '100%';
             bar.style.background = 'var(--ok)';
             status.style.color   = 'var(--ok)';
-            status.textContent   = data.mode === 'chunked'
-                ? '✓ ' + data.chunk_count + ' чанков загружено · ' + data.size_mb + ' МБ'
-                : '✓ ZIP загружен · ' + data.size_mb + ' МБ';
-            detail.textContent = data.mode === 'chunked'
-                ? 'manifest.json создан на S3'
-                : '';
+            if (isApk) {
+                status.textContent = '✓ APK загружен · ' + data.size_mb + ' МБ';
+            } else if (data.mode === 'chunked') {
+                status.textContent = '✓ ' + data.chunk_count + ' чанков загружено · ' + data.size_mb + ' МБ';
+                detail.textContent = 'manifest.json создан на S3';
+            } else {
+                status.textContent = '✓ ZIP загружен · ' + data.size_mb + ' МБ';
+            }
             setTimeout(() => location.reload(), 1500);
             return;
         }

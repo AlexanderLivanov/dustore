@@ -1,4 +1,11 @@
 <?php
+function asset_url(string $path): string {
+    $abs = $_SERVER['DOCUMENT_ROOT'] . $path;
+    $v   = file_exists($abs) ? substr(md5_file($abs), 0, 8) : time();
+    return $path . '?v=' . $v;
+}
+?>
+<?php
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/../../controllers/user.php');
 
@@ -111,10 +118,10 @@ $stmt->execute([
         <div><img src="https://mc.yandex.ru/watch/101729504" style="position:absolute; left:-9999px;" alt="" /></div>
     </noscript>
     <!-- /Yandex.Metrika counter -->
-    <link rel="stylesheet" href="/swad/css/header.css">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/header.css') ?>">
     <link rel="shortcut icon" href="../img/logo.svg" type="image/x-icon">
-    <link rel="stylesheet" href="/swad/css/style.css">
-    <link rel="stylesheet" href="/swad/css/notifications.css">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/style.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/notifications.css') ?>">
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -271,10 +278,10 @@ $stmt->execute([
     <button id="pushBtn">
         Push
     </button> -->
-    <div class="top-banner hidden" id="top-banner">
+    <div class="top-banner" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
-                Следите за новостями в нашем <a style="color: lightgreen;" target="_blank" href="https://t.me/dustore_official">Telegram канале<svg style="vertical-align: middle;"
+                Домену dustore.ru 1 год! Самое время присоединиться и следить за новостями в нашем <a style="color: lightgreen;" target="_blank" href="https://t.me/dustore_official">Telegram канале<svg style="vertical-align: middle;"
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
                         height="16"
@@ -313,17 +320,29 @@ $stmt->execute([
             </div>
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
-                <!--<button class="button disabled-btn tooltip">Ассеты<span class="tooltiptext">Скоро</span></button>-->
-                <!-- <button class="button" onclick="location.href='/about'">О нас</button> -->
                 <button class="button" onclick="location.href='/search'">Поиск</button>
-                <button class="button" onclick="location.href='/l4t'">L4T</button>
-                <button class="button" onclick="location.href='/assetstore'">Ассеты</button>
+
+                <!-- Dropdown «Для разработчиков» -->
+                <div class="nav-dropdown">
+                    <button class="button nav-dropdown__trigger" aria-haspopup="true" aria-expanded="false">
+                        Для разработчиков
+                        <svg class="nav-dropdown__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
+                            <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="nav-dropdown__menu" role="menu">
+                        <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
+                        <li><a class="nav-dropdown__item" href="/assetstore" role="menuitem">Ассеты</a></li>
+                        <li><a class="nav-dropdown__item" href="/brokenpixel" role="menuitem">Битый Пиксель</a></li>
+                        <li><a class="nav-dropdown__item" href="/jams/sprints" role="menuitem">Джемы</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
         <div class="section center-section">
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
-                <img src="/swad/static/img/logo_new.png" alt="" onclick="location.href='/'">
+                <img style="scale: .7;" src="/swad/static/img/logo_1y.png" alt="" onclick="location.href='/'">
                 <!-- <img id="dancingCow" style="height: 80px;"
                     src="https://media.tenor.com/yNy3XaDrdjgAAAAj/polish-dancing-cow-dancing.gif"
                     alt=""
@@ -426,18 +445,19 @@ $stmt->execute([
             const banner = document.getElementById('top-banner');
             const closeBtn = document.getElementById('close-banner');
 
+            // Если пользователь уже закрывал — не показываем
             if (localStorage.getItem('bannerClosed') === 'true') {
-                banner.style.display = 'none';
                 return;
             }
 
+            // Показываем: снимаем класс hidden
+            banner.classList.remove('hidden');
+
             closeBtn.addEventListener('click', function() {
                 banner.style.animation = 'slideUp 0.5s forwards';
-
                 setTimeout(() => {
                     banner.style.display = 'none';
                 }, 500);
-
                 localStorage.setItem('bannerClosed', 'true');
             });
         });
@@ -809,6 +829,35 @@ $stmt->execute([
                 setTimeout(() => preloader.remove(), 500);
             }
         });
+
+        // ── Dropdown «Для разработчиков» ──
+(function () {
+    const dropdown = document.querySelector('.nav-dropdown');
+    const trigger  = dropdown?.querySelector('.nav-dropdown__trigger');
+    if (!trigger) return;
+
+    trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.toggle('open');
+        trigger.setAttribute('aria-expanded', isOpen);
+    });
+
+    // Закрыть по клику вне
+    document.addEventListener('click', function (e) {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Закрыть при resize > 900 вместе с burger-меню
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 900) {
+            dropdown.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    });
+})();
     </script>
 
 </body>

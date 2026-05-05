@@ -1,5 +1,4 @@
 <?php
-
 /**
  * devs/upload_chunk.php
  *
@@ -23,7 +22,7 @@ register_shutdown_function(function () {
         echo json_encode([
             'success' => false,
             'message' => 'PHP Fatal: ' . $err['message']
-                . ' @ ' . basename($err['file']) . ':' . $err['line'],
+                       . ' @ ' . basename($err['file']) . ':' . $err['line'],
         ]);
     }
 });
@@ -38,15 +37,13 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 header('Content-Type: application/json');
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
-function resp(bool $ok, array $extra = []): never
-{
+function resp(bool $ok, array $extra = []): never {
     ob_end_clean();
     echo json_encode(['success' => $ok] + $extra);
     exit();
 }
 
-function rmdirr(string $dir): void
-{
+function rmdirr(string $dir): void {
     if (!is_dir($dir)) return;
     foreach (array_diff(scandir($dir), ['.', '..']) as $f) {
         $p = "$dir/$f";
@@ -65,8 +62,11 @@ $chunk_index  = (int)($_POST['chunk_index']  ?? 0);
 $total_chunks = (int)($_POST['total_chunks'] ?? 1);
 $file_name    = basename($_POST['file_name'] ?? 'game.zip');
 $file_size    = (int)($_POST['file_size']    ?? 0);
+$file_type    = $_POST['file_type'] ?? 'zip';   // 'zip' | 'apk'
 $studio_id    = (int)($_SESSION['studio_id'] ?? 0);
-$is_large     = $file_size >= LARGE_THRESHOLD;
+$is_apk       = ($file_type === 'apk');
+// APK всегда прямая загрузка (SMALL MODE), игнорируем порог размера
+$is_large     = !$is_apk && $file_size >= LARGE_THRESHOLD;
 
 if (!$project_id)             resp(false, ['message' => 'project_id не передан']);
 if (!isset($_FILES['chunk'])) resp(false, ['message' => 'Поле chunk не найдено в запросе']);
@@ -91,10 +91,7 @@ if (!file_exists($autoload)) {
         dirname(__DIR__) . '/vendor/autoload.php',
     ];
     foreach ($alternatives as $alt) {
-        if (file_exists($alt)) {
-            $autoload = $alt;
-            break;
-        }
+        if (file_exists($alt)) { $autoload = $alt; break; }
     }
     if (!file_exists($autoload)) {
         resp(false, ['message' => 'vendor/autoload.php не найден. Пути проверены: ' . __DIR__ . '/../vendor/']);
@@ -105,7 +102,7 @@ require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/../swad/controllers/s3.php';
 
 // Проверяем константы S3
-foreach (['AWS_S3_KEY', 'AWS_S3_SECRET', 'AWS_S3_REGION', 'AWS_S3_ENDPOINT', 'AWS_S3_BUCKET_USERCONTENT'] as $c) {
+foreach (['AWS_S3_KEY','AWS_S3_SECRET','AWS_S3_REGION','AWS_S3_ENDPOINT','AWS_S3_BUCKET_USERCONTENT'] as $c) {
     if (!defined($c) || !constant($c)) resp(false, ['message' => "Константа {$c} не задана в config.php"]);
 }
 
@@ -216,10 +213,7 @@ if ($is_large) {
     $old->execute([$project_id]);
     $old_url = $old->fetchColumn();
     if ($old_url) {
-        try {
-            $s3->deleteFile($old_url);
-        } catch (Exception $e) {
-        }
+        try { $s3->deleteFile($old_url); } catch (Exception $e) {}
     }
 
     // Сохраняем в БД
@@ -284,18 +278,27 @@ fclose($out);
 
 $real_size = filesize($assembled);
 
+// ZIP-валидация (APK пропускаем)
+if (!$is_apk) {
+    $fh    = fopen($assembled, 'rb');
+    $magic = fread($fh, 4);
+    fclose($fh);
+    if (substr($magic, 0, 2) !== 'PK') {
+        @unlink($assembled);
+        resp(false, ['message' => 'Файл не является ZIP (magic: ' . bin2hex($magic) . '). Попробуйте снова.']);
+    }
+}
+
 // Загружаем на S3
 $old = $db->prepare("SELECT game_zip_url FROM games WHERE id=?");
 $old->execute([$project_id]);
 $old_url = $old->fetchColumn();
 if ($old_url) {
-    try {
-        $s3->deleteFile($old_url);
-    } catch (Exception $e) {
-    }
+    try { $s3->deleteFile($old_url); } catch (Exception $e) {}
 }
 
-$s3_key = "{$s3_dir}/game-" . uniqid() . '.zip';
+$ext    = $is_apk ? '.apk' : '.zip';
+$s3_key = "{$s3_dir}/game-" . uniqid() . $ext;
 $url    = $s3->uploadFile($assembled, $s3_key);
 rmdirr($chunk_dir);
 
@@ -304,11 +307,11 @@ if (!$url) {
 }
 
 $db->prepare("UPDATE games SET game_zip_url=?, game_zip_size=?, updated_at=NOW() WHERE id=?")
-    ->execute([$url, $real_size, $project_id]);
+   ->execute([$url, $real_size, $project_id]);
 
 resp(true, [
     'done'    => true,
-    'mode'    => 'direct',
+    'mode'    => $is_apk ? 'apk' : 'direct',
     'url'     => $url,
     'size_mb' => round($real_size / 1048576, 1),
 ]);

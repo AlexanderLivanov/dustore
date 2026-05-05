@@ -39,7 +39,7 @@ $seconds = $timeToEnd % 60;
 // ── Авторизация ───────────────────────────────────────────────────────────
 $user = $_SESSION['USERDATA'] ?? null;
 if (!$user) {
-    header("Location: /login?backUrl=/expert/apply");
+    header("Location: /login");
     exit;
 }
 
