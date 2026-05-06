@@ -174,6 +174,11 @@ $stmt->execute([
             opacity: 0.75;
             color: #fff;
         }
+
+        .nav-dropdown__item--accent:hover {
+            color: #ff5ba8 !important;
+            background: rgba(195,33,120,.08);
+        }
     </style>
 </head>
 
@@ -321,6 +326,7 @@ $stmt->execute([
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
                 <button class="button" onclick="location.href='/search'">Поиск</button>
+                <!-- <button class="button" onclick="location.href='/about'">О нас</button> -->
 
                 <!-- Dropdown «Для разработчиков» -->
                 <div class="nav-dropdown">
@@ -331,10 +337,47 @@ $stmt->execute([
                         </svg>
                     </button>
                     <ul class="nav-dropdown__menu" role="menu">
-                        <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
-                        <li><a class="nav-dropdown__item" href="/assetstore" role="menuitem">Ассеты</a></li>
-                        <li><a class="nav-dropdown__item" href="/brokenpixel" role="menuitem">Битый Пиксель</a></li>
+                        <!-- <li><a class="nav-dropdown__item" href="/about"        role="menuitem">О нас</a></li> -->
+                        <li><a class="nav-dropdown__item" href="/assetstore"   role="menuitem">Ассеты</a></li>
+                        <li><a class="nav-dropdown__item" href="/brokenpixel"  role="menuitem">Битый Пиксель</a></li>
                         <li><a class="nav-dropdown__item" href="/jams/sprints" role="menuitem">Джемы</a></li>
+                    
+                        <!-- Разделитель -->
+                        <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>
+                    
+                        <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
+                            <!-- Залогинен — показываем прямую ссылку в консоль -->
+                            <li>
+                                <a class="nav-dropdown__item nav-dropdown__item--accent"
+                                href="/devs/" role="menuitem"
+                                style="color:#ff5ba8;font-weight:600;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        style="vertical-align:middle;margin-right:4px;">
+                                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                                        <path d="M8 21h8M12 17v4"/>
+                                    </svg>
+                                    Консоль разработчика
+                                </a>
+                            </li>
+                        <?php else: ?>
+                            <!-- Не залогинен — ведём на логин с редиректом -->
+                            <li>
+                                <a class="nav-dropdown__item nav-dropdown__item--accent"
+                                href="/login?backUrl=/devs/" role="menuitem"
+                                style="color:rgba(255,91,168,.7);font-weight:600;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        style="vertical-align:middle;margin-right:4px;">
+                                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                                        <path d="M8 21h8M12 17v4"/>
+                                    </svg>
+                                    Войти в консоль
+                                </a>
+                            </li>
+                        <?php endif; ?>
                     </ul>
                 </div>
             </div>

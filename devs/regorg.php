@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/user.php');
+require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
 
 $curr_user = new User();
 $db        = new Database();
@@ -101,16 +102,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unset($_SESSION['STUDIODATA']);
 
                 // ── Асинхронно запускаем уведомления — не ждём ───────────
-                dispatchNotifications([
-                    'studio_id'      => $new_studio_id,
-                    'studio_name'    => $name,
-                    'tiker'          => $tiker ?: mb_substr($name, 0, 3),
-                    'owner_id'       => $user_id,
-                    'owner_name'     => $user_data['username'] ?? '',
-                    'owner_email'    => $user_data['email']    ?? '',
-                    'specialization' => $specialization,
-                ]);
+                // dispatchNotifications([
+                //     'studio_id'      => $new_studio_id,
+                //     'studio_name'    => $name,
+                //     'tiker'          => $tiker ?: mb_substr($name, 0, 3),
+                //     'owner_id'       => $user_id,
+                //     'owner_name'     => $user_data['username'] ?? '',
+                //     'owner_email'    => $user_data['email']    ?? '',
+                //     'specialization' => $specialization,
+                // ]);
 
+                send_group_message(-1002916906978, 
+                                    '🆕 <b>Новая заявка на регистрацию студии</b>',
+                                    true,
+                                    'https://dustore.ru/devs/recentorgs');
                 // Редиректим мгновенно — письма уходят в фоне
                 header('Location: /devs/mystudio?created=1');
                 exit();
