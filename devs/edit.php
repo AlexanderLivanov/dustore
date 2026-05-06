@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/s3.php');
+require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: /devs/projects'); exit(); }
@@ -100,9 +101,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'moderation') {
         $conn->prepare("UPDATE games SET moderation_status = 'pending', updated_at = NOW() WHERE id = ? AND developer = ?")
              ->execute([$project_id, $studio_id]);
+        send_group_message(-1002916906978, 
+                                    '🆕 <b>Для экспертов: Новый проект требует прохождения модерации</b>',
+                                    true,
+                                    'https://dustore.ru/devs/experts');
         header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
         exit();
-
+    } elseif ($action === 'publish') {
+        // Дополнительная проверка: только если модерация пройдена
+        $chk = $conn->prepare("SELECT moderation_status FROM games WHERE id = ? AND developer = ?");
+        $chk->execute([$project_id, $studio_id]);
+        $ms = $chk->fetchColumn();
+        if ($ms === 'approved') {
+            $conn->prepare("UPDATE games SET status = 'published', updated_at = NOW() WHERE id = ? AND developer = ?")
+                ->execute([$project_id, $studio_id]);
+            header('Location: /devs/edit?id=' . $project_id . '&published=1');
+            exit();
+        }
+        $error_msg = 'Игра ещё не прошла модерацию.';
+    
+    // --- Сохранить анонс ---
+    } elseif ($action === 'save_announce') {
+        $ann_date    = $_POST['announce_date']    ?? null;
+        $ann_tbd     = isset($_POST['announce_tbd']) ? 1 : 0;
+        $ann_enabled = isset($_POST['announce_enabled']) ? 1 : 0;
+    
+        // Если «дата неизвестна» — обнуляем дату
+        if ($ann_tbd) $ann_date = null;
+        // Если анонс выключен — сбрасываем всё
+        if (!$ann_enabled) { $ann_date = null; $ann_tbd = 0; }
+    
+        $conn->prepare("
+            UPDATE games
+            SET announce_enabled = :ae,
+                announce_date    = :ad,
+                announce_tbd     = :at,
+                updated_at       = NOW()
+            WHERE id = :id AND developer = :dev
+        ")->execute([
+            'ae'  => $ann_enabled,
+            'ad'  => $ann_date ?: null,
+            'at'  => $ann_tbd,
+            'id'  => $project_id,
+            'dev' => $studio_id,
+        ]);
+        header('Location: /devs/edit?id=' . $project_id . '&announced=1');
+        exit();
+    }
     // Удаление (только владелец)
     } elseif ($action === 'delete') {
         // Проверяем права ещё раз на сервере
@@ -119,7 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $error_msg = 'Недостаточно прав для удаления проекта.';
     }
-}
 
 // Перечитываем актуальные данные после возможного обновления
 $stmt = $conn->prepare("SELECT * FROM games WHERE id = ?");
@@ -131,6 +175,8 @@ $success_msg = '';
 if (isset($_GET['saved']))    $success_msg = 'Изменения сохранены!';
 if (isset($_GET['created']))  $success_msg = 'Проект создан! Теперь загрузите файл игры.';
 if (isset($_GET['moderated'])) $success_msg = 'Проект отправлен на модерацию!';
+if (isset($_GET['published']))  $success_msg = 'Игра опубликована! Теперь она видна всем игрокам.';
+if (isset($_GET['announced']))  $success_msg = 'Настройки анонса сохранены!';
 
 $page_title = 'Редактирование: ' . ($game['name'] ?? '');
 $active_nav = 'projects';
@@ -172,13 +218,36 @@ function ev(array $a, string $k): string {
            class="btn btn-g" style="padding:6px 14px;font-size:12px;">
             <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть
         </a>
-        <?php if ($game['status'] === 'draft' && $is_owner): ?>
-        <form method="POST">
+ 
+        <?php if ($game['status'] === 'draft' && $game['moderation_status'] === 'pending'): ?>
+        <!-- Ждём решения экспертов -->
+        <span class="btn btn-g" style="padding:6px 14px;font-size:12px;opacity:.6;cursor:default;">
+            <span class="material-icons" style="font-size:15px;">hourglass_top</span>На модерации
+        </span>
+ 
+        <?php elseif ($game['status'] === 'draft' && $game['moderation_status'] === 'approved'): ?>
+        <!-- Модерация прошла — показываем кнопку публикации -->
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="publish">
+            <button type="submit" class="btn btn-p"
+                    style="padding:6px 14px;font-size:12px;background:linear-gradient(135deg,#00c471,#00a05a);">
+                <span class="material-icons" style="font-size:15px;">rocket_launch</span>Опубликовать
+            </button>
+        </form>
+ 
+        <?php elseif ($game['status'] === 'draft' && ($game['moderation_status'] ?? 'draft') === 'draft' && $is_owner): ?>
+        <!-- Ещё не отправлена на модерацию -->
+        <form method="POST" style="display:inline;">
             <input type="hidden" name="action" value="moderation">
             <button type="submit" class="btn btn-p" style="padding:6px 14px;font-size:12px;">
                 <span class="material-icons" style="font-size:15px;">send</span>На модерацию
             </button>
         </form>
+ 
+        <?php elseif ($game['status'] === 'published'): ?>
+        <span class="btn btn-g" style="padding:6px 14px;font-size:12px;opacity:.6;cursor:default;">
+            <span class="material-icons" style="font-size:15px;">check_circle</span>Опубликована
+        </span>
         <?php endif; ?>
     </div>
 </div>
@@ -361,6 +430,80 @@ function ev(array $a, string $k): string {
                     <img id="cover_prev" src="" style="width:100%;border-radius:8px;object-fit:cover;max-height:120px;">
                 </div>
             </div>
+
+            <!-- Анонс проекта -->
+            <form method="POST" id="announce-form">
+                <input type="hidden" name="action" value="save_announce">
+                <div class="card" style="border-color:rgba(255,170,0,.2);">
+                    <div class="card-title">
+                        <span class="material-icons" style="color:#ffaa00;">campaign</span>
+                        Анонс проекта
+                    </div>
+                    <p style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
+                        Игроки смогут добавить игру в вишлист до её выхода и получат уведомление при публикации.
+                    </p>
+            
+                    <!-- Включить анонс -->
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
+                        <input type="checkbox" name="announce_enabled"
+                            id="ann-enabled"
+                            style="accent-color:var(--p);width:16px;height:16px;"
+                            <?= !empty($game['announce_enabled']) ? 'checked' : '' ?>>
+                        <span style="font-size:13px;font-weight:600;">Включить анонс</span>
+                    </label>
+            
+                    <div id="ann-fields" style="<?= empty($game['announce_enabled']) ? 'display:none;' : '' ?>">
+                        <!-- Дата неизвестна -->
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:10px;">
+                            <input type="checkbox" name="announce_tbd"
+                                id="ann-tbd"
+                                style="accent-color:var(--p);width:16px;height:16px;"
+                                <?= !empty($game['announce_tbd']) ? 'checked' : '' ?>>
+                            <span style="font-size:12px;color:var(--ts);">Дата выхода неизвестна (TBD)</span>
+                        </label>
+            
+                        <!-- Поле даты -->
+                        <div class="field" id="ann-date-wrap"
+                            style="<?= !empty($game['announce_tbd']) ? 'display:none;' : '' ?>">
+                            <label>Планируемая дата выхода</label>
+                            <input type="date" name="announce_date"
+                                value="<?= htmlspecialchars($game['announce_date'] ?? '') ?>">
+                        </div>
+            
+                        <!-- Счётчик вишлистов (read-only) -->
+                        <?php
+                        $wl_count = $conn->prepare("SELECT COUNT(*) FROM wishlists WHERE game_id = ?");
+                        $wl_count->execute([$project_id]);
+                        $wl_total = (int)$wl_count->fetchColumn();
+                        ?>
+                        <?php if ($wl_total > 0): ?>
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;
+                                    background:rgba(255,170,0,.07);border-radius:8px;border:1px solid rgba(255,170,0,.15);">
+                            <span class="material-icons" style="font-size:16px;color:#ffaa00;">favorite</span>
+                            <span style="font-size:12px;color:var(--ts);">
+                                <strong style="color:#ffaa00;"><?= $wl_total ?></strong>
+                                <?= $wl_total === 1 ? 'игрок' : ($wl_total < 5 ? 'игрока' : 'игроков') ?> добавили в вишлист
+                            </span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+            
+                    <button type="submit" class="btn btn-g"
+                            style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
+                        <span class="material-icons" style="font-size:15px;">save</span>Сохранить анонс
+                    </button>
+                </div>
+            </form>
+
+            <script>
+            // Логика показа/скрытия полей анонса
+            document.getElementById('ann-enabled').addEventListener('change', function() {
+                document.getElementById('ann-fields').style.display = this.checked ? '' : 'none';
+            });
+            document.getElementById('ann-tbd').addEventListener('change', function() {
+                document.getElementById('ann-date-wrap').style.display = this.checked ? 'none' : '';
+            });
+            </script>
 
             <!-- Кнопка сохранения -->
             <div class="card">

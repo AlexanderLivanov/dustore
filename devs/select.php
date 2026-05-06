@@ -1,8 +1,7 @@
 <?php
-
 /**
- * devs/select.php — выбор активной студии + обработчик смены студии.
- * НЕ подключаем includes/header.php — избегаем бесконечного редиректа.
+ * devs/select.php — выбор активной студии.
+ * FIX: показываем студии где юзер числится через staff (не только owner_id)
  */
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -18,23 +17,33 @@ if ($curr_user->checkAuth() > 0) {
 }
 
 $user_data = $_SESSION['USERDATA'];
-$user_id   = (int)($user_data['id'] ?? 0);
+$user_id   = (int)($user_data['id']          ?? 0);
+$tg_id     = (string)($user_data['telegram_id'] ?? '');
 $conn      = $db->connect();
 
-// ── Обработчик выбора студии (вместо set_studio.php) ─────────────────────
+// ── Обработчик выбора студии ──────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_id'])) {
     $selected_id = (int)$_POST['studio_id'];
-    $back_url    = $_POST['backUrl'] ?? '/devs/';
 
-    // Проверяем что студия реально принадлежит юзеру
-    $check = $conn->prepare("SELECT id FROM studios WHERE id=? AND owner_id=?");
-    $check->execute([$selected_id, $user_id]);
+    // Проверяем: юзер — владелец ИЛИ числится в staff
+    $check = $conn->prepare("
+        SELECT s.id FROM studios s
+        WHERE s.id = ?
+          AND (
+            s.owner_id = ?
+            OR EXISTS (
+                SELECT 1 FROM staff st
+                WHERE st.org_id = s.id
+                  AND CAST(st.telegram_id AS CHAR) = CAST(? AS CHAR)
+            )
+          )
+        LIMIT 1
+    ");
+    $check->execute([$selected_id, $user_id, $tg_id]);
 
     if ($check->fetchColumn()) {
         $_SESSION['studio_id'] = $selected_id;
-        // Сбрасываем закешированные данные студии
         unset($_SESSION['STUDIODATA']);
-        // Редиректим только на /devs/ во избежание open redirect
         header('Location: /devs/');
     } else {
         header('Location: /devs/select?err=forbidden');
@@ -42,349 +51,209 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['studio_id'])) {
     exit();
 }
 
-// ── Загрузка студий пользователя ─────────────────────────────────────────
+// ── Загрузка студий: owner + staff ────────────────────────────────────────
+// Объединяем: студии где owner_id = user_id + студии из staff по telegram_id
 $stmt = $conn->prepare("
-    SELECT * FROM studios
-    WHERE owner_id = :id
-    ORDER BY name ASC
+    SELECT DISTINCT s.*,
+        CASE WHEN s.owner_id = :uid THEN 'Владелец'
+             ELSE COALESCE(st.role, 'Участник')
+        END AS my_role
+    FROM studios s
+    LEFT JOIN staff st ON st.org_id = s.id
+        AND CAST(st.telegram_id AS CHAR) = CAST(:tg AS CHAR)
+    WHERE s.owner_id = :uid2
+       OR (st.id IS NOT NULL AND CAST(st.telegram_id AS CHAR) = CAST(:tg2 AS CHAR))
+    ORDER BY s.name ASC
 ");
-$stmt->execute(['id' => $user_id]);
+$stmt->execute([
+    'uid'  => $user_id,
+    'uid2' => $user_id,
+    'tg'   => $tg_id,
+    'tg2'  => $tg_id,
+]);
 $studios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $current_studio_id = (int)($_SESSION['studio_id'] ?? 0);
-$error = $_GET['err'] ?? '';
-
-$status_labels = [
-    'active'  => ['label' => 'Активна',       'color' => 'var(--ok)'],
-    'banned'  => ['label' => 'Заблокирована',  'color' => 'var(--err)'],
-    'pending' => ['label' => 'На проверке',    'color' => 'var(--warn)'],
-];
+$error = $_GET['err'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Выбор студии — Dustore.Devs</title>
-    <link rel="shortcut icon" href="/swad/static/img/DD.svg" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        *,
-        *::before,
-        *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --p: #c32178;
-            --pd: #9a1a5e;
-            --pl: #ff5ba8;
-            --dark: #14041d;
-            --surf: #1a0a24;
-            --elev: #241030;
-            --tp: #fff;
-            --ts: #b0b0c0;
-            --tm: #5a5a6e;
-            --ok: #00d68f;
-            --warn: #ffaa00;
-            --err: #ff3d71;
-            --bd: rgba(255, 255, 255, 0.07);
+            --bg:   #0d0118;
+            --surf: #160824;
+            --elev: #1e0f2e;
+            --bd:   rgba(255,255,255,.08);
+            --p:    #c32178;
+            --pl:   #ff5ba8;
+            --pd:   #9a1a5e;
+            --tt:   #f0e6ff;
+            --ts:   rgba(240,230,255,.6);
+            --tm:   rgba(240,230,255,.35);
+            --ok:   #00d68f;
+            --err:  #ff3d71;
+            --r:    10px;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, var(--dark) 0%, #2a0a3a 100%);
-            color: var(--tp);
+            background: var(--bg);
+            color: var(--tt);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 24px;
+            padding: 20px;
         }
 
         .wrap {
             width: 100%;
-            max-width: 520px;
+            max-width: 440px;
         }
 
-        .page-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
+        .page-header { text-align: center; margin-bottom: 28px; }
 
         .logo {
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
             text-decoration: none;
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             background: linear-gradient(135deg, var(--p), var(--pl));
             border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: 700;
-            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 700; color: #fff;
         }
 
-        .logo-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #fff;
-        }
+        .logo-name { font-size: 18px; font-weight: 700; color: #fff; }
 
-        .page-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .page-sub {
-            font-size: 14px;
-            color: var(--ts);
-        }
+        .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .page-sub   { font-size: 14px; color: var(--ts); }
 
         .user-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--surf);
-            border: 1px solid var(--bd);
-            border-radius: 20px;
-            padding: 6px 14px 6px 8px;
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--surf); border: 1px solid var(--bd);
+            border-radius: 20px; padding: 6px 14px 6px 8px;
             margin-bottom: 24px;
         }
 
         .user-ava {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--elev);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 700;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--elev); overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700;
         }
 
-        .user-ava img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .user-ava img { width: 100%; height: 100%; object-fit: cover; }
+        .user-name { font-size: 13px; font-weight: 500; }
+
+        .alert-err {
+            background: rgba(255,61,113,.1); border: 1px solid rgba(255,61,113,.2);
+            color: var(--err); padding: 12px 16px; border-radius: var(--r);
+            font-size: 13px; margin-bottom: 16px;
         }
 
-        .user-name {
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .studio-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+        .studio-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 
         .studio-card {
-            width: 100%;
-            background: var(--surf);
-            border: 1px solid var(--bd);
-            border-radius: 14px;
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            cursor: pointer;
-            transition: all .15s;
-            text-align: left;
-            font-family: 'Inter', sans-serif;
-            color: var(--tp);
+            background: var(--surf); border: 1px solid var(--bd);
+            border-radius: 14px; padding: 0;
+            transition: border-color .2s, background .2s;
+            cursor: pointer; overflow: hidden;
         }
 
-        .studio-card:hover {
-            border-color: rgba(195, 33, 120, .4);
-            background: rgba(195, 33, 120, .05);
-            transform: translateY(-1px);
+        .studio-card:hover { border-color: rgba(195,33,120,.4); background: var(--elev); }
+        .studio-card.current { border-color: var(--p); }
+
+        .studio-card form { display: contents; }
+
+        .studio-btn {
+            width: 100%; background: none; border: none; cursor: pointer;
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; color: var(--tt); text-align: left;
+            font-family: inherit;
         }
 
-        .studio-card.current {
-            border-color: var(--p);
-            background: rgba(195, 33, 120, .08);
+        .studio-avatar {
+            width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--p), var(--pd));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 700; overflow: hidden;
         }
 
-        .studio-card.banned {
-            opacity: .6;
-            cursor: not-allowed;
+        .studio-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .studio-info { flex: 1; min-width: 0; }
+
+        .studio-name {
+            font-size: 14px; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
-        .studio-card.banned:hover {
-            transform: none;
-            border-color: rgba(255, 61, 113, .3);
-            background: rgba(255, 61, 113, .04);
-        }
+        .studio-meta { font-size: 11px; color: var(--ts); margin-top: 3px; }
 
-        .stu-ava {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            flex-shrink: 0;
-            background: linear-gradient(135deg, var(--p), #7a155d);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 700;
-            overflow: hidden;
-        }
-
-        .stu-ava img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .stu-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .stu-name {
-            font-size: 15px;
-            font-weight: 600;
+        .studio-role {
+            font-size: 10px; font-weight: 700; letter-spacing: .04em;
+            padding: 2px 8px; border-radius: 6px;
+            background: rgba(195,33,120,.15); color: var(--pl);
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
-        .stu-meta {
-            font-size: 12px;
-            color: var(--ts);
-            margin-top: 2px;
-        }
+        .studio-role.owner { background: rgba(255,170,0,.12); color: #ffaa00; }
 
-        .stu-role {
-            font-size: 11px;
-            color: var(--p);
-            background: rgba(195, 33, 120, .12);
-            padding: 2px 8px;
-            border-radius: 4px;
-            display: inline-block;
-            margin-top: 4px;
-        }
-
-        .current-badge {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: rgba(0, 214, 143, .12);
-            color: var(--ok);
-            flex-shrink: 0;
-        }
-
-        .status-badge {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 4px;
-            flex-shrink: 0;
+        .current-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--ok); flex-shrink: 0;
         }
 
         .empty {
-            background: var(--surf);
-            border: 1px solid var(--bd);
+            text-align: center; padding: 40px 20px;
+            background: var(--surf); border: 1px solid var(--bd);
             border-radius: 14px;
-            padding: 40px;
-            text-align: center;
         }
 
-        .empty .material-icons {
-            font-size: 48px;
-            color: var(--p);
-            display: block;
-            margin-bottom: 12px;
-        }
-
-        .empty p {
-            color: var(--ts);
-            font-size: 14px;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
+        .empty .material-icons { font-size: 48px; color: var(--tm); display: block; margin-bottom: 12px; }
+        .empty p { font-size: 13px; color: var(--ts); line-height: 1.6; margin-bottom: 20px; }
 
         .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            transition: all .15s;
-            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 18px; border-radius: var(--r);
+            font-size: 13px; font-weight: 600; border: none;
+            cursor: pointer; text-decoration: none; font-family: inherit;
         }
 
-        .btn-p {
-            background: var(--p);
-            color: #fff;
-            width: 100%;
-            justify-content: center;
+        .btn-p { background: var(--p); color: #fff; }
+        .btn-p:hover { background: var(--pd); }
+        .btn-g {
+            background: var(--elev); color: var(--ts);
+            border: 1px solid var(--bd);
         }
-
-        .btn-p:hover {
-            background: var(--pd);
-        }
-
-        .btn .material-icons {
-            font-size: 18px;
-        }
-
-        .alert-err {
-            background: rgba(255, 61, 113, .1);
-            border: 1px solid rgba(255, 61, 113, .2);
-            color: var(--err);
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
+        .btn-g:hover { color: #fff; }
 
         .footer-links {
-            text-align: center;
-            margin-top: 16px;
-            display: flex;
-            justify-content: center;
-            gap: 16px;
+            text-align: center; margin-top: 20px;
+            display: flex; justify-content: center; gap: 20px;
         }
 
         .footer-links a {
-            font-size: 12px;
-            color: var(--tm);
-            text-decoration: none;
-            transition: .15s;
+            font-size: 12px; color: var(--tm); text-decoration: none;
         }
 
-        .footer-links a:hover {
-            color: var(--p);
-        }
+        .footer-links a:hover { color: var(--p); }
     </style>
 </head>
-
 <body>
     <div class="wrap">
 
@@ -411,13 +280,16 @@ $status_labels = [
         </div>
 
         <?php if ($error === 'forbidden'): ?>
-            <div class="alert-err">Эта студия вам не принадлежит.</div>
+            <div class="alert-err">
+                <span class="material-icons" style="font-size:15px;vertical-align:middle;">lock</span>
+                У вас нет доступа к этой студии.
+            </div>
         <?php endif; ?>
 
         <?php if (empty($studios)): ?>
             <div class="empty">
                 <span class="material-icons">apartment</span>
-                <p>У вас пока нет студий.<br>Создайте свою первую студию на платформе.</p>
+                <p>У вас пока нет студий.<br>Создайте свою первую или попросите владельца добавить вас в команду.</p>
                 <a href="/devs/regorg" class="btn btn-p">
                     <span class="material-icons">add_business</span>Создать студию
                 </a>
@@ -429,60 +301,52 @@ $status_labels = [
                     $sid      = (int)$s['id'];
                     $initials = mb_strtoupper(mb_substr($s['name'], 0, 2));
                     $is_cur   = ($sid === $current_studio_id);
-                    $status   = $s['status'] ?? 'active';
-                    $is_banned = ($status === 'banned');
-                    $scfg     = $status_labels[$status] ?? $status_labels['active'];
+                    $my_role  = $s['my_role'] ?? 'Участник';
+                    $is_owner_role = ($my_role === 'Владелец');
                 ?>
-                    <form method="POST" style="margin:0;">
-                        <input type="hidden" name="studio_id" value="<?= $sid ?>">
-                        <button type="submit"
-                            class="studio-card <?= $is_cur ? 'current' : '' ?> <?= $is_banned ? 'banned' : '' ?>"
-                            <?= $is_banned ? 'disabled title="Студия заблокирована"' : '' ?>>
-
-                            <div class="stu-ava">
-                                <?php if (!empty($s['avatar_link'])): ?>
-                                    <img src="<?= htmlspecialchars($s['avatar_link']) ?>" alt="">
-                                    <?php else: ?><?= $initials ?><?php endif; ?>
-                            </div>
-
-                            <div class="stu-info">
-                                <div class="stu-name"><?= htmlspecialchars($s['name']) ?></div>
-                                <div class="stu-meta">
-                                    <?php if (!empty($s['tiker'])): ?>[<?= htmlspecialchars($s['tiker']) ?>]<?php endif; ?>
-                                    <?php if (!empty($s['city'])): ?> · <?= htmlspecialchars($s['city']) ?><?php endif; ?>
-                                        <?php if (!empty($s['team_size'])): ?> · <?= htmlspecialchars($s['team_size']) ?> чел.<?php endif; ?>
+                    <div class="studio-card <?= $is_cur ? 'current' : '' ?>">
+                        <form method="POST">
+                            <input type="hidden" name="studio_id" value="<?= $sid ?>">
+                            <button type="submit" class="studio-btn">
+                                <div class="studio-avatar">
+                                    <?php if (!empty($s['avatar_link'])): ?>
+                                        <img src="<?= htmlspecialchars($s['avatar_link']) ?>" alt="">
+                                    <?php else: ?>
+                                        <?= $initials ?>
+                                    <?php endif; ?>
                                 </div>
-                                <?php if ($is_banned && !empty($s['ban_reason'])): ?>
-                                    <span style="font-size:11px;color:var(--err);margin-top:4px;display:block;">
-                                        Причина: <?= htmlspecialchars($s['ban_reason']) ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="stu-role">Владелец</span>
+                                <div class="studio-info">
+                                    <div class="studio-name"><?= htmlspecialchars($s['name']) ?></div>
+                                    <div class="studio-meta">
+                                        <?= htmlspecialchars($s['specialization'] ?? '') ?>
+                                        <?php if (!empty($s['city'])): ?>
+                                            · <?= htmlspecialchars($s['city']) ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <span class="studio-role <?= $is_owner_role ? 'owner' : '' ?>">
+                                    <?= htmlspecialchars($my_role) ?>
+                                </span>
+                                <?php if ($is_cur): ?>
+                                    <div class="current-dot" title="Текущая студия"></div>
                                 <?php endif; ?>
-                            </div>
-
-                            <?php if ($is_cur && !$is_banned): ?>
-                                <span class="current-badge">Активна</span>
-                            <?php elseif (!$is_banned): ?>
-                                <span class="material-icons" style="color:var(--tm);flex-shrink:0;">chevron_right</span>
-                            <?php else: ?>
-                                <span class="status-badge" style="background:rgba(255,61,113,.12);color:var(--err);">Заблокирована</span>
-                            <?php endif; ?>
-                        </button>
-                    </form>
+                            </button>
+                        </form>
+                    </div>
                 <?php endforeach; ?>
             </div>
 
-            <a href="/devs/regorg" class="btn btn-p">
-                <span class="material-icons">add_business</span>Создать новую студию
-            </a>
+            <div style="text-align:center;">
+                <a href="/devs/regorg" class="btn btn-g">
+                    <span class="material-icons">add_business</span>Создать новую студию
+                </a>
+            </div>
         <?php endif; ?>
 
         <div class="footer-links">
-            <a href="/me">← Профиль</a>
-            <a href="/">Главная</a>
+            <a href="/">← На главную</a>
+            <a href="/me">Профиль</a>
         </div>
     </div>
 </body>
-
 </html>
