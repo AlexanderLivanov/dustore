@@ -341,9 +341,13 @@ $stmt->execute([
             </div>
         </div>
         <div class="section center-section">
+            <div class="center-floating-block">
+                <!-- Сюда можешь поместить любой контент: текст, картинку, форму -->
+                <p style="color: #c4a93a;font-weight: bolder;font-size: larger;font-family: 'PixelizerBold';">1 год домену</p>
+            </div>
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
-                <img style="scale: .7;" src="/swad/static/img/logo_1y.png" alt="" onclick="location.href='/'">
+                <img src="/swad/static/img/logo_new_year.png" alt="" onclick="location.href='/'">
                 <!-- <img id="dancingCow" style="height: 80px;"
                     src="https://media.tenor.com/yNy3XaDrdjgAAAAj/polish-dancing-cow-dancing.gif"
                     alt=""
@@ -364,6 +368,7 @@ $stmt->execute([
                         sound.pause();
                         sound.currentTime = 0;
                     });
+
                 </script>
             </div>
         </div>

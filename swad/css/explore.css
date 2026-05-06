@@ -6,7 +6,6 @@
     --gradient: linear-gradient(180deg, #0f0a20);
 }
 
-/* Ð¡ÐºÑ€Ð¾Ð»Ð»Ð±Ð°Ñ€ Ð´Ð»Ñ ÑÐµÑ‚ÐºÐ¸ */
 .games-grid::-webkit-scrollbar {
     width: 2px;
 }
@@ -32,7 +31,6 @@
 }
 
 
-/* Ð¡ÐºÑ€Ð¾Ð»Ð»Ð±Ð°Ñ€ Ð´Ð»Ñ Ð»ÐµÐ²Ð¾Ð¹ Ð¿Ð°Ð½ÐµÐ»Ð¸ Ñ„Ð¸Ð»ÑŒÑ‚Ñ€Ð¾Ð² */
 .controls-left::-webkit-scrollbar {
     width: 2px;
 }+
@@ -53,7 +51,7 @@
 
 
 body {
-    background: var(--gradient);
+    background: #0f0a20;
     color: var(--light);
     overflow: hidden;
     height: 100vh;
@@ -122,13 +120,11 @@ h2:after {
     box-shadow: 0 5px 15px rgba(195, 33, 120, 0.3);
 }
 
-/* Ð¡Ñ‚Ð¸Ð»Ð¸ Ð´Ð»Ñ ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ñ‹ Ð¸Ð³Ñ€ */
 .games-header {
     background: none;
-    padding: 30px 0 10px;
+    padding: 30px 0 0px;
 }
 
-/* ÐžÐ±Ñ‘Ñ€Ñ‚ÐºÐ° Ð´Ð»Ñ ÑÑ‚Ñ€Ð¾ÐºÐ¸ Ñ Ñ„Ð¸Ð»ÑŒÑ‚Ñ€Ð°Ð¼Ð¸ Ð¸ ÑÐµÑ‚ÐºÐ¾Ð¹ */
 .games-body {
     display: flex;
     flex-direction: row;
@@ -159,7 +155,7 @@ h2:after {
     border-radius: 10px;
     overflow-y: auto;
     overflow-x: hidden;
-    box-shadow: inset 2px 2px 1px 2px #00000040;
+    box-shadow: inset 0px 0px 2px 3px #00000040;
 }
 
 .search-wrapper {
@@ -259,38 +255,11 @@ h2:after {
     display: flex;
     flex-direction: column;
     padding: 20px 20px 20px 20px;
-    background: linear-gradient(180deg, #ffffff13, #ffffff13, #ffffff13, #ffffff20);
+    background: linear-gradient(180deg, #ffffff13);
     border-radius: 15px;
     border: 1px white;
     box-shadow: 0px 0px 1px 1px #ffffff33;
     backdrop-filter: blur(40px);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 .games-grid {
@@ -304,14 +273,14 @@ h2:after {
         padding: 20px;
         border-radius: 10px;
         background: linear-gradient(180deg, #0f0a20);
-        box-shadow: inset 0px 0px 4px 6px #00000040;
+        box-shadow: inset 0px 0px 2px 3px #00000040;
     }
 
 .game-card {
     border-radius: 20px;
     height: 210px;
     overflow: hidden;
-    transition: transform 0.01s ease-out; /* Ð±Ñ‹ÑÑ‚Ñ€Ð°Ñ Ñ€ÐµÐ°ÐºÑ†Ð¸Ñ */
+    transition: transform 0.01s ease-out;
     transform-style: preserve-3d;
     will-change: transform;
     box-shadow: 0px 0px 3px 4px #00000040;
@@ -400,9 +369,7 @@ h2:after {
     margin-left: 8px;
     color: #ffffffc7;
     font-weight: 100;
-    /* text-shadow:
-        -1px -1px 2px rgba(255,255,255,0.3),
-         2px  1px 2px rgba(0,0,0,0.5); */          /* Ñ‚Ñ‘Ð¼Ð½Ð°Ñ Ñ‚ÐµÐ½ÑŒ (ÑÐ½Ð¸Ð·Ñƒ-ÑÐ¿Ñ€Ð°Ð²Ð°) */
+
 }
 
 .game-card::before {
@@ -471,10 +438,6 @@ h2:after {
     background: var(--primary);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ÐœÐžÐ‘Ð˜Ð›Ð¬ÐÐÐ¯ ÐÐ”ÐÐŸÐ¢ÐÐ¦Ð˜Ð¯
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-
 @media (max-width: 768px) {
 
     body { overflow: hidden; height: 100vh; }
@@ -508,22 +471,19 @@ h2:after {
 
     .container { padding: 0 10px; max-width: 100%; }
 
-    /* ÐŸÐ¾Ð¸ÑÐº */
     .search-wrapper { flex-shrink: 0; width: 100%; }
     .search-bar { width: 100%; max-width: 100%; }
     .search-bar input { font-size: 1rem; padding: 10px 10px 10px 42px; }
 
-    /* games-body: ÐºÐ¾Ð»Ð¾Ð½ÐºÐ° â€” controls ÑÐ²ÐµÑ€Ñ…Ñƒ, Ð³Ñ€Ð¸Ð´ ÑÐ½Ð¸Ð·Ñƒ */
     .games-body {
         flex: 1;
         min-height: 0;
         display: flex;
         flex-direction: column;
         gap: 8px;
-        overflow: visible; /* controls dropdown Ð½Ðµ Ð¾Ð±Ñ€ÐµÐ·Ð°ÐµÑ‚ÑÑ */
+        overflow: visible;
     }
 
-    /* Ð¤Ð¸Ð»ÑŒÑ‚Ñ€Ñ‹ â€” ÑÐ½Ð°Ñ€ÑƒÐ¶Ð¸ Ð¾Ñ‚ ÑÐºÑ€Ð¾Ð»Ð»ÑÑ‰ÐµÐ³Ð¾ÑÑ ÐºÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€Ð° */
     .games-controls {
         flex-shrink: 0;
         width: 100%;
@@ -531,7 +491,6 @@ h2:after {
         z-index: 100;
     }
 
-    /* ÐšÐ½Ð¾Ð¿ÐºÐ° Ñ‚Ð¾Ð³Ð³Ð» */
     .mobile-filter-toggle {
         display: flex;
         align-items: center;
@@ -556,7 +515,6 @@ h2:after {
     .mobile-filter-toggle svg.chevron { transition: transform 0.25s ease; }
     .mobile-filter-toggle.open svg.chevron { transform: rotate(180deg); }
 
-    /* Ð”Ñ€Ð¾Ð¿Ð´Ð°ÑƒÐ½ â€” Ð°Ð±ÑÐ¾Ð»ÑŽÑ‚Ð½Ñ‹Ð¹, Ð½Ðµ Ð¾Ð±Ñ€ÐµÐ·Ð°ÐµÑ‚ÑÑ */
     .controls-left {
         display: none;
         position: absolute;
@@ -584,7 +542,6 @@ h2:after {
     }
     .btn-filter:last-child { border-bottom: none; }
 
-    /* content-row: flex: 1, ÑÐºÑ€Ð¾Ð»Ð»Ð¸Ñ‚ÑÑ */
     .content-row {
         flex: 1;
         min-height: 0;
@@ -594,7 +551,6 @@ h2:after {
         border-radius: 10px;
     }
 
-    /* Ð“Ñ€Ð¸Ð´: Ð²Ñ‹ÑÐ¾Ñ‚Ð° Ð¿Ð¾ ÐºÐ¾Ð½Ñ‚ÐµÐ½Ñ‚Ñƒ, ÑÐºÑ€Ð¾Ð»Ð»Ð¸Ñ‚ÑÑ Ñ‡ÐµÑ€ÐµÐ· Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»Ñ */
     .games-grid {
         display: grid !important;
         width: 100%;
@@ -610,7 +566,6 @@ h2:after {
         box-shadow: inset 2px 2px 1px 2px #00000040;
     }
 
-    /* ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ¸ */
     .game-card { height: auto; border-radius: 12px; }
     .game-image { height: 110px; }
     .game-title { font-size: 0.9rem; margin-left: 4px; }
@@ -630,10 +585,8 @@ h2:after {
     .game-price  { font-size: 0.78rem; }
 }
 
-/* Ð¢Ð¾Ð³Ð³Ð» ÑÐºÑ€Ñ‹Ñ‚ Ð½Ð° Ð´ÐµÑÐºÑ‚Ð¾Ð¿Ðµ */
 @media (min-width: 769px) {
     .mobile-filter-toggle { display: none; }
-    /* ÐÐ° Ð´ÐµÑÐºÑ‚Ð¾Ð¿Ðµ games-body Ð²ÐµÐ´Ñ‘Ñ‚ ÑÐµÐ±Ñ ÐºÐ°Ðº ÑÑ‚Ð°Ñ€Ñ‹Ð¹ content-row */
     .games-body {
         display: flex;
         flex-direction: row;

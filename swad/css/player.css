@@ -5,7 +5,7 @@
 }
 
 body {
-    background: linear-gradient(#2e0f32, #2e0f32);
+    background: linear-gradient(#0f0a20);
     color: var(--light);
     min-height: 100vh;
     overflow: hidden;
@@ -160,7 +160,7 @@ body {
 .tab-button {
     flex: 1;
     padding: 12px 20px;
-    background: #3f2a416e;
+    background: #2323366e;
     border: none;
     color: #aaa;
     font-size: 1rem;
@@ -189,12 +189,12 @@ body {
 }
 
 .tab-button:hover {
-    background: #6549676e;
+    background: #494a676e;
     color: white;
 }
 
 .tab-button.active {
-    background: #614164a3;
+    background: #414564a3;
     color: white;
     pointer-events: none;
 }
@@ -643,7 +643,7 @@ h2 {
 
 .profile-left .tabs {
     flex-direction: column;
-    background: linear-gradient(rgb(32 14 34), rgb(28 9 30));
+    background: linear-gradient(rgb(12 12 22));
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -696,7 +696,7 @@ h2 {
     flex: 0 0 300px;
     min-width: 260px;
     box-shadow: inset 1px 1px 3px 1px #00000066;
-    background: linear-gradient(#1c091e, #00000066, #1c091e);
+    background: linear-gradient(#0a091e, #00000066, #0a091e);
     border-radius: 30px;
 }
 
@@ -1242,7 +1242,7 @@ h2 {
     transform-origin: bottom center;
     transition: transform 0.22s ease, box-shadow 0.22s ease;
     box-shadow: 2px 4px 14px rgba(0, 0, 0, 0.65);
-    background: linear-gradient(155deg, #3c2648 0%, #1e1028 100%);
+    background: linear-gradient(155deg, #392648 0%, #1e1028 100%);
     position: relative;
 }
 
@@ -1264,7 +1264,7 @@ h2 {
 /* Пустой слот-заглушка */
 .showcase-game-empty {
     cursor: default;
-    background: linear-gradient(155deg, #30203a 0%, #180d20 100%);
+    background: linear-gradient(155deg, #2a324b 0%, #0c0c1d 100%);
     opacity: 0.45;
 }
 

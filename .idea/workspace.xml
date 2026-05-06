@@ -4,7 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="" />
+    <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/swad/static/img/logo_1y_plus.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search.php" beforeDir="false" afterPath="$PROJECT_DIR$/search.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/explore.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/explore.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/header.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/header.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/player.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/player.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/static/img/logo.svg" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/img/logo.svg" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -22,22 +32,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/xampp/htdocs/swad/static/elements&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/xampp/htdocs",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\xampp\htdocs" />
+      <recent name="C:\xampp\htdocs\swad" />
       <recent name="C:\xampp\htdocs\swad\static\elements" />
       <recent name="C:\xampp\htdocs\swad\css" />
       <recent name="C:\xampp\htdocs\swad\static\img" />
-      <recent name="C:\xampp\htdocs\swad" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\xampp\htdocs\swad\static\img" />
       <recent name="C:\xampp\htdocs\swad\css" />
       <recent name="C:\xampp\htdocs\swad\static" />
     </key>

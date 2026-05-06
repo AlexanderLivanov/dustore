@@ -56,7 +56,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(180deg, #28112b, #61114e);
+            background: linear-gradient(180deg, #0f0a20);
             color: var(--text-primary);
             line-height: 1.5;
         }
@@ -70,7 +70,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         .games-header {
             flex-shrink: 0;
-            padding: 20px 0 0;
+            padding: 40px 0 0;
         }
 
         .container1 {
@@ -122,7 +122,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             justify-content: space-between;
             align-items: center;
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .filters {
@@ -239,8 +239,8 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             min-height: 0;
             overflow-y: auto;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(279px, 1fr));
+            gap: 20px;
             padding: 8px 4px 20px 4px;
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.2) transparent;

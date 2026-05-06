@@ -10,10 +10,10 @@
       }
     </style>
     <linearGradient id="Безымянный_градиент_20" data-name="Безымянный градиент 20" x1="540.29" y1="33.5" x2="540.29" y2="1046.5" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#a148aa"/>
-      <stop offset="0.5" stop-color="#dd743d"/>
-      <stop offset="0.77" stop-color="#f0be3a"/>
-      <stop offset="1" stop-color="#fff837"/>
+      <stop offset="0" stop-color="#ffffff80"/>
+      <stop offset="0.5" stop-color="#ffffff80"/>
+      <stop offset="0.77" stop-color="#ffffff80"/>
+      <stop offset="1" stop-color="#ffffff80"/>
     </linearGradient>
   </defs>
   <title>Буква Ю!</title>

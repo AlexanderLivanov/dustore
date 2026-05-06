@@ -569,3 +569,23 @@ body {
         display: block;
     }
 }
+
+.center-floating-block {
+    position: fixed;
+    top: 107%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 170px;
+    height: 26px;
+    background-color: #0f0a20;
+    border-radius: 0px 0px 15px 15px;
+    text-align: center;
+}
+
+@font-face {
+    font-family: "PixelizerBold";
+    src: url(../static/fonts/PixelizerBold.ttf) format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
