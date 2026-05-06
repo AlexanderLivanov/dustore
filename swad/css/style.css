@@ -7,7 +7,7 @@
 } */
 
 .main-container {
-    background: linear-gradient(#2e0f32, #3a2a3f);
+    background: linear-gradient(#0f0a20);
     height: calc(100vh - 70px - 10px);
     overflow: hidden;
 }

@@ -547,6 +547,8 @@ body {
     font-weight: 500;
     transition: background 0.15s, color 0.15s;
     white-space: nowrap;
+    color: antiquewhite;
+
 }
 
 
