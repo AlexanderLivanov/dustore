@@ -30,13 +30,12 @@ body {
     padding-left: 15px;
     padding-right: 15px;
     height: 80px;
-    background-color: #230e2d;
+    background-color: #0f0a20;
     backdrop-filter: blur(1px);
     position: sticky;
     top: 0;
     z-index: 10;
     /* background-color: white; */
-
 }
 
 .section {
@@ -549,6 +548,7 @@ body {
     transition: background 0.15s, color 0.15s;
     white-space: nowrap;
 }
+
 
 .nav-dropdown__item:hover {
     background: rgba(195, 33, 120, 0.18);

@@ -278,6 +278,7 @@ $stmt->execute([
     <button id="pushBtn">
         Push
     </button> -->
+
     <div class="top-banner" id="top-banner">
         <div class="banner-content">
             <div class="banner-text">
@@ -445,22 +446,19 @@ $stmt->execute([
             const banner = document.getElementById('top-banner');
             const closeBtn = document.getElementById('close-banner');
 
-            // Если пользователь уже закрывал — не показываем
+            if (!banner || !closeBtn) return;
+
+            // 👉 если уже закрывали — сразу скрываем
             if (localStorage.getItem('bannerClosed') === 'true') {
+                banner.style.display = 'none';
                 return;
             }
-
-            // Показываем: снимаем класс hidden
-            banner.classList.remove('hidden');
-
+        
             closeBtn.addEventListener('click', function() {
-                banner.style.animation = 'slideUp 0.5s forwards';
-                setTimeout(() => {
-                    banner.style.display = 'none';
-                }, 500);
+                banner.style.display = 'none';
                 localStorage.setItem('bannerClosed', 'true');
             });
-        });
+});
     </script>
 
     <script>
@@ -552,133 +550,6 @@ $stmt->execute([
                 console.error("Push subscription failed:", err);
             }
         }
-    </script>
-
-    <script>
-        (function() {
-            const gradientColors = ['#14041d', '#c32178', '#ffaa00'];
-
-            const hero = document.querySelector('.hero');
-            const header = document.querySelector('.header');
-
-            if (!hero || !header) return;
-
-            header.style.transition = 'background-color 0.01s linear';
-
-            function interpolateColor(color1, color2, factor) {
-
-                const r1 = parseInt(color1.substring(1, 3), 16);
-                const g1 = parseInt(color1.substring(3, 5), 16);
-                const b1 = parseInt(color1.substring(5, 7), 16);
-                const r2 = parseInt(color2.substring(1, 3), 16);
-                const g2 = parseInt(color2.substring(3, 5), 16);
-                const b2 = parseInt(color2.substring(5, 7), 16);
-
-                const r = Math.round(r1 + factor * (r2 - r1));
-                const g = Math.round(g1 + factor * (g2 - g1));
-                const b = Math.round(b1 + factor * (b2 - b1));
-
-                return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-            }
-
-            function updateHeaderColor() {
-                const scrollY = window.scrollY;
-                const heroTop = hero.offsetTop;
-                const heroHeight = hero.offsetHeight;
-                const heroBottom = heroTop + heroHeight;
-
-                let factor;
-                if (scrollY < heroTop) {
-                    factor = 0; // выше hero
-                } else if (scrollY > heroBottom) {
-                    factor = 1; // ниже hero
-                } else {
-                    factor = (scrollY - heroTop) / heroHeight; // внутри hero
-                }
-
-                if (gradientColors.length === 2) {
-
-                    const newColor = interpolateColor(gradientColors[0], gradientColors[1], factor);
-                    header.style.backgroundColor = newColor;
-                } else if (gradientColors.length > 2) {
-
-                    const totalSegments = gradientColors.length - 1;
-                    const exactIndex = factor * totalSegments;
-                    const leftIndex = Math.floor(exactIndex);
-                    const rightIndex = Math.min(leftIndex + 1, totalSegments);
-                    const segmentFactor = exactIndex - leftIndex;
-
-                    const newColor = interpolateColor(
-                        gradientColors[leftIndex],
-                        gradientColors[rightIndex],
-                        segmentFactor
-                    );
-                    header.style.backgroundColor = newColor;
-                }
-            }
-
-            window.addEventListener('scroll', updateHeaderColor);
-            window.addEventListener('resize', updateHeaderColor); // на случай изменения высоты hero
-
-            updateHeaderColor();
-        })();
-    </script>
-
-    <script>
-        (function() {
-
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('Скрипт глобального изменения цвета запущен');
-
-                const colorTop = '#2e0f32'; // цвет вверху страницы
-                const colorBottom = '#65154c'; // цвет внизу страницы
-
-                const header = document.querySelector('.header');
-                if (!header) {
-                    console.warn('Header не найден');
-                    return;
-                }
-
-                header.style.transition = 'background-color 0.2s ease';
-
-                function interpolateColor(color1, color2, factor) {
-
-                    const r1 = parseInt(color1.substring(1, 3), 16);
-                    const g1 = parseInt(color1.substring(3, 5), 16);
-                    const b1 = parseInt(color1.substring(5, 7), 16);
-                    const r2 = parseInt(color2.substring(1, 3), 16);
-                    const g2 = parseInt(color2.substring(3, 5), 16);
-                    const b2 = parseInt(color2.substring(5, 7), 16);
-
-                    const r = Math.round(r1 + factor * (r2 - r1));
-                    const g = Math.round(g1 + factor * (g2 - g1));
-                    const b = Math.round(b1 + factor * (b2 - b1));
-
-                    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-                }
-
-                function updateHeaderColor() {
-                    const scrollY = window.scrollY;
-                    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-
-                    let factor;
-                    if (maxScroll <= 0) {
-
-                        factor = 0;
-                    } else {
-                        factor = Math.min(1, Math.max(0, scrollY / maxScroll));
-                    }
-
-                    const newColor = interpolateColor(colorTop, colorBottom, factor);
-                    header.style.backgroundColor = newColor;
-                }
-
-                window.addEventListener('scroll', updateHeaderColor);
-                window.addEventListener('resize', updateHeaderColor);
-
-                updateHeaderColor();
-            });
-        })();
     </script>
 
     <script>
