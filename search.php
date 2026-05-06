@@ -154,7 +154,7 @@
             padding: 12px 20px 12px 48px;
             border-radius: 40px;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(0, 0, 0, 0.3);
+            background: rgb(0 0 0 / 50%);
             color: white;
             font-size: 1rem;
             outline: none;
