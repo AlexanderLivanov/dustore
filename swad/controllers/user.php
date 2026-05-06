@@ -79,7 +79,7 @@ class User
     {
         if ($type == "in_company") {
             $stmt = $this->db->prepare("
-                SELECT `role_id` FROM user_organization WHERE user_id = ?
+                SELECT `role_id` FROM staff WHERE user_id = ?
             ");
             $stmt->execute([$id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);

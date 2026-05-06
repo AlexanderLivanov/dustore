@@ -2,44 +2,57 @@
 session_start();
 require_once __DIR__ . '/../swad/config.php';
 
-$db = new Database();
+$db  = new Database();
 $pdo = $db->connect();
 
-// Check if user is logged in
+// Создаём таблицу выборов если ещё нет (на случай первого захода)
+$pdo->exec("CREATE TABLE IF NOT EXISTS expert_elections (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    start_date  DATETIME NOT NULL,
+    end_date    DATETIME NOT NULL,
+    status      ENUM('scheduled','active','completed') DEFAULT 'scheduled',
+    created_by  INT DEFAULT NULL,
+    created_at  DATETIME DEFAULT NOW()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// ── Активный период приёма заявок из БД ──────────────────────────────────
+$election = $pdo->query("
+    SELECT *, NOW() BETWEEN start_date AND end_date AS is_active
+    FROM expert_elections
+    ORDER BY start_date DESC
+    LIMIT 1
+")->fetch(PDO::FETCH_ASSOC);
+
+$isOpen     = $election && (bool)$election['is_active'];
+$nextStart  = $election ? strtotime($election['start_date']) : null;
+$nextEnd    = $election ? strtotime($election['end_date'])   : null;
+$now        = time();
+
+// Счётчик до конца / начала
+$timeToEnd   = $nextEnd   ? max(0, $nextEnd   - $now) : 0;
+$timeToStart = $nextStart ? max(0, $nextStart - $now) : 0;
+$days    = floor($timeToEnd / 86400);
+$hours   = floor(($timeToEnd % 86400) / 3600);
+$minutes = floor(($timeToEnd % 3600) / 60);
+$seconds = $timeToEnd % 60;
+
+// ── Авторизация ───────────────────────────────────────────────────────────
 $user = $_SESSION['USERDATA'] ?? null;
 if (!$user) {
     header("Location: /login");
     exit;
 }
 
-// Check if user has email
-if (empty($user['email'])) {
-    $noEmail = true;
-}
+$noEmail = empty($user['email']);
 
-// Check if user already has a pending or approved application
+// ── Статус существующей заявки ────────────────────────────────────────────
 $stmt = $pdo->prepare("SELECT status FROM experts WHERE user_id = ?");
 $stmt->execute([$user['id']]);
 $existingApp = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Get stats
-$stmt = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'");
-$totalRequests = $stmt->fetchColumn();
-$stmt = $pdo->query("SELECT COUNT(*) FROM experts");
-$allRequests = $stmt->fetchColumn();
-
-$nextStart = strtotime('2026-03-01 12:00:00');
-$nextEnd   = strtotime('2026-03-31 23:59:59');
-$now       = time();
-$timeToStart = max(0, $nextStart - $now);
-$timeToEnd   = max(0, $nextEnd   - $now);
-$days = floor($timeToEnd / 86400);
-$hours = floor(($timeToEnd % 86400) / 3600);
-$minutes = floor(($timeToEnd % 3600) / 60);
-$seconds = $timeToEnd % 60;
-
-
-$isOpen = ($now >= $nextStart && $now <= $nextEnd);
+// ── Статистика ────────────────────────────────────────────────────────────
+$totalRequests = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
+$allRequests   = $pdo->query("SELECT COUNT(*) FROM experts")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -78,19 +91,15 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
             overflow-x: hidden;
         }
 
-        /* Background mesh */
         body::before {
             content: '';
             position: fixed;
             inset: 0;
-            background:
-                radial-gradient(ellipse 60% 40% at 20% 10%, rgba(74, 222, 128, .06) 0%, transparent 70%),
-                radial-gradient(ellipse 50% 50% at 80% 80%, rgba(34, 211, 238, .05) 0%, transparent 70%);
+            background: radial-gradient(ellipse 60% 40% at 20% 10%, rgba(74, 222, 128, .06) 0%, transparent 70%), radial-gradient(ellipse 50% 50% at 80% 80%, rgba(34, 211, 238, .05) 0%, transparent 70%);
             pointer-events: none;
             z-index: 0;
         }
 
-        /* ── NAV ── */
         nav {
             position: sticky;
             top: 0;
@@ -134,7 +143,6 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
             background: var(--surface2);
         }
 
-        /* ── LAYOUT ── */
         .page {
             position: relative;
             z-index: 1;
@@ -170,7 +178,6 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
             margin-bottom: 40px;
         }
 
-        /* ── STATS BAR ── */
         .stats-bar {
             display: flex;
             gap: 16px;
@@ -189,34 +196,33 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
             font-size: .875rem;
         }
 
-        .stat-chip .dot {
+        .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 8px var(--accent);
             flex-shrink: 0;
         }
 
-        .stat-chip .dot.orange {
+        .dot-green {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .dot-orange {
             background: var(--warning);
             box-shadow: 0 0 8px var(--warning);
         }
 
-        .stat-chip .dot.cyan {
+        .dot-cyan {
             background: var(--accent2);
             box-shadow: 0 0 8px var(--accent2);
         }
 
-        .stat-chip strong {
-            color: var(--text);
+        .dot-red {
+            background: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
         }
 
-        .stat-chip span {
-            color: var(--muted);
-        }
-
-        /* ── STATUS CARDS (pending / no email) ── */
         .status-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -267,7 +273,6 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
             margin: 0 auto;
         }
 
-        /* ── FORM ── */
         .form-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -368,66 +373,62 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
             padding: 15px;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: #22c55e;
             transform: translateY(-1px);
             box-shadow: 0 8px 24px rgba(74, 222, 128, .25);
         }
 
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
         .btn-primary:disabled {
             opacity: .4;
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
         }
 
-        /* closed state */
-        .closed-badge {
-            display: inline-block;
-            background: rgba(248, 113, 113, .12);
+        /* Closed banner */
+        .closed-banner {
+            background: rgba(248, 113, 113, .08);
+            border: 1px solid rgba(248, 113, 113, .2);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .closed-banner .icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .closed-banner h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
             color: var(--danger);
-            border: 1px solid rgba(248, 113, 113, .25);
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: .8rem;
-            font-weight: 600;
-            margin-left: 10px;
-            vertical-align: middle;
+            margin-bottom: 4px;
         }
 
-        .open-badge {
-            display: inline-block;
-            background: rgba(74, 222, 128, .12);
-            color: var(--accent);
-            border: 1px solid rgba(74, 222, 128, .25);
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: .8rem;
-            font-weight: 600;
-            margin-left: 10px;
-            vertical-align: middle;
+        .closed-banner p {
+            font-size: .85rem;
+            color: var(--muted);
         }
 
         @keyframes fadeUp {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(20px)
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0)
             }
         }
     </style>
 </head>
 
 <body>
-
     <nav>
         <a href="/" class="nav-logo">Dustore</a>
         <div class="nav-links">
@@ -443,35 +444,35 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
     <div class="page">
         <div class="eyebrow">Экспертная программа</div>
         <h1>Стать экспертом<br>Dustore</h1>
-        <p class="subtitle">Эксперты оценивают indie-игры по чек-листу и формируют рейтинги. Ваше мнение влияет на то, какие игры увидит сообщество.</p>
+        <p class="subtitle">Эксперты оценивают indie-игры и формируют рейтинги. Ваше мнение влияет на то, какие игры увидит сообщество.</p>
 
-        <!-- Stats -->
+        <!-- Статистика -->
         <div class="stats-bar">
             <div class="stat-chip">
-                <span class="dot"></span>
+                <span class="dot dot-green"></span>
                 <strong><?= $allRequests ?></strong>
                 <span>заявок подано</span>
             </div>
             <div class="stat-chip">
-                <span class="dot"></span>
+                <span class="dot dot-orange"></span>
                 <strong><?= $totalRequests ?></strong>
-                <span>заявок на рассмотрении</span>
+                <span>на рассмотрении</span>
             </div>
             <?php if ($isOpen): ?>
                 <div class="stat-chip">
-                    <span class="dot orange"></span>
+                    <span class="dot dot-green"></span>
                     <strong>Набор открыт</strong>
-                    <span>ещё <?= ("$days дней $hours часов $minutes минут $seconds секунд") ?></span>
+                    <span>ещё <?= "$days д. $hours ч. $minutes мин." ?></span>
                 </div>
-            <?php elseif ($timeToStart > 0): ?>
+            <?php elseif ($nextStart && $timeToStart > 0): ?>
                 <div class="stat-chip">
-                    <span class="dot cyan"></span>
-                    <strong>Набор откроется</strong>
-                    <span>через <?= gmdate("H:i:s", $timeToStart) ?></span>
+                    <span class="dot dot-cyan"></span>
+                    <strong>Скоро открытие</strong>
+                    <span>через <?= date('d.m.Y', $nextStart) ?></span>
                 </div>
             <?php else: ?>
                 <div class="stat-chip">
-                    <span class="dot" style="background:var(--danger)"></span>
+                    <span class="dot dot-red"></span>
                     <strong>Набор закрыт</strong>
                     <span>следите за анонсами</span>
                 </div>
@@ -479,25 +480,25 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
         </div>
 
         <?php if (!empty($noEmail)): ?>
-            <!-- No email -->
+            <!-- Нет email -->
             <div class="status-card">
                 <div class="status-icon info">📧</div>
                 <h2>Необходим email</h2>
-                <p>Для подачи заявки на эксперта необходимо указать email в профиле, в разделе "Безопасность".</p>
+                <p>Для подачи заявки необходимо указать email в профиле в разделе «Безопасность».</p>
                 <br>
                 <a href="/me" class="btn btn-primary" style="max-width:240px;margin:0 auto;">Перейти в профиль</a>
             </div>
 
         <?php elseif ($existingApp): ?>
-            <!-- Already applied -->
+            <!-- Уже подавал заявку -->
             <?php
             $s = $existingApp['status'];
-            $icons = ['new' => '⏳', 'approved' => '✅', 'rejected' => '❌'];
+            $icons  = ['new' => '⏳', 'approved' => '✅', 'rejected' => '❌'];
             $titles = ['new' => 'Заявка на рассмотрении', 'approved' => 'Вы одобрены!', 'rejected' => 'Заявка отклонена'];
             $texts  = [
-                'new'      => 'Ваша заявка принята и ожидает рассмотрения администраторами. Мы уведомим вас по email.',
-                'approved' => 'Поздравляем! Теперь вы официальный эксперт Dustore. Войдите в панель для начала работы.',
-                'rejected' => 'К сожалению, ваша заявка была отклонена. Вы можете подать новую заявку в следующий набор.',
+                'new'      => 'Ваша заявка принята и ожидает рассмотрения. Мы уведомим вас по email.',
+                'approved' => 'Поздравляем! Теперь вы официальный эксперт Dustore.',
+                'rejected' => 'К сожалению, ваша заявка отклонена. Вы можете подать новую в следующий набор.',
             ];
             ?>
             <div class="status-card">
@@ -508,54 +509,66 @@ $isOpen = ($now >= $nextStart && $now <= $nextEnd);
                 <p><?= $texts[$s] ?? '' ?></p>
                 <?php if ($s === 'approved'): ?>
                     <br>
-                    <a href="/expert/admin" class="btn btn-primary" style="max-width:240px;margin:0 auto;">Открыть панель эксперта</a>
+                    <a href="/expert/admin/" class="btn btn-primary" style="max-width:240px;margin:0 auto;">Открыть панель эксперта</a>
                 <?php endif; ?>
             </div>
 
         <?php else: ?>
-            <!-- Application form -->
+            <!-- Форма заявки -->
+            <?php if (!$isOpen): ?>
+                <div class="closed-banner">
+                    <div class="icon">🔒</div>
+                    <div>
+                        <h3>Набор заявок закрыт</h3>
+                        <p>
+                            <?php if ($nextStart && $timeToStart > 0): ?>
+                                Следующий набор начнётся <?= date('d.m.Y в H:i', $nextStart) ?>.
+                            <?php elseif ($nextEnd && $timeToEnd === 0 && $nextStart): ?>
+                                Набор завершился <?= date('d.m.Y', $nextEnd) ?>. Следите за анонсами в Telegram.
+                            <?php else: ?>
+                                Администраторы откроют следующий набор в ближайшее время. Следите за анонсами.
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div class="form-card">
                 <form method="post" action="submit-expert.php">
-
                     <div class="form-row">
                         <div class="field">
                             <label>Никнейм</label>
-                            <input type="text" name="nickname" value="<?= htmlspecialchars($user['username'] ?? '') ?>" readonly>
-                            <span class="hint">Берётся из вашего профиля</span>
+                            <input type="text" value="<?= htmlspecialchars($user['username'] ?? '') ?>" readonly>
+                            <span class="hint">Берётся из профиля</span>
                         </div>
                         <div class="field">
                             <label>Email</label>
-                            <input type="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" readonly>
-                            <span class="hint">Берётся из вашего профиля</span>
+                            <input type="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" readonly>
+                            <span class="hint">Берётся из профиля</span>
                         </div>
                     </div>
-
                     <div class="field">
                         <label>Ваш игровой опыт</label>
-                        <textarea name="experience" required placeholder="Расскажите, сколько лет вы играете, в какие жанры, с какими платформами работали..."></textarea>
+                        <textarea name="experience" required <?= !$isOpen ? 'disabled' : '' ?>
+                            placeholder="Расскажите, сколько лет вы играете, в какие жанры..."></textarea>
                     </div>
-
                     <div class="field">
                         <label>Мотивация</label>
-                        <textarea name="motivation" required placeholder="Почему вы хотите стать экспертом и как планируете оценивать игры?"></textarea>
+                        <textarea name="motivation" required <?= !$isOpen ? 'disabled' : '' ?>
+                            placeholder="Почему хотите стать экспертом и как планируете оценивать игры?"></textarea>
                     </div>
-
                     <div class="field">
                         <label>Профиль / Портфолио <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(необязательно)</span></label>
-                        <input type="url" name="profile" placeholder="https://...">
-                        <span class="hint">Ссылка на соцсети, Steam, itch.io и т.д.</span>
+                        <input type="url" name="profile" <?= !$isOpen ? 'disabled' : '' ?> placeholder="https://...">
+                        <span class="hint">Ссылка на Steam, itch.io, соцсети</span>
                     </div>
-
                     <hr class="divider">
-
-                    <button type="submit" class="btn btn-primary" <?= !$isOpen ? 'disabled title="Набор закрыт"' : '' ?>>
-                        <?= $isOpen ? 'Отправить заявку →' : 'Набор закрыт' ?>
+                    <button type="submit" class="btn btn-primary" <?= !$isOpen ? 'disabled' : '' ?>>
+                        <?= $isOpen ? 'Отправить заявку →' : '🔒 Набор закрыт' ?>
                     </button>
-
                 </form>
             </div>
         <?php endif; ?>
-
     </div>
 </body>
 

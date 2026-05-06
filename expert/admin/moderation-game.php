@@ -38,11 +38,13 @@ $screenshots = json_decode($game['screenshots'] ?? '[]', true);
 $requirements = json_decode($game['requirements'] ?? '[]', true);
 
 $stmt = $pdo->prepare("
-    SELECT r.*, u.username, e.rating AS expert_weight
-    FROM reviews r
-    JOIN experts e ON r.expert_id = e.id
-    JOIN users u ON e.user_id = u.id
-    WHERE r.game_id=?
+    SELECT mr.id, mr.score, mr.comment AS review,
+           mr.score AS bugs, mr.score AS gameplay, mr.score AS graphics,
+           u.username, e.rating AS expert_weight
+    FROM moderation_reviews mr
+    JOIN experts e ON e.id = mr.expert_id
+    JOIN users u ON u.id = e.user_id
+    WHERE mr.game_id=?
 ");
 $stmt->execute([$gameId]);
 $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -54,6 +56,12 @@ $expert = $stmt->fetch();
 if (!$expert) die('no access');
 
 $expertId = $expert['id'];
+
+// Моя рецензия (если уже оставлял)
+$stmt = $pdo->prepare("SELECT score, comment FROM moderation_reviews WHERE game_id=? AND expert_id=?");
+$stmt->execute([$gameId, $expertId]);
+$myReview = $stmt->fetch(PDO::FETCH_ASSOC);
+$hasMyReview = (bool)$myReview;
 
 $avgBugs = $avgGameplay = $avgGraphics = 0;
 if ($reviews) {
@@ -79,7 +87,8 @@ $stmt = $pdo->prepare("
 $stmt->execute([$gameId]);
 $reviewCount = $stmt->fetchColumn();
 
-$progress = $reviewCount / ceil($totalExperts * 0.51) * 100;
+$needVotes = max(1, ceil($totalExperts * 0.51));
+$progress = min(100, round($reviewCount / $needVotes * 100));
 
 $pendingExperts = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
 $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")->fetchColumn();
@@ -500,6 +509,66 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
             width: 100%;
         }
 
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface2);
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 3px solid var(--bg);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 3px solid var(--bg);
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%236b7a99'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px !important;
+        }
+
+        .verdict-btn {
+            user-select: none;
+        }
+
+        .form-section textarea {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: .9rem;
+            width: 100%;
+            transition: border-color .2s;
+            resize: vertical;
+        }
+
+        .form-section textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
         .btn-submit:hover {
             background: #22c55e;
             transform: translateY(-1px);
@@ -744,19 +813,17 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
                         <a href="<?= htmlspecialchars($game['trailer_url']) ?>" target="_blank"
                             style="color:var(--accent2);font-size:.88rem;text-decoration:none;">▶ Смотреть трейлер →</a>
                     </div>
-                    <?php if (!empty($game['screenshots'])): ?>
-                        <?php $screens = json_decode($game['screenshots'], true); ?>
-                        <?php if ($screens): ?>
-                            <div style="padding:24px;">
-                                <div class="section-title">Скриншоты</div>
-                                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                                    <?php foreach ($screens as $img): ?>
-                                        <img src="<?= htmlspecialchars($img) ?>" style="width:160px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    <?php endif; ?>
+                <?php endif; ?>
+                <?php if (!empty($screenshots)): ?>
+                    <div style="padding:24px;">
+                        <div class="section-title">Скриншоты</div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <?php foreach ($screenshots as $s): ?>
+                                <img src="<?= htmlspecialchars($s['path'] ?? '') ?>"
+                                    style="width:160px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 <?php endif; ?>
                 <?php if (!empty($game['short_description'])): ?>
                     <div class="game-desc"><?= htmlspecialchars($game['short_description']) ?></div>
@@ -792,7 +859,7 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
                     <h2>Скриншоты</h2>
                     <div class="grid">
                         <?php foreach ($screenshots as $s): ?>
-                            <img src="<?= $s['path'] ?>">
+                            <img src="<?= htmlspecialchars($s['path'] ?? '') ?>">
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -827,62 +894,182 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
             <div class="progress-section">
                 <div class="progress-header">
                     <h3>Прогресс голосования</h3>
-                    <span><?= $reviewCount ?> из <?= ceil($totalExperts * 0.51) ?> голосов (<?= $reviewCount / ceil($totalExperts * 0.51) * 100 . "%" ?>)</span>
+                    <span><?= $reviewCount ?> из <?= $needVotes ?> голосов (<?= $progress ?>%)</span>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width:<?= $progress ?>%"></div>
                 </div>
-                
+
             </div>
 
-            <!-- Review Form -->
-            <?php if ($expertId && $game['status'] != 'published'): ?>
-                <div class="form-section">
-                    <div class="section-title">Оставить оценку</div>
+            <!-- ═══ ФОРМА ОЦЕНКИ ═══ -->
+            <?php if ($expertId && $game['moderation_status'] === 'pending'): ?>
+                <div class="form-section" id="review-form-section">
+                    <div class="section-title" style="display:flex;align-items:center;gap:10px;">
+                        <?= $hasMyReview ? '✏️ Ваша оценка (можно изменить)' : '⭐ Оценить игру' ?>
+                        <?php if ($hasMyReview): ?>
+                            <span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-left:4px;">
+                                · оценка учтена в голосовании
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
                     <form method="post" action="submit-moderation?id=<?= $gameId ?>">
-                        <div class="score-inputs">
-                            <div class="field">
-                                <label>Оценка (0–100) <span style="color: coral;">*</span></label>
-                                <input type="number" name="score" min="0" max="100" required placeholder="0">
+
+                        <!-- Слайдер оценки -->
+                        <div style="margin-bottom:24px;">
+                            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+                                <label style="font-size:.75rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);">
+                                    Общая оценка
+                                </label>
+                                <div style="display:flex;align-items:baseline;gap:6px;">
+                                    <span id="score-display" style="font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;color:var(--accent);line-height:1;">
+                                        <?= $hasMyReview ? $myReview['score'] : 50 ?>
+                                    </span>
+                                    <span style="color:var(--muted);font-size:1rem;">/ 100</span>
+                                </div>
                             </div>
-                            <div class="field">
-                                <label>Найденные баги</label>
-                                <input type="number" name="bugs" min="0" max="10" placeholder="0">
+
+                            <input type="range" name="score" id="score-slider"
+                                min="0" max="100" step="1"
+                                value="<?= $hasMyReview ? $myReview['score'] : 50 ?>"
+                                style="width:100%;accent-color:var(--accent);cursor:pointer;height:6px;"
+                                oninput="updateScore(this.value)">
+
+                            <!-- Метки шкалы -->
+                            <div style="display:flex;justify-content:space-between;margin-top:8px;">
+                                <?php foreach (
+                                    [
+                                        [0,  '0',   '#f87171', 'Ужасно'],
+                                        [25, '25',  '#fb923c', 'Плохо'],
+                                        [51, '51',  '#fbbf24', 'Проходимо'],
+                                        [75, '75',  '#a3e635', 'Хорошо'],
+                                        [100, '100', '#4ade80', 'Отлично'],
+                                    ] as [$val, $num, $clr, $lbl]
+                                ): ?>
+                                    <div style="text-align:center;cursor:pointer;" onclick="setScore(<?= $val ?>)">
+                                        <div style="font-size:.7rem;font-weight:700;color:<?= $clr ?>;"><?= $num ?></div>
+                                        <div style="font-size:.65rem;color:var(--muted);"><?= $lbl ?></div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
-                            <div class="field">
-                                <label>Геймплей</label>
-                                <input type="number" name="gameplay" min="0" max="10" placeholder="0">
-                            </div>
-                            <div class="field">
-                                <label>Графика</label>
-                                <input type="number" name="graphics" min="0" max="10" placeholder="0">
-                            </div>
+
+                            <!-- Динамическая подсказка -->
+                            <div id="score-hint" style="margin-top:12px;padding:10px 14px;border-radius:8px;font-size:.85rem;font-weight:500;transition:all .2s;"></div>
                         </div>
+
+                        <!-- Критерии -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+                            <?php foreach (
+                                [
+                                    ['gameplay_score', 'Геймплей',  'Насколько интересно играть? Механики, баланс, реиграбельность.'],
+                                    ['visual_score',   'Визуал',    'Графика, арт-стиль, UI — насколько приятно смотреть.'],
+                                    ['stability',      'Стабильность', 'Баги, вылеты, производительность.'],
+                                ] as [$fname, $flabel, $fdesc]
+                            ): ?>
+                                <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+                                    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;"><?= $flabel ?></div>
+                                    <select name="<?= $fname ?>"
+                                        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:.85rem;cursor:pointer;outline:none;">
+                                        <?php foreach ([0 => '—', 1 => '1 · Очень плохо', 2 => '2 · Плохо', 3 => '3 · Ниже среднего', 4 => '4 · Среднее', 5 => '5 · Выше среднего', 6 => '6 · Хорошо', 7 => '7 · Очень хорошо', 8 => '8 · Отлично', 9 => '9 · Превосходно', 10 => '10 · Шедевр'] as $v => $l): ?>
+                                            <option value="<?= $v ?>"><?= $l ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div style="font-size:.7rem;color:var(--muted);margin-top:6px;line-height:1.4;"><?= $fdesc ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Текст рецензии -->
                         <div class="field">
-                            <label>Анонимная рецензия <span style="color: coral;">*</span></label>
-                            <textarea name="review" required placeholder="Опишите своё мнение об игре..."></textarea>
+                            <label>
+                                Рецензия
+                                <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);">
+                                    · анонимна до публикации игры
+                                </span>
+                            </label>
+                            <textarea name="review" rows="5" required
+                                placeholder="Опишите впечатления от игры. Что понравилось? Что стоит улучшить? Порекомендуете ли другим игрокам?"
+                                style="min-height:120px;"><?= htmlspecialchars($myReview['comment'] ?? '') ?></textarea>
+                            <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">
+                                Минимум 20 символов · рецензия станет видна разработчику сразу
+                            </div>
                         </div>
-                        <button type="submit" class="btn-submit">Отправить оценку →</button>
+
+                        <!-- Вердикт -->
+                        <div style="display:flex;gap:10px;margin-bottom:20px;">
+                            <label style="flex:1;cursor:pointer;">
+                                <input type="radio" name="verdict" value="recommend" style="display:none;" id="v-yes"
+                                    <?= (!$hasMyReview || $myReview['score'] > 51) ? 'checked' : '' ?>>
+                                <div class="verdict-btn" data-for="v-yes"
+                                    style="padding:12px;border-radius:10px;border:2px solid;text-align:center;font-weight:600;font-size:.9rem;transition:all .2s;
+                                        border-color:<?= (!$hasMyReview || $myReview['score'] > 51) ? 'var(--accent)' : 'var(--border)' ?>;
+                                        background:<?= (!$hasMyReview || $myReview['score'] > 51) ? 'rgba(74,222,128,.1)' : 'transparent' ?>;
+                                        color:<?= (!$hasMyReview || $myReview['score'] > 51) ? 'var(--accent)' : 'var(--muted)' ?>;">
+                                    👍 Рекомендую публикацию
+                                </div>
+                            </label>
+                            <label style="flex:1;cursor:pointer;">
+                                <input type="radio" name="verdict" value="reject" style="display:none;" id="v-no"
+                                    <?= ($hasMyReview && $myReview['score'] <= 51) ? 'checked' : '' ?>>
+                                <div class="verdict-btn" data-for="v-no"
+                                    style="padding:12px;border-radius:10px;border:2px solid;text-align:center;font-weight:600;font-size:.9rem;transition:all .2s;
+                                        border-color:<?= ($hasMyReview && $myReview['score'] <= 51) ? '#f87171' : 'var(--border)' ?>;
+                                        background:<?= ($hasMyReview && $myReview['score'] <= 51) ? 'rgba(248,113,113,.1)' : 'transparent' ?>;
+                                        color:<?= ($hasMyReview && $myReview['score'] <= 51) ? '#f87171' : 'var(--muted)' ?>;">
+                                    👎 Не рекомендую
+                                </div>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <?= $hasMyReview ? '💾 Обновить оценку' : '✅ Отправить оценку' ?>
+                        </button>
                     </form>
                 </div>
             <?php endif; ?>
 
-            <!-- Reviews -->
+            <!-- ═══ РЕЦЕНЗИИ ═══ -->
             <?php if ($reviews): ?>
                 <div class="reviews-section">
-                    <div class="section-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:16px;">Рецензии (<?= count($reviews) ?>)</div>
-                    <?php foreach ($reviews as $r): ?>
-                        <div class="review-card">
+                    <div class="section-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:16px;">
+                        Рецензии (<?= count($reviews) ?>)
+                    </div>
+                    <?php foreach ($reviews as $r):
+                        $isMe = ($r['expert_weight'] && $myReview && (int)$r['score'] === (int)$myReview['score']);
+                        // Точнее определяем свою - сравниваем username
+                        $isMe = ($r['username'] === $_SESSION['USERDATA']['username']);
+                        $positive = $r['score'] > 51;
+                    ?>
+                        <div class="review-card" style="<?= $isMe ? 'border:2px solid var(--accent2);background:rgba(34,211,238,.05);' : '' ?>">
+                            <?php if ($isMe): ?>
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                                    <span style="font-size:.75rem;font-weight:700;background:rgba(34,211,238,.15);color:var(--accent2);padding:3px 10px;border-radius:4px;letter-spacing:.5px;">
+                                        ★ ВАШ ОТЗЫВ
+                                    </span>
+                                    <a href="#review-form-section" style="font-size:.75rem;color:var(--accent2);text-decoration:none;">изменить ↑</a>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="review-scores">
-                                <div class="rs">Оценка: <strong><?= $r['score'] ?></strong></div>
-                                <div class="rs">Баги: <strong><?= $r['bugs'] ?></strong></div>
-                                <div class="rs">Геймплей: <strong><?= $r['gameplay'] ?></strong></div>
-                                <div class="rs">Графика: <strong><?= $r['graphics'] ?></strong></div>
+                                <div class="rs">
+                                    Оценка: <strong style="color:<?= $positive ? 'var(--accent)' : '#f87171' ?>;font-size:1.1rem;">
+                                        <?= $r['score'] ?>/100
+                                    </strong>
+                                    <span style="font-size:.75rem;margin-left:4px;<?= $positive ? 'color:var(--accent)' : 'color:#f87171' ?>">
+                                        <?= $positive ? '👍' : '👎' ?>
+                                    </span>
+                                </div>
                             </div>
-                            <?php if ($game['status'] == 'published'): ?>
-                                <div class="review-text">"<?= htmlspecialchars($r['review']) ?>"</div>
+
+                            <?php if ($isMe || $game['moderation_status'] !== 'pending'): ?>
+                                <div class="review-text" style="<?= $isMe ? 'color:var(--text);' : '' ?>">
+                                    "<?= htmlspecialchars($r['review']) ?>"
+                                </div>
                             <?php else: ?>
-                                <div style="font-size:.82rem;color:var(--muted);font-style:italic">Рецензии анонимны до публикации игры</div>
+                                <div style="font-size:.82rem;color:var(--muted);font-style:italic;">
+                                    🔒 Рецензия скрыта до завершения голосования
+                                </div>
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
@@ -904,6 +1091,71 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
         </div>
     </main>
 
+    <script>
+        const SCORE_HINTS = [
+            [0, 15, '#f87171', '😱 Ужасно — игра не соответствует минимальным стандартам качества'],
+            [16, 30, '#fb923c', '😞 Плохо — серьёзные проблемы, мешающие игровому опыту'],
+            [31, 50, '#fbbf24', '😐 Ниже среднего — есть потенциал, но слишком много недостатков'],
+            [51, 51, '#facc15', '⚖️ Граница — ровно на пороге публикации (51 = голос «за»)'],
+            [52, 65, '#a3e635', '🙂 Приемлемо — можно публиковать, но есть что улучшить'],
+            [66, 80, '#4ade80', '😊 Хорошая игра — заслуживает внимания игроков'],
+            [81, 90, '#34d399', '🎮 Отличная — яркий представитель своего жанра'],
+            [91, 100, '#22d3ee', '🏆 Шедевр — рекомендуем всем без исключения'],
+        ];
+
+        function updateScore(val) {
+            val = parseInt(val);
+            document.getElementById('score-display').textContent = val;
+
+            // Цвет числа
+            const hint = SCORE_HINTS.find(([lo, hi]) => val >= lo && val <= hi);
+            const [, , color, text] = hint || [0, 0, '#4ade80', ''];
+            document.getElementById('score-display').style.color = color;
+            document.getElementById('score-slider').style.setProperty('accent-color', color);
+
+            // Подсказка
+            const el = document.getElementById('score-hint');
+            el.textContent = text;
+            el.style.background = color + '18';
+            el.style.color = color;
+            el.style.border = '1px solid ' + color + '44';
+
+            // Автовыбор вердикта
+            const yes = document.getElementById('v-yes');
+            const no = document.getElementById('v-no');
+            yes.checked = val > 51;
+            no.checked = val <= 51;
+            updateVerdictBtns();
+        }
+
+        function setScore(val) {
+            document.getElementById('score-slider').value = val;
+            updateScore(val);
+        }
+
+        function updateVerdictBtns() {
+            document.querySelectorAll('.verdict-btn').forEach(btn => {
+                const radio = document.getElementById(btn.dataset.for);
+                if (radio.checked) {
+                    const isYes = radio.value === 'recommend';
+                    btn.style.borderColor = isYes ? 'var(--accent)' : '#f87171';
+                    btn.style.background = isYes ? 'rgba(74,222,128,.1)' : 'rgba(248,113,113,.1)';
+                    btn.style.color = isYes ? 'var(--accent)' : '#f87171';
+                } else {
+                    btn.style.borderColor = 'var(--border)';
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--muted)';
+                }
+            });
+        }
+
+        document.querySelectorAll('input[name=verdict]').forEach(r =>
+            r.addEventListener('change', updateVerdictBtns)
+        );
+
+        // Инит
+        updateScore(document.getElementById('score-slider').value);
+    </script>
 </body>
 
 </html>
