@@ -23,6 +23,8 @@ $pdo = $db->connect();
 
 $login_error    = '';
 $register_error = '';
+$resend_status  = ''; // '' | 'ok' | 'error' | 'already_verified' | 'not_found' | 'limit'
+$forgot_status  = ''; // '' | 'ok' | 'error' | 'limit'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function generateFakeTelegram(): int
@@ -103,8 +105,10 @@ if ($_POST['action'] === 'login') {
 
     if ($user && !empty($user['password']) && password_verify($pass, $user['password'])) {
         if (!$user['email_verified']) {
-            $login_error = '📩 Почта не подтверждена. Проверьте email и папку «Спам».';
+            $_SESSION['unverified_email'] = $email;
+            $login_error = 'unverified';
         } else {
+            unset($_SESSION['unverified_email']);
             loadSessionUser($user);
             $redirectUrl = $_POST['backUrl'] ?? '/';
             if (!str_starts_with($redirectUrl, '/') || str_starts_with($redirectUrl, '//')) {
@@ -119,24 +123,129 @@ if ($_POST['action'] === 'login') {
     }
 }
 
-// ── REGISTER ──────────────────────────────────────────────────────────────────
-if ($_POST['action'] === 'register') {
+// ── RESEND VERIFICATION ───────────────────────────────────────────────────────
+if ($_POST['action'] === 'resend_verification') {
 
-    // 1. Honeypot
-    if (!empty($_POST['website'])) {
-        logBotAttempt('HONEYPOT', $_POST);
-        $register_error = '🎉 Регистрация успешна!'; // тихий фейк для ботов
+    if (!checkRateLimit('resend', 3, 600)) {
+        $resend_status = 'limit';
         return;
     }
 
-    // 2. Регистрация включена?
+    $email = trim($_POST['email'] ?? $_SESSION['unverified_email'] ?? '');
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $resend_status = 'not_found';
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT id, email, email_verified, verification_token FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) {
+        $resend_status = 'ok';
+        return;
+    }
+
+    if ($user['email_verified']) {
+        $resend_status = 'already_verified';
+        return;
+    }
+
+    $newToken = bin2hex(random_bytes(16));
+    $pdo->prepare('UPDATE users SET verification_token = ? WHERE id = ?')
+        ->execute([$newToken, $user['id']]);
+
+    require_once(__DIR__ . '/send_email.php');
+    $verifyLink = 'https://dustore.ru/verify?token=' . $newToken;
+    $body = "<p style='color:#b8b8c6;font-size:14px;line-height:1.6;margin-bottom:20px;'>
+        Вы запросили повторную отправку письма с подтверждением email для аккаунта Dustore.
+    </p>";
+
+    $ok = sendMail(
+        $email,
+        'Подтвердите email — Dustore',
+        buildEmail('Подтверждение почты', $body, 'Подтвердить email', $verifyLink)
+    );
+
+    $resend_status = $ok ? 'ok' : 'error';
+}
+
+// ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+if ($_POST['action'] === 'forgot_password') {
+
+    // Rate limit: 3 запроса за 15 минут с одного IP
+    if (!checkRateLimit('forgot', 3, 900)) {
+        $forgot_status = 'limit';
+        return;
+    }
+
+    $email = trim($_POST['email'] ?? '');
+
+    // Всегда отвечаем 'ok' — не раскрываем существование email
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $forgot_status = 'ok';
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT id, email FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) {
+        $forgot_status = 'ok';
+        return;
+    }
+
+    // Токен действует 1 час
+    $resetToken   = bin2hex(random_bytes(32));
+    $resetExpires = time() + 3600;
+
+    $pdo->prepare('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?')
+        ->execute([$resetToken, $resetExpires, $user['id']]);
+
+    require_once(__DIR__ . '/send_email.php');
+    $resetLink = 'https://dustore.ru/reset?token=' . $resetToken;
+
+    $body = "
+    <p style='color:#b8b8c6;font-size:14px;line-height:1.6;margin-bottom:20px;'>
+        Мы получили запрос на сброс пароля для вашего аккаунта.<br>
+        Ссылка действительна <strong style='color:#fff;'>1 час</strong>.
+    </p>
+    <p style='color:#9a9ab0;font-size:12px;line-height:1.6;'>
+        Если вы не запрашивали сброс пароля — просто проигнорируйте это письмо.
+    </p>";
+
+    $ok = sendMail(
+        $email,
+        'Сброс пароля — Dustore',
+        buildEmail('Сброс пароля', $body, 'Сбросить пароль', $resetLink)
+    );
+
+    if (!$ok) {
+        error_log('[forgot_password] Failed to send reset email to: ' . $email);
+        $forgot_status = 'error';
+        return;
+    }
+
+    $forgot_status = 'ok';
+}
+
+// ── REGISTER ──────────────────────────────────────────────────────────────────
+if ($_POST['action'] === 'register') {
+
+    if (!empty($_POST['website'])) {
+        logBotAttempt('HONEYPOT', $_POST);
+        $register_error = '🎉 Регистрация успешна!';
+        return;
+    }
+
     if (!REGISTRATION_ENABLED) {
         http_response_code(403);
         $register_error = '❌ Регистрация временно закрыта.';
         return;
     }
 
-    // 3. Rate limit
     if (!checkRateLimit('register', 3, 600)) {
         http_response_code(429);
         logBotAttempt('RATE_LIMIT', $_POST);
@@ -144,7 +253,6 @@ if ($_POST['action'] === 'register') {
         return;
     }
 
-    // 4. Валидация полей (инвайт-код убран)
     $email    = trim($_POST['email'] ?? '');
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -162,7 +270,6 @@ if ($_POST['action'] === 'register') {
         return;
     }
 
-    // 5. Проверка дубликата email
     $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
@@ -170,45 +277,52 @@ if ($_POST['action'] === 'register') {
         return;
     }
 
-    // 6. Создание пользователя
+    if (!empty($username)) {
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ?');
+        $stmt->execute([$username]);
+        if ($stmt->fetch()) {
+            $register_error = '⚠ Это имя пользователя уже занято.';
+            return;
+        }
+    }
+
     $verifyToken = bin2hex(random_bytes(16));
     $passHash    = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+    $firstName   = htmlspecialchars(trim($_POST['first_name'] ?? 'Неопознанный'), ENT_QUOTES);
+    $lastName    = htmlspecialchars(trim($_POST['last_name']  ?? 'Игрок'),        ENT_QUOTES);
+    $country     = htmlspecialchars(trim($_POST['country']    ?? ''),             ENT_QUOTES) ?: null;
+    $tgId        = generateFakeTelegram();
 
-    $firstName = htmlspecialchars(trim($_POST['first_name'] ?? 'Неопознанный'), ENT_QUOTES);
-    $lastName  = htmlspecialchars(trim($_POST['last_name']  ?? 'Игрок'),        ENT_QUOTES);
-    $country   = htmlspecialchars(trim($_POST['country']    ?? ''),             ENT_QUOTES) ?: null;
-    $tgId      = generateFakeTelegram();
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO users
+                (username, email, password, first_name, last_name, country, verification_token, telegram_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([$username ?: null, $email, $passHash, $firstName, $lastName, $country, $verifyToken, $tgId]);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            $register_error = '⚠ Имя пользователя или email уже заняты.';
+            return;
+        }
+        throw $e;
+    }
 
-    $stmt = $pdo->prepare("
-        INSERT INTO users
-            (username, email, password, first_name, last_name, country, verification_token, telegram_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ");
-    $stmt->execute([
-        $username ?: null,
-        $email,
-        $passHash,
-        $firstName,
-        $lastName,
-        $country,
-        $verifyToken,
-        $tgId,
-    ]);
-
-    // 7. Письмо с подтверждением
     require_once(__DIR__ . '/send_email.php');
     $verifyLink = 'https://dustore.ru/verify?token=' . $verifyToken;
-
-    $body = "
-    <p style='color:#b8b8c6;font-size:14px;line-height:1.6;margin-bottom:20px;'>
+    $body = "<p style='color:#b8b8c6;font-size:14px;line-height:1.6;margin-bottom:20px;'>
         Вы создали аккаунт на Dustore. Нажмите кнопку ниже, чтобы подтвердить email.
     </p>";
 
-    sendMail(
+    $mailSent = sendMail(
         $email,
         'Подтвердите email — Dustore',
         buildEmail('Добро пожаловать!', $body, 'Подтвердить email', $verifyLink)
     );
+
+    if (!$mailSent) {
+        error_log('[register] Failed to send verification email to: ' . $email);
+    }
 
     $register_error = '🎉 Регистрация успешна!';
 }
