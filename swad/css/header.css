@@ -44,7 +44,7 @@ body {
 
 .header.scrolled {
     box-shadow: 0px 0px 0px 1px #ffffff15;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
     background-color: #0f0a203b;
 }
 
@@ -60,7 +60,7 @@ body {
     text-align: center;
     box-shadow: none;
     transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
-    backdrop-filter: blur(1px);
+    backdrop-filter: blur(10px);
     z-index: 10;
     background-color: #0f0a20;
 }

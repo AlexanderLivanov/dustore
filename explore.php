@@ -70,7 +70,6 @@ if ($selectedGenre) {
                     в соответствии с законодательством РФ.
                 </div>
 
-                <!-- Поиск и сортировка -->
                 <div class="search-wrapper">
                     <div class="sort-buttons" id="sortButtons">
                         <button class="sort-btn" data-sort="popularity" data-dir="desc">
@@ -92,7 +91,6 @@ if ($selectedGenre) {
                     </div>
                 </div>
 
-                <!-- Обёртка: фильтры + грид -->
                 <div class="games-body">
                     <div class="games-controls">
                         <button class="mobile-filter-toggle" id="filterToggle">
@@ -108,7 +106,6 @@ if ($selectedGenre) {
                             </svg>
                         </button>
                         <div class="controls-left" id="filterPanel">
-                            <!-- Начальный набор фильтров (серверный рендер) -->
                             <a href="#" class="btn-filter <?= !$selectedGenre && !$adultSection ? 'active' : '' ?>" data-genre="">Все игры</a>
                             <a href="#" class="btn-filter <?= $adultSection ? 'active' : '' ?>" data-adult-toggle>18+</a>
                             <?php foreach ($allGenres as $genre): ?>
@@ -163,7 +160,6 @@ if ($selectedGenre) {
 
     <?php require_once('swad/static/elements/footer.php'); ?>
 
-    <!-- Adult modal -->
     <div id="adultModal" class="adult-modal">
         <div class="adult-modal-content">
             <h2>Подтверждение возраста</h2>
@@ -172,7 +168,6 @@ if ($selectedGenre) {
         </div>
     </div>
 
-    <!-- Основной скрипт каталога -->
     <script>
     (function() {
         const API_URL = '/swad/controllers/explore_games.php';
@@ -183,7 +178,6 @@ if ($selectedGenre) {
         const adultWarning = document.getElementById('adult-warning');
         const searchInput = document.getElementById('searchInput');
 
-        // Состояние фильтров
         let state = {
             adult: <?= $adultSection ? 1 : 0 ?>,
             genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
@@ -191,14 +185,12 @@ if ($selectedGenre) {
             dir: 'desc'
         };
 
-        // Восстановить сортировку из localStorage
         try {
             const saved = JSON.parse(localStorage.getItem('explore_sort') || '{}');
             if (saved.sort) state.sort = saved.sort;
             if (saved.dir) state.dir = saved.dir;
         } catch(e) {}
 
-        // Функции работы с API и рендерингом
         async function fetchGames() {
             const params = new URLSearchParams();
             params.set('adult', state.adult);
@@ -218,7 +210,6 @@ if ($selectedGenre) {
                 return;
             }
 
-            // Генерируем HTML-карточки (класс hidden-card уже в разметке)
             grid.innerHTML = games.map(game => {
                 const now = new Date();
                 const releaseDate = new Date(game.release_date);
@@ -249,20 +240,19 @@ if ($selectedGenre) {
                 </div>`;
             }).join('');
 
-            // Прячем все новые карточки (они уже имеют класс hidden-card)
             const cards = grid.querySelectorAll('.game-card.hidden-card');
 
             cards.forEach((card, index) => {
-                // Устанавливаем начальные стили (opacity:0, translateY 20px)
+
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
                 card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
 
-                // Запускаем появление с задержкой
+
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
-                    // После завершения анимации убираем inline-стили, чтобы tilt-эффект работал свободно
+
                     card.addEventListener('transitionend', function handler() {
                         card.style.transition = '';
                         card.style.opacity = '';
@@ -270,7 +260,7 @@ if ($selectedGenre) {
                         card.classList.remove('hidden-card');
                         card.removeEventListener('transitionend', handler);
                     });
-                }, index * 30); // задержка 60 мс между карточками для эффекта волны
+                }, index * 30);
             });
         }
 
