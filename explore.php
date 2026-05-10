@@ -6,8 +6,7 @@ require_once('swad/controllers/game.php');
 $gameController = new Game();
 $games = $gameController->getLatestGames();
 
-
-
+// Оставляем серверную фильтрацию только для начального отображения (SEO)
 $games = array_filter($games, function ($game) {
     return isset($game['status']) && strtolower($game['status']) === 'published';
 });
@@ -23,29 +22,26 @@ if ($adultSection) {
         return !isset($game['age_rating']) || intval($game['age_rating']) < 18;
     });
 }
-// --- Сбор уникальных жанров из всех игр ---
+
+// Сбор жанров для начального состояния
 $allGenres = [];
 foreach ($games as $game) {
     if (!empty($game['genre'])) {
-        // Разбиваем по запятой, убираем пробелы
         $genres = array_map('trim', explode(',', $game['genre']));
         foreach ($genres as $g) {
-            $g = trim($g);
-            if (!empty($g) && !in_array($g, $allGenres)) {
+            if (!in_array($g, $allGenres)) {
                 $allGenres[] = $g;
             }
         }
     }
 }
-sort($allGenres); // алфавитный порядок
+sort($allGenres);
 
-// --- Фильтрация по выбранному жанру ---
 $selectedGenre = isset($_GET['genre']) ? trim(urldecode($_GET['genre'])) : null;
 if ($selectedGenre) {
     $games = array_filter($games, function ($game) use ($selectedGenre) {
         if (empty($game['genre'])) return false;
         $genres = array_map('trim', explode(',', $game['genre']));
-        // Сравнение без учёта регистра
         return in_array(strtolower($selectedGenre), array_map('strtolower', $genres));
     });
 }
@@ -58,7 +54,6 @@ if ($selectedGenre) {
     <title>Dustore - Каталог игр</title>
     <link rel="stylesheet" href="swad/css/explore.css">
     <?php require_once('swad/controllers/ymcounter.php'); ?>
-    <!-- Yandex.RTB -->
     <script>
         window.yaContextCb = window.yaContextCb || []
     </script>
@@ -70,17 +65,14 @@ if ($selectedGenre) {
     <main>
         <section class="games-list">
             <div class="container">
-                <?php if (isset($_GET['adult']) && $_GET['adult'] == 1): ?>
-                    <div class="warning-adult">
-                        Внимание! Данный раздел содержит игры, предназначенные только для пользователей старше 18 лет
-                        в соответствии с законодательством РФ.
-                    </div>
-                <?php endif; ?>
+                <div id="adult-warning" class="warning-adult" style="display: <?= $adultSection ? 'block' : 'none' ?>">
+                    Внимание! Данный раздел содержит игры, предназначенные только для пользователей старше 18 лет
+                    в соответствии с законодательством РФ.
+                </div>
 
-                <!-- Поиск теперь сверху -->
+                <!-- Поиск и сортировка -->
                 <div class="search-wrapper">
-                    <!-- Кнопки сортировки -->
-                    <div class="sort-buttons">
+                    <div class="sort-buttons" id="sortButtons">
                         <button class="sort-btn" data-sort="popularity" data-dir="desc">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                             Популярные
@@ -96,22 +88,18 @@ if ($selectedGenre) {
                     </div>
                     <div class="search-bar">
                         <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
-                        <input type="text" placeholder="Введите название игры или тикер разработчика...">
+                        <input type="text" id="searchInput" placeholder="Введите название игры или тикер разработчика...">
                     </div>
                 </div>
 
                 <!-- Обёртка: фильтры + грид -->
                 <div class="games-body">
                     <div class="games-controls">
-
-                        <!-- Кнопка-тоггл (только мобайл) -->
                         <button class="mobile-filter-toggle" id="filterToggle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
                             </svg>
-                            <span class="filter-label">
-                                <?= $selectedGenre ? htmlspecialchars($selectedGenre) : 'Все игры' ?>
-                            </span>
+                            <span class="filter-label"><?= $selectedGenre ? htmlspecialchars($selectedGenre) : 'Все игры' ?></span>
                             <?php if ($selectedGenre): ?>
                                 <span class="active-badge">активен</span>
                             <?php endif; ?>
@@ -119,69 +107,40 @@ if ($selectedGenre) {
                                 <polyline points="6 9 12 15 18 9"/>
                             </svg>
                         </button>
-
                         <div class="controls-left" id="filterPanel">
-                            <!-- Все игры (сброс жанра, остаёмся в текущей adult-секции) -->
-                            <a href="?adult=<?= (int)$adultSection ?>" class="btn-filter <?= !isset($_GET['genre']) ? 'active' : '' ?>">Все игры</a>
-
-                            <!-- 18+ (переключение секции) -->
-                            <a href="?adult=1"
-                               class="btn-filter <?= (isset($_GET['adult']) && $_GET['adult'] == 1) ? 'active' : '' ?>">
-                                18+
-                            </a>
-
-                            <!-- Динамические жанры из игр -->
+                            <!-- Начальный набор фильтров (серверный рендер) -->
+                            <a href="#" class="btn-filter <?= !$selectedGenre && !$adultSection ? 'active' : '' ?>" data-genre="">Все игры</a>
+                            <a href="#" class="btn-filter <?= $adultSection ? 'active' : '' ?>" data-adult-toggle>18+</a>
                             <?php foreach ($allGenres as $genre): ?>
-                                <a href="?adult=<?= (int)$adultSection ?>&genre=<?= urlencode($genre) ?>"
-                                   class="btn-filter <?= (isset($_GET['genre']) && urldecode($_GET['genre']) == $genre) ? 'active' : '' ?>">
+                                <a href="#" class="btn-filter <?= ($selectedGenre === $genre) ? 'active' : '' ?>" data-genre="<?= htmlspecialchars($genre) ?>">
                                     <?= htmlspecialchars($genre) ?>
                                 </a>
                             <?php endforeach; ?>
                         </div>
                     </div>
 
-                    <!-- Грид игр -->
                     <div class="content-row">
-                        <div class="games-grid">
-                        <?php if (empty($games)): ?>
-                            <div class="no-games-message">
-                                <p>Игры еще не добавлены в каталог</p>
-                            </div>
-                        <?php else: ?>
-                            <?php
-                            $maxTiles = 10000;
-                            $i = 0;
-                            foreach ($games as $game):
-                                if ($i >= $maxTiles) break;
-                                $i++;
-
-
-                                $badge = '';
-                                $badgeClass = '';
-                                if ($game['price'] == 0) {
-                                    $badge = 'Бесплатно';
-                                    $badgeClass = 'free';
-                                } elseif ((time() - strtotime($game['release_date'])) < (30 * 24 * 60 * 60)) {
-                                    $badge = 'Новинка';
-                                }
-
-                                $price = ($game['price'] == 0)
-                                    ? 'Бесплатно'
-                                    : number_format($game['price'], 0, ',', ' ') . ' ₽';
+                        <div class="games-grid" id="gamesGrid">
+                            <?php if (empty($games)): ?>
+                                <div class="no-games-message"><p>Игры еще не добавлены в каталог</p></div>
+                            <?php else: ?>
+                                <?php foreach ($games as $game):
+                                    $price = ($game['price'] == 0) ? 'Бесплатно' : number_format($game['price'], 0, ',', ' ') . ' ₽';
                                 ?>
                                 <div class="game-card"
                                      data-price="<?= (float)$game['price'] ?>"
                                      data-popularity="<?= (float)($game['rating'] ?? 0) ?>"
                                      data-date="<?= strtotime($game['release_date'] ?? '2000-01-01') ?>"
+                                     data-id="<?= $game['id'] ?>"
                                      onclick="window.location.href='/g/<?= $game['id'] ?>';">
                                     <div class="game-image <?= ($adultSection && $game['age_rating'] >= 18) ? 'blur-adult' : '' ?>">
-                                        <img src="<?= !empty($game['path_to_cover'])
-                                            ? htmlspecialchars($game['path_to_cover'])
-                                            : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
-                                            alt="<?= htmlspecialchars($game['name']) ?>"
-                                            style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);">
-                                        <?php if ($badge): ?>
-                                            <div class="game-badge <?= $badgeClass ?>"><?= $badge ?></div>
+                                        <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
+                                             alt="<?= htmlspecialchars($game['name']) ?>"
+                                             style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);">
+                                        <?php if ($game['price'] == 0): ?>
+                                            <div class="game-badge free">Бесплатно</div>
+                                        <?php elseif ((time() - strtotime($game['release_date'])) < 30*24*60*60): ?>
+                                            <div class="game-badge">Новинка</div>
                                         <?php endif; ?>
                                     </div>
                                     <div class="game-info">
@@ -193,17 +152,18 @@ if ($selectedGenre) {
                                         </div>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                        </div><!-- /.games-grid -->
-                    </div><!-- /.content-row -->
-                </div><!-- /.games-body -->
-            </div><!-- /.container -->
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
     <?php require_once('swad/static/elements/footer.php'); ?>
 
+    <!-- Adult modal -->
     <div id="adultModal" class="adult-modal">
         <div class="adult-modal-content">
             <h2>Подтверждение возраста</h2>
@@ -212,273 +172,332 @@ if ($selectedGenre) {
         </div>
     </div>
 
+    <!-- Основной скрипт каталога -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const gameCards = document.querySelectorAll('.game-card');
-            gameCards.forEach((card, index) => {
-                card.style.transitionDelay = `${index * 0.05}s`;
+    (function() {
+        const API_URL = '/swad/controllers/explore_games.php';
+        const grid = document.getElementById('gamesGrid');
+        const filterPanel = document.getElementById('filterPanel');
+        const filterToggle = document.getElementById('filterToggle');
+        const adultModal = document.getElementById('adultModal');
+        const adultWarning = document.getElementById('adult-warning');
+        const searchInput = document.getElementById('searchInput');
+
+        // Состояние фильтров
+        let state = {
+            adult: <?= $adultSection ? 1 : 0 ?>,
+            genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
+            sort: 'popularity',
+            dir: 'desc'
+        };
+
+        // Восстановить сортировку из localStorage
+        try {
+            const saved = JSON.parse(localStorage.getItem('explore_sort') || '{}');
+            if (saved.sort) state.sort = saved.sort;
+            if (saved.dir) state.dir = saved.dir;
+        } catch(e) {}
+
+        // Функции работы с API и рендерингом
+        async function fetchGames() {
+            const params = new URLSearchParams();
+            params.set('adult', state.adult);
+            if (state.genre) params.set('genre', state.genre);
+            params.set('sort', state.sort);
+            params.set('dir', state.dir);
+
+            const res = await fetch(`${API_URL}?${params.toString()}`);
+            if (!res.ok) throw new Error('Network response was not ok');
+            const data = await res.json();
+            return data;
+        }
+
+        function renderGames(games) {
+            if (!games.length) {
+                grid.innerHTML = '<div class="no-games-message"><p>Игры еще не добавлены в каталог</p></div>';
+                return;
+            }
+
+            // Генерируем HTML-карточки (класс hidden-card уже в разметке)
+            grid.innerHTML = games.map(game => {
+                const now = new Date();
+                const releaseDate = new Date(game.release_date);
+                const isNew = (now - releaseDate) < 30 * 24 * 60 * 60 * 1000;
+                const priceStr = game.price == 0 ? 'Бесплатно' : Math.round(game.price).toLocaleString('ru-RU') + ' ₽';
+                return `
+                <div class="game-card hidden-card"
+                     data-price="${game.price}"
+                     data-popularity="${game.rating}"
+                     data-date="${Math.floor(releaseDate.getTime() / 1000)}"
+                     data-id="${game.id}"
+                     onclick="window.location.href='/g/${game.id}'">
+                    <div class="game-image ${state.adult && game.age_rating >= 18 ? 'blur-adult' : ''}">
+                        <img src="${game.path_to_cover || 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image'}"
+                             alt="${game.name.replace(/"/g, '&quot;')}"
+                             style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);">
+                        ${game.price == 0 ? '<div class="game-badge free">Бесплатно</div>' : ''}
+                        ${isNew && game.price > 0 ? '<div class="game-badge">Новинка</div>' : ''}
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">${game.name}</h3>
+                        <div class="game-footer">
+                            <div class="game-price ${game.price == 0 ? 'free' : ''}">
+                                ${priceStr}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Прячем все новые карточки (они уже имеют класс hidden-card)
+            const cards = grid.querySelectorAll('.game-card.hidden-card');
+
+            cards.forEach((card, index) => {
+                // Устанавливаем начальные стили (opacity:0, translateY 20px)
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+
+                // Запускаем появление с задержкой
                 setTimeout(() => {
                     card.style.opacity = '1';
-                    card.style.transform = '';
-                    card.style.transitionDelay = '';
-                }, 100);
+                    card.style.transform = 'translateY(0)';
+                    // После завершения анимации убираем inline-стили, чтобы tilt-эффект работал свободно
+                    card.addEventListener('transitionend', function handler() {
+                        card.style.transition = '';
+                        card.style.opacity = '';
+                        card.style.transform = '';
+                        card.classList.remove('hidden-card');
+                        card.removeEventListener('transitionend', handler);
+                    });
+                }, index * 30); // задержка 60 мс между карточками для эффекта волны
+            });
+        }
+
+
+        function renderFilters(genres) {
+            let html = `
+                <a href="#" class="btn-filter ${!state.genre && !state.adult ? 'active' : ''}" data-genre="">Все игры</a>
+                <a href="#" class="btn-filter ${state.adult ? 'active' : ''}" data-adult-toggle>18+</a>
+            `;
+            genres.forEach(genre => {
+                html += `<a href="#" class="btn-filter ${state.genre === genre ? 'active' : ''}" data-genre="${genre}">${genre}</a>`;
+            });
+            filterPanel.innerHTML = html;
+
+            // Обновляем заголовок мобильной кнопки
+            const label = filterToggle.querySelector('.filter-label');
+            if (label) label.textContent = state.genre || 'Все игры';
+            const badge = filterToggle.querySelector('.active-badge');
+            if (badge) badge.style.display = state.genre ? '' : 'none';
+        }
+
+        async function updateUI() {
+            try {
+                const data = await fetchGames();
+                renderGames(data.games);
+                renderFilters(data.genres);
+
+                // Показ/скрытие предупреждения 18+
+                if (state.adult) {
+                    adultWarning.style.display = 'block';
+                } else {
+                    adultWarning.style.display = 'none';
+                }
+
+                // Сохраняем сортировку
+                localStorage.setItem('explore_sort', JSON.stringify({ sort: state.sort, dir: state.dir }));
+
+                // Применяем текущий поисковый запрос, если есть
+                if (searchInput && searchInput.value.trim()) {
+                    applySearch();
+                }
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = '<p style="color:red;">Ошибка загрузки игр</p>';
+            }
+        }
+
+        // Обновление URL без перезагрузки
+        function updateURL() {
+            const url = new URL(window.location);
+            url.searchParams.set('adult', state.adult);
+            if (state.genre) {
+                url.searchParams.set('genre', state.genre);
+            } else {
+                url.searchParams.delete('genre');
+            }
+            // sort и dir не обязательно добавлять в URL, но для полноты можно
+            // url.searchParams.set('sort', state.sort);
+            // url.searchParams.set('dir', state.dir);
+            window.history.pushState({}, '', url);
+        }
+
+        // Обработчик кликов по фильтрам (делегирование)
+        filterPanel.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const target = e.target.closest('.btn-filter');
+            if (!target) return;
+
+            if (target.hasAttribute('data-adult-toggle')) {
+                // Переключение 18+
+                if (!state.adult && !sessionStorage.getItem('adultConfirmed')) {
+                    // Показать модалку
+                    adultModal.style.display = 'flex';
+                    return;
+                }
+                state.adult = state.adult ? 0 : 1;
+                state.genre = null;
+            } else {
+                const genre = target.dataset.genre;
+                state.genre = genre || null;
+            }
+
+            updateURL();
+            await updateUI();
+
+            // Закрываем мобильную панель фильтров
+            filterPanel.classList.remove('open');
+            filterToggle.classList.remove('open');
+        });
+
+        // Adult модалка
+        document.getElementById('adultConfirmBtn').addEventListener('click', async () => {
+            sessionStorage.setItem('adultConfirmed', 'true');
+            adultModal.style.display = 'none';
+            state.adult = 1;
+            state.genre = null;
+            updateURL();
+            await updateUI();
+            // Убираем блюр с картинок (хотя они только что перерисованы, но на всякий случай)
+            document.querySelectorAll('.blur-adult').forEach(el => el.classList.remove('blur-adult'));
+        });
+
+        // Сортировка
+        const sortButtons = document.querySelectorAll('#sortButtons .sort-btn');
+        sortButtons.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const sort = this.dataset.sort;
+                if (state.sort === sort) {
+                    state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.sort = sort;
+                    state.dir = sort === 'price' ? 'asc' : 'desc';
+                }
+                updateURL();
+                await updateUI();
+                updateSortButtonsUI();
+            });
+        });
+
+        function updateSortButtonsUI() {
+            sortButtons.forEach(btn => {
+                const isActive = btn.dataset.sort === state.sort;
+                btn.classList.toggle('active', isActive);
+                let arrow = btn.querySelector('.sort-arrow');
+                if (!arrow) {
+                    arrow = document.createElement('span');
+                    arrow.className = 'sort-arrow';
+                    btn.appendChild(arrow);
+                }
+                arrow.textContent = state.dir === 'asc' ? '↑' : '↓';
+                arrow.style.display = isActive ? '' : 'none';
+            });
+        }
+
+        // Инициализация стрелок
+        updateSortButtonsUI();
+
+        // Поиск
+        function applySearch() {
+            const term = searchInput.value.toLowerCase().trim();
+            document.querySelectorAll('#gamesGrid .game-card').forEach(card => {
+                const title = card.querySelector('.game-title')?.textContent.toLowerCase() || '';
+                card.style.display = title.includes(term) ? '' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', applySearch);
+
+        // Обработка истории браузера (назад/вперёд)
+        window.addEventListener('popstate', async () => {
+            const params = new URLSearchParams(window.location.search);
+            state.adult = params.get('adult') == 1 ? 1 : 0;
+            state.genre = params.get('genre') || null;
+            await updateUI();
+            updateSortButtonsUI();
+        });
+
+        // Мобильный тоггл фильтров
+        filterToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = filterPanel.classList.toggle('open');
+            filterToggle.classList.toggle('open', isOpen);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.games-controls')) {
+                filterPanel.classList.remove('open');
+                filterToggle.classList.remove('open');
+            }
+        });
+
+        // При загрузке страницы заменяем серверный рендер на актуальный (чтобы синхронизировать с состоянием JS)
+        // Но начальный рендер уже есть, просто обновим его в фоне, чтобы состояние localStorage и URL совпадали.
+        // Можно также сразу инициализировать сортировку по выбранной.
+        (async function() {
+            // Небольшая задержка, чтобы начальный рендер не моргал
+            await updateUI();
+            updateSortButtonsUI();
+        })();
+
+        // Эффекты наклона для динамических карточек (делегирование)
+        (function() {
+            const grid = document.getElementById('gamesGrid');
+            if (!grid) return;
+            let activeCard = null;
+
+            function resetTilt(card) {
+                card.style.transform = '';
+            }
+
+            grid.addEventListener('mousemove', (e) => {
+                const card = e.target.closest('.game-card');
+                if (!card || card.classList.contains('ad-card')) {
+                    if (activeCard) {
+                        resetTilt(activeCard);
+                        activeCard = null;
+                    }
+                    return;
+                }
+
+                if (activeCard !== card) {
+                    if (activeCard) resetTilt(activeCard);
+                    activeCard = card;
+                }
+
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const nx = (x / rect.width) * 2 - 1;
+                const ny = (y / rect.height) * 2 - 1;
+                const maxAngle = 12;
+                const rotateY = maxAngle * nx;
+                const rotateX = -maxAngle * ny;
+                const dx = nx * 50;
+                card.style.setProperty('--dx', `${dx}%`);
+                card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.02)`;
             });
 
-            const searchInput = document.querySelector('.search-bar input');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    const searchTerm = this.value.toLowerCase();
-                    const gameCards = document.querySelectorAll('.game-card:not(.ad-card)'); // рекламу не скрываем
-                    gameCards.forEach(card => {
-                        const title = card.querySelector('.game-title')?.textContent.toLowerCase() || '';
-                        const developer = card.querySelector('.game-developer')?.textContent.toLowerCase() || '';
-                        if (title.includes(searchTerm) || developer.includes(searchTerm)) {
-                            card.style.display = 'block';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
-                });
-            }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const isAdultSection = urlParams.get('adult') == 1;
-            if (isAdultSection && !sessionStorage.getItem('adultConfirmed')) {
-                const modal = document.getElementById('adultModal');
-                const btn = document.getElementById('adultConfirmBtn');
-                modal.style.display = 'flex';
-
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                }, true);
-
-                modal.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
-
-                btn.addEventListener('click', function() {
-                    sessionStorage.setItem('adultConfirmed', 'true');
-                    modal.style.display = 'none';
-                    document.querySelectorAll('.blur-adult').forEach(img => {
-                        img.classList.remove('blur-adult');
-                    });
-                });
-            }
-        });
+            grid.addEventListener('mouseleave', () => {
+                if (activeCard) {
+                    resetTilt(activeCard);
+                    activeCard = null;
+                }
+            });
+        })();
+    })();
     </script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const grid = document.querySelector('.games-grid');
-        if (!grid) return;
-
-        let activeCard = null;
-
-        // Сброс трансформации карточки
-        function resetTilt(card) {
-            card.style.transform = '';
-        }
-
-        // Обработчик движения мыши внутри grid
-        grid.addEventListener('mousemove', (e) => {
-            const card = e.target.closest('.game-card');
-            if (!card || card.classList.contains('ad-card')) return;
-
-            // Если перешли на новую карточку, сбрасываем старую
-            if (activeCard !== card) {
-                if (activeCard) resetTilt(activeCard);
-                activeCard = card;
-            }
-
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            // Нормализация координат в диапазон -1..1
-            const nx = (x / rect.width) * 2 - 1;
-            const ny = (y / rect.height) * 2 - 1;
-
-            const maxAngle = 12; // максимальный угол наклона
-            const rotateY = maxAngle * nx;
-            const rotateX = -maxAngle * ny;
-
-            const dx = nx * 50; // диапазон от -50% до 50%
-            card.style.setProperty('--dx', `${dx}%`);
-
-            // Применяем наклон + лёгкий подъём и масштабирование
-            card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.02)`;
-        });
-
-        // Когда мышь покидает grid (ушла за пределы)
-        grid.addEventListener('mouseleave', () => {
-            if (activeCard) {
-                resetTilt(activeCard);
-                activeCard = null;
-            }
-        });
-
-        // Когда мышь уходит с карточки на пустую область
-        grid.addEventListener('mouseout', (e) => {
-            const card = e.target.closest('.game-card');
-            if (card && !card.contains(e.relatedTarget)) {
-                resetTilt(card);
-                if (activeCard === card) activeCard = null;
-            }
-        });
-    });
-
-(function() {
-    const filterButtons = document.querySelectorAll('.btn-filter');
-    if (!filterButtons.length) return;
-
-    function resetTilt(btn) {
-        btn.style.transform = '';
-    }
-
-    function handleMouseMove(e) {
-        const btn = e.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        // Нормализация координат в диапазон -1..1
-        const nx = (x / rect.width) * 2 - 1;
-        const ny = (y / rect.height) * 2 - 1;
-
-        const maxAngle = 15; // мягкий наклон
-        const rotateY = maxAngle * nx;
-        const rotateX = -maxAngle * ny;
-
-        const translateY = 0; // подъём в пикселях
-        const scale = 1.07;    // лёгкое увеличение
-
-        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-    }
-
-    function handleMouseLeave(e) {
-        resetTilt(e.currentTarget);
-    }
-
-    filterButtons.forEach(btn => {
-        btn.addEventListener('mousemove', handleMouseMove);
-        btn.addEventListener('mouseleave', handleMouseLeave);
-    });
-})();
-
-// Сортировка игр
-(function() {
-    const STORAGE_KEY = 'explore_sort';
-    const grid = document.querySelector('.games-grid');
-    const btns = document.querySelectorAll('.sort-btn');
-    if (!grid || !btns.length) return;
-
-    // Восстанавливаем сохранённые настройки
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
-    let activeSort = saved.sort || 'popularity';
-    let activeDir  = saved.dir  || 'desc';
-
-    function getVal(card, sort) {
-        if (sort === 'price')      return parseFloat(card.dataset.price)      || 0;
-        if (sort === 'popularity') return parseFloat(card.dataset.popularity) || 0;
-        if (sort === 'date')       return parseInt(card.dataset.date)         || 0;
-        return 0;
-    }
-
-    function sortGrid() {
-        const cards = Array.from(grid.querySelectorAll('.game-card:not(.ad-card)'));
-        cards.sort((a, b) => {
-            const va = getVal(a, activeSort);
-            const vb = getVal(b, activeSort);
-            return activeDir === 'asc' ? va - vb : vb - va;
-        });
-        cards.forEach(c => grid.appendChild(c));
-    }
-
-    function updateButtons() {
-        btns.forEach(btn => {
-            const isActive = btn.dataset.sort === activeSort;
-            btn.classList.toggle('active', isActive);
-            // Показываем стрелку направления только у активной
-            btn.setAttribute('data-dir', isActive ? activeDir : (btn.dataset.sort === 'price' ? 'asc' : 'desc'));
-            const arrow = btn.querySelector('.sort-arrow');
-            if (arrow) arrow.style.display = isActive ? '' : 'none';
-            if (arrow) arrow.textContent = activeDir === 'asc' ? '↑' : '↓';
-        });
-    }
-
-    // Добавляем стрелки в кнопки
-    btns.forEach(btn => {
-        const arrow = document.createElement('span');
-        arrow.className = 'sort-arrow';
-        arrow.style.display = 'none';
-        btn.appendChild(arrow);
-    });
-
-    btns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const sort = this.dataset.sort;
-            if (activeSort === sort) {
-                // Инверсия направления
-                activeDir = activeDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                activeSort = sort;
-                // Дефолтные направления
-                activeDir = sort === 'price' ? 'asc' : 'desc';
-            }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ sort: activeSort, dir: activeDir }));
-            updateButtons();
-            sortGrid();
-        });
-
-        // Tilt-эффект как у btn-filter
-        btn.addEventListener('mousemove', function(e) {
-            const rect = this.getBoundingClientRect();
-            const nx = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-            const ny = ((e.clientY - rect.top)  / rect.height) * 2 - 1;
-            this.style.transform = `perspective(400px) rotateX(${-ny*12}deg) rotateY(${nx*12}deg) scale(1.05)`;
-        });
-        btn.addEventListener('mouseleave', function() { this.style.transform = ''; });
-    });
-
-    // Инициализация
-    updateButtons();
-    sortGrid();
-})();
-
-// Мобильный тоггл фильтров
-(function() {
-    const toggle = document.getElementById('filterToggle');
-    const panel  = document.getElementById('filterPanel');
-    if (!toggle || !panel) return;
-
-    toggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isOpen = panel.classList.toggle('open');
-        toggle.classList.toggle('open', isOpen);
-    });
-
-    // Закрыть при клике вне
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.games-controls')) {
-            panel.classList.remove('open');
-            toggle.classList.remove('open');
-        }
-    });
-
-    // Закрыть после выбора фильтра
-    panel.querySelectorAll('.btn-filter').forEach(btn => {
-        btn.addEventListener('click', () => {
-            panel.classList.remove('open');
-            toggle.classList.remove('open');
-        });
-    });
-})();
-
-</script>
 </body>
 </html>
+
