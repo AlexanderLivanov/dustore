@@ -384,10 +384,6 @@ $stmt->execute([
             </div>
         </div>
         <div class="section center-section">
-            <div class="center-floating-block">
-                <!-- Сюда можешь поместить любой контент: текст, картинку, форму -->
-                <p style="color: #c4a93a;font-weight: 100;font-size: large;font-family: 'PixelizerBold';">1 год домену</p>
-            </div>
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
                 <img src="/swad/static/img/logo_new_year.png" alt="" onclick="location.href='/'">
@@ -397,7 +393,6 @@ $stmt->execute([
                     onclick="location.href='/'">
 
                 <audio id="cowSound" src="/swad/static/img/cow.mp3" preload="auto"></audio> -->
-
                 <script>
                     const gif = document.getElementById('dancingCow');
                     const sound = document.getElementById('cowSound');
@@ -470,6 +465,9 @@ $stmt->execute([
                 </button>
             </div>
         </div>
+    </div>
+    <div class="center-floating-block">
+        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;">1 год домену</p>
     </div>
     <script>
         document.getElementById('burger').addEventListener('click', function(e) {
@@ -777,6 +775,23 @@ $stmt->execute([
         }
     });
 })();
+    </script>
+
+    <script>
+    // Shadow только при скролле
+    (function() {
+        const header  = document.querySelector('.header');
+        const floater = document.querySelector('.center-floating-block');
+
+        function onScroll() {
+            const scrolled = window.scrollY > 4;
+            header?.classList.toggle('scrolled', scrolled);
+            floater?.classList.toggle('scrolled', scrolled);
+        }
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll(); // сразу при загрузке
+    })();
     </script>
 
 </body>

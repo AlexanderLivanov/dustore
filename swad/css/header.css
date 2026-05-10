@@ -35,9 +35,40 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
-    /* background-color: white; */
-    box-shadow: 0px 0px 0px 1px #ffffff09;
     border-radius: 0px 0px 20px 20px;
+    box-shadow: none;
+    transition: box-shadow 0.5s ease;
+    transition: backdrop-filter 0.5s ease;
+    transition: background-color 0.5s ease;
+}
+
+.header.scrolled {
+    box-shadow: 0px 0px 0px 1px #ffffff15;
+    backdrop-filter: blur(20px);
+    background-color: #0f0a203b;
+}
+
+.center-floating-block {
+    position: fixed;
+    margin-top: -1px;
+    left: 50%;
+    margin-left: -80px;
+    transform: none !important;
+    width: 160px;
+    height: 20px;
+    border-radius: 0px 0px 15px 15px;
+    text-align: center;
+    box-shadow: none;
+    transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
+    backdrop-filter: blur(1px);
+    z-index: 10;
+    background-color: #0f0a20;
+}
+
+.center-floating-block.scrolled {
+    box-shadow: 0px 1px 1px 0px #ffffff15;
+    backdrop-filter: blur(20px);
+    background-color: #0f0a203b;
 }
 
 .section {
@@ -574,18 +605,7 @@ body {
     }
 }
 
-.center-floating-block {
-    position: fixed;
-    top: 107%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 160px;
-    height: 26px;
-    background-color: #0f0a20;
-    border-radius: 0px 0px 15px 15px;
-    text-align: center;
-    box-shadow: 0px 1px 1px 0px #ffffff10;
-}
+
 
 @font-face {
     font-family: "PixelizerBold";
@@ -594,3 +614,4 @@ body {
     font-style: normal;
     font-display: swap;
 }
+
