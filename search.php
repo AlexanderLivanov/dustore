@@ -261,7 +261,7 @@
             flex-direction: column;
             box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, 0.2);
             transform: translateY(0);
-            background: #a9a9a947;
+            background: #221f2b;
         }
 
         .card:hover {

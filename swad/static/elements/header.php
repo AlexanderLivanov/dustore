@@ -386,7 +386,7 @@ $stmt->execute([
         <div class="section center-section">
             <div class="center-floating-block">
                 <!-- Сюда можешь поместить любой контент: текст, картинку, форму -->
-                <p style="color: #c4a93a;font-weight: bolder;font-size: larger;font-family: 'PixelizerBold';">1 год домену</p>
+                <p style="color: #c4a93a;font-weight: 100;font-size: large;font-family: 'PixelizerBold';">1 год домену</p>
             </div>
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->

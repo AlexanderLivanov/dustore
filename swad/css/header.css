@@ -36,6 +36,8 @@ body {
     top: 0;
     z-index: 10;
     /* background-color: white; */
+    box-shadow: 0px 0px 0px 1px #ffffff09;
+    border-radius: 0px 0px 20px 20px;
 }
 
 .section {
@@ -126,16 +128,16 @@ body {
 
 .image {
     position: relative;
-    display: inline-block; /* чтобы размер соответствовал картинке */
+    display: inline-block; /* Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ñ€Ð°Ð·Ð¼ÐµÑ€ ÑÐ¾Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²Ð¾Ð²Ð°Ð» ÐºÐ°Ñ€Ñ‚Ð¸Ð½ÐºÐµ */
 }
 
 .image img {
     width: auto;
     height: 110px;
-    transition: transform 0.01s ease-out; /* быстрая реакция */
+    transition: transform 0.01s ease-out; /* Ð±Ñ‹ÑÑ‚Ñ€Ð°Ñ Ñ€ÐµÐ°ÐºÑ†Ð¸Ñ */
     transform-style: preserve-3d;
     will-change: transform;
-    backface-visibility: hidden; /* для плавности */
+    backface-visibility: hidden; /* Ð´Ð»Ñ Ð¿Ð»Ð°Ð²Ð½Ð¾ÑÑ‚Ð¸ */
     position: relative;
     z-index: 1;
 }
@@ -182,14 +184,14 @@ body {
 
 @media screen and (max-width: 900px) {
 
-    /* Хедер чуть компактнее */
+    /* Ð¥ÐµÐ´ÐµÑ€ Ñ‡ÑƒÑ‚ÑŒ ÐºÐ¾Ð¼Ð¿Ð°ÐºÑ‚Ð½ÐµÐµ */
     .header {
         height: 64px;
         padding-left: 10px;
         padding-right: 10px;
     }
 
-    /* Логотип */
+    /* Ð›Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿ */
     .image img {
         width: auto;
         padding: 2px;
@@ -205,7 +207,7 @@ body {
         filter: contrast(200%);
     }
 
-    /* Бургер — показываем */
+    /* Ð‘ÑƒÑ€Ð³ÐµÑ€ â€” Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÐ¼ */
     #burger {
         display: flex !important;
         align-items: center;
@@ -221,7 +223,7 @@ body {
         height: 26px;
     }
 
-    /* Левая секция — бургер + дропдаун */
+    /* Ð›ÐµÐ²Ð°Ñ ÑÐµÐºÑ†Ð¸Ñ â€” Ð±ÑƒÑ€Ð³ÐµÑ€ + Ð´Ñ€Ð¾Ð¿Ð´Ð°ÑƒÐ½ */
     .left-section {
         position: static;
         flex: 0 0 auto;
@@ -229,7 +231,7 @@ body {
         gap: 0;
     }
 
-    /* Дропдаун навигации */
+    /* Ð”Ñ€Ð¾Ð¿Ð´Ð°ÑƒÐ½ Ð½Ð°Ð²Ð¸Ð³Ð°Ñ†Ð¸Ð¸ */
     .buttons-left {
         display: none;
         position: fixed;
@@ -261,13 +263,13 @@ body {
         border-radius: 9px;
     }
 
-    /* Центр — логотип по центру */
+    /* Ð¦ÐµÐ½Ñ‚Ñ€ â€” Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿ Ð¿Ð¾ Ñ†ÐµÐ½Ñ‚Ñ€Ñƒ */
     .section.center-section {
         flex: 1;
         justify-content: center;
     }
 
-    /* Правая секция */
+    /* ÐŸÑ€Ð°Ð²Ð°Ñ ÑÐµÐºÑ†Ð¸Ñ */
     .right-section {
         flex: 0 0 auto;
         margin-left: 0;
@@ -276,7 +278,7 @@ body {
         padding-right: 0;
     }
 
-    /* Кнопки справа — сбрасываем инлайновый padding-left: 100px */
+    /* ÐšÐ½Ð¾Ð¿ÐºÐ¸ ÑÐ¿Ñ€Ð°Ð²Ð° â€” ÑÐ±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÐ¼ Ð¸Ð½Ð»Ð°Ð¹Ð½Ð¾Ð²Ñ‹Ð¹ padding-left: 100px */
     .buttons-right {
         padding-left: 6px !important;
         padding-right: 6px !important;
@@ -290,7 +292,7 @@ body {
         white-space: nowrap;
     }
 
-    /* Кнопка уведомлений */
+    /* ÐšÐ½Ð¾Ð¿ÐºÐ° ÑƒÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ð¹ */
     .buttons-right .button[onclick*="notifications"] {
         padding: 6px 8px;
     }
@@ -383,7 +385,7 @@ body {
     display: none !important;
 }
 
-/* Контейнер логотипа для позиционирования псевдоэлемента */
+/* ÐšÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° Ð´Ð»Ñ Ð¿Ð¾Ð·Ð¸Ñ†Ð¸Ð¾Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ñ Ð¿ÑÐµÐ²Ð´Ð¾ÑÐ»ÐµÐ¼ÐµÐ½Ñ‚Ð° */
 .image {
     position: relative;
     display: inline-block;
@@ -400,7 +402,7 @@ body {
     z-index: 1;
 }
 
-/* Голографический эффект с маской по форме логотипа */
+/* Ð“Ð¾Ð»Ð¾Ð³Ñ€Ð°Ñ„Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ ÑÑ„Ñ„ÐµÐºÑ‚ Ñ Ð¼Ð°ÑÐºÐ¾Ð¹ Ð¿Ð¾ Ñ„Ð¾Ñ€Ð¼Ðµ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° */
 .image::after {
     content: '';
     position: absolute;
@@ -424,7 +426,7 @@ body {
     z-index: 2;
     mix-blend-mode: overlay;
 
-    /* Маска, повторяющая форму логотипа */
+    /* ÐœÐ°ÑÐºÐ°, Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€ÑÑŽÑ‰Ð°Ñ Ñ„Ð¾Ñ€Ð¼Ñƒ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° */
     mask-image: url('/swad/static/img/logo_new.png');
     mask-size: contain;
     mask-repeat: no-repeat;
@@ -439,7 +441,7 @@ body {
     opacity: 1;
 }
 
-/* Прелоадер */
+/* ÐŸÑ€ÐµÐ»Ð¾Ð°Ð´ÐµÑ€ */
 .preloader {
     position: fixed;
     top: 0;
@@ -491,7 +493,7 @@ body {
     50% { transform: scale(1.1); }
 }
 
-/* ── Dropdown «Для разработчиков» ── */
+/* â”€â”€ Dropdown Â«Ð”Ð»Ñ Ñ€Ð°Ð·Ñ€Ð°Ð±Ð¾Ñ‚Ñ‡Ð¸ÐºÐ¾Ð²Â» â”€â”€ */
 .nav-dropdown {
     position: relative;
     display: inline-block;
@@ -557,7 +559,7 @@ body {
     color: #fff;
 }
 
-/* Закрываем dropdown при схлопывании мобильного меню */
+/* Ð—Ð°ÐºÑ€Ñ‹Ð²Ð°ÐµÐ¼ dropdown Ð¿Ñ€Ð¸ ÑÑ…Ð»Ð¾Ð¿Ñ‹Ð²Ð°Ð½Ð¸Ð¸ Ð¼Ð¾Ð±Ð¸Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ð¼ÐµÐ½ÑŽ */
 @media (max-width: 900px) {
     .nav-dropdown__menu {
         position: static;
@@ -577,11 +579,12 @@ body {
     top: 107%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 170px;
+    width: 160px;
     height: 26px;
     background-color: #0f0a20;
     border-radius: 0px 0px 15px 15px;
     text-align: center;
+    box-shadow: 0px 1px 1px 0px #ffffff10;
 }
 
 @font-face {

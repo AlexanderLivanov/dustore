@@ -79,6 +79,21 @@ if ($selectedGenre) {
 
                 <!-- Поиск теперь сверху -->
                 <div class="search-wrapper">
+                    <!-- Кнопки сортировки -->
+                    <div class="sort-buttons">
+                        <button class="sort-btn" data-sort="popularity" data-dir="desc">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                            Популярные
+                        </button>
+                        <button class="sort-btn" data-sort="price" data-dir="asc">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            Цена
+                        </button>
+                        <button class="sort-btn" data-sort="date" data-dir="desc">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Новые
+                        </button>
+                    </div>
                     <div class="search-bar">
                         <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
                         <input type="text" placeholder="Введите название игры или тикер разработчика...">
@@ -154,7 +169,11 @@ if ($selectedGenre) {
                                     ? 'Бесплатно'
                                     : number_format($game['price'], 0, ',', ' ') . ' ₽';
                                 ?>
-                                <div class="game-card" onclick="window.location.href='/g/<?= $game['id'] ?>';">
+                                <div class="game-card"
+                                     data-price="<?= (float)$game['price'] ?>"
+                                     data-popularity="<?= (float)($game['rating'] ?? 0) ?>"
+                                     data-date="<?= strtotime($game['release_date'] ?? '2000-01-01') ?>"
+                                     onclick="window.location.href='/g/<?= $game['id'] ?>';">
                                     <div class="game-image <?= ($adultSection && $game['age_rating'] >= 18) ? 'blur-adult' : '' ?>">
                                         <img src="<?= !empty($game['path_to_cover'])
                                             ? htmlspecialchars($game['path_to_cover'])
@@ -348,6 +367,87 @@ if ($selectedGenre) {
         btn.addEventListener('mousemove', handleMouseMove);
         btn.addEventListener('mouseleave', handleMouseLeave);
     });
+})();
+
+// Сортировка игр
+(function() {
+    const STORAGE_KEY = 'explore_sort';
+    const grid = document.querySelector('.games-grid');
+    const btns = document.querySelectorAll('.sort-btn');
+    if (!grid || !btns.length) return;
+
+    // Восстанавливаем сохранённые настройки
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+    let activeSort = saved.sort || 'popularity';
+    let activeDir  = saved.dir  || 'desc';
+
+    function getVal(card, sort) {
+        if (sort === 'price')      return parseFloat(card.dataset.price)      || 0;
+        if (sort === 'popularity') return parseFloat(card.dataset.popularity) || 0;
+        if (sort === 'date')       return parseInt(card.dataset.date)         || 0;
+        return 0;
+    }
+
+    function sortGrid() {
+        const cards = Array.from(grid.querySelectorAll('.game-card:not(.ad-card)'));
+        cards.sort((a, b) => {
+            const va = getVal(a, activeSort);
+            const vb = getVal(b, activeSort);
+            return activeDir === 'asc' ? va - vb : vb - va;
+        });
+        cards.forEach(c => grid.appendChild(c));
+    }
+
+    function updateButtons() {
+        btns.forEach(btn => {
+            const isActive = btn.dataset.sort === activeSort;
+            btn.classList.toggle('active', isActive);
+            // Показываем стрелку направления только у активной
+            btn.setAttribute('data-dir', isActive ? activeDir : (btn.dataset.sort === 'price' ? 'asc' : 'desc'));
+            const arrow = btn.querySelector('.sort-arrow');
+            if (arrow) arrow.style.display = isActive ? '' : 'none';
+            if (arrow) arrow.textContent = activeDir === 'asc' ? '↑' : '↓';
+        });
+    }
+
+    // Добавляем стрелки в кнопки
+    btns.forEach(btn => {
+        const arrow = document.createElement('span');
+        arrow.className = 'sort-arrow';
+        arrow.style.display = 'none';
+        btn.appendChild(arrow);
+    });
+
+    btns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const sort = this.dataset.sort;
+            if (activeSort === sort) {
+                // Инверсия направления
+                activeDir = activeDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                activeSort = sort;
+                // Дефолтные направления
+                activeDir = sort === 'price' ? 'asc' : 'desc';
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ sort: activeSort, dir: activeDir }));
+            updateButtons();
+            sortGrid();
+        });
+
+        // Tilt-эффект как у btn-filter
+        btn.addEventListener('mousemove', function(e) {
+            const rect = this.getBoundingClientRect();
+            const nx = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+            const ny = ((e.clientY - rect.top)  / rect.height) * 2 - 1;
+            this.style.transform = `perspective(400px) rotateX(${-ny*12}deg) rotateY(${nx*12}deg) scale(1.05)`;
+        });
+        btn.addEventListener('mouseleave', function() { this.style.transform = ''; });
+    });
+
+    // Инициализация
+    updateButtons();
+    sortGrid();
 })();
 
 // Мобильный тоггл фильтров

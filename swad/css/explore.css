@@ -160,7 +160,55 @@ h2:after {
 
 .search-wrapper {
     width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     justify-items: right;
+    gap: 525px;
+}
+
+/* Группа кнопок сортировки */
+.sort-buttons {
+    display: flex;
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+.sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #373346;
+    border: none;
+    color: #ffffff70;
+    font-size: 0.82rem;
+    font-weight: 300;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.01s, color 0.01s;
+    transform-style: preserve-3d;
+    will-change: transform;
+    font-family: inherit;
+    box-shadow: 1px 1px 1px 1px #00000050;
+}
+
+.sort-btn:hover {
+    color: white;
+    background: #ffffff2b;
+    box-shadow: 1px 1px 1px 1px #00000050;
+}
+
+.sort-btn.active {
+    background: #ffffff1a;
+    color: #fff;
+    box-shadow: 1px 1px 1px 1px #00000050;
+}
+
+.sort-arrow {
+    font-size: 0.75rem;
+    opacity: 0.7;
 }
 
 .search-bar {
@@ -260,7 +308,6 @@ h2:after {
     border: 1px white;
     box-shadow: 0px 0px 1px 1px #ffffff33;
     backdrop-filter: blur(40px);
-
 
 .games-grid {
         flex: 1;
@@ -471,7 +518,9 @@ h2:after {
 
     .container { padding: 0 10px; max-width: 100%; }
 
-    .search-wrapper { flex-shrink: 0; width: 100%; }
+    .search-wrapper { flex-shrink: 0; width: 100%; flex-wrap: wrap; gap: 6px; }
+    .sort-buttons   { order: 2; width: 100%; }
+    .sort-btn       { flex: 1; justify-content: center; font-size: 0.78rem; padding: 6px 8px; }
     .search-bar { width: 100%; max-width: 100%; }
     .search-bar input { font-size: 1rem; padding: 10px 10px 10px 42px; }
 
