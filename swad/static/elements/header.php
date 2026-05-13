@@ -466,9 +466,6 @@ $stmt->execute([
             </div>
         </div>
     </div>
-    <div class="center-floating-block">
-        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;">1 год домену</p>
-    </div>
     <script>
         document.getElementById('burger').addEventListener('click', function(e) {
             e.stopPropagation();
