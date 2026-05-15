@@ -105,6 +105,87 @@ if ($selected_id) {
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                     <div>
                         <div style="font-size:18px;font-weight:700;margin-bottom:4px;"><?= htmlspecialchars($game_info['name'] ?? '') ?></div>
+                        <?php if ($game_info && $selected_id):
+                                // Агрегируем детальные оценки
+                                $stmt = $conn->prepare("
+                                    SELECT
+                                        ROUND(AVG(score))           AS avg_score,
+                                        ROUND(AVG(gameplay_score))  AS avg_gameplay,
+                                        ROUND(AVG(visual_score))    AS avg_visual,
+                                        ROUND(AVG(stability))       AS avg_stability,
+                                        ROUND(AVG(originality))     AS avg_originality,
+                                        ROUND(AVG(sound_score))     AS avg_sound,
+                                        ROUND(AVG(content_depth))   AS avg_content,
+                                        COUNT(*)                    AS cnt
+                                    FROM moderation_reviews WHERE game_id = ?
+                                ");
+                                $stmt->execute([$selected_id]);
+                                $agg = $stmt->fetch(PDO::FETCH_ASSOC);
+                            ?>
+                            <?php if ($agg && $agg['cnt'] > 0): ?>
+                            <div class="card" style="margin-bottom:14px;">
+                                <div class="card-title" style="margin-bottom:16px;">
+                                    <span class="material-icons">analytics</span>Детальные оценки экспертов
+                                    <span style="margin-left:auto;font-size:11px;color:var(--tm);"><?= $agg['cnt'] ?> голос(ов)</span>
+                                </div>
+
+                                <!-- GQI большой -->
+                                <?php
+                                $gqi_stmt = $conn->prepare("SELECT GQI FROM games WHERE id=?");
+                                $gqi_stmt->execute([$selected_id]);
+                                $gqi_val = (int)$gqi_stmt->fetchColumn();
+                                $gqi_color = $gqi_val >= 75 ? 'var(--ok)' : ($gqi_val >= 50 ? '#fbbf24' : 'var(--err)');
+                                ?>
+                                <div style="display:flex;align-items:center;gap:20px;padding:16px;background:var(--elev);
+                                            border-radius:10px;margin-bottom:16px;">
+                                    <div style="text-align:center;flex-shrink:0;">
+                                        <div style="font-size:48px;font-weight:800;color:<?= $gqi_color ?>;line-height:1;font-family:monospace;">
+                                            <?= $gqi_val ?>
+                                        </div>
+                                        <div style="font-size:11px;color:var(--tm);margin-top:4px;">GQI</div>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="height:8px;background:var(--surf);border-radius:4px;overflow:hidden;margin-bottom:8px;">
+                                            <div style="height:100%;width:<?= $gqi_val ?>%;background:<?= $gqi_color ?>;border-radius:4px;transition:width .6s;"></div>
+                                        </div>
+                                        <div style="font-size:12px;color:var(--tm);">
+                                            Game Quality Index — взвешенная оценка на основе голосов экспертов
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Детальные критерии -->
+                                <?php
+                                $crit_display = [
+                                    ['avg_gameplay',   '🎮 Геймплей',      20],
+                                    ['avg_visual',     '🎨 Визуал',         12],
+                                    ['avg_stability',  '🔧 Стабильность',   12],
+                                    ['avg_originality','💡 Оригинальность',  6],
+                                    ['avg_sound',      '🎵 Звук',            5],
+                                    ['avg_content',    '📖 Глубина',          5],
+                                ];
+                                ?>
+                                <div style="display:flex;flex-direction:column;gap:8px;">
+                                    <?php foreach ($crit_display as [$key, $label, $weight]):
+                                        $val = (int)($agg[$key] ?? 0);
+                                        $pct = $val * 10;
+                                        $col = $val >= 7 ? 'var(--ok)' : ($val >= 4 ? '#fbbf24' : ($val > 0 ? 'var(--err)' : 'var(--tm)'));
+                                    ?>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="font-size:12px;color:var(--ts);width:130px;flex-shrink:0;"><?= $label ?></div>
+                                        <div style="flex:1;height:6px;background:var(--elev);border-radius:3px;overflow:hidden;">
+                                            <div style="height:100%;width:<?= $pct ?>%;background:<?= $col ?>;border-radius:3px;transition:width .6s;"></div>
+                                        </div>
+                                        <div style="font-size:12px;font-weight:700;color:<?= $col ?>;width:30px;text-align:right;">
+                                            <?= $val > 0 ? $val : '—' ?>
+                                        </div>
+                                        <div style="font-size:10px;color:var(--tm);width:40px;">вес <?= $weight ?>%</div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            <?php endif; ?>
                         <?php if ($game_info['moderation_status'] === 'pending'): ?>
                             <span class="badge badge-rev">На модерации</span>
                         <?php elseif ($game_info['status'] === 'published'): ?>

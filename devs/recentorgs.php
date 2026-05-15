@@ -2,6 +2,7 @@
 $page_title = 'Новые организации';
 $active_nav = 'recentorgs';
 require_once(__DIR__ . '/includes/header.php');
+require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
 
 if (!$is_admin) {
     echo '<div class="alert alert-err"><span class="material-icons" style="font-size:16px;vertical-align:middle;">lock</span> Доступно только администраторам платформы.</div>';
@@ -23,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->prepare("UPDATE studios SET status=?, ban_reason=? WHERE id=?")
             ->execute([$new_status, $ban_reason, $target_studio]);
         $action_msg = "Статус студии #{$target_studio} изменён на «{$new_status}».";
+        send_group_message(-1002916906978, "Статус студии #{$target_studio} изменён на «{$new_status}»", true, "");
     } else {
         $action_err = 'Неверные параметры.';
     }

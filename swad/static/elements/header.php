@@ -467,7 +467,7 @@ $stmt->execute([
         </div>
     </div>
     <div class="center-floating-block">
-        <v style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;">1 год домену</v>
+        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;">1 год домену</p>
     </div>
     <script>
         document.getElementById('burger').addEventListener('click', function(e) {
