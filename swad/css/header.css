@@ -37,20 +37,17 @@ body {
     z-index: 10;
     border-radius: 0px 0px 20px 20px;
     box-shadow: none;
-    transition: box-shadow 0.5s ease;
-    transition: backdrop-filter 0.5s ease;
-    transition: background-color 0.5s ease;
+    transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
 }
 
 .header.scrolled {
-    box-shadow: 0px 0px 0px 1px #ffffff15;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(7px);
     background-color: #0f0a203b;
 }
 
 .center-floating-block {
     position: fixed;
-    margin-top: -1px;
+    margin-top: 80px;
     left: 50%;
     margin-left: -80px;
     transform: none !important;
@@ -60,14 +57,14 @@ body {
     text-align: center;
     box-shadow: none;
     transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(1px);
     z-index: 10;
     background-color: #0f0a20;
 }
 
 .center-floating-block.scrolled {
     box-shadow: 0px 1px 1px 0px #ffffff15;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(7px);
     background-color: #0f0a203b;
 }
 
@@ -170,13 +167,14 @@ body {
 
 .image img {
     width: auto;
-    height: 110px;
+    height: 70px;
     transition: transform 0.01s ease-out; /* Ð±Ñ‹ÑÑ‚Ñ€Ð°Ñ Ñ€ÐµÐ°ÐºÑ†Ð¸Ñ */
     transform-style: preserve-3d;
     will-change: transform;
     backface-visibility: hidden; /* Ð´Ð»Ñ Ð¿Ð»Ð°Ð²Ð½Ð¾ÑÑ‚Ð¸ */
     position: relative;
     z-index: 1;
+    margin-top: 35px;
 }
 
 .image::after {
@@ -430,7 +428,7 @@ body {
 
 .image img {
     width: auto;
-    height: 110px;
+    height: 70px;
     transition: transform 0.01s ease-out;
     transform-style: preserve-3d;
     will-change: transform;
@@ -443,7 +441,7 @@ body {
 .image::after {
     content: '';
     position: absolute;
-    top: 0;
+    top: 15px;
     left: 0;
     width: 100%;
     height: 100%;
@@ -464,11 +462,11 @@ body {
     mix-blend-mode: overlay;
 
     /* ÐœÐ°ÑÐºÐ°, Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€ÑÑŽÑ‰Ð°Ñ Ñ„Ð¾Ñ€Ð¼Ñƒ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° */
-    mask-image: url('/swad/static/img/logo_new.png');
+    mask-image: url('/swad/static/img/LogoV3 - Appolo_mini.png');
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
-    -webkit-mask-image: url('/swad/static/img/logo_new.png');
+    -webkit-mask-image: url('/swad/static/img/LogoV3 - Appolo_mini.png');
     -webkit-mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -621,3 +619,37 @@ body {
     font-display: swap;
 }
 
+
+.header::before,
+.header::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 682px;
+    box-shadow: none;
+    transition: box-shadow 0.5s ease;
+    z-index: -10;
+}
+
+.header::before { left: 0; border-radius: 0 0 0 20px; }
+.header::after  { right: 0; border-radius: 0 0 20px 0; }
+
+.header.scrolled::before,
+.header.scrolled::after {
+    box-shadow: 0px 1px 0px 0px #ffffff15;
+}
+.header:hover {
+    backdrop-filter: blur(7px);
+    background-color: #0f0a203b;
+}
+
+.header:hover::before,
+.header:hover::after {
+    box-shadow: 0px 1px 0px 0px #ffffff15;
+}
+.center-floating-block.scrolled,
+.center-floating-block.header-hovered {
+  box-shadow: 0px 1px 1px 0px #ffffff15;
+  backdrop-filter: blur(7px);
+  background-color: #0f0a203b;
+}

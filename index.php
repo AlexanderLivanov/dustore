@@ -8,6 +8,7 @@
     <title>Dustore - Игровая платформа для разработчиков и игроков</title>
     <link rel="manifest" crossorigin="use-credentials" href="manifest.json">
     <link rel="stylesheet" href="swad/css/pages.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
     <?php require_once('swad/controllers/ymcounter.php'); ?>
 </head>
@@ -545,6 +546,143 @@
     });
 })();
     </script>
+
+<div id="dust-intro-modal" class="dust-modal hidden">
+
+  <div class="dust-modal-content">
+
+    <!-- КОТИК -->
+    <div class="dust-cat-wrapper">
+      <img id="dust-cat" src="/swad/static/img/dastyframe1.png">
+    </div>
+
+    <!-- ОБЛАЧКО -->
+    <div class="dust-dialogue">
+      <div id="dust-text"></div>
+
+      <button id="dust-close-btn" class="dust-close hidden">
+        Продолжить
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+if (!localStorage.getItem("dust_intro_seen")) {
+  const modal = document.getElementById("dust-intro-modal");
+  const textElement = document.getElementById("dust-text");
+  const closeBtn = document.getElementById("dust-close-btn");
+  const cat = document.getElementById("dust-cat");
+
+  const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
+  typeSound.volume = 0.3;
+
+  // Частота звука: проигрывать раз в N символов (понижение частоты)
+  const SOUND_EVERY_N_CHARS = 3;
+
+  const catFrames = [
+    "/swad/static/img/dastyframe1.png",
+    "/swad/static/img/dastyframe2.png",
+    "/swad/static/img/dastyframe3.png"
+  ];
+
+  const dialogues = [
+    "Хэй! Добро пожаловать на DustStore!",
+    "Это площадка для инди-разработчиков и игроков.",
+    "Тут можно публиковать игры, искать команду и участвовать в джемах.",
+    "Надеюсь, тебе тут понравится."
+  ];
+
+  const winkAfter = [0, 3];
+
+  modal.classList.remove("hidden");
+
+  let frameIndex = 0;
+  let animationInterval = setInterval(() => {
+    frameIndex = (frameIndex + 1) % catFrames.length;
+    cat.src = catFrames[frameIndex];
+  }, 150);
+
+  let dialogueIndex = 0;
+  let charIndex = 0;
+  let soundCounter = 0; // счётчик для пропуска звуков
+
+  function winkAnimation(callback) {
+    cat.src = "/swad/static/img/dastyframe_half.png";
+    setTimeout(() => {
+      cat.src = "/swad/static/img/dastyframe_full.png";
+      setTimeout(() => {
+        cat.src = "/swad/static/img/dastyframe1.png";
+        if (callback) callback();
+      }, 900);
+    }, 700);
+  }
+
+  function typeDialogue() {
+    const currentText = dialogues[dialogueIndex];
+    if (charIndex < currentText.length) {
+      textElement.textContent += currentText.charAt(charIndex);
+
+      // Проигрываем звук только каждый N-й символ
+      soundCounter++;
+      if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
+        typeSound.currentTime = 0;
+        typeSound.play().catch(() => {});
+      }
+
+      charIndex++;
+      setTimeout(typeDialogue, 25);
+    } else {
+      clearInterval(animationInterval);
+      if (winkAfter.includes(dialogueIndex)) {
+        winkAnimation(() => {
+          closeBtn.classList.remove("hidden");
+        });
+      } else {
+        cat.src = "/swad/static/img/dastyframe1.png";
+        closeBtn.classList.remove("hidden");
+      }
+    }
+  }
+
+  // ====== Запуск диалога только после первого клика по модалке ======
+  function startDialogueOnClick() {
+    typeDialogue();
+    modal.removeEventListener('click', startDialogueOnClick);
+  }
+  modal.addEventListener('click', startDialogueOnClick);
+
+  // Обработчик кнопки «Продолжить»
+  closeBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // чтобы не сработал обработчик клика по модалке повторно
+    dialogueIndex++;
+    if (dialogueIndex >= dialogues.length) {
+      modal.style.opacity = "0";
+      setTimeout(() => {
+        modal.remove();
+      }, 300);
+      clearInterval(animationInterval);
+      cat.src = "/swad/static/img/dastyframe1.png";
+      localStorage.setItem("dust_intro_seen", "true");
+      return;
+    }
+    textElement.textContent = "";
+    charIndex = 0;
+    soundCounter = 0; // сбрасываем счётчик для новой реплики
+    closeBtn.classList.add("hidden");
+
+    animationInterval = setInterval(() => {
+      frameIndex = (frameIndex + 1) % catFrames.length;
+      cat.src = catFrames[frameIndex];
+    }, 150);
+
+    typeDialogue();
+  });
+}
+</script>
+
 </body>
 
 </html>

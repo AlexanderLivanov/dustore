@@ -56,7 +56,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(180deg, #28112b, #61114e);
             color: var(--text-primary);
             line-height: 1.5;
         }
@@ -275,6 +274,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             flex-direction: column;
             box-shadow: var(--shadow-sm);
             transform: translateY(0);
+            background-color: #ffffff12
         }
 
         .card:hover {

@@ -315,6 +315,10 @@ $stmt->execute([
             <button class="close-banner" id="close-banner">&times;</button>
         </div>
     </div>
+    <div class="center-floating-block">
+        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;"></p>
+    </div>
+    <div class="header-wrapper">
     <div class="header">
         <div class="section left-section">
             <div>
@@ -342,10 +346,10 @@ $stmt->execute([
                         <li><a class="nav-dropdown__item" href="/assetstore"   role="menuitem">Ассеты</a></li>
                         <li><a class="nav-dropdown__item" href="/brokenpixel"  role="menuitem">Битый Пиксель</a></li>
                         <li><a class="nav-dropdown__item" href="/jams/sprints" role="menuitem">Джемы</a></li>
-                    
+
                         <!-- Разделитель -->
                         <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>
-                    
+
                         <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
                             <!-- Залогинен — показываем прямую ссылку в консоль -->
                             <li>
@@ -386,7 +390,7 @@ $stmt->execute([
         <div class="section center-section">
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
-                <img src="/swad/static/img/logo_new_year.png" alt="" onclick="location.href='/'">
+                <img src="/swad/static/img/LogoV3 - Appolo_mini.png" alt="" onclick="location.href='/'">
                 <!-- <img id="dancingCow" style="height: 80px;"
                     src="https://media.tenor.com/yNy3XaDrdjgAAAAj/polish-dancing-cow-dancing.gif"
                     alt=""
@@ -436,6 +440,18 @@ $stmt->execute([
                     <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>
                 </div>
 -->
+                <button class="button" style="padding: 6px;" id="modeBtn" onclick="toggleMode()">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        class="icon icon-tabler icons-tabler-filled icon-tabler-flame"
+                        style="vertical-align: middle;">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
+                    </svg>
+                </button>
                 <button class="button" style="padding: 6px;" onclick="location.href='/notifications'">
                     <!--<?= $unread_notif_count ?> -->
                     <svg xmlns="http://www.w3.org/2000/svg"
@@ -466,9 +482,7 @@ $stmt->execute([
             </div>
         </div>
     </div>
-    <div class="center-floating-block">
-        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;">1 год домену</p>
-    </div>
+
     <script>
         document.getElementById('burger').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -599,6 +613,15 @@ $stmt->execute([
     </script>
 
     <script>
+        const header = document.querySelector('.header');
+        const floatingBlock = document.querySelector('.center-floating-block');
+
+        header.addEventListener('mouseenter', () => {
+          floatingBlock.classList.add('header-hovered');
+        });
+        header.addEventListener('mouseleave', () => {
+          floatingBlock.classList.remove('header-hovered');
+        });
         document.addEventListener('DOMContentLoaded', function() {
             const imageContainer = document.querySelector('.image');
             const logoImg = document.querySelector('.image img');
@@ -794,6 +817,19 @@ $stmt->execute([
     })();
     </script>
 
+    <script>
+    function toggleMode() {
+        const btn = document.getElementById('modeBtn');
+        const isFire = btn.dataset.mode !== 'moon';
+        btn.dataset.mode = isFire ? 'moon' : 'fire';
+        btn.querySelector('svg').innerHTML = isFire
+            ? `<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+               <path d="M12 1.992a10 10 0 1 0 9.236 13.838c.341 -.82 -.476 -1.644 -1.298 -1.31a6.5 6.5 0 0 1 -6.864 -10.787l.077 -.08c.551 -.63 .113 -1.653 -.758 -1.653h-.266l-.068 -.006l-.06 -.002z"/>`
+            : `<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+               <path d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78"/>`;
+    }
+    </script>
 </body>
 
 </html>
+
