@@ -726,21 +726,15 @@ p {
   image-rendering: pixelated;
 }
 
-.dust-dialogue {
-  position: relative;
-  background: white;
-  color: black;
-  padding: 24px;
-  border-radius: 20px;
-  min-width: 320px;
-  min-height: 140px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 20px;
+#dust-text {
+  font-family: 'PixelizerBold', 'Press Start 2P', monospace;
+  font-size: 26px;
   line-height: 1.5;
-  box-shadow: 0 0 30px rgba(0,0,0,0.3);
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
 }
 
-/* хвостик облачка */
+
 .dust-dialogue::before {
   content: "";
   position: absolute;
@@ -757,8 +751,8 @@ p {
   margin-top: 20px;
   padding: 10px 18px;
   border: none;
-  background: black;
-  color: white;
+  background: white;
+  color: black;
   border-radius: 10px;
   cursor: pointer;
   font-size: 16px;

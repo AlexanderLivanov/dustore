@@ -579,7 +579,7 @@ if (!localStorage.getItem("dust_intro_seen")) {
   const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
   typeSound.volume = 0.3;
 
-  // Частота звука: проигрывать раз в N символов (понижение частоты)
+  // Частота звука
   const SOUND_EVERY_N_CHARS = 3;
 
   const catFrames = [
@@ -589,13 +589,18 @@ if (!localStorage.getItem("dust_intro_seen")) {
   ];
 
   const dialogues = [
-    "Хэй! Добро пожаловать на DustStore!",
+    "Здарова! Добро пожаловать на наш Dustore!",
+    "Я Дасти кстати...",
+    "...ну, типа менеджер здесь. Да-да!",
     "Это площадка для инди-разработчиков и игроков.",
-    "Тут можно публиковать игры, искать команду и участвовать в джемах.",
-    "Надеюсь, тебе тут понравится."
+    "Тут можно публиковать игры, искать команду, участвовать в джемах и многое другое.",
+    "Надеюсь, что ты самостоятельно всё найдешь.",
+    "Но если нет... то ищи меня в правом верхнем углу, я помогу.",
+    "В общем, будь как дома и...",
+    "Надеюсь, тебе тут понравится. Свидимся!."
   ];
 
-  const winkAfter = [0, 3];
+  const winkAfter = [0, 8];
 
   modal.classList.remove("hidden");
 
@@ -607,7 +612,7 @@ if (!localStorage.getItem("dust_intro_seen")) {
 
   let dialogueIndex = 0;
   let charIndex = 0;
-  let soundCounter = 0; // счётчик для пропуска звуков
+  let soundCounter = 0;
 
   function winkAnimation(callback) {
     cat.src = "/swad/static/img/dastyframe_half.png";
@@ -625,7 +630,7 @@ if (!localStorage.getItem("dust_intro_seen")) {
     if (charIndex < currentText.length) {
       textElement.textContent += currentText.charAt(charIndex);
 
-      // Проигрываем звук только каждый N-й символ
+      // Тут частота звука на каждый символ (Для Сани, чтобы не тупил)
       soundCounter++;
       if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
         typeSound.currentTime = 0;
@@ -647,16 +652,15 @@ if (!localStorage.getItem("dust_intro_seen")) {
     }
   }
 
-  // ====== Запуск диалога только после первого клика по модалке ======
+
   function startDialogueOnClick() {
     typeDialogue();
     modal.removeEventListener('click', startDialogueOnClick);
   }
   modal.addEventListener('click', startDialogueOnClick);
 
-  // Обработчик кнопки «Продолжить»
   closeBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // чтобы не сработал обработчик клика по модалке повторно
+    e.stopPropagation();
     dialogueIndex++;
     if (dialogueIndex >= dialogues.length) {
       modal.style.opacity = "0";
@@ -670,7 +674,7 @@ if (!localStorage.getItem("dust_intro_seen")) {
     }
     textElement.textContent = "";
     charIndex = 0;
-    soundCounter = 0; // сбрасываем счётчик для новой реплики
+    soundCounter = 0;
     closeBtn.classList.add("hidden");
 
     animationInterval = setInterval(() => {
