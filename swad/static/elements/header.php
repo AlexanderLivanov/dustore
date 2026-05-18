@@ -440,17 +440,18 @@ $stmt->execute([
                     <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>
                 </div>
 -->
-                <button class="button" style="padding: 6px;" id="modeBtn" onclick="toggleMode()">
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        class="icon icon-tabler icons-tabler-filled icon-tabler-flame"
-                        style="vertical-align: middle;">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78" />
-                    </svg>
+                <button class="button" style="padding: 6px;" id="modeBtn">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="icon icon-tabler icons-tabler-filled icon-tabler-paw">
+                    <path stroke="none"
+                    d="M0 0h24v24H0z"
+                    fill="none" />
+                    <path d="M12 10c-1.32 0 -1.983 .421 -2.931 1.924l-.244 .398l-.395 .688a50.89 50.89 0 0 0 -.141 .254c-.24 .434 -.571 .753 -1.139 1.142l-.55 .365c-.94 .627 -1.432 1.118 -1.707 1.955c-.124 .338 -.196 .853 -.193 1.28c0 1.687 1.198 2.994 2.8 2.994l.242 -.006c.119 -.006 .234 -.017 .354 -.034l.248 -.043l.132 -.028l.291 -.073l.162 -.045l.57 -.17l.763 -.243l.455 -.136c.53 -.15 .94 -.222 1.283 -.222c.344 0 .753 .073 1.283 .222l.455 .136l.764 .242l.569 .171l.312 .084c.097 .024 .187 .045 .273 .062l.248 .043c.12 .017 .235 .028 .354 .034l.242 .006c1.602 0 2.8 -1.307 2.8 -3c0 -.427 -.073 -.939 -.207 -1.306c-.236 -.724 -.677 -1.223 -1.48 -1.83l-.257 -.19l-.528 -.38c-.642 -.47 -1.003 -.826 -1.253 -1.278l-.27 -.485l-.252 -.432c-1.011 -1.696 -1.618 -2.099 -3.053 -2.099z" /><path d="M19.78 7h-.03c-1.219 .02 -2.35 1.066 -2.908 2.504c-.69 1.775 -.348 3.72 1.075 4.333c.256 .109 .527 .163 .801 .163c1.231 0 2.38 -1.053 2.943 -2.504c.686 -1.774 .34 -3.72 -1.076 -4.332a2.05 2.05 0 0 0 -.804 -.164z" /><path d="M9.025 3c-.112 0 -.185 .002 -.27 .015l-.093 .016c-1.532 .206 -2.397 1.989 -2.108 3.855c.272 1.725 1.462 3.114 2.92 3.114l.187 -.005a1.26 1.26 0 0 0 .084 -.01l.092 -.016c1.533 -.206 2.397 -1.989 2.108 -3.855c-.27 -1.727 -1.46 -3.114 -2.92 -3.114z" /><path d="M14.972 3c-1.459 0 -2.647 1.388 -2.916 3.113c-.29 1.867 .574 3.65 2.174 3.867c.103 .013 .2 .02 .296 .02c1.39 0 2.543 -1.265 2.877 -2.883l.041 -.23c.29 -1.867 -.574 -3.65 -2.174 -3.867a2.154 2.154 0 0 0 -.298 -.02z" /><path d="M4.217 7c-.274 0 -.544 .054 -.797 .161c-1.426 .615 -1.767 2.562 -1.078 4.335c.563 1.451 1.71 2.504 2.941 2.504c.274 0 .544 -.054 .797 -.161c1.426 -.615 1.767 -2.562 1.078 -4.335c-.563 -1.451 -1.71 -2.504 -2.941 -2.504z" />
+                </svg>
                 </button>
                 <button class="button" style="padding: 6px;" onclick="location.href='/notifications'">
                     <!--<?= $unread_notif_count ?> -->
@@ -513,7 +514,7 @@ $stmt->execute([
                 banner.style.display = 'none';
                 return;
             }
-        
+
             closeBtn.addEventListener('click', function() {
                 banner.style.display = 'none';
                 localStorage.setItem('bannerClosed', 'true');
@@ -817,18 +818,176 @@ $stmt->execute([
     })();
     </script>
 
-    <script>
-    function toggleMode() {
-        const btn = document.getElementById('modeBtn');
-        const isFire = btn.dataset.mode !== 'moon';
-        btn.dataset.mode = isFire ? 'moon' : 'fire';
-        btn.querySelector('svg').innerHTML = isFire
-            ? `<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-               <path d="M12 1.992a10 10 0 1 0 9.236 13.838c.341 -.82 -.476 -1.644 -1.298 -1.31a6.5 6.5 0 0 1 -6.864 -10.787l.077 -.08c.551 -.63 .113 -1.653 -.758 -1.653h-.266l-.068 -.006l-.06 -.002z"/>`
-            : `<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-               <path d="M10 2c0 -.88 1.056 -1.331 1.692 -.722c1.958 1.876 3.096 5.995 1.75 9.12l-.08 .174l.012 .003c.625 .133 1.203 -.43 2.303 -2.173l.14 -.224a1 1 0 0 1 1.582 -.153c1.334 1.435 2.601 4.377 2.601 6.27c0 4.265 -3.591 7.705 -8 7.705s-8 -3.44 -8 -7.706c0 -2.252 1.022 -4.716 2.632 -6.301l.605 -.589c.241 -.236 .434 -.43 .618 -.624c1.43 -1.512 2.145 -2.924 2.145 -4.78"/>`;
+
+<!-- Модалка помощника Дасти -->
+<div id="dusty-helper-modal" class="dust-modal hidden">
+  <div class="dust-modal-content dust-layout">
+    <button class="dust-helper-close">&times;</button>
+
+    <!-- Левая часть: котик -->
+    <div class="dust-layout__cat">
+      <img id="dusty-cat" src="/swad/static/img/dastyframe1.png" alt="Дасти">
+    </div>
+
+    <!-- Правая часть: диалог + нижняя панель -->
+    <div class="dust-layout__right">
+      <div class="dust-layout__dialogue">
+        <div id="dusty-text"></div>
+      </div>
+      <div class="dust-layout__actions">
+        <button id="dusty-continue-btn" class="dust-close hidden">Продолжить</button>
+        <!-- Здесь в будущем появятся кнопки вопросов -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+    const modal = document.getElementById('dusty-helper-modal');
+    const closeBtn = modal.querySelector('.dust-helper-close');
+    const continueBtn = document.getElementById('dusty-continue-btn');
+    const openBtn = document.getElementById('modeBtn');
+    const cat = document.getElementById('dusty-cat');
+    const textElement = document.getElementById('dusty-text');
+
+    // Звук печати (тот же, что в приветствии)
+    const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
+    typeSound.volume = 0.3;
+    const SOUND_EVERY_N_CHARS = 5; // понижаем частоту
+
+    // Кадры анимации
+    const catFrames = [
+        "/swad/static/img/dastyframe1.png",
+        "/swad/static/img/dastyframe2.png",
+        "/swad/static/img/dastyframe3.png"
+    ];
+
+    // Диалоги (пока демо, потом заменишь на нужные)
+    const dialogues = [
+        "Привет! Я Дасти, твой помощник на Dustore.",
+        "Хочешь найти игру? Или узнать, как стать разработчиком?",
+        "Просто спроси — я расскажу!"
+    ];
+
+    // После каких реплик кот подмигнёт (индексы)
+    const winkAfter = [0, 2];
+
+    let frameIndex = 0;
+    let animationInterval = null;
+    let dialogueIndex = 0;
+    let charIndex = 0;
+    let soundCounter = 0;
+
+    // Анимация «говорения» кота
+    function startCatTalk() {
+        if (animationInterval) return;
+        frameIndex = 0;
+        cat.src = catFrames[0];
+        animationInterval = setInterval(() => {
+            frameIndex = (frameIndex + 1) % catFrames.length;
+            cat.src = catFrames[frameIndex];
+        }, 150);
     }
-    </script>
+
+    function stopCatTalk() {
+        if (animationInterval) {
+            clearInterval(animationInterval);
+            animationInterval = null;
+        }
+        cat.src = "/swad/static/img/dastyframe1.png"; // обычный кадр
+    }
+
+    // Подмигивание
+    function winkAnimation(callback) {
+        cat.src = "/swad/static/img/dastyframe_half.png";
+        setTimeout(() => {
+            cat.src = "/swad/static/img/dastyframe_full.png";
+            setTimeout(() => {
+                cat.src = "/swad/static/img/dastyframe1.png";
+                if (callback) callback();
+            }, 900);
+        }, 700);
+    }
+
+    // Побуквенная печать
+    function typeDialogue() {
+        const currentText = dialogues[dialogueIndex];
+        if (charIndex < currentText.length) {
+            textElement.textContent += currentText.charAt(charIndex);
+            soundCounter++;
+            if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
+                typeSound.currentTime = 0;
+                typeSound.play().catch(() => {});
+            }
+            charIndex++;
+            setTimeout(typeDialogue, 20);
+        } else {
+            stopCatTalk();
+            // Если нужно подмигивание — запускаем, затем показываем кнопку
+            if (winkAfter.includes(dialogueIndex)) {
+                winkAnimation(() => {
+                    continueBtn.classList.remove('hidden');
+                });
+            } else {
+                continueBtn.classList.remove('hidden');
+            }
+        }
+    }
+
+    // Открыть модалку и начать диалог
+    function openModal() {
+        modal.classList.remove('hidden');
+        dialogueIndex = 0;
+        charIndex = 0;
+        soundCounter = 0;
+        textElement.textContent = '';
+        continueBtn.classList.add('hidden');
+        startCatTalk();
+        typeDialogue();
+    }
+
+    // Закрыть модалку и всё остановить
+    function closeModal() {
+        modal.classList.add('hidden');
+        stopCatTalk();
+    }
+
+    // Клик по лапке
+    openBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openModal();
+    });
+
+    // Крестик
+    closeBtn.addEventListener('click', closeModal);
+
+    // Клик по фону (опционально)
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+
+    // Кнопка «Продолжить»
+    continueBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dialogueIndex++;
+        if (dialogueIndex >= dialogues.length) {
+            // Все фразы показаны — закрываем
+            closeModal();
+            return;
+        }
+        // Следующая фраза
+        textElement.textContent = '';
+        charIndex = 0;
+        soundCounter = 0;
+        continueBtn.classList.add('hidden');
+        startCatTalk();
+        typeDialogue();
+    });
+
+})();
+</script>
+
 </body>
 
 </html>

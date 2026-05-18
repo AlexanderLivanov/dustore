@@ -162,16 +162,16 @@ body {
 
 .image {
     position: relative;
-    display: inline-block; /* Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ñ€Ð°Ð·Ð¼ÐµÑ€ ÑÐ¾Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²Ð¾Ð²Ð°Ð» ÐºÐ°Ñ€Ñ‚Ð¸Ð½ÐºÐµ */
+    display: inline-block; /* Ã‘â€¡Ã‘â€šÃÂ¾ÃÂ±Ã‘â€¹ Ã‘â‚¬ÃÂ°ÃÂ·ÃÂ¼ÃÂµÃ‘â‚¬ Ã‘ÂÃÂ¾ÃÂ¾Ã‘â€šÃÂ²ÃÂµÃ‘â€šÃ‘ÂÃ‘â€šÃÂ²ÃÂ¾ÃÂ²ÃÂ°ÃÂ» ÃÂºÃÂ°Ã‘â‚¬Ã‘â€šÃÂ¸ÃÂ½ÃÂºÃÂµ */
 }
 
 .image img {
     width: auto;
     height: 70px;
-    transition: transform 0.01s ease-out; /* Ð±Ñ‹ÑÑ‚Ñ€Ð°Ñ Ñ€ÐµÐ°ÐºÑ†Ð¸Ñ */
+    transition: transform 0.01s ease-out; /* ÃÂ±Ã‘â€¹Ã‘ÂÃ‘â€šÃ‘â‚¬ÃÂ°Ã‘Â Ã‘â‚¬ÃÂµÃÂ°ÃÂºÃ‘â€ ÃÂ¸Ã‘Â */
     transform-style: preserve-3d;
     will-change: transform;
-    backface-visibility: hidden; /* Ð´Ð»Ñ Ð¿Ð»Ð°Ð²Ð½Ð¾ÑÑ‚Ð¸ */
+    backface-visibility: hidden; /* ÃÂ´ÃÂ»Ã‘Â ÃÂ¿ÃÂ»ÃÂ°ÃÂ²ÃÂ½ÃÂ¾Ã‘ÂÃ‘â€šÃÂ¸ */
     position: relative;
     z-index: 1;
     margin-top: 35px;
@@ -219,14 +219,14 @@ body {
 
 @media screen and (max-width: 900px) {
 
-    /* Ð¥ÐµÐ´ÐµÑ€ Ñ‡ÑƒÑ‚ÑŒ ÐºÐ¾Ð¼Ð¿Ð°ÐºÑ‚Ð½ÐµÐµ */
+    /* ÃÂ¥ÃÂµÃÂ´ÃÂµÃ‘â‚¬ Ã‘â€¡Ã‘Æ’Ã‘â€šÃ‘Å’ ÃÂºÃÂ¾ÃÂ¼ÃÂ¿ÃÂ°ÃÂºÃ‘â€šÃÂ½ÃÂµÃÂµ */
     .header {
         height: 64px;
         padding-left: 10px;
         padding-right: 10px;
     }
 
-    /* Ð›Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿ */
+    /* Ãâ€ºÃÂ¾ÃÂ³ÃÂ¾Ã‘â€šÃÂ¸ÃÂ¿ */
     .image img {
         width: auto;
         padding: 2px;
@@ -242,7 +242,7 @@ body {
         filter: contrast(200%);
     }
 
-    /* Ð‘ÑƒÑ€Ð³ÐµÑ€ â€” Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÐ¼ */
+    /* Ãâ€˜Ã‘Æ’Ã‘â‚¬ÃÂ³ÃÂµÃ‘â‚¬ Ã¢â‚¬â€ ÃÂ¿ÃÂ¾ÃÂºÃÂ°ÃÂ·Ã‘â€¹ÃÂ²ÃÂ°ÃÂµÃÂ¼ */
     #burger {
         display: flex !important;
         align-items: center;
@@ -258,7 +258,7 @@ body {
         height: 26px;
     }
 
-    /* Ð›ÐµÐ²Ð°Ñ ÑÐµÐºÑ†Ð¸Ñ â€” Ð±ÑƒÑ€Ð³ÐµÑ€ + Ð´Ñ€Ð¾Ð¿Ð´Ð°ÑƒÐ½ */
+    /* Ãâ€ºÃÂµÃÂ²ÃÂ°Ã‘Â Ã‘ÂÃÂµÃÂºÃ‘â€ ÃÂ¸Ã‘Â Ã¢â‚¬â€ ÃÂ±Ã‘Æ’Ã‘â‚¬ÃÂ³ÃÂµÃ‘â‚¬ + ÃÂ´Ã‘â‚¬ÃÂ¾ÃÂ¿ÃÂ´ÃÂ°Ã‘Æ’ÃÂ½ */
     .left-section {
         position: static;
         flex: 0 0 auto;
@@ -266,7 +266,7 @@ body {
         gap: 0;
     }
 
-    /* Ð”Ñ€Ð¾Ð¿Ð´Ð°ÑƒÐ½ Ð½Ð°Ð²Ð¸Ð³Ð°Ñ†Ð¸Ð¸ */
+    /* Ãâ€Ã‘â‚¬ÃÂ¾ÃÂ¿ÃÂ´ÃÂ°Ã‘Æ’ÃÂ½ ÃÂ½ÃÂ°ÃÂ²ÃÂ¸ÃÂ³ÃÂ°Ã‘â€ ÃÂ¸ÃÂ¸ */
     .buttons-left {
         display: none;
         position: fixed;
@@ -420,7 +420,7 @@ body {
     display: none !important;
 }
 
-/* ÐšÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° Ð´Ð»Ñ Ð¿Ð¾Ð·Ð¸Ñ†Ð¸Ð¾Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ñ Ð¿ÑÐµÐ²Ð´Ð¾ÑÐ»ÐµÐ¼ÐµÐ½Ñ‚Ð° */
+/* ÃÅ¡ÃÂ¾ÃÂ½Ã‘â€šÃÂµÃÂ¹ÃÂ½ÃÂµÃ‘â‚¬ ÃÂ»ÃÂ¾ÃÂ³ÃÂ¾Ã‘â€šÃÂ¸ÃÂ¿ÃÂ° ÃÂ´ÃÂ»Ã‘Â ÃÂ¿ÃÂ¾ÃÂ·ÃÂ¸Ã‘â€ ÃÂ¸ÃÂ¾ÃÂ½ÃÂ¸Ã‘â‚¬ÃÂ¾ÃÂ²ÃÂ°ÃÂ½ÃÂ¸Ã‘Â ÃÂ¿Ã‘ÂÃÂµÃÂ²ÃÂ´ÃÂ¾Ã‘ÂÃÂ»ÃÂµÃÂ¼ÃÂµÃÂ½Ã‘â€šÃÂ° */
 .image {
     position: relative;
     display: inline-block;
@@ -437,7 +437,7 @@ body {
     z-index: 1;
 }
 
-/* Ð“Ð¾Ð»Ð¾Ð³Ñ€Ð°Ñ„Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ ÑÑ„Ñ„ÐµÐºÑ‚ Ñ Ð¼Ð°ÑÐºÐ¾Ð¹ Ð¿Ð¾ Ñ„Ð¾Ñ€Ð¼Ðµ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° */
+/* Ãâ€œÃÂ¾ÃÂ»ÃÂ¾ÃÂ³Ã‘â‚¬ÃÂ°Ã‘â€žÃÂ¸Ã‘â€¡ÃÂµÃ‘ÂÃÂºÃÂ¸ÃÂ¹ Ã‘ÂÃ‘â€žÃ‘â€žÃÂµÃÂºÃ‘â€š Ã‘Â ÃÂ¼ÃÂ°Ã‘ÂÃÂºÃÂ¾ÃÂ¹ ÃÂ¿ÃÂ¾ Ã‘â€žÃÂ¾Ã‘â‚¬ÃÂ¼ÃÂµ ÃÂ»ÃÂ¾ÃÂ³ÃÂ¾Ã‘â€šÃÂ¸ÃÂ¿ÃÂ° */
 .image::after {
     content: '';
     position: absolute;
@@ -461,7 +461,7 @@ body {
     z-index: 2;
     mix-blend-mode: overlay;
 
-    /* ÐœÐ°ÑÐºÐ°, Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€ÑÑŽÑ‰Ð°Ñ Ñ„Ð¾Ñ€Ð¼Ñƒ Ð»Ð¾Ð³Ð¾Ñ‚Ð¸Ð¿Ð° */
+    /* ÃÅ“ÃÂ°Ã‘ÂÃÂºÃÂ°, ÃÂ¿ÃÂ¾ÃÂ²Ã‘â€šÃÂ¾Ã‘â‚¬Ã‘ÂÃ‘Å½Ã‘â€°ÃÂ°Ã‘Â Ã‘â€žÃÂ¾Ã‘â‚¬ÃÂ¼Ã‘Æ’ ÃÂ»ÃÂ¾ÃÂ³ÃÂ¾Ã‘â€šÃÂ¸ÃÂ¿ÃÂ° */
     mask-image: url('/swad/static/img/LogoV3 - Appolo_mini.png');
     mask-size: contain;
     mask-repeat: no-repeat;
@@ -476,7 +476,7 @@ body {
     opacity: 1;
 }
 
-/* ÐŸÑ€ÐµÐ»Ð¾Ð°Ð´ÐµÑ€ */
+/* ÃÅ¸Ã‘â‚¬ÃÂµÃÂ»ÃÂ¾ÃÂ°ÃÂ´ÃÂµÃ‘â‚¬ */
 .preloader {
     position: fixed;
     top: 0;
@@ -528,7 +528,7 @@ body {
     50% { transform: scale(1.1); }
 }
 
-/* â”€â”€ Dropdown Â«Ð”Ð»Ñ Ñ€Ð°Ð·Ñ€Ð°Ð±Ð¾Ñ‚Ñ‡Ð¸ÐºÐ¾Ð²Â» â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Dropdown Ã‚Â«Ãâ€ÃÂ»Ã‘Â Ã‘â‚¬ÃÂ°ÃÂ·Ã‘â‚¬ÃÂ°ÃÂ±ÃÂ¾Ã‘â€šÃ‘â€¡ÃÂ¸ÃÂºÃÂ¾ÃÂ²Ã‚Â» Ã¢â€â‚¬Ã¢â€â‚¬ */
 .nav-dropdown {
     position: relative;
     display: inline-block;
@@ -594,7 +594,7 @@ body {
     color: #fff;
 }
 
-/* Ð—Ð°ÐºÑ€Ñ‹Ð²Ð°ÐµÐ¼ dropdown Ð¿Ñ€Ð¸ ÑÑ…Ð»Ð¾Ð¿Ñ‹Ð²Ð°Ð½Ð¸Ð¸ Ð¼Ð¾Ð±Ð¸Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ð¼ÐµÐ½ÑŽ */
+/* Ãâ€”ÃÂ°ÃÂºÃ‘â‚¬Ã‘â€¹ÃÂ²ÃÂ°ÃÂµÃÂ¼ dropdown ÃÂ¿Ã‘â‚¬ÃÂ¸ Ã‘ÂÃ‘â€¦ÃÂ»ÃÂ¾ÃÂ¿Ã‘â€¹ÃÂ²ÃÂ°ÃÂ½ÃÂ¸ÃÂ¸ ÃÂ¼ÃÂ¾ÃÂ±ÃÂ¸ÃÂ»Ã‘Å’ÃÂ½ÃÂ¾ÃÂ³ÃÂ¾ ÃÂ¼ÃÂµÃÂ½Ã‘Å½ */
 @media (max-width: 900px) {
     .nav-dropdown__menu {
         position: static;
@@ -652,4 +652,166 @@ body {
   box-shadow: 0px 1px 1px 0px #ffffff15;
   backdrop-filter: blur(7px);
   background-color: #0f0a203b;
+}
+
+
+
+/* =============================================
+   Только для вызываемого помощника (лапка)
+   ============================================= */
+#dusty-helper-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+#dusty-helper-modal.hidden {
+  display: none;
+}
+
+/* Основной контейнер помощника */
+.dust-layout {
+  display: flex;
+  flex-direction: row;
+  max-width: 840px;
+  width: 95%;
+  background: #1e1e2f;
+  border-radius: 24px;
+  padding: 0;
+  text-align: left;
+  box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  position: relative;
+  height: 500px;
+  max-height: 90vh;
+}
+
+/* Левая часть – котик */
+.dust-layout__cat {
+  width: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #16162b;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+  height: 100%
+}
+
+.dust-layout__cat img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  animation: catFloat 3.5s ease-in-out infinite;
+}
+
+@keyframes catFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+
+/* Правая часть – диалог и кнопки */
+.dust-layout__right {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  box-sizing: border-box;
+}
+
+.dust-layout__dialogue {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 6px;
+  display: flex;
+  align-items: flex-start;
+  max-height: 66%;
+}
+
+/* Текст диалога (в помощнике) */
+#dusty-text {
+  font-family: 'PixelizerBold', 'Press Start 2P', monospace;
+  font-size: 18px;
+  line-height: 1.5;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  word-break: break-word;
+}
+
+/* Нижняя панель с кнопками */
+.dust-layout__actions {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 12px;
+  padding-top: 12px;
+  box-sizing: border-box;
+  min-height: 30%;
+}
+
+/* Кнопка «Продолжить» */
+.dust-close {
+  background: #c32178;
+  color: white;
+  border: none;
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-family: 'PixelizerBold', 'Press Start 2P', monospace;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.dust-close:hover {
+  background: #ff5ba8;
+}
+.dust-close.hidden {
+  display: none;
+}
+
+/* Крестик закрытия (только в помощнике) */
+.dust-helper-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 30px;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 5;
+}
+.dust-helper-close:hover {
+  color: #ff5ba8;
+}
+
+/* Адаптивность помощника */
+@media (max-width: 520px) {
+  .dust-layout {
+    flex-direction: column;
+    height: auto;
+    max-height: 95vh;
+  }
+  .dust-layout__cat {
+    width: 100%;
+    max-height: 180px;
+  }
+  .dust-layout__right {
+    width: 100%;
+    height: auto;
+  }
+  .dust-layout__dialogue {
+    max-height: 40vh;
+  }
 }
