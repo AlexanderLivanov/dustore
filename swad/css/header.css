@@ -815,3 +815,6 @@ body {
     max-height: 40vh;
   }
 }
+#dusty-helper-modal .dust-layout__dialogue {
+  overflow-y: auto;
+}

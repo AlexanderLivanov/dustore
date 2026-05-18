@@ -821,7 +821,7 @@ $stmt->execute([
 
 <!-- Модалка помощника Дасти -->
 <div id="dusty-helper-modal" class="dust-modal hidden">
-  <div class="dust-modal-content dust-layout">
+  <div class="dust-layout">
     <button class="dust-helper-close">&times;</button>
 
     <!-- Левая часть: котик -->
@@ -921,7 +921,7 @@ $stmt->execute([
                 typeSound.play().catch(() => {});
             }
             charIndex++;
-            setTimeout(typeDialogue, 20);
+            setTimeout(typeDialogue, 10);
         } else {
             stopCatTalk();
             // Если нужно подмигивание — запускаем, затем показываем кнопку
