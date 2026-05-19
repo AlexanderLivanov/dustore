@@ -6,11 +6,6 @@
         }
 } */
 
-.main-container {
-    background: linear-gradient(#0f0a20);
-    height: calc(100vh - 70px - 10px);
-    overflow: hidden;
-}
 
 .search-field-container {
     text-align: center;

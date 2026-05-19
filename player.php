@@ -247,7 +247,7 @@ function format_last_seen(int $ts): string
                     $incomingRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     ?>
                     <?php if (!empty($incomingRequests)): ?>
-                    <div class="profile-card" style="border:1px solid #c32178;margin-top:24px;">
+                        <button class="button" onclick="location.href='/search'">Поиск</button>
                         <h3>Входящие заявки в друзья</h3>
                         <?php foreach ($incomingRequests as $req): ?>
                         <div style="display:flex;align-items:center;gap:12px;margin:10px 0;background:rgba(255,255,255,.05);padding:10px;border-radius:10px;">
@@ -598,9 +598,10 @@ function format_last_seen(int $ts): string
             <!-- ── Вкладка "Друзья" ── -->
             <div id="tab-collection" class="tab-content">
                 <div class="profile-card">
-                    <h2 class="section-title">Друзья (<?= count($friends) ?>)</h2>
+                    <h2 class="section-title">Друзья</h2>
                     <?php if (empty($friends)): ?>
                     <div class="empty-state"><p>У пользователя пока нет друзей</p></div>
+                    <button class="empty-state-button" onclick="location.href='/search'">Поиск</button>
                     <?php else: ?>
                     <div style="display:flex;flex-direction:column;gap:10px;">
                         <?php foreach ($friends as $friend): ?>
