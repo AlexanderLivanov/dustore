@@ -175,6 +175,7 @@ body {
     position: relative;
     z-index: 1;
     margin-top: 35px;
+    cursor: pointer;
 }
 
 .image::after {

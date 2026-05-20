@@ -198,7 +198,7 @@ $stmt->execute([
             </div>
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
-                <button class="button" onclick="location.href='/L4T'">L4T</button>
+                <button class="button" onclick="location.href='/l4t'">L4T</button>
                 <!-- <button class="button" onclick="location.href='/about'">О нас</button> -->
 
                 <!-- Dropdown «Для разработчиков» -->
@@ -704,7 +704,6 @@ $stmt->execute([
             ],
             idle: [
                 "/swad/static/img/dastyframe_idle.png",
-                "/swad/static/img/dastyframe_idle1.png",
                 "/swad/static/img/dastyframe_idle2.png"
             ]
         },

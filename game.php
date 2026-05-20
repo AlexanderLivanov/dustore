@@ -217,9 +217,8 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .gp-btn-secondary:hover{background:var(--surface);color:#fff;}
         .gp-meta-row{font-size:.8rem;color:var(--muted);line-height:1.8;}
         .gp-dev-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;
-            padding:16px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;
+            padding:16px 20px;display:grid;align-items:center;gap:14px;justify-items: center;
             transition:border-color .2s;text-decoration:none;}
-        .gp-dev-card:hover{border-color:rgba(195,33,120,.4);}
         .gp-dev-icon{font-size:1.8rem;flex-shrink:0;}
         .gp-dev-name{font-weight:700;font-size:.95rem;color:#fff;}
         .gp-dev-since{font-size:.78rem;color:var(--muted);margin-top:2px;}
@@ -496,18 +495,19 @@ $isPaid = ($game['price'] ?? 0) > 0;
                     <!-- Developer card -->
                     <a class="gp-dev-card" href="/d/<?= htmlspecialchars($game['studio_slug']) ?>">
                         <div class="gp-dev-icon">🏢</div>
+
                         <div>
                             <div class="gp-dev-name"><?= htmlspecialchars($game['studio_name']) ?></div>
                             <div class="gp-dev-since">Основана в <?= date('Y', strtotime($game['studio_founded'])) ?></div>
                         </div>
+                            <button class="gp-btn gp-btn-secondary" onclick="location.href='/d/<?= htmlspecialchars($game['studio_slug']) ?>'">Все игры разработчика</button>
+
+                            <!-- Оферта — только для платных игр -->
+                            <?php if ($isPaid): ?>
+                            <button class="gp-btn gp-btn-secondary" onclick="offerModal.classList.add('is-open')">Оферта разработчика</button>
+                            <?php endif; ?>
                     </a>
 
-                    <button class="gp-btn gp-btn-secondary" onclick="location.href='/d/<?= htmlspecialchars($game['studio_slug']) ?>'">Все игры разработчика</button>
-
-                    <!-- Оферта — только для платных игр -->
-                    <?php if ($isPaid): ?>
-                    <button class="gp-btn gp-btn-secondary" onclick="offerModal.classList.add('is-open')">Оферта разработчика</button>
-                    <?php endif; ?>
 
                     <!-- Game info -->
                     <div class="gp-info-card">
@@ -537,6 +537,20 @@ $isPaid = ($game['price'] ?? 0) > 0;
 
             <!-- ══ MAIN CONTENT ══ -->
             <div class="gp-main">
+
+                <?php if (!empty($screenshots)): ?>
+                <div class="gp-section">
+                    <h2 class="gp-section-title">Скриншоты</h2>
+                    <div class="gp-screenshots" id="screenshots-grid">
+                        <?php foreach ($screenshots as $idx => $s): ?>
+                            <div class="gp-screenshot"
+                                style="background-image:url('<?= htmlspecialchars($s['path']) ?>')"
+                                data-fullsize="<?= htmlspecialchars($s['path']) ?>"
+                                data-index="<?= $idx ?>"></div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <div class="gp-section">
                     <div class="gp-description"><?= nl2br(htmlspecialchars($game['description'])) ?></div>
@@ -568,19 +582,6 @@ $isPaid = ($game['price'] ?? 0) > 0;
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($screenshots)): ?>
-                <div class="gp-section">
-                    <h2 class="gp-section-title">Скриншоты</h2>
-                    <div class="gp-screenshots" id="screenshots-grid">
-                        <?php foreach ($screenshots as $idx => $s): ?>
-                            <div class="gp-screenshot"
-                                style="background-image:url('<?= htmlspecialchars($s['path']) ?>')"
-                                data-fullsize="<?= htmlspecialchars($s['path']) ?>"
-                                data-index="<?= $idx ?>"></div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
 
                 <?php if (!empty($requirements)): ?>
                 <div class="gp-section">
