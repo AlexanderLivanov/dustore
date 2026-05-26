@@ -60,7 +60,7 @@ select {
 }
 
 .main-container {
-    background: linear-gradient(#2e0f32, #c32178);
+    background: linear-gradient(#0f0a20, #2e0f32, #c32178);
     height: calc(100vh - 70px - 10px); /* хедер + небольшой отступ */
     overflow: hidden;
     width: 100vw;

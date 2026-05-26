@@ -85,6 +85,10 @@ if ($selectedGenre) {
                             Новые
                         </button>
                     </div>
+                    <div class="price-switch" id="priceSwitch">
+                        <button class="price-btn active" data-price-type="free">Бесплатные</button>
+                        <button class="price-btn" data-price-type="paid">Платные</button>
+                    </div>
                     <div class="search-bar">
                         <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
                         <input type="text" id="searchInput" placeholder="Введите название игры или тикер разработчика...">
@@ -105,6 +109,12 @@ if ($selectedGenre) {
                                 <polyline points="6 9 12 15 18 9"/>
                             </svg>
                         </button>
+                        <div class="price-filters" id="priceFilters">
+                            <div class="price-slider-container" id="priceSliderContainer" style="display: flex; flex-flow: wrap; place-content: space-around center; align-items: center; ">
+                                <input type="range" id="priceSlider" min="100" max="5000" value="5000" step="100">
+                                <span id="priceSliderValue">до 5000 ₽</span>
+                            </div>
+                        </div>
                         <div class="controls-left" id="filterPanel">
                             <a href="#" class="btn-filter <?= !$selectedGenre && !$adultSection ? 'active' : '' ?>" data-genre="">Все игры</a>
                             <a href="#" class="btn-filter <?= $adultSection ? 'active' : '' ?>" data-adult-toggle>18+</a>
@@ -170,6 +180,19 @@ if ($selectedGenre) {
 
     <script>
     (function() {
+    const GENRE_MAP = {
+        'strategy':      'Стратегия',
+        'rpg':           'РПГ',
+        'action':        'Экшен',
+        'adventure':     'Приключения',
+        'puzzle':        'Головоломка',
+        'racing':        'Гонки',
+        'simulation':    'Симулятор',
+        'horror':        'Хоррор',
+        'indie':         'Инди',
+        'platformer':    'Платформер',
+        'visual novel':  'Визуальная новелла',
+    };
         const API_URL = '/swad/controllers/explore_games.php';
         const grid = document.getElementById('gamesGrid');
         const filterPanel = document.getElementById('filterPanel');
@@ -182,8 +205,17 @@ if ($selectedGenre) {
             adult: <?= $adultSection ? 1 : 0 ?>,
             genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
             sort: 'popularity',
-            dir: 'desc'
+            dir: 'desc',
+            priceType: 'free',   // 'free', 'paid'
+            priceMax: 5000
         };
+
+        // Восстановление из localStorage
+        try {
+            const saved = JSON.parse(localStorage.getItem('explore_filter') || '{}');
+            if (saved.priceType) state.priceType = saved.priceType;
+            if (saved.priceMax) state.priceMax = saved.priceMax;
+        } catch(e) {}
 
         try {
             const saved = JSON.parse(localStorage.getItem('explore_sort') || '{}');
@@ -197,6 +229,10 @@ if ($selectedGenre) {
             if (state.genre) params.set('genre', state.genre);
             params.set('sort', state.sort);
             params.set('dir', state.dir);
+            params.set('price_type', state.priceType);
+            if (state.priceType === 'paid') {
+                params.set('price_max', state.priceMax);
+            }
 
             const res = await fetch(`${API_URL}?${params.toString()}`);
             if (!res.ok) throw new Error('Network response was not ok');
@@ -241,18 +277,13 @@ if ($selectedGenre) {
             }).join('');
 
             const cards = grid.querySelectorAll('.game-card.hidden-card');
-
             cards.forEach((card, index) => {
-
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
                 card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-
-
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
-
                     card.addEventListener('transitionend', function handler() {
                         card.style.transition = '';
                         card.style.opacity = '';
@@ -264,18 +295,24 @@ if ($selectedGenre) {
             });
         }
 
-
         function renderFilters(genres) {
+            const normalized = [];
+            genres.forEach(g => {
+                const lower = g.trim().toLowerCase();
+                const ru = GENRE_MAP[lower] || g.trim();
+                if (!normalized.includes(ru)) normalized.push(ru);
+            });
+            normalized.sort((a, b) => a.localeCompare(b, 'ru'));
+
             let html = `
                 <a href="#" class="btn-filter ${!state.genre && !state.adult ? 'active' : ''}" data-genre="">Все игры</a>
                 <a href="#" class="btn-filter ${state.adult ? 'active' : ''}" data-adult-toggle>18+</a>
             `;
-            genres.forEach(genre => {
+            normalized.forEach(genre => {
                 html += `<a href="#" class="btn-filter ${state.genre === genre ? 'active' : ''}" data-genre="${genre}">${genre}</a>`;
             });
             filterPanel.innerHTML = html;
 
-            // Обновляем заголовок мобильной кнопки
             const label = filterToggle.querySelector('.filter-label');
             if (label) label.textContent = state.genre || 'Все игры';
             const badge = filterToggle.querySelector('.active-badge');
@@ -288,17 +325,18 @@ if ($selectedGenre) {
                 renderGames(data.games);
                 renderFilters(data.genres);
 
-                // Показ/скрытие предупреждения 18+
                 if (state.adult) {
                     adultWarning.style.display = 'block';
                 } else {
                     adultWarning.style.display = 'none';
                 }
 
-                // Сохраняем сортировку
                 localStorage.setItem('explore_sort', JSON.stringify({ sort: state.sort, dir: state.dir }));
+                localStorage.setItem('explore_filter', JSON.stringify({
+                    priceType: state.priceType,
+                    priceMax: state.priceMax
+                }));
 
-                // Применяем текущий поисковый запрос, если есть
                 if (searchInput && searchInput.value.trim()) {
                     applySearch();
                 }
@@ -308,7 +346,6 @@ if ($selectedGenre) {
             }
         }
 
-        // Обновление URL без перезагрузки
         function updateURL() {
             const url = new URL(window.location);
             url.searchParams.set('adult', state.adult);
@@ -317,22 +354,16 @@ if ($selectedGenre) {
             } else {
                 url.searchParams.delete('genre');
             }
-            // sort и dir не обязательно добавлять в URL, но для полноты можно
-            // url.searchParams.set('sort', state.sort);
-            // url.searchParams.set('dir', state.dir);
             window.history.pushState({}, '', url);
         }
 
-        // Обработчик кликов по фильтрам (делегирование)
         filterPanel.addEventListener('click', async (e) => {
             e.preventDefault();
             const target = e.target.closest('.btn-filter');
             if (!target) return;
 
             if (target.hasAttribute('data-adult-toggle')) {
-                // Переключение 18+
                 if (!state.adult && !sessionStorage.getItem('adultConfirmed')) {
-                    // Показать модалку
                     adultModal.style.display = 'flex';
                     return;
                 }
@@ -346,12 +377,10 @@ if ($selectedGenre) {
             updateURL();
             await updateUI();
 
-            // Закрываем мобильную панель фильтров
             filterPanel.classList.remove('open');
             filterToggle.classList.remove('open');
         });
 
-        // Adult модалка
         document.getElementById('adultConfirmBtn').addEventListener('click', async () => {
             sessionStorage.setItem('adultConfirmed', 'true');
             adultModal.style.display = 'none';
@@ -359,11 +388,9 @@ if ($selectedGenre) {
             state.genre = null;
             updateURL();
             await updateUI();
-            // Убираем блюр с картинок (хотя они только что перерисованы, но на всякий случай)
             document.querySelectorAll('.blur-adult').forEach(el => el.classList.remove('blur-adult'));
         });
 
-        // Сортировка
         const sortButtons = document.querySelectorAll('#sortButtons .sort-btn');
         sortButtons.forEach(btn => {
             btn.addEventListener('click', async function() {
@@ -395,10 +422,8 @@ if ($selectedGenre) {
             });
         }
 
-        // Инициализация стрелок
         updateSortButtonsUI();
 
-        // Поиск
         function applySearch() {
             const term = searchInput.value.toLowerCase().trim();
             document.querySelectorAll('#gamesGrid .game-card').forEach(card => {
@@ -409,7 +434,6 @@ if ($selectedGenre) {
 
         searchInput.addEventListener('input', applySearch);
 
-        // Обработка истории браузера (назад/вперёд)
         window.addEventListener('popstate', async () => {
             const params = new URLSearchParams(window.location.search);
             state.adult = params.get('adult') == 1 ? 1 : 0;
@@ -418,7 +442,6 @@ if ($selectedGenre) {
             updateSortButtonsUI();
         });
 
-        // Мобильный тоггл фильтров
         filterToggle.addEventListener('click', function(e) {
             e.stopPropagation();
             const isOpen = filterPanel.classList.toggle('open');
@@ -432,16 +455,12 @@ if ($selectedGenre) {
             }
         });
 
-        // При загрузке страницы заменяем серверный рендер на актуальный (чтобы синхронизировать с состоянием JS)
-        // Но начальный рендер уже есть, просто обновим его в фоне, чтобы состояние localStorage и URL совпадали.
-        // Можно также сразу инициализировать сортировку по выбранной.
         (async function() {
-            // Небольшая задержка, чтобы начальный рендер не моргал
             await updateUI();
             updateSortButtonsUI();
         })();
 
-        // Эффекты наклона для динамических карточек (делегирование)
+        // Эффекты наклона
         (function() {
             const grid = document.getElementById('gamesGrid');
             if (!grid) return;
@@ -486,8 +505,46 @@ if ($selectedGenre) {
                 }
             });
         })();
+
+        // --- Ценовые фильтры ---
+        const priceButtons = document.querySelectorAll('#priceSwitch .price-btn');
+        const priceSliderContainer = document.getElementById('priceSliderContainer');
+        const priceSlider = document.getElementById('priceSlider');
+        const priceSliderValue = document.getElementById('priceSliderValue');
+
+        function updatePriceUI() {
+            priceButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.priceType === state.priceType);
+            });
+            priceSliderContainer.style.display = state.priceType === 'paid' ? 'flex' : 'none';
+            if (state.priceType === 'paid') {
+                priceSlider.value = state.priceMax;
+                priceSliderValue.textContent = `до ${state.priceMax} ₽`;
+            }
+        }
+
+        priceButtons.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                state.priceType = btn.dataset.priceType;
+                if (state.priceType !== 'paid') state.priceMax = 5000;
+                updatePriceUI();
+                updateURL();
+                await updateUI();
+            });
+        });
+
+        priceSlider.addEventListener('input', async () => {
+            state.priceMax = parseInt(priceSlider.value, 10);
+            priceSliderValue.textContent = `до ${state.priceMax} ₽`;
+            clearTimeout(window.priceSliderTimer);
+            window.priceSliderTimer = setTimeout(async () => {
+                updateURL();
+                await updateUI();
+            }, 400);
+        });
+
+        updatePriceUI();
     })();
     </script>
 </body>
 </html>
-

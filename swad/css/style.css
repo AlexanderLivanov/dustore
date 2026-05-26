@@ -6,10 +6,17 @@
         }
 } */
 
-.main-container {
-    background: linear-gradient(#0f0a20);
-    height: calc(100vh - 70px - 10px);
-    overflow: hidden;
+body {
+    user-select: none;
+}
+
+::selection {
+    background: #c32178;
+    color: #fff;
+}
+::-moz-selection {
+    background: #c32178;
+    color: #fff;
 }
 
 .search-field-container {

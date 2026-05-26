@@ -151,7 +151,6 @@ body {
     margin-bottom: 20px;
     padding-bottom: 10px;
     text-align: center;
-    background: #291f2b;
     position: relative;
     width: 100%;
     margin-left: 0px;
@@ -473,7 +472,7 @@ body {
 
 .empty-state {
     text-align: center;
-    padding: 40px;
+    padding: 20% 40px 24% 40px;
     color: #888;
 }
 
@@ -2102,4 +2101,18 @@ h2 {
     padding: 2px 7px;
     border-radius: 8px;
     border: 1px solid rgba(195, 33, 120, 0.4);
+}
+
+.empty-state-button {
+    padding: 10px 25px 10px 25px;
+    background-color: #ffffff1a;
+    color: #ffffffa1;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    box-shadow: 1px 1px 1px 1px #00000060;
+    font-family: "Bahnschrift Light";
+    font-size: 13pt;
+    transition: all .2s;
+    width: 100%;
 }

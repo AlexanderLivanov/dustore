@@ -12,6 +12,9 @@ $adult  = isset($_GET['adult']) ? (int)$_GET['adult'] : 0;
 $sort   = $_GET['sort']   ?? 'popularity';
 $dir    = $_GET['dir']    ?? 'desc';
 
+$priceType = $_GET['price_type'] ?? 'all';
+$priceMax = isset($_GET['price_max']) ? (int)$_GET['price_max'] : 5000;
+
 // Фильтрация
 $games = array_filter($allGames, function ($game) {
     return isset($game['status']) && strtolower($game['status']) === 'published';
@@ -27,7 +30,7 @@ if ($adult) {
     });
 }
 
-// Сбор жанров
+// Сбор жанров (до применения ценового и жанрового фильтра)
 $allGenres = [];
 foreach ($games as $game) {
     if (!empty($game['genre'])) {
@@ -46,6 +49,18 @@ if ($genre) {
         if (empty($game['genre'])) return false;
         $genres = array_map('trim', explode(',', $game['genre']));
         return in_array(strtolower($genre), array_map('strtolower', $genres));
+    });
+}
+
+// Фильтр по цене
+if ($priceType === 'free') {
+    $games = array_filter($games, function ($game) {
+        return (float)($game['price'] ?? 0) == 0;
+    });
+} elseif ($priceType === 'paid') {
+    $games = array_filter($games, function ($game) use ($priceMax) {
+        $price = (float)($game['price'] ?? 0);
+        return $price > 0 && $price <= $priceMax;
     });
 }
 

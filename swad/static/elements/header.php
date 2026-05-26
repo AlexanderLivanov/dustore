@@ -198,7 +198,7 @@ $stmt->execute([
             </div>
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
-                <button class="button" onclick="location.href='/search'">Поиск</button>
+                <button class="button" onclick="location.href='/l4t'">L4T</button>
                 <!-- <button class="button" onclick="location.href='/about'">О нас</button> -->
 
                 <!-- Dropdown «Для разработчиков» -->
@@ -681,141 +681,389 @@ $stmt->execute([
     const openBtn = document.getElementById('modeBtn');
     const cat = document.getElementById('dusty-cat');
     const textElement = document.getElementById('dusty-text');
+    const actionsPanel = document.querySelector('.dust-layout__actions');
 
-    // Звук печати (тот же, что в приветствии)
+    // Звук печати
     const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
     typeSound.volume = 0.3;
-    const SOUND_EVERY_N_CHARS = 5; // понижаем частоту
+    const SOUND_EVERY_N_CHARS = 3;
 
-    // Кадры анимации
-    const catFrames = [
-        "/swad/static/img/dastyframe1.png",
-        "/swad/static/img/dastyframe2.png",
-        "/swad/static/img/dastyframe3.png"
-    ];
+    // ---------- Скорости анимации ----------
+    const TALK_SPEED = 150;        // скорость смены кадров при разговоре (мс)
+    const BLINK_SPEED = 100;       // скорость переключения кадров моргания (мс)
+    const BLINK_PAUSE_MIN = 1000;  // минимальная пауза между морганиями (мс)
+    const BLINK_PAUSE_MAX = 3000;  // максимальная пауза между морганиями (мс)
 
-    // Диалоги (пока демо, потом заменишь на нужные)
-    const dialogues = [
-        "Привет! Я Дасти, твой помощник на Dustore.",
-        "Хочешь найти игру? Или узнать, как стать разработчиком?",
-        "Просто спроси — я расскажу!"
-    ];
+    // ---------- Кадры анимации по эмоциям ----------
+    const catEmotions = {
+        normal: {
+            talk: [
+                "/swad/static/img/dastyframe1.png",
+                "/swad/static/img/dastyframe2.png",
+                "/swad/static/img/dastyframe3.png"
+            ],
+            idle: [
+                "/swad/static/img/dastyframe_idle.png",
+                "/swad/static/img/dastyframe_idle2.png"
+            ]
+        },
+        happy: {
+            talk: [
+                "/swad/static/img/dastyframe_happy1.png",
+                "/swad/static/img/dastyframe_happy2.png",
+                "/swad/static/img/dastyframe_happy3.png"
+            ],
+            idle: [
+                "/swad/static/img/dastyframe_happy_idle.png",
+                "/swad/static/img/dastyframe_happy_idle2.png"
+            ]
+        },
+        think: {
+            talk: [
+                "/swad/static/img/dastyframe_think1.png",
+                "/swad/static/img/dastyframe_think2.png",
+                "/swad/static/img/dastyframe_think3.png"
+            ],
+            idle: [
+                "/swad/static/img/dastyframe_think_idle.png",
+                "/swad/static/img/dastyframe_think_idle2.png",
+                "/swad/static/img/dastyframe_think_idle3.png"
+            ]
+        },
+        sleepy: {
+            talk: [
+                "/swad/static/img/dastyframe_sleepy1.png",
+                "/swad/static/img/dastyframe_sleepy2.png",
+                "/swad/static/img/dastyframe_sleepy3.png"
+            ],
+            idle: [
+                "/swad/static/img/dastyframe_sleepy_idle.png",
+                "/swad/static/img/dastyframe_sleepy_idle2.png"
+            ]
+        }
+    };
 
-    // После каких реплик кот подмигнёт (индексы)
-    const winkAfter = [0, 2];
+    // ---------- База знаний Дасти (greetings и topics) ----------
+    const pagesTopics = {
+        '/': {
+            greetings: [
+                "Ты на главной Dustore! Что хочешь узнать?",
+                "О, привет! Давно не виделись. Куда направимся?",
+                "Главная — сердце платформы. Выбирай, что интересно!"
+            ],
+            topics: [
+                { label: "Что такое Dustore?", answer: "Dustore — это открытая платформа для инди-разработчиков и игроков. Тут можно публиковать игры, искать команду, участвовать в джемах и многое другое.", emotion: 'sleepy' },
+                { label: "Куда пойти с главной?", answer: "С главной можно сразу перейти в каталог игр (кнопка «Игры») или зарегистрироваться, нажав «Войти в аккаунт» в правом верхнем углу." },
+                { label: "Как стать разработчиком?", answer: "Нажми «Для разработчиков» в шапке, а затем «Войти в консоль». Если у тебя ещё нет аккаунта, система предложит создать его." }
+            ]
+        },
+        '/explore': {
+            greetings: [
+                "Ты в каталоге игр! Чем помочь?",
+                "Ищешь что-то конкретное? Я подскажу.",
+                "Ого, сколько игр! Давай найдём ту самую."
+            ],
+            topics: [
+                { label: "Как найти игру?", answer: "В каталоге можно искать по названию, фильтровать по жанрам или просто листать. Если не нашёл нужное, воспользуйся поиском (кнопка «Поиск»)." },
+                { label: "Как скачать игру?", answer: "Зайди на страницу игры и нажми кнопку «Скачать». Если игра платная, сначала оплати через FinV2 — это наша платёжная система." },
+                { label: "Есть ли возрастные ограничения?", answer: "Да, мы предупреждаем о контенте 18+. На странице игры будет пометка, если это необходимо.", emotion: 'think' }
+            ]
+        },
+        '/search': {
+            greetings: [
+                "Ты в поиске! Что ищешь?",
+                "Поиск — сила! Введи запрос, и я помогу.",
+                "Что будем искать? Игру, разработчика, жанр?"
+            ],
+            topics: [
+                { label: "Как искать по жанрам?", answer: "Введи ключевое слово или выбери жанр из подсказок. Можно искать и по названию игры, и по разработчику." },
+                { label: "Что делать, если ничего не нашлось?", answer: "Попробуй другое написание или более общий запрос. Если совсем ничего нет — возможно, такая игра ещё не добавлена.", emotion: 'think' }
+            ]
+        },
+        '/devs': {
+            greetings: [
+                "Ты в консоли разработчика! Нужна помощь?",
+                "Привет, творец! Что сегодня создаём?",
+                "Консоль — твой штаб. Спрашивай, не стесняйся."
+            ],
+            topics: [
+                { label: "Как загрузить игру?", answer: "В консоли нажми «Добавить проект», заполни описание, загрузи файлы и отправь на модерацию. После проверки игра появится в каталоге." },
+                { label: "Как подключить монетизацию?", answer: "В разделе «Финансы» ты можешь настроить цену игры и подключить FinV2. Комиссия платформы — 0%!", emotion: 'think' },
+                { label: "Где взять команду?", answer: "Загляни в сервис L4T (Looking for a Team) — там можно найти художников, программистов и других специалистов." }
+            ]
+        },
+        '_default': {
+            greetings: [
+                "Я Дасти! Чем могу помочь?",
+                "Привет-привет! Что будем делать?",
+                "Дасти на связи. Задавай вопрос!"
+            ],
+            topics: [
+                { label: "Что такое Dustore?", answer: "Dustore — это платформа для инди-разработчиков и игроков. Здесь ты можешь находить новые игры или публиковать свои." },
+                { label: "Как зарегистрироваться?", answer: "Нажми «Войти в аккаунт» в правом верхнем углу. Регистрация бесплатная." },
+                { label: "Где я сейчас?", answer: "Я вижу текущую страницу, но у меня пока нет для неё специальных подсказок. Попробуй спросить что-то общее!", emotion: 'think' }
+            ]
+        }
+    };
 
+    const timeGreetings = {
+        morning: [
+            "Доброе утро! Как настроение?",
+            "Утречка! Кофе уже выпил?",
+            "Солнышко встало — пора за игры!"
+        ],
+        day: [
+            "Добрый день! Самое время для новых открытий.",
+            "День в разгаре! Чем займёмся?",
+            "Привет! Не пора ли немного поиграть?"
+        ],
+        evening: [
+            "Добрый вечер! Как прошёл день?",
+            "Вечер — лучшее время для инди-игр.",
+            "Привет! Готов к вечерним приключениям?"
+        ],
+        night: [
+            "Полуночничаешь? Я с тобой.",
+            "Ночью тоже работаем! Что нужно?",
+            "Тихая ночь — отличное время для вопросов."
+        ]
+    };
+
+    const currentPath = window.location.pathname;
+    const pageData = pagesTopics[currentPath] || pagesTopics['_default'];
+
+    // ---------- Переменные анимации ----------
     let frameIndex = 0;
     let animationInterval = null;
-    let dialogueIndex = 0;
+    let idleTimeout = null;
+    let blinkInterval = null;   // интервал для кадров моргания
     let charIndex = 0;
     let soundCounter = 0;
+    let typingTimer = null;   // хранит setTimeout печати
+    let isModalOpen = false;  // флаг, что модалка открыта
+    let currentEmotion = 'normal';
+    let currentFrames = catEmotions.normal.idle;
 
-    // Анимация «говорения» кота
-    function startCatTalk() {
-        if (animationInterval) return;
-        frameIndex = 0;
-        cat.src = catFrames[0];
-        animationInterval = setInterval(() => {
-            frameIndex = (frameIndex + 1) % catFrames.length;
-            cat.src = catFrames[frameIndex];
-        }, 150);
-    }
-
-    function stopCatTalk() {
+    // ---------- Управление анимацией ----------
+    function stopAnimation() {
+        clearTimeout(typingTimer);
+        typingTimer = null;
         if (animationInterval) {
             clearInterval(animationInterval);
             animationInterval = null;
         }
-        cat.src = "/swad/static/img/dastyframe1.png"; // обычный кадр
+        if (idleTimeout) {
+            clearTimeout(idleTimeout);
+            idleTimeout = null;
+        }
+        if (blinkInterval) {              // <-- добавь это
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+        }
+    }
+
+    // Анимация говорения (равномерная смена кадров)
+    function startTalkAnimation(frames) {
+        stopAnimation();
+        if (!frames || frames.length === 0) return;
+        currentFrames = frames;
+        frameIndex = 0;
+        cat.src = frames[0];
+        animationInterval = setInterval(() => {
+            frameIndex = (frameIndex + 1) % frames.length;
+            cat.src = frames[frameIndex];
+        }, TALK_SPEED);
+    }
+
+    // Анимация моргания с паузами
+    function startIdleAnimation(frames) {
+        stopAnimation();
+        if (!frames || frames.length < 2) {
+            cat.src = frames?.[0] || catEmotions.normal.idle[0];
+            return;
+        }
+        currentFrames = frames;
+
+        function blinkCycle() {
+            // Показываем открытые глаза (первый кадр)
+            cat.src = frames[0];
+            const pause = BLINK_PAUSE_MIN + Math.random() * (BLINK_PAUSE_MAX - BLINK_PAUSE_MIN);
+            idleTimeout = setTimeout(() => {
+                let step = 1;
+                cat.src = frames[step];
+                blinkInterval = setInterval(() => {
+                    step++;
+                    if (step >= frames.length) {
+                        clearInterval(blinkInterval);
+                        blinkInterval = null;    // не обязательно, но для чистоты
+                        cat.src = frames[0];
+                        blinkCycle();
+                    } else {
+                        cat.src = frames[step];
+                    }
+                }, BLINK_SPEED);
+            }, pause);
+        }
+
+        blinkCycle();
+    }
+
+    // ---------- Запуск эмоций ----------
+    function startCatTalk(emotion = 'normal') {
+        currentEmotion = emotion;
+        const frames = catEmotions[emotion]?.talk || catEmotions.normal.talk;
+        startTalkAnimation(frames);
+    }
+
+    function startCatIdle(emotion = 'normal') {
+        currentEmotion = emotion;
+        const frames = catEmotions[emotion]?.idle || catEmotions.normal.idle;
+        startIdleAnimation(frames);
     }
 
     // Подмигивание
     function winkAnimation(callback) {
+        stopAnimation();
         cat.src = "/swad/static/img/dastyframe_half.png";
         setTimeout(() => {
             cat.src = "/swad/static/img/dastyframe_full.png";
             setTimeout(() => {
-                cat.src = "/swad/static/img/dastyframe1.png";
+                startCatIdle(currentEmotion);
                 if (callback) callback();
             }, 900);
         }, 700);
     }
 
-    // Побуквенная печать
-    function typeDialogue() {
-        const currentText = dialogues[dialogueIndex];
-        if (charIndex < currentText.length) {
-            textElement.textContent += currentText.charAt(charIndex);
-            soundCounter++;
-            if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
-                typeSound.currentTime = 0;
-                typeSound.play().catch(() => {});
-            }
-            charIndex++;
-            setTimeout(typeDialogue, 10);
-        } else {
-            stopCatTalk();
-            // Если нужно подмигивание — запускаем, затем показываем кнопку
-            if (winkAfter.includes(dialogueIndex)) {
-                winkAnimation(() => {
-                    continueBtn.classList.remove('hidden');
-                });
+    // ---------- Побуквенная печать (с эмоцией) ----------
+    function typeText(text, emotion = 'normal', onComplete) {
+        clearTimeout(typingTimer);
+        textElement.textContent = '';
+        charIndex = 0;
+        soundCounter = 0;
+        startCatTalk(emotion);
+
+        function type() {
+            if (charIndex < text.length) {
+                textElement.textContent += text.charAt(charIndex);
+                soundCounter++;
+                if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
+                    typeSound.currentTime = 0;
+                    typeSound.play().catch(() => {});
+                }
+                charIndex++;
+                typingTimer = setTimeout(type, 25);
             } else {
-                continueBtn.classList.remove('hidden');
+                startCatIdle(emotion);
+                if (onComplete) onComplete();
             }
+        }
+        type();
+    }
+
+    // ---------- Панель действий ----------
+    function clearActions() {
+        actionsPanel.innerHTML = '';
+    }
+
+    function getRandomGreeting() {
+        const greetings = Array.isArray(pageData.greetings)
+                          ? pageData.greetings
+                          : [pageData.greeting || "Привет!"];
+        return greetings[Math.floor(Math.random() * greetings.length)];
+    }
+
+    function showTopicsMenu() {
+        clearActions();
+        pageData.topics.forEach(topic => {
+            const btn = document.createElement('button');
+            btn.className = 'dust-close';
+            btn.textContent = topic.label;
+            btn.addEventListener('click', () => {
+                clearActions();
+                const isNight = (new Date().getHours() >= 0 && new Date().getHours() < 6);
+                const emotion = topic.emotion || (isNight ? 'sleepy' : 'normal');
+                typeText(topic.answer, emotion, () => {
+                    if (topic.wink) {
+                        winkAnimation(() => {
+                            showBackButton();
+                        });
+                    } else {
+                        showBackButton();
+                    }
+                });
+            });
+            actionsPanel.appendChild(btn);
+        });
+
+        function showBackButton() {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'dust-close';
+            backBtn.textContent = 'Ещё вопрос?';
+            backBtn.addEventListener('click', () => {
+                textElement.textContent = getRandomGreeting();
+                showTopicsMenu();
+            });
+            actionsPanel.appendChild(backBtn);
         }
     }
 
-    // Открыть модалку и начать диалог
+    // ---------- Открытие / закрытие ----------
     function openModal() {
         modal.classList.remove('hidden');
-        dialogueIndex = 0;
-        charIndex = 0;
-        soundCounter = 0;
+        isModalOpen = true;
         textElement.textContent = '';
-        continueBtn.classList.add('hidden');
-        startCatTalk();
-        typeDialogue();
+        clearActions();
+
+        const hour = new Date().getHours();
+        let greeting;
+        let greetingEmotion = 'normal';  // эмоция для приветствия
+
+        // Определяем время суток
+        let timeKey;
+        if (hour >= 6 && hour < 12) timeKey = 'morning';
+        else if (hour >= 12 && hour < 18) timeKey = 'day';
+        else if (hour >= 18 && hour < 24) timeKey = 'evening';
+        else {
+            timeKey = 'night';
+            greetingEmotion = 'sleepy';   // ночью Дасти сонный
+        }
+
+        if (Math.random() < 0.4) {
+            const arr = timeGreetings[timeKey];
+            greeting = arr[Math.floor(Math.random() * arr.length)];
+        } else {
+            greeting = getRandomGreeting();
+            // если не временное приветствие, но ночь – всё равно сонный
+            if (timeKey === 'night') greetingEmotion = 'sleepy';
+        }
+
+        // Печатаем приветствие с нужной эмоцией
+        typeText(greeting, greetingEmotion, () => {
+            showTopicsMenu();
+        });
     }
 
-    // Закрыть модалку и всё остановить
     function closeModal() {
         modal.classList.add('hidden');
-        stopCatTalk();
+        isModalOpen = false;
+        stopAnimation();
+        cat.src = catEmotions.normal.idle[0];
     }
 
-    // Клик по лапке
     openBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         openModal();
     });
 
-    // Крестик
     closeBtn.addEventListener('click', closeModal);
 
-    // Клик по фону (опционально)
     modal.addEventListener('click', function(e) {
         if (e.target === modal) closeModal();
     });
 
-    // Кнопка «Продолжить»
     continueBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        dialogueIndex++;
-        if (dialogueIndex >= dialogues.length) {
-            // Все фразы показаны — закрываем
-            closeModal();
-            return;
-        }
-        // Следующая фраза
-        textElement.textContent = '';
-        charIndex = 0;
-        soundCounter = 0;
-        continueBtn.classList.add('hidden');
-        startCatTalk();
-        typeDialogue();
     });
-
 })();
 </script>
 
