@@ -305,7 +305,7 @@ $stmt->execute([
                     <div class="update-bar">
                         <div class="update-bar-fill" id="updateBarFill" style="width: 50%;"></div>
                     </div>
-                    <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>
+                    <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>F
                 </div>
 -->
                 <button class="button" style="padding: 6px;" id="modeBtn">
