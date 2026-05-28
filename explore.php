@@ -85,10 +85,11 @@ if ($selectedGenre) {
                             Новые
                         </button>
                     </div>
-                    <div class="price-switch" id="priceSwitch">
-                        <button class="price-btn active" data-price-type="free">Бесплатные</button>
-                        <button class="price-btn" data-price-type="paid">Платные</button>
-                    </div>
+                        <div class="price-switch" id="priceSwitch">
+                            <button class="price-btn active" data-price-type="all">Все</button>
+                            <button class="price-btn" data-price-type="free">Бесплатные</button>
+                            <button class="price-btn" data-price-type="paid">Платные</button>
+                        </div>
                     <div class="search-bar">
                         <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-search"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg></span>
                         <input type="text" id="searchInput" placeholder="Введите название игры или тикер разработчика...">
@@ -103,7 +104,7 @@ if ($selectedGenre) {
                             </svg>
                             <span class="filter-label"><?= $selectedGenre ? htmlspecialchars($selectedGenre) : 'Все игры' ?></span>
                             <?php if ($selectedGenre): ?>
-                                <span class="active-badge">активен</span>
+                                   <span class="active-badge">активен</span>
                             <?php endif; ?>
                             <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="6 9 12 15 18 9"/>
@@ -206,7 +207,7 @@ if ($selectedGenre) {
             genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
             sort: 'popularity',
             dir: 'desc',
-            priceType: 'free',   // 'free', 'paid'
+            priceType: 'all',   // 'free', 'paid'
             priceMax: 5000
         };
 
@@ -281,16 +282,18 @@ if ($selectedGenre) {
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
                 card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
-                    card.addEventListener('transitionend', function handler() {
+
+                    // Убираем класс hidden-card через 400 мс (время анимации)
+                    setTimeout(() => {
                         card.style.transition = '';
                         card.style.opacity = '';
                         card.style.transform = '';
                         card.classList.remove('hidden-card');
-                        card.removeEventListener('transitionend', handler);
-                    });
+                    }, 400);
                 }, index * 30);
             });
         }
