@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Создать период выборов
     } elseif ($action === 'create_election') {
-        $start = $_POST['election_start'] ?? '';
-        $end   = $_POST['election_end']   ?? '';
+        $start = $_POST['start_date'] ?? '';
+        $end   = $_POST['end_date']   ?? '';
         if ($start && $end && $start < $end) {
             $conn->prepare("INSERT INTO expert_elections (start_date, end_date, status, created_by) VALUES (?,?,'scheduled',?)")
                 ->execute([$start, $end, $user_id]);
@@ -384,12 +384,12 @@ $tab = $_GET['tab'] ?? 'applications';
                 <input type="hidden" name="action" value="create_election">
                 <div class="field">
                     <label>Начало выборов</label>
-                    <input type="datetime-local" name="election_start" required
+                    <input type="datetime-local" name="start_date" required
                         value="<?= date('Y-m-d\TH:i') ?>">
                 </div>
                 <div class="field">
                     <label>Конец выборов</label>
-                    <input type="datetime-local" name="election_end" required
+                    <input type="datetime-local" name="end_date" required
                         value="<?= date('Y-m-d\TH:i', strtotime('+7 days')) ?>">
                 </div>
                 <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;">

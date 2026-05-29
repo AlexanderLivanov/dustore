@@ -782,3 +782,20 @@ p {
 
   animation: dustFloat 1.2s ease-in-out infinite;
 }
+
+.dust-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.2s;
+}
+.dust-modal-close:hover {
+    transform: scale(1.2);
+}
