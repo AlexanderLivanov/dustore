@@ -5,18 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/swad/static/img/LogoV3-Moonlight_mini.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/static/img/Moonlight_pict.jpeg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/edit.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/explore.php" beforeDir="false" afterPath="$PROJECT_DIR$/explore.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/l4t/css/main.css" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/css/main.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/explore.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/explore.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/header.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/header.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/static/img/LogoV3 - Appolo_mini.png" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/img/LogoV3-Appolo_mini.png" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
