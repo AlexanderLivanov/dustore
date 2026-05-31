@@ -636,7 +636,7 @@ function format_last_seen(int $ts): string
                                 <input type="email" name="email" required placeholder="Email" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <input type="password" name="password" required placeholder="Пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <button name="bind_email" style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
+                                <button name="bind_email" style="padding:10px 20px;background:#12556d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
                             </form>
                             <?php else: ?>
                             <h3 style="margin-top:0;">Почта</h3>
@@ -657,7 +657,7 @@ function format_last_seen(int $ts): string
                             <h3 style="margin-top:0;">Завершение сеанса</h3>
                             <p style="color:#888;font-size:.9em;line-height:1.5;">Выход прекратит доступ на этом устройстве. Для повторного входа потребуется авторизация через Telegram или passphrase.</p>
                             <form action="/swad/controllers/logout.php" method="POST" onsubmit="return confirm('Вы уверены?')">
-                                <button type="submit" style="padding:10px 20px;background:#d9534f;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;width:100%;">Выйти из аккаунта</button>
+                                <button type="submit" style="padding:10px 20px;background:#740101;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;width:100%;">Выйти из аккаунта</button>
                             </form>
                         </div>
 
@@ -666,7 +666,7 @@ function format_last_seen(int $ts): string
                             <?php
                             if ($curr_user->getUO($userID)) {
                                 echo '<p>Студия <b>'.htmlspecialchars($curr_user->getUO($userID)[0]['name']).'</b></p>';
-                                echo '<p><a href="/devs/select" style="color:#c32178;text-decoration:none;">>>> Вход в консоль для разработчиков</a></p>';
+                                echo '<p><a href="/devs/select" style="color:#115165;text-decoration:none;">>>> Вход в консоль для разработчиков</a></p>';
                             } else {
                                 echo '<p style="color:#888;">У вас ещё нет аккаунта разработчика</p>';
                                 echo '<p><a href="/devs/regorg" style="color:#c32178;text-decoration:none;">>>> Зарегистрируйте его бесплатно!</a></p>';

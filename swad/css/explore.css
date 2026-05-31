@@ -1062,8 +1062,8 @@ body.moonlight-theme .price-switch .price-btn:hover {
     color: #fff;
 }
 body.moonlight-theme .price-switch .price-btn.active {
-    background: #21bcc3;
-    border-color: #21bcc3;
+    background: #105a5d;
+    border-color: #0f575a;
     color: #fff;
     font-weight: 600;
 }

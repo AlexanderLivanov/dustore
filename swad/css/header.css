@@ -826,15 +826,16 @@ body.moonlight-theme .center-floating-block.header-hovered {
   flex-direction: row;
   max-width: 840px;
   width: 95%;
-  background: #1e1e2f;
+  background: #ffffff0d;
   border-radius: 24px;
   padding: 0;
   text-align: left;
-  box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  box-shadow: 0 0 1px rgb(255 255 255 / 74%);
   overflow: hidden;
   position: relative;
   height: 500px;
   max-height: 90vh;
+  backdrop-filter: blur(10px);
 }
 
 /* Ð›ÐµÐ²Ð°Ñ Ñ‡Ð°ÑÑ‚ÑŒ â€“ ÐºÐ¾Ñ‚Ð¸Ðº */
@@ -843,7 +844,7 @@ body.moonlight-theme .center-floating-block.header-hovered {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #16162b;
+  background: #00000033;
   padding: 20px;
   box-sizing: border-box;
   overflow: hidden;
