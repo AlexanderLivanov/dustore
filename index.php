@@ -17,11 +17,11 @@
 
 
     <?php require_once('swad/static/elements/header.php'); ?>
-    <main >
+    <main>
         <section class="hero">
             <div class="hero-bg">
 
-               </div>
+            </div>
             <div class="container">
                 <div class="hero-content">
                     <h1 class="pixel-title">DUSTORE — открытое пространство для инди-разработчиков</h1>
@@ -518,176 +518,206 @@
                 .catch(err => console.log('service worker not registered', err));
         }
 
-    (function() {
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
+        (function() {
+            const hero = document.querySelector('.hero');
+            if (!hero) return;
 
-    // Максимальное смещение в пикселях (вправо)
-    const MAX_OFFSET = 300;
+            // Максимальное смещение в пикселях (вправо)
+            const MAX_OFFSET = 300;
 
-    function updateHeroBgOffset() {
-        const scrollY = window.scrollY;
-        // Рассчитываем смещение: чем больше скролл, тем больше offset (но не больше MAX_OFFSET)
-        let offset = Math.min(scrollY * 0.5, MAX_OFFSET);
-        hero.style.setProperty('--hero-bg-offset', offset + 'px');
-    }
+            function updateHeroBgOffset() {
+                const scrollY = window.scrollY;
+                // Рассчитываем смещение: чем больше скролл, тем больше offset (но не больше MAX_OFFSET)
+                let offset = Math.min(scrollY * 0.5, MAX_OFFSET);
+                hero.style.setProperty('--hero-bg-offset', offset + 'px');
+            }
 
-    // Запускаем при загрузке
-    updateHeroBgOffset();
+            // Запускаем при загрузке
+            updateHeroBgOffset();
 
-    // Оптимизированный обработчик скролла с requestAnimationFrame
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                updateHeroBgOffset();
-                ticking = false;
+            // Оптимизированный обработчик скролла с requestAnimationFrame
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        updateHeroBgOffset();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
             });
-            ticking = true;
-        }
-    });
-})();
+        })();
     </script>
 
-<div id="dust-intro-modal" class="dust-modal hidden">
-
-  <div class="dust-modal-content">
-
-    <!-- КОТИК -->
-    <div class="dust-cat-wrapper">
-      <img id="dust-cat" src="/swad/static/img/dastyframe1.png">
+    <div id="dust-intro-modal" class="dust-modal hidden">
+        <div class="dust-modal-content">
+            <button class="dust-modal-close" aria-label="Закрыть">×</button>
+            <div class="dust-cat-wrapper">
+                <img id="dust-cat" src="/swad/static/img/dastyframe1.png">
+            </div>
+            <div class="dust-dialogue">
+                <div id="dust-text"></div>
+                <button id="dust-close-btn" class="dust-close hidden">Продолжить</button>
+            </div>
+        </div>
     </div>
 
-    <!-- ОБЛАЧКО -->
-    <div class="dust-dialogue">
-      <div id="dust-text"></div>
+    <script>
+        if (!localStorage.getItem("dust_intro_seen")) {
+            const modal = document.getElementById("dust-intro-modal");
+            const textElement = document.getElementById("dust-text");
+            const continueBtn = document.getElementById("dust-close-btn");
+            const cat = document.getElementById("dust-cat");
+            const closeCross = document.querySelector(".dust-modal-close");
 
-      <button id="dust-close-btn" class="dust-close hidden">
-        Продолжить
-      </button>
-    </div>
+            const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
+            typeSound.volume = 0.3;
+            const SOUND_EVERY_N_CHARS = 3;
 
-  </div>
+            const catFrames = [
+                "/swad/static/img/dastyframe1.png",
+                "/swad/static/img/dastyframe2.png",
+                "/swad/static/img/dastyframe3.png"
+            ];
 
-</div>
+            const dialogues = [
+                "Здарова! Добро пожаловать на наш Dustore!",
+                "Я Дасти кстати...",
+                "...ну, типа менеджер здесь. Да-да!",
+                "Это площадка для инди-разработчиков и игроков.",
+                "Тут можно публиковать игры, искать команду, участвовать в джемах и многое другое.",
+                "Надеюсь, что ты самостоятельно всё найдешь.",
+                "Но если нет... то ищи меня в правом верхнем углу, я помогу.",
+                "В общем, будь как дома и...",
+                "Надеюсь, тебе тут понравится. Свидимся!"
+            ];
 
-<script>
-if (!localStorage.getItem("dust_intro_seen")) {
-  const modal = document.getElementById("dust-intro-modal");
-  const textElement = document.getElementById("dust-text");
-  const closeBtn = document.getElementById("dust-close-btn");
-  const cat = document.getElementById("dust-cat");
+            const winkAfter = [0, 8];
 
-  const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
-  typeSound.volume = 0.3;
+            let frameIndex = 0;
+            let animationInterval = null;
+            let dialogueIndex = 0;
+            let charIndex = 0;
+            let soundCounter = 0;
+            let isClosing = false;
+            let isTyping = false;
 
-  // Частота звука
-  const SOUND_EVERY_N_CHARS = 3;
+            // Функция полного закрытия окна
+            function forceCloseModal() {
+                if (isClosing) return;
+                isClosing = true;
 
-  const catFrames = [
-    "/swad/static/img/dastyframe1.png",
-    "/swad/static/img/dastyframe2.png",
-    "/swad/static/img/dastyframe3.png"
-  ];
+                if (animationInterval) clearInterval(animationInterval);
+                modal.style.opacity = "0";
+                setTimeout(() => {
+                    if (modal && modal.parentNode) modal.remove();
+                }, 300);
+                localStorage.setItem("dust_intro_seen", "true");
+            }
 
-  const dialogues = [
-    "Здарова! Добро пожаловать на наш Dustore!",
-    "Я Дасти кстати...",
-    "...ну, типа менеджер здесь. Да-да!",
-    "Это площадка для инди-разработчиков и игроков.",
-    "Тут можно публиковать игры, искать команду, участвовать в джемах и многое другое.",
-    "Надеюсь, что ты самостоятельно всё найдешь.",
-    "Но если нет... то ищи меня в правом верхнем углу, я помогу.",
-    "В общем, будь как дома и...",
-    "Надеюсь, тебе тут понравится. Свидимся!"
-  ];
+            // Анимация подмигивания
+            function winkAnimation(callback) {
+                cat.src = "/swad/static/img/dastyframe_half.png";
+                setTimeout(() => {
+                    cat.src = "/swad/static/img/dastyframe_full.png";
+                    setTimeout(() => {
+                        if (!isClosing) {
+                            cat.src = "/swad/static/img/dastyframe1.png";
+                            if (callback) callback();
+                        }
+                    }, 900);
+                }, 700);
+            }
 
-  const winkAfter = [0, 8];
+            // Печать текста
+            function typeDialogue() {
+                if (isClosing) return;
+                isTyping = true;
+                const currentText = dialogues[dialogueIndex];
+                if (charIndex < currentText.length) {
+                    textElement.textContent += currentText.charAt(charIndex);
+                    soundCounter++;
+                    if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
+                        typeSound.currentTime = 0;
+                        typeSound.play().catch(() => {});
+                    }
+                    charIndex++;
+                    setTimeout(typeDialogue, 25);
+                } else {
+                    isTyping = false;
+                    clearInterval(animationInterval);
+                    if (winkAfter.includes(dialogueIndex)) {
+                        winkAnimation(() => {
+                            if (!isClosing) continueBtn.classList.remove("hidden");
+                        });
+                    } else {
+                        cat.src = "/swad/static/img/dastyframe1.png";
+                        if (!isClosing) continueBtn.classList.remove("hidden");
+                    }
+                }
+            }
 
-  modal.classList.remove("hidden");
+            // Переход к следующей фразе
+            function nextDialogue() {
+                if (isClosing) return;
+                dialogueIndex++;
+                if (dialogueIndex >= dialogues.length) {
+                    forceCloseModal();
+                    return;
+                }
+                textElement.textContent = "";
+                charIndex = 0;
+                soundCounter = 0;
+                continueBtn.classList.add("hidden");
+                // Перезапускаем анимацию кота
+                if (animationInterval) clearInterval(animationInterval);
+                animationInterval = setInterval(() => {
+                    if (!isClosing) {
+                        frameIndex = (frameIndex + 1) % catFrames.length;
+                        cat.src = catFrames[frameIndex];
+                    }
+                }, 150);
+                typeDialogue();
+            }
 
-  let frameIndex = 0;
-  let animationInterval = setInterval(() => {
-    frameIndex = (frameIndex + 1) % catFrames.length;
-    cat.src = catFrames[frameIndex];
-  }, 150);
+            // Закрытие по крестику
+            function onCrossClose(e) {
+                e.stopPropagation();
+                forceCloseModal();
+            }
 
-  let dialogueIndex = 0;
-  let charIndex = 0;
-  let soundCounter = 0;
+            // Закрытие по клику на фон (overlay)
+            function onOverlayClick(e) {
+                if (e.target === modal) forceCloseModal();
+            }
 
-  function winkAnimation(callback) {
-    cat.src = "/swad/static/img/dastyframe_half.png";
-    setTimeout(() => {
-      cat.src = "/swad/static/img/dastyframe_full.png";
-      setTimeout(() => {
-        cat.src = "/swad/static/img/dastyframe1.png";
-        if (callback) callback();
-      }, 900);
-    }, 700);
-  }
+            // Закрытие по Escape
+            function onEscKey(e) {
+                if (e.key === "Escape") forceCloseModal();
+            }
 
-  function typeDialogue() {
-    const currentText = dialogues[dialogueIndex];
-    if (charIndex < currentText.length) {
-      textElement.textContent += currentText.charAt(charIndex);
+            // Запуск диалога автоматически при открытии
+            function startDialogue() {
+                modal.classList.remove("hidden");
+                animationInterval = setInterval(() => {
+                    if (!isClosing) {
+                        frameIndex = (frameIndex + 1) % catFrames.length;
+                        cat.src = catFrames[frameIndex];
+                    }
+                }, 150);
+                typeDialogue();
+            }
 
-      // Тут частота звука на каждый символ (Для Сани, чтобы не тупил)
-      soundCounter++;
-      if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
-        typeSound.currentTime = 0;
-        typeSound.play().catch(() => {});
-      }
+            // Навешиваем обработчики
+            closeCross.addEventListener("click", onCrossClose);
+            continueBtn.addEventListener("click", nextDialogue);
+            modal.addEventListener("click", onOverlayClick);
+            document.addEventListener("keydown", onEscKey);
 
-      charIndex++;
-      setTimeout(typeDialogue, 25);
-    } else {
-      clearInterval(animationInterval);
-      if (winkAfter.includes(dialogueIndex)) {
-        winkAnimation(() => {
-          closeBtn.classList.remove("hidden");
-        });
-      } else {
-        cat.src = "/swad/static/img/dastyframe1.png";
-        closeBtn.classList.remove("hidden");
-      }
-    }
-  }
-
-
-  function startDialogueOnClick() {
-    typeDialogue();
-    modal.removeEventListener('click', startDialogueOnClick);
-  }
-  modal.addEventListener('click', startDialogueOnClick);
-
-  closeBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    dialogueIndex++;
-    if (dialogueIndex >= dialogues.length) {
-      modal.style.opacity = "0";
-      setTimeout(() => {
-        modal.remove();
-      }, 300);
-      clearInterval(animationInterval);
-      cat.src = "/swad/static/img/dastyframe1.png";
-      localStorage.setItem("dust_intro_seen", "true");
-      return;
-    }
-    textElement.textContent = "";
-    charIndex = 0;
-    soundCounter = 0;
-    closeBtn.classList.add("hidden");
-
-    animationInterval = setInterval(() => {
-      frameIndex = (frameIndex + 1) % catFrames.length;
-      cat.src = catFrames[frameIndex];
-    }, 150);
-
-    typeDialogue();
-  });
-}
-</script>
+            // Запускаем
+            startDialogue();
+        }
+    </script>
 
 <script>
     (function() {

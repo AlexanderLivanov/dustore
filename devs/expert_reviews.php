@@ -110,7 +110,7 @@ if ($selected_id) {
                                 $stmt = $conn->prepare("
                                     SELECT
                                         ROUND(AVG(score))           AS avg_score,
-                                        ROUND(AVG(gameplay_score))  AS avg_gameplay,
+                                        ROUND(AVG))  AS avg_gameplay,
                                         ROUND(AVG(visual_score))    AS avg_visual,
                                         ROUND(AVG(stability))       AS avg_stability,
                                         ROUND(AVG(originality))     AS avg_originality,

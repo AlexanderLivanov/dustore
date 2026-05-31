@@ -479,6 +479,113 @@ $allRequests   = $pdo->query("SELECT COUNT(*) FROM experts")->fetchColumn();
             <?php endif; ?>
         </div>
 
+        <?php if ($isOpen): ?>
+            <div style="
+    background: linear-gradient(135deg, rgba(74,222,128,.12), rgba(34,211,238,.08));
+    border: 1px solid rgba(74,222,128,.35);
+    border-radius: 14px;
+    padding: 20px 28px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+">
+                <!-- Иконка -->
+                <div style="
+        width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+        background: rgba(74,222,128,.15);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem;
+        animation: glow 2s ease-in-out infinite alternate;
+    ">🗳</div>
+
+                <!-- Текст -->
+                <div style="flex: 1; min-width: 180px;">
+                    <div style="
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-bottom: 4px;
+        ">Набор экспертов открыт!</div>
+                    <div style="font-size: .85rem; color: var(--muted); line-height: 1.5;">
+                        Успей подать заявку — до конца приёма осталось
+                    </div>
+                </div>
+
+                <!-- Таймер -->
+                <div style="
+        background: rgba(0,0,0,.35);
+        border: 1px solid rgba(74,222,128,.2);
+        border-radius: 12px;
+        padding: 12px 20px;
+        text-align: center;
+        flex-shrink: 0;
+        min-width: 160px;
+    ">
+                    <div id="election-countdown" style="
+            font-family: 'Syne', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: .5px;
+        ">--:--:--</div>
+                    <div style="font-size: .72rem; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .07em;">
+                        осталось
+                    </div>
+                </div>
+
+                <!-- Кнопка-якорь на форму -->
+                <?php if (!$existingApp && !$noEmail): ?>
+                    <a href="#apply-form" style="
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 12px 22px; border-radius: 10px;
+        background: var(--accent); color: #0b0e13;
+        font-family: 'Syne', sans-serif; font-weight: 700; font-size: .9rem;
+        text-decoration: none; flex-shrink: 0;
+        transition: all .2s;
+    " onmouseover="this.style.background='#22c55e';this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.background='var(--accent)';this.style.transform=''">
+                        Подать заявку →
+                    </a>
+                <?php endif; ?>
+            </div>
+
+            <script>
+                (function() {
+                    const endTime = <?= $nextEnd * 1000 ?>;
+                    const el = document.getElementById('election-countdown');
+                    if (!el) return;
+
+                    function pad(n) {
+                        return String(n).padStart(2, '0');
+                    }
+
+                    function tick() {
+                        const diff = endTime - Date.now();
+                        if (diff <= 0) {
+                            el.textContent = '00:00:00';
+                            el.closest('div[style]').style.opacity = '.5';
+                            return;
+                        }
+                        const d = Math.floor(diff / 86400000);
+                        const h = Math.floor((diff % 86400000) / 3600000);
+                        const m = Math.floor((diff % 3600000) / 60000);
+                        const s = Math.floor((diff % 60000) / 1000);
+
+                        el.textContent = d > 0 ?
+                            `${d}д ${pad(h)}:${pad(m)}:${pad(s)}` :
+                            `${pad(h)}:${pad(m)}:${pad(s)}`;
+                    }
+
+                    tick();
+                    setInterval(tick, 1000);
+                })();
+            </script>
+        <?php endif; ?>
+
         <?php if (!empty($noEmail)): ?>
             <!-- Нет email -->
             <div class="status-card">
@@ -533,7 +640,7 @@ $allRequests   = $pdo->query("SELECT COUNT(*) FROM experts")->fetchColumn();
                 </div>
             <?php endif; ?>
 
-            <div class="form-card">
+            <div class="form-card" id="apply-form">
                 <form method="post" action="submit-expert.php">
                     <div class="form-row">
                         <div class="field">
