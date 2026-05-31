@@ -199,12 +199,13 @@ $stmt->execute([
             <div class="buttons-left">
                 <button class="button" onclick="location.href='/explore'">Игры</button>
                 <button class="button" onclick="location.href='/l4t'">L4T</button>
+                <button class="button" onclick="location.href='/jams'">Спринты</button>
                 <!-- <button class="button" onclick="location.href='/about'">О нас</button> -->
 
                 <!-- Dropdown «Для разработчиков» -->
                 <div class="nav-dropdown">
                     <button class="button nav-dropdown__trigger" aria-haspopup="true" aria-expanded="false">
-                        Для разработчиков
+                        Devs
                         <svg class="nav-dropdown__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
                             <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -258,7 +259,7 @@ $stmt->execute([
         <div class="section center-section">
             <div class="image">
                 <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
-                <img src="/swad/static/img/LogoV3 - Appolo_mini.png" alt="" onclick="location.href='/'">
+                <img src="/swad/static/img/LogoV3-Appolo_mini.png" alt="" onclick="location.href='/'">
                 <!-- <img id="dancingCow" style="height: 80px;"
                     src="https://media.tenor.com/yNy3XaDrdjgAAAAj/polish-dancing-cow-dancing.gif"
                     alt=""
@@ -308,6 +309,22 @@ $stmt->execute([
                     <div class="update-next" id="updateNext">Следующее обновление: v1.4</div>F
                 </div>
 -->
+
+
+                <!-- Кнопка переключения темы (Appollo / Moonlight) -->
+                <button class="button" style="padding: 6px;" id="themeToggleBtn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
                 <button class="button" style="padding: 6px;" id="modeBtn">
                 <svg xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -479,7 +496,7 @@ $stmt->execute([
                 const rotateX = -maxAngle * ny;
 
                 // Применяем наклон к картинке (без translate, т.к. при перетаскивании он сброшен)
-                logoImg.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+                imageContainer.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
 
                 // Голографический градиент
                 const bgX = (nx * 50) + 50;
@@ -491,7 +508,7 @@ $stmt->execute([
             // Сброс эффекта
             function resetTilt() {
                 if (isDragging) return;
-                logoImg.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0)';
+                imageContainer.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) translateZ(0)';
                 imageContainer.style.setProperty('--bg-x', '0%');
                 imageContainer.style.setProperty('--bg-y', '0%');
             }
@@ -515,6 +532,7 @@ $stmt->execute([
                 // поэтому сбрасываем transform и будем применять только translate
                 logoImg.style.transition = 'none'; // отключаем анимацию при перетаскивании
                 logoImg.style.transform = ''; // убираем наклон
+                imageContainer.style.transform = '';
                 originalX = 0;
                 originalY = 0;
             });
@@ -527,7 +545,7 @@ $stmt->execute([
                 const dy = e.clientY - startY;
 
                 // Перемещаем картинку
-                logoImg.style.transform = `translate(${dx}px, ${dy}px)`;
+                imageContainer.style.transform = `translate(${dx}px, ${dy}px)`;
             });
 
             // Завершение перетаскивания
@@ -536,14 +554,14 @@ $stmt->execute([
                 isDragging = false;
 
                 // Возвращаем transition
-                logoImg.style.transition = 'transform 0.3s ease-out';
+                imageContainer.style.transition = 'transform 0.3s ease-out';
 
                 // Плавно возвращаем на место
-                logoImg.style.transform = '';
+                imageContainer.style.transform = '';
 
                 // После окончания анимации можно вернуть наклон (но пока убираем)
                 setTimeout(() => {
-                    logoImg.style.transition = 'transform 0.01s ease-out'; // возвращаем быструю реакцию
+                    imageContainer.style.transition = 'transform 0.01s ease-out'; // возвращаем быструю реакцию
                 }, 30); // время должно совпадать с transition
             });
 
@@ -576,7 +594,7 @@ $stmt->execute([
 
 
                 const translateY = -3; // в пикселях
-                const scale = 1.04;
+                const scale = 1.1;
 
 
                 btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
@@ -1123,6 +1141,65 @@ const pagesTopics = {
         e.stopPropagation();
     });
 })();
+</script>
+
+<script>
+    // Тоггл темы (иконка солнце/луна + localStorage + логотип)
+    (function() {
+        const themeBtn = document.getElementById('themeToggleBtn');
+        const logoImg = document.querySelector('.image img');
+        if (!themeBtn) return;
+
+        // Пути к логотипам
+        const logoAppollo = '/swad/static/img/LogoV3-Appolo_mini.png';
+        const logoMoonlight = '/swad/static/img/LogoV3-Moonlight_mini.png';
+
+        // Установить иконку и логотип в зависимости от темы
+        function setThemeUI(theme) {
+            // Меняем иконку кнопки
+            if (theme === 'moonlight') {
+                themeBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>`;
+                // Меняем логотип на лунный
+                if (logoImg) logoImg.src = logoMoonlight;
+            } else {
+                themeBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>`;
+                // Меняем логотип на светлый
+                if (logoImg) logoImg.src = logoAppollo;
+            }
+        }
+
+        // Загружаем сохранённую тему (по умолчанию 'appollo')
+        const savedTheme = localStorage.getItem('dustore_theme');
+        if (savedTheme === 'moonlight') {
+            setThemeUI('moonlight');
+            document.body.classList.add('moonlight-theme');
+        } else {
+            setThemeUI('appollo');
+            document.body.classList.remove('moonlight-theme');
+            if (!savedTheme) localStorage.setItem('dustore_theme', 'appollo');
+        }
+
+        // Клик — переключение
+        themeBtn.addEventListener('click', function() {
+            const current = localStorage.getItem('dustore_theme');
+            const newTheme = current === 'moonlight' ? 'appollo' : 'moonlight';
+            localStorage.setItem('dustore_theme', newTheme);
+            setThemeUI(newTheme);
+            document.body.classList.toggle('moonlight-theme', newTheme === 'moonlight');
+        });
+    })();
 </script>
 
 </body>

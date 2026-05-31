@@ -111,7 +111,7 @@ if ($selectedGenre) {
                             </svg>
                         </button>
                         <div class="price-filters" id="priceFilters">
-                            <div class="price-slider-container" id="priceSliderContainer" style="display: flex; flex-flow: wrap; place-content: space-around center; align-items: center; ">
+                            <div class="price-slider-container" id="priceSliderContainer" style="display: flex; margin-bottom: 10px; margin-top: 10px; flex-flow: wrap; place-content: space-around center; align-items: center; ">
                                 <input type="range" id="priceSlider" min="100" max="5000" value="5000" step="100">
                                 <span id="priceSliderValue">до 5000 ₽</span>
                             </div>
@@ -536,9 +536,21 @@ if ($selectedGenre) {
             });
         });
 
-        priceSlider.addEventListener('input', async () => {
-            state.priceMax = parseInt(priceSlider.value, 10);
+        priceSlider.addEventListener('input', function() {
+            // Обновляем значение
+            state.priceMax = parseInt(this.value, 10);
             priceSliderValue.textContent = `до ${state.priceMax} ₽`;
+
+            // Наклон в зависимости от положения ползунка (0 = лево, 100 = право)
+            const rect = this.getBoundingClientRect();
+            const percent = (this.value - this.min) / (this.max - this.min);
+            const nx = percent * 9 - 4; // от -1 (лево) до 1 (право)
+            const maxAngle = -10; // угол наклона
+            const rotateY = maxAngle * nx; // наклон вправо/влево
+            const translateY = -2; // небольшой подъём
+            this.style.transform = `perspective(400px) rotateY(${rotateY}deg) translateY(${translateY}px)`;
+
+            // Дебаунс запроса
             clearTimeout(window.priceSliderTimer);
             window.priceSliderTimer = setTimeout(async () => {
                 updateURL();
@@ -546,8 +558,89 @@ if ($selectedGenre) {
             }, 400);
         });
 
+// Сброс наклона, когда отпускаем ползунок или уводим мышь
+priceSlider.addEventListener('mouseleave', function() {
+    this.style.transform = '';
+});
+priceSlider.addEventListener('mouseup', function() {
+    this.style.transform = '';
+});
+
         updatePriceUI();
     })();
+
+// --- Эффект наклона (как в хедере) для кнопок сортировки, цен и фильтров ---
+(function() {
+    const selector = '.sort-btn, .price-btn, .btn-filter';
+    let activeBtn = null;
+
+    function resetTilt(btn) {
+        btn.style.transform = '';
+    }
+
+    document.addEventListener('mousemove', function(e) {
+        const btn = e.target.closest(selector);
+        if (!btn) {
+            if (activeBtn) {
+                resetTilt(activeBtn);
+                activeBtn = null;
+            }
+            return;
+        }
+        if (activeBtn !== btn) {
+            if (activeBtn) resetTilt(activeBtn);
+            activeBtn = btn;
+        }
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+        const maxAngle = 15;
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+        const translateY = -3;
+        const scale = 1.04;
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    });
+
+    // При уходе курсора с кнопки (сброс произойдёт на следующем mousemove, когда курсор не над кнопкой)
+})();
+
+// --- Наклон и тряска поля поиска ---
+(function() {
+    const searchBar = document.querySelector('.search-bar');
+    const searchInput = document.getElementById('searchInput');
+    if (!searchBar || !searchInput) return;
+
+    // Наклон обёртки при движении мыши над ней (как у кнопок)
+    searchBar.addEventListener('mousemove', function(e) {
+        const rect = searchBar.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 10 - 5;
+        const maxAngle = 5;   // лёгкий наклон, чтобы не мешать вводу
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+        searchBar.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
+    });
+
+    searchBar.addEventListener('mouseleave', function() {
+        searchBar.style.transform = '';
+    });
+
+    // Тряска при вводе / удалении символов
+    searchInput.addEventListener('input', function() {
+        searchInput.classList.remove('shake-it');
+        void searchInput.offsetWidth; // форсируем reflow
+        searchInput.classList.add('shake-it');
+        searchInput.addEventListener('animationend', function onAnimEnd() {
+            searchInput.classList.remove('shake-it');
+            searchInput.removeEventListener('animationend', onAnimEnd);
+        });
+    });
+})();
     </script>
 </body>
 </html>

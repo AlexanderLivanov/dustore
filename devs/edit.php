@@ -197,7 +197,38 @@ if (in_array($game['moderation_status'] ?? '', ['pending','rejected'])) {
     ];
 }
 
-$lang_options = ['Русский','English','Deutsch','Français','Español','中文','日本語','Português','한국어','Italiano'];
+$lang_options = [
+    'English',
+    'العربية',
+    'Български',
+    'Magyar',
+    'Tiếng Việt',
+    'Ελληνικά',
+    'Dansk',
+    'עברית',
+    'Bahasa Indonesia',
+    'Español',
+    'Italiano',
+    '中文',
+    '한국어',
+    'Deutsch',
+    'Nederlands',
+    'Norsk',
+    'فارسی',
+    'Polski',
+    'Português',
+    'Română',
+    'Русский',
+    'ไทย',
+    'Türkçe',
+    'Українська',
+    'Suomi',
+    'Français',
+    'हिन्दी',
+    'Čeština',
+    'Svenska',
+    '日本語'
+];
 $langs_saved  = array_map('trim', explode(',', $game['languages'] ?? ''));
 
 function ev(array $a, string $k): string { return htmlspecialchars($a[$k] ?? ''); }

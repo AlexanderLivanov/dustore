@@ -218,6 +218,100 @@ body {
     transition: transform 0.001s ease-out;
 }
 
+
+/* =============================================
+   Лунная тема для хедера (moonlight)
+   ============================================= */
+
+/* Фон хедера в лунной теме */
+body.moonlight-theme .header {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(10px);
+}
+
+/* При скролле — усиливаем размытие */
+body.moonlight-theme .header.scrolled {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(10px);
+}
+
+/* При ховере на хедер — чуть светлеет */
+body.moonlight-theme .header:hover {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(10px);
+}
+
+/* Псевдоэлементы для теней по бокам (если нужны) */
+body.moonlight-theme .header::before,
+body.moonlight-theme .header::after {
+    box-shadow: 0px 1px 0px 0px rgba(255, 255, 255, 0.08);
+}
+
+/* Блок "монобровь" под хедером */
+body.moonlight-theme .center-floating-block {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(10px);
+    box-shadow: 0px 1px 1px 0px #ffffff15;
+    transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
+}
+
+body.moonlight-theme .center-floating-block.scrolled,
+body.moonlight-theme .center-floating-block.header-hovered {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(10px);
+    box-shadow: 0px 1px 1px 0px #ffffff15;
+}
+
+/* Контейнеры кнопок (buttons-left/right) */
+body.moonlight-theme .buttons-left,
+body.moonlight-theme .buttons-right {
+    box-shadow: inset 1px 1px 1px 2px #00000050;
+}
+
+/* Сами кнопки в хедере */
+body.moonlight-theme .button {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffffcc;
+    box-shadow: 1px 1px 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+body.moonlight-theme .button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Выпадающее меню (dropdown) */
+body.moonlight-theme .nav-dropdown__menu {
+    background: rgba(10, 8, 20, 0.9);
+    backdrop-filter: blur(12px);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.moonlight-theme .nav-dropdown__item {
+    color: #e0dde6;
+}
+
+body.moonlight-theme .nav-dropdown__item:hover {
+    background: rgba(195, 33, 120, 0.25);
+    color: #fff;
+}
+
+/* Кнопка бургера (мобильное меню) */
+body.moonlight-theme .buttons-left {
+    background: rgba(10, 5, 20, 0.95);
+    backdrop-filter: blur(12px);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Если используешь логотип с маской — можно оставить как есть,
+   но можешь добавить свечение:
+*/
+body.moonlight-theme .image::after {
+    mix-blend-mode: soft-light;
+    opacity: 0.4;
+}
+
+
 @media screen and (max-width: 900px) {
 
     /* ÃƒÂÃ‚Â¥ÃƒÂÃ‚ÂµÃƒÂÃ‚Â´ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬ Ãƒâ€˜Ã¢â‚¬Â¡Ãƒâ€˜Ã†â€™Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã…â€™ ÃƒÂÃ‚ÂºÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â°ÃƒÂÃ‚ÂºÃƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â½ÃƒÂÃ‚ÂµÃƒÂÃ‚Âµ */
@@ -463,11 +557,11 @@ body {
     mix-blend-mode: overlay;
 
     /* ÃƒÂÃ…â€œÃƒÂÃ‚Â°Ãƒâ€˜Ã‚ÂÃƒÂÃ‚ÂºÃƒÂÃ‚Â°, ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â²Ãƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬Ãƒâ€˜Ã‚ÂÃƒâ€˜Ã…Â½Ãƒâ€˜Ã¢â‚¬Â°ÃƒÂÃ‚Â°Ãƒâ€˜Ã‚Â Ãƒâ€˜Ã¢â‚¬Å¾ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â¼Ãƒâ€˜Ã†â€™ ÃƒÂÃ‚Â»ÃƒÂÃ‚Â¾ÃƒÂÃ‚Â³ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â° */
-    mask-image: url('/swad/static/img/LogoV3 - Appolo_mini.png');
+    mask-image: url('/swad/static/img/LogoV3-Appolo_mini.png');
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
-    -webkit-mask-image: url('/swad/static/img/LogoV3 - Appolo_mini.png');
+    -webkit-mask-image: url('/swad/static/img/LogoV3-Appolo_mini.png');
     -webkit-mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -500,6 +594,18 @@ body {
 .preloader-content {
     text-align: center;
     vertical-align: middle;
+}
+
+/* Лунная тема: отдельные настройки для логотипа */
+body.moonlight-theme .image img {
+    width: auto;
+    height: 70px;
+    transition: transform 0.01s ease-out;
+    transform-style: preserve-3d;
+    will-change: transform;
+    backface-visibility: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 .preloader-logo {
@@ -656,6 +762,46 @@ body {
 }
 
 
+
+/* =============================================
+   Лунная тема — такие же эффекты, как в обычной
+   ============================================= */
+
+body.moonlight-theme .header::before,
+body.moonlight-theme .header::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 682px;
+    box-shadow: 0px 1px 0px 0px #ffffff15;
+    transition: box-shadow 0.5s ease;
+    z-index: -10;
+}
+
+body.moonlight-theme .header::before { left: 0; border-radius: 0 0 0 20px; }
+body.moonlight-theme .header::after  { right: 0; border-radius: 0 0 20px 0; }
+
+body.moonlight-theme .header.scrolled::before,
+body.moonlight-theme .header.scrolled::after {
+    box-shadow: 0px 1px 0px 0px #ffffff15;
+}
+
+body.moonlight-theme .header:hover {
+    backdrop-filter: blur(7px);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+body.moonlight-theme .header:hover::before,
+body.moonlight-theme .header:hover::after {
+    box-shadow: 0px 1px 0px 0px #ffffff15;
+}
+
+body.moonlight-theme .center-floating-block.scrolled,
+body.moonlight-theme .center-floating-block.header-hovered {
+    box-shadow: 0px 1px 1px 0px rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(7px);
+    background-color: rgba(0, 0, 0, 0);
+}
 
 /* =============================================
    Ð¢Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ð²Ñ‹Ð·Ñ‹Ð²Ð°ÐµÐ¼Ð¾Ð³Ð¾ Ð¿Ð¾Ð¼Ð¾Ñ‰Ð½Ð¸ÐºÐ° (Ð»Ð°Ð¿ÐºÐ°)

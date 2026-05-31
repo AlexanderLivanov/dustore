@@ -14,6 +14,8 @@
 </head>
 
 <body>
+
+
     <?php require_once('swad/static/elements/header.php'); ?>
     <main >
         <section class="hero">
@@ -685,6 +687,96 @@ if (!localStorage.getItem("dust_intro_seen")) {
     typeDialogue();
   });
 }
+</script>
+
+<script>
+    (function() {
+        let targetX = 0, targetY = 0;
+        let currentX = 0, currentY = 0;
+        let animationFrame = null;
+        let isMoonlight = document.body.classList.contains('moonlight-theme');
+
+        const MAX_OFFSET_X = 4;
+        const MAX_OFFSET_Y = 3;
+
+        function updateBackgroundPosition() {
+            if (!isMoonlight) return;
+
+            currentX += (targetX - currentX) * 0.1;
+            currentY += (targetY - currentY) * 0.1;
+
+            const posX = 50 + currentX;
+            const posY = 35 + currentY;   // 35% — твой сдвиг вверх
+            document.body.style.backgroundPosition = `${posX}% ${posY}%`;
+
+            animationFrame = requestAnimationFrame(updateBackgroundPosition);
+        }
+
+        function onMouseMove(e) {
+            if (!isMoonlight) return;
+
+            const wx = window.innerWidth;
+            const wy = window.innerHeight;
+            const nx = (e.clientX / wx - 0.5) * 2;
+            const ny = (e.clientY / wy - 0.5) * 2;
+
+            targetX = nx * MAX_OFFSET_X;
+            targetY = ny * MAX_OFFSET_Y;
+        }
+
+        const observer = new MutationObserver(() => {
+            isMoonlight = document.body.classList.contains('moonlight-theme');
+            if (!isMoonlight) {
+                document.body.style.backgroundPosition = '';
+                targetX = targetY = 0;
+                currentX = currentY = 0;
+            }
+        });
+        observer.observe(document.body, { attributes: true });
+
+        window.addEventListener('mousemove', onMouseMove);
+        updateBackgroundPosition();
+    })();
+</script>
+
+<script>
+// Эффект наклона и масштаба для всех кнопок .btn на странице (как в хедере)
+(function() {
+    const btns = document.querySelectorAll('.btn');
+    if (!btns.length) return;
+
+    function resetTilt(btn) {
+        btn.style.transform = '';
+    }
+
+    function handleMouseMove(e) {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+
+        const maxAngle = 15;          // максимальный угол наклона
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+
+        const translateY = -3;        // подъём вверх при наведении
+        const scale = 1.1;           // небольшое увеличение
+
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+
+    function handleMouseLeave(e) {
+        resetTilt(e.currentTarget);
+    }
+
+    btns.forEach(btn => {
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
 </script>
 
 </body>
