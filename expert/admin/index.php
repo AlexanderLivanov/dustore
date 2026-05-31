@@ -9,6 +9,9 @@ $stmt = $pdo->prepare("SELECT id FROM experts WHERE user_id = ? AND status = 'ap
 $stmt->execute([$_SESSION['USERDATA']['id']]);
 $isExpert = (bool) $stmt->fetch();
 
+$globalRole = (int)($_SESSION['USERDATA']['global_role'] ?? 0);
+// print_r($globalRole);
+
 if(!$isExpert){
     die('Доступ запрещён');
 }

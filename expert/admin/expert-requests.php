@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../swad/config.php';
 
 // ── Только для администраторов ────────────────────────────────────────────
 $globalRole = (int)($_SESSION['USERDATA']['global_role'] ?? 0);
-if ($globalRole !== -1) {
+if ($globalRole !== -1 && $globalRole !== 3) {
     header('Location: /expert/admin/index');
     exit;
 }

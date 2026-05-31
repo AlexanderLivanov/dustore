@@ -801,7 +801,7 @@ $maxVotes        = max($maxVotes, 1);
                     <div>Никто не подал заявку на участие в этом раунде выборов.</div>
                     <?php if ($isAuthed): ?>
                         <div style="margin-top:16px;">
-                            <a href="/expert/apply" style="color:var(--p2);font-weight:600;">Подать заявку самому →</a>
+                            <a href="/expert/expert-apply" style="color:var(--p2);font-weight:600;">Подать заявку самому →</a>
                         </div>
                     <?php endif; ?>
                 </div>

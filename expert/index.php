@@ -879,6 +879,10 @@ $election = $conn->query("
                     <a href="/expert/expert-apply" class="btn btn-primary" style="flex-shrink:0;">
                         Подать заявку →
                     </a>
+                <?php else: ?>
+                    <a href="/expert/expert-apply" class="btn btn-primary" style="flex-shrink:0;">
+                        Просмотр заявки
+                    </a>
                 <?php endif; ?>
             </div>
         </section>

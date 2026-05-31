@@ -536,21 +536,6 @@ $allRequests   = $pdo->query("SELECT COUNT(*) FROM experts")->fetchColumn();
                         осталось
                     </div>
                 </div>
-
-                <!-- Кнопка-якорь на форму -->
-                <?php if (!$existingApp && !$noEmail): ?>
-                    <a href="#apply-form" style="
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 12px 22px; border-radius: 10px;
-        background: var(--accent); color: #0b0e13;
-        font-family: 'Syne', sans-serif; font-weight: 700; font-size: .9rem;
-        text-decoration: none; flex-shrink: 0;
-        transition: all .2s;
-    " onmouseover="this.style.background='#22c55e';this.style.transform='translateY(-2px)'"
-                        onmouseout="this.style.background='var(--accent)';this.style.transform=''">
-                        Подать заявку →
-                    </a>
-                <?php endif; ?>
             </div>
 
             <script>
@@ -640,7 +625,7 @@ $allRequests   = $pdo->query("SELECT COUNT(*) FROM experts")->fetchColumn();
                 </div>
             <?php endif; ?>
 
-            <div class="form-card" id="apply-form">
+            <div class="form-card">
                 <form method="post" action="submit-expert.php">
                     <div class="form-row">
                         <div class="field">

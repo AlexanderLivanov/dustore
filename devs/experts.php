@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $start = $_POST['start_date'] ?? '';
         $end   = $_POST['end_date']   ?? '';
         if ($start && $end && $start < $end) {
-            $conn->prepare("INSERT INTO expert_elections (start_date, end_date, status, created_by) VALUES (?,?,'scheduled',?)")
+            $conn->prepare("INSERT INTO expert_elections (start_date, end_date, status, created_by) VALUES (?,?,'active',?)")
                 ->execute([$start, $end, $user_id]);
             $success = 'Период выборов создан.';
         } else {

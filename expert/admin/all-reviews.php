@@ -48,11 +48,20 @@ if (!in_array($filterStatus, $allowedStatuses)) $filterStatus = 'all';
 $pendingExperts = (int)$pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
 $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_status='pending'")->fetchColumn();
 
-// Список игр с оценками
-$whereStatus = $filterStatus !== 'all' ? "AND g.moderation_status = " . $pdo->quote($filterStatus) : '';
-$whereGame   = $filterGame > 0 ? "AND g.id = $filterGame" : '';
+// Построение WHERE для статуса и игры (используем плейсхолдеры для безопасности)
+$whereStatus = '';
+$whereParams = [];
+if ($filterStatus !== 'all') {
+    $whereStatus = "AND g.moderation_status = :status";
+    $whereParams[':status'] = $filterStatus;
+}
+if ($filterGame > 0) {
+    $whereStatus .= " AND g.id = :game_id";
+    $whereParams[':game_id'] = $filterGame;
+}
 
-$gamesStmt = $pdo->query("
+// Основной запрос (исправлен: убрано WHERE review_count > 0, добавлено HAVING)
+$sql = "
     SELECT
         g.id, g.name, g.moderation_status, g.GQI,
         g.path_to_cover, g.updated_at,
@@ -65,22 +74,36 @@ $gamesStmt = $pdo->query("
     FROM games g
     LEFT JOIN studios s ON s.id = g.developer
     LEFT JOIN moderation_reviews mr ON mr.game_id = g.id
-    WHERE review_count > 0 OR g.moderation_status = 'pending'
-    $whereStatus $whereGame
+    WHERE 1=1 $whereStatus
     GROUP BY g.id
+    HAVING COUNT(mr.id) > 0 OR g.moderation_status = 'pending'
     ORDER BY g.updated_at DESC
-    LIMIT $perPage OFFSET $offset
-");
-$games = $gamesStmt->fetchAll(PDO::FETCH_ASSOC);
+    LIMIT :limit OFFSET :offset
+";
+
+$stmt = $pdo->prepare($sql);
+foreach ($whereParams as $key => $val) {
+    $stmt->bindValue($key, $val);
+}
+$stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
+$games = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Счётчик для пагинации
-$totalGamesRow = $pdo->query("
+$countSql = "
     SELECT COUNT(DISTINCT g.id)
     FROM games g
     LEFT JOIN moderation_reviews mr ON mr.game_id = g.id
     WHERE (mr.id IS NOT NULL OR g.moderation_status = 'pending')
-    $whereStatus $whereGame
-")->fetchColumn();
+    $whereStatus
+";
+$countStmt = $pdo->prepare($countSql);
+foreach ($whereParams as $key => $val) {
+    $countStmt->bindValue($key, $val);
+}
+$countStmt->execute();
+$totalGamesRow = $countStmt->fetchColumn();
 $totalPages = max(1, (int)ceil($totalGamesRow / $perPage));
 
 // Детальные рецензии выбранной игры
@@ -115,7 +138,7 @@ if ($filterGame > 0) {
     $agg = $pdo->prepare("
         SELECT
             ROUND(AVG(score))           AS avg_score,
-            ROUND(AVG(score))  AS avg_gameplay,
+            ROUND(AVG(gameplay_score))  AS avg_gameplay,
             ROUND(AVG(visual_score))    AS avg_visual,
             ROUND(AVG(stability))       AS avg_stability,
             ROUND(AVG(originality))     AS avg_originality,
@@ -856,7 +879,13 @@ if ($filterGame > 0) {
                                     'sound_score'    => ['🎵', '#fb923c'],
                                     'content_depth'  => ['📖', '#f472b6'],
                                 ];
-                                $hasCrits = array_any(array_keys($miniCrits), fn($k) => !empty($r[$k]));
+                                $hasCrits = false;
+                                foreach ($miniCrits as $field => $d) {
+                                    if (!empty($r[$field])) {
+                                        $hasCrits = true;
+                                        break;
+                                    }
+                                }
                                 ?>
                                 <?php if ($hasCrits): ?>
                                     <div class="mini-criteria">
@@ -882,18 +911,6 @@ if ($filterGame > 0) {
         </div>
     </main>
 
-    <?php
-    // array_any — PHP 8.5+ или fallback
-    if (!function_exists('array_any')) {
-        function array_any(array $arr, callable $fn): bool
-        {
-            foreach ($arr as $v) {
-                if ($fn($v)) return true;
-            }
-            return false;
-        }
-    }
-    ?>
 </body>
 
 </html>
