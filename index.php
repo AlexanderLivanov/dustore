@@ -1,4 +1,9 @@
-<?php session_start(); ?>
+<?php 
+session_start(); 
+
+require_once __DIR__ . '/swad/controllers/mobile_redirect.php';
+mobile_redirect_if_needed(); 
+?>
 <!DOCTYPE html>
 <html lang="ru">
 

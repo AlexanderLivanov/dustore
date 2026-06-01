@@ -1,0 +1,98 @@
+{
+    "name": "Dustore",
+    "short_name": "Dustore",
+    "description": "Магазин игр — находи, покупай и запускай игры от независимых разработчиков",
+    "start_url": "/m/?source=pwa",
+    "display": "standalone",
+    "background_color": "#0d0118",
+    "theme_color": "#0d0118",
+    "orientation": "portrait-primary",
+    "lang": "ru",
+    "categories": [
+        "games",
+        "entertainment"
+    ],
+    "screenshots": [
+        {
+            "src": "/swad/static/img/pwa/screenshot-1.png",
+            "sizes": "390x844",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Главная страница Dustore"
+        }
+    ],
+    "icons": [
+        {
+            "src": "/swad/static/img/pwa/icon-72.png",
+            "sizes": "72x72",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-96.png",
+            "sizes": "96x96",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-128.png",
+            "sizes": "128x128",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-144.png",
+            "sizes": "144x144",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-152.png",
+            "sizes": "152x152",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/swad/static/img/pwa/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Каталог игр",
+            "short_name": "Каталог",
+            "description": "Открыть каталог игр",
+            "url": "/m/catalog",
+            "icons": [
+                {
+                    "src": "/swad/static/img/pwa/shortcut-catalog.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Моя библиотека",
+            "short_name": "Библиотека",
+            "description": "Мои игры",
+            "url": "/m/library",
+            "icons": [
+                {
+                    "src": "/swad/static/img/pwa/shortcut-library.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ]
+}

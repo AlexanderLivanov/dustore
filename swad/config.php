@@ -12,11 +12,38 @@ class Database {
     // Important Note: function use_pack() находится в файле secrets.php. Будущие программисты, извините
     // меня за такой костыль, просто мои текущие знания и отсутствие свободного времени не позволяют сделать это нормально.
     // Спасибо. (с) 10.05.2025 Alexander Livanov
-    function get_creds(){
-        if ($_SERVER['HTTP_HOST'] == '127.0.0.1') {
+
+    // (с) 02.06.2026 Здесь что-то менялось тем же человеком, и, возможно, стало еще сложнее...
+    function get_creds()
+    {
+        $host = $_SERVER['HTTP_HOST'];
+        // Отделяем порт (если есть)
+        $host = strtolower(explode(':', $host)[0]);
+
+        $isLocal = false;
+
+        // localhost и 127.0.0.1
+        if ($host === '127.0.0.1' || $host === 'localhost') {
+            $isLocal = true;
+        }
+        // Проверка частных IP-адресов (192.168.x.x, 10.x.x.x, 172.16.x.x - 172.31.x.x)
+        elseif (filter_var($host, FILTER_VALIDATE_IP)) {
+            $parts = explode('.', $host);
+            if (count($parts) === 4) {
+                $first = (int)$parts[0];
+                if ($first === 10) $isLocal = true;                                   // 10.0.0.0/8
+                elseif ($first === 172 && (int)$parts[1] >= 16 && (int)$parts[1] <= 31) $isLocal = true; // 172.16.0.0/12
+                elseif ($first === 192 && (int)$parts[1] === 168) $isLocal = true;    // 192.168.0.0/16
+            }
+        }
+
+        if ($isLocal) {
             return use_pack('LOCAL');
-        } else if ($_SERVER['HTTP_HOST'] == 'dustore.ru') {
+        } elseif ($host === 'dustore.ru') {
             return use_pack('PRODUCTION');
+        } else {
+            // Неизвестный хост – используем LOCAL как fallback (для отладки)
+            return use_pack('LOCAL');
         }
     }
 
