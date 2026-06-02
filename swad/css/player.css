@@ -2116,3 +2116,1749 @@ h2 {
     transition: all .2s;
     width: 100%;
 }
+
+/* =============================================
+   ЛУННАЯ ТЕМА ДЛЯ ПРОФИЛЯ (копия всех стилей с префиксом)
+   ============================================= */
+
+body.moonlight-theme {
+    background-image: url("/swad/static/img/Moonlight_pict.jpeg");
+    color: var(--light);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+body.moonlight-theme .container {
+    height: 88vh;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 10px 10px 10px;
+    background: #ffffff05;
+    border-radius: 15px;
+    box-shadow: 0px 1px 1px 1px #ffffff17;
+    backdrop-filter: blur(40px);
+    margin-top: -19px;
+}
+
+body.moonlight-theme .profile-right::-webkit-scrollbar {
+    width: 2px;
+    height: 2px;
+}
+body.moonlight-theme .profile-right::-webkit-scrollbar-track {
+    background: transparent;
+}
+body.moonlight-theme .profile-right::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+body.moonlight-theme .profile-right::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+body.moonlight-theme .profile-right {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+body.moonlight-theme .profile-header {
+    position: relative;
+    padding: 20px;
+    overflow: hidden;
+}
+body.moonlight-theme .profile-content {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 50px;
+}
+body.moonlight-theme .profile-sidebar {
+    flex: 0 0 300px;
+}
+body.moonlight-theme .profile-main {
+    flex: 1;
+}
+body.moonlight-theme .profile-card {
+    border-radius: 15px;
+    padding: 25px;
+}
+body.moonlight-theme .user-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 20px;
+    object-fit: cover;
+    margin-bottom: 20px;
+}
+body.moonlight-theme .user-info {
+    width: 100%;
+    height: 100%;
+    display: flex;
+}
+body.moonlight-theme .user-info h1 {
+    font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    color: white;
+}
+body.moonlight-theme .user-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+}
+body.moonlight-theme .stat-item {
+    text-align: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+body.moonlight-theme .stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary);
+    display: block;
+}
+body.moonlight-theme .stat-label {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+body.moonlight-theme .social-links {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+}
+body.moonlight-theme .social-link {
+    display: inline-block;
+    padding: 8px 15px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    color: #ddd;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+body.moonlight-theme .social-link:hover {
+    background: var(--primary);
+    color: white;
+}
+body.moonlight-theme .section-title {
+    font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
+    font-size: 1rem;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    text-align: center;
+    position: relative;
+    width: 100%;
+    margin-left: 0px;
+}
+body.moonlight-theme .tab-button {
+    flex: 1;
+    padding: 12px 20px;
+    background: #ffffff05;
+    border: none;
+    color: #aaa;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    text-align: center;
+    box-shadow: inset 1px 1px 1px 1px #00000060;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: background 0.01s, color 0.01s, transform 0.01s ease-out;
+    backdrop-filter: blur(10px);
+}
+body.moonlight-theme .profile-left .tabs {
+    width: 100%;
+}
+body.moonlight-theme .profile-left .tab-button {
+    width: 100%;
+    border-radius: 9px;
+    box-shadow: 0px 0px 0px 1px #d6d6d61f;
+}
+body.moonlight-theme .tab-button:hover {
+    background: #494a676e;
+    color: white;
+}
+body.moonlight-theme .tab-button.active {
+    background: #28605fa3;
+    color: white;
+    pointer-events: none;
+}
+body.moonlight-theme .tab-button.active:hover {
+    color: white;
+    pointer-events: none;
+}
+body.moonlight-theme .tab-content {
+    display: none;
+}
+body.moonlight-theme .tab-content.active {
+    display: contents;
+    animation: fadeIn 0.5s ease;
+}
+body.moonlight-theme .shelf-container {
+    margin-top: 20px;
+}
+body.moonlight-theme .shelf-title {
+    font-size: 1.8em;
+    margin: 30px 0 20px;
+    color: #ffbe0b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+body.moonlight-theme .shelf {
+    margin-bottom: 50px;
+    position: relative;
+}
+body.moonlight-theme .shelf-bar {
+    height: 10px;
+    background: linear-gradient(180deg, #3d4a5c 0%, #2a3344 50%, #1a1f2e 100%);
+    border-radius: 8px;
+    margin-bottom: 30px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+body.moonlight-theme .collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 0 10px;
+}
+body.moonlight-theme .item-card {
+    width: 100%;
+    height: 285px;
+    cursor: pointer;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+    border-radius: 12px;
+    overflow: hidden;
+}
+body.moonlight-theme .item-card:hover {
+    transform: rotateX(10deg) rotateY(-10deg) translateY(-5px) scale(1.05);
+    box-shadow: 0 20px 45px rgba(255, 0, 110, 0.4);
+}
+body.moonlight-theme .item-cover {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-align: center;
+    padding: 20px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+}
+body.moonlight-theme .item-content {
+    position: relative;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+body.moonlight-theme .item-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    display: block;
+}
+body.moonlight-theme .item-title {
+    font-size: 1.1em;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: white;
+}
+body.moonlight-theme .item-rarity {
+    font-size: 0.85em;
+    opacity: 0.9;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    display: inline-block;
+    margin-top: 5px;
+    color: white;
+}
+body.moonlight-theme .item-card[data-rarity="0"] .item-cover {
+    border: 2px solid #a0a0a0;
+    box-shadow: inset 0 0 10px rgba(160, 160, 160, 0.3);
+}
+body.moonlight-theme .item-card[data-rarity="1"] .item-cover {
+    border: 2px solid #00ff00;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+body.moonlight-theme .item-card[data-rarity="2"] .item-cover {
+    border: 2px solid #007bff;
+    box-shadow: 0 0 25px rgba(0, 123, 255, 0.4);
+}
+body.moonlight-theme .item-card[data-rarity="3"] .item-cover {
+    border: 2px solid #800080;
+    box-shadow: 0 0 30px rgba(128, 0, 128, 0.5);
+}
+body.moonlight-theme .item-card[data-rarity="4"] .item-cover {
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.6);
+}
+body.moonlight-theme .item-purchase-info {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 0.8em;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 3px 8px;
+    border-radius: 10px;
+    opacity: 0.8;
+    color: white;
+}
+body.moonlight-theme .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+body.moonlight-theme .game-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+body.moonlight-theme .carousel-item .game-card {
+    height: 600px;
+}
+body.moonlight-theme .game-card:hover {
+    transform: translateY(-5px);
+}
+body.moonlight-theme .game-cover {
+    width: 100%;
+    height: 70%;
+    object-fit: cover;
+}
+body.moonlight-theme .game-info {
+    padding: 15px;
+}
+body.moonlight-theme .game-title {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: white;
+}
+body.moonlight-theme .game-description {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+body.moonlight-theme .game-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+body.moonlight-theme .game-rating {
+    color: #ffc107;
+    font-weight: bold;
+}
+body.moonlight-theme .game-price {
+    color: var(--primary);
+    font-weight: bold;
+}
+body.moonlight-theme .reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+body.moonlight-theme .review-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 20px;
+}
+body.moonlight-theme .review-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+body.moonlight-theme .review-game-cover {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-right: 15px;
+}
+body.moonlight-theme .review-game-title {
+    font-weight: bold;
+    color: white;
+}
+body.moonlight-theme .review-rating {
+    color: #ffc107;
+    margin-left: auto;
+}
+body.moonlight-theme .review-text {
+    color: #ddd;
+    line-height: 1.5;
+}
+body.moonlight-theme .review-date {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 10px;
+}
+body.moonlight-theme .empty-state {
+    text-align: center;
+    padding: 20% 40px 24% 40px;
+    color: #888;
+}
+body.moonlight-theme .edit-profile-btn {
+    display: flex;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    margin-top: auto;
+}
+
+body.moonlight-theme .avatar-wrapper {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin-bottom: 20px;
+}
+body.moonlight-theme .avatar-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+body.moonlight-theme .frame-image {
+    position: absolute;
+    top: -50px;
+    left: -45px;
+    width: 150%;
+    height: 150%;
+    z-index: 0;
+}
+body.moonlight-theme .avatar-wrapper .user-avatar {
+    position: absolute;
+    width: 300px;
+    height: 400px;
+    z-index: -1;
+    padding: 5px;
+    border-radius: 30px;
+}
+body.moonlight-theme h1 {
+    margin-top: 10px;
+    margin-left: 20px;
+    font-weight: 100;
+}
+body.moonlight-theme p {
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+body.moonlight-theme h2 {
+    margin-left: 20px;
+    margin-bottom: 20px;
+}
+@media (max-width: 900px) {
+    body.moonlight-theme .profile-content {
+        flex-direction: column;
+    }
+    body.moonlight-theme .profile-sidebar {
+        flex: 1;
+    }
+    body.moonlight-theme .user-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    body.moonlight-theme .tabs {
+        flex-wrap: wrap;
+    }
+    body.moonlight-theme .tab-button {
+        flex: 0 0 50%;
+    }
+}
+@media (max-width: 600px) {
+    body.moonlight-theme .user-stats {
+        grid-template-columns: 1fr;
+    }
+    body.moonlight-theme .games-grid,
+    body.moonlight-theme .collection-grid {
+        grid-template-columns: 1fr;
+    }
+    body.moonlight-theme .tab-button {
+        flex: 0 0 100%;
+    }
+}
+body.moonlight-theme .achievement-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body.moonlight-theme .achievement-icon:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px #ffd700;
+}
+body.moonlight-theme .achievement-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+body.moonlight-theme .profile-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+}
+body.moonlight-theme .btn-friend {
+    background: var(--primary);
+    border: none;
+    border-radius: 40px;
+    padding: 10px 25px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 8px 16px rgba(195, 33, 120, 0.3);
+    display: inline-block;
+}
+body.moonlight-theme .btn-friend:hover {
+    background: #ff4d9e;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(195, 33, 120, 0.5);
+}
+body.moonlight-theme .profile-left .tabs {
+    flex-direction: column;
+    background: linear-gradient(#00000020);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    margin-top: auto;
+    gap: 7px;
+    padding: 5px;
+}
+body.moonlight-theme .profile-right .profile-card {
+    height: 100%;
+    background: #00000020;
+    margin-top: auto;
+    box-shadow: 0px 0px 0px 1px #ffffff17;
+    overflow-y: auto;
+}
+body.moonlight-theme .profile-info-card {
+    height: 100%;
+    background: #00000020;
+    border-radius: 15px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0px 0px 0px 1px #fdfdfd12;
+}
+@media (max-width: 900px) {
+    body.moonlight-theme .profile-header .container {
+        flex-direction: column;
+    }
+    body.moonlight-theme .profile-left {
+        flex: 1 1 auto;
+    }
+}
+body.moonlight-theme .profile-header .container {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    max-width: none;
+}
+body.moonlight-theme .profile-left {
+    flex: 0 0 300px;
+    min-width: 260px;
+    box-shadow: 0px 0px 0px 1px #fdfdfd12;
+    background: linear-gradient(#ffffff05);
+    border-radius: 30px 30px 10px 10px;
+}
+body.moonlight-theme .profile-right {
+    display: flex;
+    flex: 1;
+    min-width: 280px;
+    overflow: hidden;
+    height: 100%;
+    flex-direction: column;
+    box-shadow: 0px 0px 0px 1px #fdfdfd12;
+    background: #ffffff05;
+}
+body.moonlight-theme .avatar-wrapper {
+    position: relative;
+    display: inline-block;
+}
+body.moonlight-theme .edit-profile-btn {
+    position: absolute;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    background: #ffffff1c;
+}
+body.moonlight-theme .carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 20px 0;
+    overflow: visible;
+}
+body.moonlight-theme .carousel-track-wrap {
+    overflow: hidden;
+    width: 100%;
+    padding: 20px 0;
+    margin: 0 40px;
+}
+body.moonlight-theme .carousel-track {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    transition: transform 0.3s ease-out;
+    will-change: transform;
+}
+body.moonlight-theme .carousel-item {
+    flex: 0 0 300px;
+    transition: all 0.3s ease;
+    transform-origin: center center;
+    opacity: 0.6;
+    scale: 0.85;
+    filter: blur(1px);
+}
+body.moonlight-theme .carousel-item.active {
+    opacity: 1;
+    scale: 1.1;
+    filter: blur(0);
+    z-index: 10;
+    transform: translateY(-10px);
+}
+body.moonlight-theme .carousel-item .game-card {
+    width: 100%;
+    height: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.03);
+    transition: box-shadow 0.3s;
+}
+body.moonlight-theme .carousel-item.active .game-card {
+    box-shadow: 0 20px 40px rgba(195,33,120,0.4);
+}
+body.moonlight-theme .carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+body.moonlight-theme .carousel-btn:hover {
+    background: #ff4d9e;
+    box-shadow: 0 6px 15px rgba(195,33,120,0.5);
+}
+body.moonlight-theme .carousel-btn.prev {
+    left: 0;
+}
+body.moonlight-theme .carousel-btn.next {
+    right: 0;
+}
+@media (max-width: 700px) {
+    body.moonlight-theme .carousel-item {
+        flex: 0 0 180px;
+    }
+    body.moonlight-theme .carousel-track-wrap {
+        margin: 0 30px;
+    }
+    body.moonlight-theme .carousel-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 20px;
+    }
+}
+body.moonlight-theme .carousel-3d-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 40px 0;
+    overflow: visible;
+    min-height: 400px;
+    margin-top: 5%;
+}
+body.moonlight-theme .carousel-3d-stage {
+    width: 100%;
+    overflow: visible;
+    position: relative;
+    height: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+body.moonlight-theme .carousel-3d-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.5s ease;
+}
+body.moonlight-theme .carousel-3d-item {
+    position: absolute;
+    width: 240px;
+    height: 380px;
+    transition: all 0.5s ease;
+    opacity: 0.8;
+    filter: blur(1px);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    z-index: 1;
+}
+body.moonlight-theme .carousel-3d-item[data-position="0"] {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate(-50%, -50%) scale(1.2);
+    z-index: 10;
+}
+body.moonlight-theme .carousel-3d-item[data-position="-1"],
+body.moonlight-theme .carousel-3d-item[data-position="1"] {
+    opacity: 0.9;
+    filter: blur(0.5px);
+    transform: translate(-50%, -50%) scale(0.9);
+    z-index: 5;
+}
+body.moonlight-theme .carousel-3d-item[data-position="-1"] {
+    transform: translate(calc(-50% - 140px), -50%) scale(0.9);
+}
+body.moonlight-theme .carousel-3d-item[data-position="1"] {
+    transform: translate(calc(-50% + 140px), -50%) scale(0.9);
+}
+body.moonlight-theme .carousel-3d-item[data-position="-2"],
+body.moonlight-theme .carousel-3d-item[data-position="2"] {
+    opacity: 0.7;
+    filter: blur(1px);
+    transform: translate(calc(-50% - 240px), -50%) scale(0.7);
+    z-index: 3;
+}
+body.moonlight-theme .carousel-3d-item[data-position="2"] {
+    transform: translate(calc(-50% + 240px), -50%) scale(0.7);
+}
+body.moonlight-theme .carousel-3d-item[data-position="-3"],
+body.moonlight-theme .carousel-3d-item[data-position="3"],
+body.moonlight-theme .carousel-3d-item[data-position="-4"],
+body.moonlight-theme .carousel-3d-item[data-position="4"] {
+    opacity: 0.5;
+    filter: blur(2px);
+    transform: translate(calc(-50% - 320px), -50%) scale(0.5);
+    z-index: 1;
+}
+body.moonlight-theme .carousel-3d-item[data-position="3"],
+body.moonlight-theme .carousel-3d-item[data-position="4"] {
+    transform: translate(calc(-50% + 320px), -50%) scale(0.5);
+}
+body.moonlight-theme .game-card-vertical {
+    width: 100%;
+    height: 45vh;
+    background: rgba(20, 4, 29);
+    backdrop-filter: blur(5px);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.3s;
+}
+body.moonlight-theme .game-cover-vertical {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+body.moonlight-theme .game-info-vertical {
+    padding: 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #1b333d;
+}
+body.moonlight-theme .game-title-vertical {
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: white;
+}
+body.moonlight-theme .game-meta-vertical {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+body.moonlight-theme .game-rating {
+    color: #ffc107;
+}
+body.moonlight-theme .game-price {
+    color: var(--primary);
+    font-weight: bold;
+}
+body.moonlight-theme .carousel-3d-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+body.moonlight-theme .viewchoice {
+    overflow: visible;
+    padding: 20px 10px;
+}
+body.moonlight-theme .carousel-3d-btn:hover {
+    background: #ff4d9e;
+    transform: translateY(-50%) scale(1.1);
+}
+body.moonlight-theme .carousel-3d-btn.prev {
+    left: 10px;
+}
+body.moonlight-theme .carousel-3d-btn.next {
+    right: 10px;
+}
+@media (max-width: 700px) {
+    body.moonlight-theme .carousel-3d-item {
+        width: 150px;
+        height: 210px;
+    }
+    body.moonlight-theme .game-cover-vertical {
+        height: 120px;
+    }
+}
+body.moonlight-theme .view-switcher {
+    display: flex;
+    gap: 8px;
+}
+body.moonlight-theme .view-btn {
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    color: #ccc;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+body.moonlight-theme .view-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+body.moonlight-theme .games-profile-card {
+    padding: 0 !important;
+    overflow: visible !important;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+body.moonlight-theme .games-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: #00000020;
+    flex-shrink: 0;
+}
+body.moonlight-theme .games-view-icons {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+body.moonlight-theme .games-view-icon-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    padding: 4px 5px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.18s ease;
+    line-height: 0;
+}
+body.moonlight-theme .games-view-icon-btn.active,
+body.moonlight-theme .games-view-icon-btn:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+body.moonlight-theme .games-profile-card .carousel-3d-container {
+    margin-top: 8vh;
+}
+body.moonlight-theme .showcase-container {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    border-radius: 15px;
+    overflow: auto;
+    position: relative;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff05;
+}
+body.moonlight-theme .showcase-header {
+    display: none;
+}
+body.moonlight-theme .showcase-tabs {
+    display: flex;
+    gap: 2px;
+}
+body.moonlight-theme .showcase-tab {
+    padding: 5px 22px;
+    border: 1px solid transparent;
+    border-radius: 20px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+}
+body.moonlight-theme .showcase-tab.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+body.moonlight-theme .showcase-tab:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.75);
+}
+body.moonlight-theme .showcase-body {
+    display: flex;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+}
+body.moonlight-theme .showcase-shelves {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    overflow-y: auto;
+    overflow-x: visible;
+    padding: 50px 12px 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+body.moonlight-theme .showcase-shelves::-webkit-scrollbar {
+    width: 2px;
+}
+body.moonlight-theme .showcase-shelves::-webkit-scrollbar-track {
+    background: transparent;
+}
+body.moonlight-theme .showcase-shelves::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+body.moonlight-theme .showcase-shelves::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+body.moonlight-theme .showcase-shelf-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+    padding: 0 0 16px;
+    border-bottom: none;
+    box-shadow: none;
+    perspective: 900px;
+    perspective-origin: 50% 50%;
+}
+body.moonlight-theme .showcase-shelf-row + .showcase-shelf-row {
+    margin-top: -28px;
+}
+body.moonlight-theme .showcase-shelf-row:nth-child(1) { z-index: 1; }
+body.moonlight-theme .showcase-shelf-row:nth-child(2) { z-index: 2; }
+body.moonlight-theme .showcase-shelf-row:nth-child(3) { z-index: 3; }
+body.moonlight-theme .showcase-shelf-row:nth-child(4) { z-index: 4; }
+body.moonlight-theme .showcase-shelf-row:nth-child(5) { z-index: 5; }
+body.moonlight-theme .showcase-shelf-row:nth-child(6) { z-index: 6; }
+body.moonlight-theme .showcase-shelf-row::after {
+    display: none;
+}
+body.moonlight-theme .showcase-game-card {
+    flex: 0 0 auto;
+    width: 120px;
+    height: 188px;
+    border-radius: 7px 7px 4px 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transform: rotateX(-7deg);
+    transform-origin: bottom center;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    box-shadow: 2px 4px 14px rgba(0, 0, 0, 0.65);
+    background: linear-gradient(155deg, #392648 0%, #1e1028 100%);
+    position: relative;
+}
+body.moonlight-theme .showcase-game-card:hover {
+    transform: rotateX(0deg) translateY(-20px) scale(1.10);
+    box-shadow: 3px 14px 26px rgba(0, 0, 0, 0.85);
+    z-index: 10;
+}
+body.moonlight-theme .showcase-game-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
+    padding: 5px 5px 40px 5px;
+}
+body.moonlight-theme .showcase-game-empty {
+    cursor: default;
+    background: linear-gradient(155deg, #2a324b 0%, #0c0c1d 100%);
+    opacity: 0.45;
+}
+body.moonlight-theme .showcase-game-empty:hover {
+    transform: rotateX(-7deg);
+    box-shadow: 2px 4px 14px rgba(0, 0, 0, 0.65);
+}
+body.moonlight-theme .showcase-nav-arrow {
+    flex: 0 0 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.28);
+    font-size: 2rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    align-self: center;
+    padding: 0;
+    line-height: 1;
+    margin-right: 4px;
+}
+body.moonlight-theme .showcase-nav-arrow:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+body.moonlight-theme .showcase-achievements-wip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+    width: 100%;
+}
+body.moonlight-theme .showcase-wip-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.3);
+    text-align: center;
+    width: 100%;
+}
+body.moonlight-theme .showcase-wip-icon {
+    opacity: 0.25;
+}
+body.moonlight-theme .showcase-wip-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.45);
+}
+body.moonlight-theme .showcase-wip-sub {
+    margin: 0;
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.25);
+    max-width: 280px;
+    line-height: 1.5;
+}
+body.moonlight-theme #tab-profile.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+body.moonlight-theme .pf-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 16px;
+    overflow-y: auto;
+    height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+    box-shadow: 0px 0px 0px 1px #fdfdfd12;
+}
+body.moonlight-theme .pf-wrap::-webkit-scrollbar { width: 2px; }
+body.moonlight-theme .pf-wrap::-webkit-scrollbar-track { background: transparent; }
+body.moonlight-theme .pf-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 6px; }
+body.moonlight-theme .pf-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #00000020;
+    border-radius: 14px;
+    padding: 16px 20px;
+    border: 1px solid rgb(255 255 255 / 6%);
+}
+body.moonlight-theme .pf-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0 16px;
+}
+body.moonlight-theme .pf-stat-num {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+body.moonlight-theme .pf-stat-lbl {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+body.moonlight-theme .pf-stat-div {
+    width: 1px;
+    height: 32px;
+    background: rgba(255,255,255,0.08);
+    flex-shrink: 0;
+}
+body.moonlight-theme .pf-meta {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+body.moonlight-theme .pf-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.35);
+}
+body.moonlight-theme .pf-meta-item svg {
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+body.moonlight-theme .pf-socials {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+body.moonlight-theme .pf-social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.82rem;
+    text-decoration: none;
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+body.moonlight-theme .pf-social-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: rgba(255,255,255,0.25);
+}
+body.moonlight-theme .pf-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+body.moonlight-theme .pf-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+body.moonlight-theme .pf-section-title {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.3);
+    font-weight: 600;
+}
+body.moonlight-theme .pf-link-btn {
+    background: none;
+    border: none;
+    color: rgba(195,33,120,0.8);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.18s;
+}
+body.moonlight-theme .pf-link-btn:hover { color: #ff4d9e; }
+body.moonlight-theme .pf-games-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+}
+body.moonlight-theme .pf-games-scroll::-webkit-scrollbar { display: none; }
+body.moonlight-theme .pf-game-thumb {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+    width: 90px;
+}
+body.moonlight-theme .pf-game-cover {
+    position: relative;
+    width: 90px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.05);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+body.moonlight-theme .pf-game-thumb:hover .pf-game-cover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.6);
+}
+body.moonlight-theme .pf-game-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+body.moonlight-theme .pf-game-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 18px 6px 5px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    display: flex;
+    justify-content: flex-end;
+}
+body.moonlight-theme .pf-game-rating {
+    font-size: 0.72rem;
+    color: #ffc107;
+    font-weight: 600;
+}
+body.moonlight-theme .pf-game-name {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.3;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.18s;
+}
+body.moonlight-theme .pf-game-thumb:hover .pf-game-name { color: rgba(255,255,255,0.85); }
+body.moonlight-theme .pf-reviews {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+body.moonlight-theme .pf-review {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.18s, border-color 0.18s;
+}
+body.moonlight-theme .pf-review:hover {
+    background: rgba(0,0,0,0.32);
+    border-color: rgba(255,255,255,0.1);
+}
+body.moonlight-theme .pf-review-cover {
+    width: 42px;
+    height: 56px;
+    border-radius: 5px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.05);
+}
+body.moonlight-theme .pf-review-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+body.moonlight-theme .pf-review-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+body.moonlight-theme .pf-review-game {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+body.moonlight-theme .pf-review-score {
+    font-size: 0.78rem;
+    color: #ffc107;
+    flex-shrink: 0;
+    font-weight: 600;
+}
+body.moonlight-theme .pf-review-text {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.38);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+body.moonlight-theme .pf-review-date {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.2);
+    margin-top: 2px;
+}
+@media (max-width: 768px) {
+    body.moonlight-theme body {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+    }
+    body.moonlight-theme .container {
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 12px !important;
+    }
+    body.moonlight-theme .profile-header {
+        padding: 8px;
+        overflow: visible;
+    }
+    body.moonlight-theme .profile-header .container {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    body.moonlight-theme .profile-left {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: unset !important;
+        height: auto !important;
+        padding: 12px;
+        border-radius: 16px;
+    }
+    body.moonlight-theme .user-info {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 14px;
+    }
+    body.moonlight-theme .avatar-wrapper {
+        position: relative !important;
+        width: 80px !important;
+        height: 80px !important;
+        flex-shrink: 0;
+        margin-bottom: 0 !important;
+    }
+    body.moonlight-theme .avatar-frame {
+        width: 80px !important;
+        height: 80px !important;
+    }
+    body.moonlight-theme .avatar-wrapper .user-avatar {
+        position: relative !important;
+        width: 80px !important;
+        height: 80px !important;
+        border-radius: 14px !important;
+        padding: 0 !important;
+        top: auto !important;
+        left: auto !important;
+    }
+    body.moonlight-theme .edit-profile-btn {
+        position: static !important;
+        display: inline-flex !important;
+        margin-top: 6px;
+        font-size: 0.78rem;
+        padding: 3px 8px;
+    }
+    body.moonlight-theme .achievements-container {
+        margin-top: 6px;
+        gap: 4px;
+    }
+    body.moonlight-theme .achievement-icon {
+        width: 30px;
+        height: 30px;
+    }
+    body.moonlight-theme .tabs-wrapper {
+        position: relative;
+        width: 100%;
+        margin-top: 10px;
+    }
+    body.moonlight-theme .mobile-tabs-toggle {
+        display: flex !important;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        background: linear-gradient(rgb(32 14 34), rgb(28 9 30));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: rgba(255,255,255,0.85);
+        font-size: 0.9rem;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    body.moonlight-theme .mobile-tabs-label { flex: 1; text-align: left; font-weight: 500; }
+    body.moonlight-theme .mobile-tabs-chevron {
+        opacity: 0.5;
+        transition: transform 0.2s ease;
+    }
+    body.moonlight-theme .mobile-tabs-toggle.open .mobile-tabs-chevron {
+        transform: rotate(180deg);
+    }
+    body.moonlight-theme .profile-left .tabs {
+        display: none !important;
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 0; right: 0;
+        z-index: 300;
+        flex-direction: column !important;
+        gap: 4px;
+        padding: 8px;
+        background: #1c0923;
+        border: 1px solid rgba(195,33,120,0.35);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+        margin-top: 0 !important;
+    }
+    body.moonlight-theme .profile-left .tabs.open {
+        display: flex !important;
+    }
+    body.moonlight-theme .profile-left .tab-button {
+        width: 100% !important;
+        text-align: left !important;
+        padding: 10px 14px !important;
+        font-size: 0.88rem !important;
+        border-radius: 8px !important;
+        white-space: nowrap;
+    }
+    body.moonlight-theme .profile-right {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        min-width: unset !important;
+    }
+    body.moonlight-theme .profile-right h1 {
+        font-size: 1.4rem !important;
+        margin-left: 0 !important;
+        margin-top: 0 !important;
+    }
+    body.moonlight-theme .profile-right > p {
+        font-size: 0.85rem !important;
+        margin-left: 0 !important;
+        margin-bottom: 8px !important;
+    }
+    body.moonlight-theme .profile-right .profile-card {
+        height: auto !important;
+        padding: 10px !important;
+    }
+    body.moonlight-theme .games-profile-card {
+        height: auto !important;
+    }
+    body.moonlight-theme .games-profile-card .carousel-3d-container {
+        margin-top: 10px !important;
+        min-height: 260px !important;
+    }
+    body.moonlight-theme .carousel-3d-stage {
+        height: 240px !important;
+    }
+    body.moonlight-theme .carousel-3d-item {
+        width: 130px !important;
+        height: 200px !important;
+    }
+    body.moonlight-theme .carousel-3d-item[data-position="-1"] {
+        transform: translate(calc(-50% - 80px), -50%) scale(0.9) !important;
+    }
+    body.moonlight-theme .carousel-3d-item[data-position="1"] {
+        transform: translate(calc(-50% + 80px), -50%) scale(0.9) !important;
+    }
+    body.moonlight-theme .carousel-3d-item[data-position="-2"],
+    body.moonlight-theme .carousel-3d-item[data-position="-3"],
+    body.moonlight-theme .carousel-3d-item[data-position="-4"] {
+        transform: translate(calc(-50% - 155px), -50%) scale(0.6) !important;
+    }
+    body.moonlight-theme .carousel-3d-item[data-position="2"],
+    body.moonlight-theme .carousel-3d-item[data-position="3"],
+    body.moonlight-theme .carousel-3d-item[data-position="4"] {
+        transform: translate(calc(-50% + 155px), -50%) scale(0.6) !important;
+    }
+    body.moonlight-theme .game-cover-vertical { height: 110px !important; }
+    body.moonlight-theme .game-title-vertical  { font-size: 0.85rem; }
+    body.moonlight-theme .showcase-game-card {
+        width: 70px !important;
+        height: 98px !important;
+    }
+    body.moonlight-theme .showcase-shelf-row {
+        gap: 5px !important;
+    }
+    body.moonlight-theme .showcase-shelf-row + .showcase-shelf-row {
+        margin-top: -18px !important;
+    }
+    body.moonlight-theme .pf-stats-row {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        gap: 6px;
+    }
+    body.moonlight-theme .pf-stat { padding: 0 8px; }
+    body.moonlight-theme .pf-stat-num { font-size: 1.2rem; }
+    body.moonlight-theme .pf-meta {
+        width: 100%;
+        margin-left: 0;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        padding-top: 6px;
+        margin-top: 2px;
+        align-items: flex-start;
+    }
+    body.moonlight-theme .pf-game-thumb { width: 70px; }
+    body.moonlight-theme .pf-game-cover { width: 70px; height: 93px; }
+    body.moonlight-theme .collection-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+    }
+    body.moonlight-theme .item-card { height: 160px !important; }
+    body.moonlight-theme .section-title { font-size: 0.82rem; }
+}
+@media (max-width: 480px) {
+    body.moonlight-theme .carousel-3d-stage  { height: 200px !important; }
+    body.moonlight-theme .carousel-3d-item   { width: 110px !important; height: 170px !important; }
+    body.moonlight-theme .game-cover-vertical{ height: 95px !important; }
+    body.moonlight-theme .showcase-game-card { width: 58px !important; height: 82px !important; }
+    body.moonlight-theme .pf-stat-num        { font-size: 1rem; }
+    body.moonlight-theme .pf-stat-div        { display: none; }
+}
+@media (min-width: 769px) {
+    body.moonlight-theme .mobile-tabs-toggle { display: none !important; }
+    body.moonlight-theme .profile-left .tabs {
+        display: flex !important;
+        position: static !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 5px !important;
+    }
+}
+body.moonlight-theme .profile-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+}
+body.moonlight-theme .friend-action-btn {
+    flex-shrink: 0;
+    padding: 6px 25px;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 1.2s, transform 1.2s, box-shadow 1.2s;
+    background: var(--primary, #ffffff20);
+    color: #fff;
+    box-shadow: 0px 0px 0px 1px rgb(153 0 0);
+}
+body.moonlight-theme .friend-action-btn:hover:not(:disabled) {
+    background: var(--primary, #ffffff20);
+    transform: translateY(-2px);
+    box-shadow: 0px 0px 0px 1px rgb(255 0 0);
+}
+body.moonlight-theme .friend-action-btn--accept {
+    background: #1a7a3f;
+    box-shadow: 0 4px 14px rgba(26, 122, 63, 0.35);
+}
+body.moonlight-theme .friend-action-btn--accept:hover:not(:disabled) {
+    background: #219a50;
+}
+body.moonlight-theme .friend-action-btn--muted {
+    background: rgba(255,255,255,0.07);
+    color: rgb(255 191 0);
+    box-shadow: none;
+    cursor: pointer;
+}
+body.moonlight-theme .friend-action-btn--remove {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: none;
+}
+body.moonlight-theme .friend-action-btn--remove:hover:not(:disabled) {
+    background: rgba(195,33,120,0.15);
+    color: #ff6eb4;
+    border-color: rgba(195,33,120,0.4);
+    transform: translateY(-1px);
+}
+body.moonlight-theme .friend-action-btn:disabled { cursor: default; pointer-events: none; }
+body.moonlight-theme .showcase-achievements-body {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+body.moonlight-theme .showcase-achievements-body::-webkit-scrollbar { width: 2px; }
+body.moonlight-theme .showcase-achievements-body::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+}
+body.moonlight-theme .achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 14px;
+}
+body.moonlight-theme .achievement-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.18s;
+    text-align: center;
+}
+body.moonlight-theme .achievement-card:hover {
+    background: rgba(255,255,255,0.09);
+    transform: translateY(-3px);
+}
+body.moonlight-theme .achievement-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.06);
+    font-size: 1.6rem;
+}
+body.moonlight-theme .achievement-card-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+body.moonlight-theme .achievement-card-name {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.3;
+    word-break: break-word;
+}
+body.moonlight-theme .achievement-card-date {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.3);
+}
+body.moonlight-theme #friendActionBtn,
+body.moonlight-theme .showcase-tab,
+body.moonlight-theme .profile-left .tab-button {
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.001s ease-out, background 0.2s, color 0.2s;
+}
+body.moonlight-theme .pf-l4t-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    background: linear-gradient(135deg, rgb(33 182 195 / 18%), rgb(21 111 116 / 25%));
+    border: 1px solid rgb(33 191 195 / 18%);
+    border-radius: 24px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s, transform 0.18s, box-shadow 0.2s;
+    align-self: flex-start;
+    box-shadow: 0 2px 12px rgb(33 195 195 / 20%);
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+body.moonlight-theme .pf-l4t-btn:hover {
+    background: linear-gradient(135deg, rgba(195, 33, 120, 0.32), rgba(116, 21, 93, 0.4));
+    border-color: rgba(195, 33, 120, 0.85);
+    box-shadow: 0 4px 20px rgba(195, 33, 120, 0.4);
+    transform: translateY(-2px);
+}
+body.moonlight-theme .pf-l4t-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgb(33 164 195 / 35%);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 7px;
+    border-radius: 8px;
+    border: 1px solid rgb(33 191 195 / 40%);
+}
+body.moonlight-theme .empty-state-button {
+    padding: 10px 25px 10px 25px;
+    background-color: #ffffff1a;
+    color: #ffffffa1;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    box-shadow: 1px 1px 1px 1px #00000060;
+    font-family: "Bahnschrift Light";
+    font-size: 13pt;
+    transition: all .2s;
+    width: 100%;
+}

@@ -69,7 +69,7 @@ select {
 .view-container {
     max-width: 95.5%;
     min-width: 95.5%;
-    height: calc(100vh - 70px - 50px); /* точная высота с учётом футера */
+    height: calc(100vh - 78px - 50px);
     background-color: #00000066;
     margin: 30px auto 0;
     border-radius: 10px;
@@ -77,19 +77,26 @@ select {
     justify-self: center;
     overflow: hidden;
     box-shadow: 0px 0px 0px 1px #fefefe12;
+    /* гарантируем растяжение по вертикали */
+    align-items: stretch;
+}
+
+.view-container {
+    /* остальное не меняем, только убедимся, что элементы растягиваются */
+    align-items: stretch; /* это значение по умолчанию, но если переопределено — вернём */
 }
 
 .left-side-menu {
     width: 23%;
-    height: 82vh;
-    margin-left: 20px;
+    margin: 10px 0 10px 10px;  /* верх 10, низ 10, лево 10, право 0 */
     background-color: #00000066;
-    border-radius: 10px 10px 10px 10px;
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* предохраняем */
-    align-self: center;
+    overflow: hidden;
+    align-self: stretch;
     box-shadow: 0px 0px 0px 1px #fefefe12;
+    max-height: calc(100vh - 14vh);
 }
 
 .right-content-view {
@@ -112,7 +119,7 @@ select {
 .avatar-canvas {
     background-color: #00000066;
     height: 70%;
-    border: 1px solid #c3217880;
+    /* border: 1px solid #c3217880; */
     border-radius: 10px 10px 40px 40px;
     display: flex;
     flex-direction: column;
@@ -1140,10 +1147,21 @@ input:checked + .slider::before {
     margin: 0 auto;
 }
 
+
+
 .left-side-menu {
-    width: 100%;
+    width: 23%;
+    /* убираем фиксированную высоту */
     height: auto;
-    flex-direction: row;
+    margin-left: 10px;
+    background-color: #00000066;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* растягиваем на всю высоту родителя */
+    align-self: stretch;
+    box-shadow: 0px 0px 0px 1px #fefefe12;
 }
 
 .right-content-view {
@@ -1196,4 +1214,36 @@ input:checked + .slider::before {
 .bid-container {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+
+/* Затемняем / осветляем основные блоки под лунный фон (опционально) */
+body.moonlight-theme .view-container,
+body.moonlight-theme .left-side-menu,
+body.moonlight-theme .right-content-view .content-background,
+body.moonlight-theme .avatar-canvas,
+body.moonlight-theme .buttons-container,
+body.moonlight-theme .bid-container,
+body.moonlight-theme .market-view.active,
+body.moonlight-theme .req-view,
+body.moonlight-theme .create-card {
+    background-color: #ffffff05;  /* чуть темнее на тёмном фоне */
+    backdrop-filter: blur(4px);              /* лёгкое размытие (как на главной) */
+}
+
+/* Можно усилить для контраста текста */
+body.moonlight-theme .filter-item.active,
+body.moonlight-theme .filter-item:hover {
+    background-color: rgba(195, 33, 120, 0.3);
+}
+
+body.moonlight-theme .left-side-button.active,
+body.moonlight-theme .left-side-button1.active {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+body.moonlight-theme .main-container{
+
+    background-image: url("Moonlight_pict.jpeg");
+
 }
