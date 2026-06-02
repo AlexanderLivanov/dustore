@@ -133,6 +133,7 @@ $stmt->execute([
     <meta name="generator" content="SWAD Framework">
     <meta name="google" content="notranslate">
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+
     <style>
         .header {
             min-height: 68px;
