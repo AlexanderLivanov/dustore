@@ -123,8 +123,10 @@ h2:after {
 
 /* Стили для страницы игры */
 .game-hero {
+    background: var(--gradient);
     padding: 120px 0 60px;
     position: relative;
+    overflow: hidden;
 }
 
 .game-banner {
@@ -629,14 +631,25 @@ h2:after {
     }
 }
 
+/* Маска для плавного исчезновения баннера книзу */
+.gp-banner {
+    mask: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+    -webkit-mask: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+}
+.gp-banner::after {
+    display: none;
+}
+
 /* ===== ЛУННАЯ ТЕМА — копия стилей страницы игры с префиксом ===== */
 
 body.moonlight-theme {
     background-image: url("/swad/static/img/Moonlight_pict.jpeg");
-    color: var(--light);
-    overflow-x: hidden;
+    background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
+    background-position: center 35%;
+    color: var(--light);
+    overflow-x: hidden;
 }
 
 body.moonlight-theme .container {
@@ -742,8 +755,10 @@ body.moonlight-theme .btn-secondary:hover {
 
 /* Стили для страницы игры */
 body.moonlight-theme .game-hero {
+    background: var(--gradient);
     padding: 120px 0 60px;
     position: relative;
+    overflow: hidden;
 }
 
 body.moonlight-theme .game-banner {
@@ -1229,21 +1244,3 @@ body.moonlight-theme .offer-content div:last-child {
         margin-bottom: 20px;
     }
 }
-
-/* Маска для плавного исчезновения баннера книзу */
-.gp-banner {
-    mask: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
-    -webkit-mask: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
-}
-.gp-banner::after {
-    display: none;
-}
-
-.gp-banner {
-    margin-top: 0;   /* убедись, что нет отрицательных */
-    /* Если баннер находится внутри <main>, а <main> не имеет отступа сверху, */
-    /* то самому баннеру нужно дать отступ, равный высоте хедера: */
-    padding-top: 0;
-    /* Проще всего — убрать перекрытие через scroll-margin или position: relative; top: 80px; */
-}
-
