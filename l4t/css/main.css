@@ -69,7 +69,7 @@ select {
 .view-container {
     max-width: 95.5%;
     min-width: 95.5%;
-    height: calc(100vh - 70px - 50px);
+    height: calc(100vh - 78px - 50px);
     background-color: #00000066;
     margin: 30px auto 0;
     border-radius: 10px;
@@ -88,7 +88,7 @@ select {
 
 .left-side-menu {
     width: 23%;
-    margin: 10px 0 17px 10px;  /* верх 10, низ 10, лево 10, право 0 */
+    margin: 10px 0 10px 10px;  /* верх 10, низ 10, лево 10, право 0 */
     background-color: #00000066;
     border-radius: 10px;
     display: flex;
