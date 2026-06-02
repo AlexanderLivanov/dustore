@@ -119,7 +119,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
         }
         /* ── BANNER ── */
         .gp-banner{width:100%;height:320px;background-size:cover;background-position:center;position:relative;flex-shrink:0;}
-        .gp-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--dark) 100%);}
+        .gp-banner::after{content:'';position:absolute;inset:0;}
         @media(max-width:768px){.gp-banner{height:200px;}}
         /* ── LAYOUT ── */
         .gp-wrap{max-width:1200px;margin:0 auto;padding:0 20px 60px;display:grid;

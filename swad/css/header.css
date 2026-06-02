@@ -298,14 +298,11 @@ body.moonlight-theme .nav-dropdown__item:hover {
 
 /* Кнопка бургера (мобильное меню) */
 body.moonlight-theme .buttons-left {
-    background: rgba(10, 5, 20, 0.95);
     backdrop-filter: blur(12px);
     border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Если используешь логотип с маской — можно оставить как есть,
-   но можешь добавить свечение:
-*/
+
 body.moonlight-theme .image::after {
     mix-blend-mode: soft-light;
     opacity: 0.4;
@@ -314,14 +311,13 @@ body.moonlight-theme .image::after {
 
 @media screen and (max-width: 900px) {
 
-    /* ÃƒÂÃ‚Â¥ÃƒÂÃ‚ÂµÃƒÂÃ‚Â´ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬ Ãƒâ€˜Ã¢â‚¬Â¡Ãƒâ€˜Ã†â€™Ãƒâ€˜Ã¢â‚¬Å¡Ãƒâ€˜Ã…â€™ ÃƒÂÃ‚ÂºÃƒÂÃ‚Â¾ÃƒÂÃ‚Â¼ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â°ÃƒÂÃ‚ÂºÃƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â½ÃƒÂÃ‚ÂµÃƒÂÃ‚Âµ */
     .header {
         height: 64px;
         padding-left: 10px;
         padding-right: 10px;
     }
 
-    /* ÃƒÂÃ¢â‚¬ÂºÃƒÂÃ‚Â¾ÃƒÂÃ‚Â³ÃƒÂÃ‚Â¾Ãƒâ€˜Ã¢â‚¬Å¡ÃƒÂÃ‚Â¸ÃƒÂÃ‚Â¿ */
+
     .image img {
         width: auto;
         padding: 2px;
@@ -337,7 +333,6 @@ body.moonlight-theme .image::after {
         filter: contrast(200%);
     }
 
-    /* ÃƒÂÃ¢â‚¬ËœÃƒâ€˜Ã†â€™Ãƒâ€˜Ã¢â€šÂ¬ÃƒÂÃ‚Â³ÃƒÂÃ‚ÂµÃƒâ€˜Ã¢â€šÂ¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ÃƒÂÃ‚Â¿ÃƒÂÃ‚Â¾ÃƒÂÃ‚ÂºÃƒÂÃ‚Â°ÃƒÂÃ‚Â·Ãƒâ€˜Ã¢â‚¬Â¹ÃƒÂÃ‚Â²ÃƒÂÃ‚Â°ÃƒÂÃ‚ÂµÃƒÂÃ‚Â¼ */
     #burger {
         display: flex !important;
         align-items: center;
@@ -762,11 +757,6 @@ body.moonlight-theme .image img {
 }
 
 
-
-/* =============================================
-   Лунная тема — такие же эффекты, как в обычной
-   ============================================= */
-
 body.moonlight-theme .header::before,
 body.moonlight-theme .header::after {
     content: "";
@@ -798,7 +788,7 @@ body.moonlight-theme .header:hover::after {
 
 body.moonlight-theme .center-floating-block.scrolled,
 body.moonlight-theme .center-floating-block.header-hovered {
-    box-shadow: 0px 1px 1px 0px rgba(255, 255, 255, 0.25);
+    box-shadow: 0px 1px 1px 0px #ffffff15;
     backdrop-filter: blur(7px);
     background-color: rgba(0, 0, 0, 0);
 }

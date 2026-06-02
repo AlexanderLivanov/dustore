@@ -91,6 +91,18 @@ h2:after {
     border-radius: 2px;
 }
 
+body.moonlight-theme h2:after {
+    content: "";
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: #7999f7;
+    border-radius: 2px;
+}
+
 p {
     font-size: 1.1rem;
     line-height: 1.6;
@@ -217,6 +229,25 @@ body.moonlight-theme .btn-secondary:hover {
     transition: transform 0.60s ease-out;
 }
 
+body.moonlight-theme .hero::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 120%;
+    height: 120%;
+    background-image: url(/swad/static/img/logo_moonlight.svg);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.15;
+    z-index: -1;
+    pointer-events: none;
+    transform: translateX(var(--hero-bg-offset, 0px));
+    transition: transform 0.60s ease-out;
+}
+
+
 /* ── Платформа ── */
 .platform {
     background: none;
@@ -238,9 +269,22 @@ body.moonlight-theme .btn-secondary:hover {
     transition: transform 0.3s ease;
 }
 
+body.moonlight-theme .platform-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 30px;
+    text-align: left;
+    transition: transform 0.3s ease;
+    backdrop-filter: blur(3px);
+}
+
 .platform-card:hover {
     transform: translateY(-10px);
     background: #74155d;
+}
+body.moonlight-theme .platform-card:hover {
+    transform: translateY(-10px);
+    background: #7999f740;
 }
 
 .platform-icon {
@@ -274,6 +318,14 @@ body.moonlight-theme .btn-secondary:hover {
     font-weight: 700;
     margin-bottom: 10px;
     color: var(--primary);
+    font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
+}
+
+body.moonlight-theme .stat-number {
+    font-size: 4rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #7999f7;
     font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
 }
 
