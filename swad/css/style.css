@@ -228,3 +228,12 @@ body {
         transform: translateY(0);
     }
 }
+
+/* ===== Лунная тема для L4T ===== */
+body.moonlight-theme {
+    background-image: url("/swad/static/img/Moonlight_pict.jpeg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center 50%;
+}

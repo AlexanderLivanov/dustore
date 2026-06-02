@@ -647,7 +647,7 @@ body.moonlight-theme {
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    background-position: center 35%;
+    background-position: center 50%;
     color: var(--light);
     overflow-x: hidden;
 }
