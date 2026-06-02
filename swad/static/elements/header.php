@@ -251,7 +251,7 @@ $stmt->execute([
                         <ul class="nav-dropdown__menu" role="menu">
                             <li><a class="nav-dropdown__item" href='/jams' role="menuitem">Спринты</a></li>
                             <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
-                            <li><a class="nav-dropdown__item" href="/brokenpixel" role="menuitem">Битый Пиксель</a></li>
+                            <li><a class="nav-dropdown__item" href="#" role="menuitem">Битый Пиксель</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">Медиа</a></li>
                         </ul>
                     </div>
@@ -265,7 +265,6 @@ $stmt->execute([
                             </svg>
                         </button>
                         <ul class="nav-dropdown__menu" role="menu">
-                            <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
                             <li><a class="nav-dropdown__item" href="/assetstore" role="menuitem">Ассеты</a></li>
                             <li><a class="nav-dropdown__item" href="/l4t" role="menuitem">L4T</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">GDDB</a></li>
