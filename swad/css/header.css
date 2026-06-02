@@ -7,7 +7,7 @@
 .header {
 font-family: "BahnschriftLight";
 min-height: 68px;          /* фиксируем минимальную высоту */
-    overflow: visible; 
+    overflow: visible;
 }
 
 .header-container {
@@ -47,7 +47,6 @@ body {
 .header-wrapper,
 .header {
     max-width: 100%;
-    overflow-x: hidden;
 }
 
 .header.scrolled {
