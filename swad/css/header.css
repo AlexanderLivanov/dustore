@@ -6,6 +6,8 @@
 
 .header {
 font-family: "BahnschriftLight";
+min-height: 68px;          /* фиксируем минимальную высоту */
+    overflow: visible; 
 }
 
 .header-container {
@@ -21,6 +23,8 @@ body {
     font-family:"Bahnschrift Light";
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
+    max-width: 100%;
 }
 
 .header {
@@ -38,6 +42,12 @@ body {
     border-radius: 0px 0px 20px 20px;
     box-shadow: none;
     transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
+}
+
+.header-wrapper,
+.header {
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .header.scrolled {

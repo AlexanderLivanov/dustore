@@ -677,6 +677,11 @@ $maxVotes        = max($maxVotes, 1);
                         <div class="l">До конца</div>
                     </div>
                 <?php endif; ?>
+                <?php if ($isAuthed): ?>
+                    <div style="margin-top:16px;">
+                        <a href="/expert/expert-apply" style="color:var(--p2);font-weight:600;">Перейти к заявке →</a>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
 

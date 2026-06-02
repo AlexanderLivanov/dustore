@@ -681,11 +681,11 @@ $election = $conn->query("
 <body>
 
     <nav>
-        <a href="/" class="nav-logo">Du<span>store</span></a>
+        <a href="/" class="nav-logo">Du<span>store</span>.Experts<sup style="font-family: 'Courier New', Courier, monospace;">β</sup></a>
         <div class="nav-links">
-            <a href="/games">Каталог</a>
+            <a href="/explore">Каталог игр</a>
             <?php if ($user): ?>
-                <a href="/me">@<?= htmlspecialchars($user['username'] ?? 'Профиль') ?></a>
+                <a href="/player/<?= htmlspecialchars($user['username'] ?? '../') ?>">@<?= htmlspecialchars($user['username'] ?? 'Профиль') ?></a>
                 <?php if ($userExpertStatus === 'approved'): ?>
                     <a href="/expert/admin/" class="btn-nav btn">Панель эксперта</a>
                 <?php elseif (!$userExpertStatus && $election): ?>
@@ -704,7 +704,7 @@ $election = $conn->query("
             Программа экспертной оценки
         </div>
         <h1>Кто решает, какие игры<br>попадают на <span>Dustore</span>?</h1>
-        <p>Не алгоритмы. Не один модератор. Сообщество экспертов — реальных людей, которые разбираются в геймдеве.</p>
+        <p>Ты.</p>
         <div class="hero-actions">
             <?php if ($election && !$userExpertStatus): ?>
                 <a href="/expert/expert-apply" class="btn btn-primary">
@@ -722,7 +722,7 @@ $election = $conn->query("
                     Как это работает
                 </a>
             <?php endif; ?>
-            <a href="/games" class="btn btn-ghost">Смотреть одобренные игры</a>
+            <a href="/explore" class="btn btn-ghost">Смотреть одобренные игры</a>
         </div>
     </div>
 
@@ -750,53 +750,53 @@ $election = $conn->query("
     <section id="how-it-works">
         <div class="section-eyebrow">Процесс</div>
         <h2 class="section-title">Как проходит оценка</h2>
-        <p class="section-sub">От отправки разработчиком до публикации в каталоге — прозрачный процесс без чёрных ящиков.</p>
+        <p class="section-sub">Каждый шаг прозрачен: от отправки игры разработчиком до публикации в каталоге.</p>
 
         <div class="steps">
             <div class="step-card">
                 <div class="step-num">01</div>
-                <div class="step-icon">📤</div>
                 <h3>Разработчик отправляет игру</h3>
                 <p>Игра проходит чеклист обязательных требований и попадает в очередь на экспертизу.</p>
             </div>
             <div class="step-card">
                 <div class="step-num">02</div>
-                <div class="step-icon">🔔</div>
                 <h3>Эксперты получают уведомление</h3>
-                <p>Все активные эксперты видят новую игру в своей панели и могут приступить к оценке.</p>
+                <p>Все активные эксперты видят новую игру в своей панели и могут приступить к оценке по 7 критериям.</p>
             </div>
             <div class="step-card">
                 <div class="step-num">03</div>
-                <div class="step-icon">🎮</div>
-                <h3>Оценка по 7 критериям</h3>
-                <p>Эксперт скачивает билд, проходит игру и выставляет оценку по каждому из критериев плюс общий вердикт.</p>
-            </div>
-            <div class="step-card">
-                <div class="step-num">04</div>
-                <div class="step-icon">📊</div>
                 <h3>Подсчёт голосов</h3>
                 <p>Нужно набрать более 51% положительных голосов. Результат считается автоматически в реальном времени.</p>
             </div>
             <div class="step-card">
-                <div class="step-num">05</div>
-                <div class="step-icon">✅</div>
+                <div class="step-num">04</div>
                 <h3>Публикация или доработка</h3>
                 <p>Одобренные игры разработчик публикует сам. Не одобренные — получают рецензии и могут быть доработаны.</p>
             </div>
         </div>
     </section>
 
+    <div class="hero">
+        <p>Самое честное голосование здесь</p>
+        <div class="hero-actions">
+            <a href="/expert/vote" class="btn btn-primary">
+                <span class="material-icons" style="font-size:18px;">how_to_reg</span>
+                Голосовать
+            </a>
+        </div>
+    </div>
+
     <!-- ── CRITERIA ── -->
     <section style="background: var(--surf); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 80px 0;">
         <div style="max-width:1100px; margin:0 auto; padding: 0 32px;">
             <div class="section-eyebrow">Критерии</div>
-            <h2 class="section-title">По чему оценивается игра</h2>
+            <h2 class="section-title">Из чего складывается оценка</h2>
             <p class="section-sub">Каждый критерий влияет на итоговый GQI — Game Quality Index.</p>
 
             <div class="criteria-grid">
                 <?php
                 $criteria = [
-                    ['🎮', 'Геймплей',      'Механики, баланс, реиграбельность, отзывчивость управления.',  '20%', '#22d3ee', 'rgba(34,211,238,.12)'],
+                    ['🎮', 'Геймплей',      'Механики, баланс, отзывчивость управления.',                     '20%', '#22d3ee', 'rgba(34,211,238,.12)'],
                     ['🎨', 'Визуал',         'Арт-стиль, UI, анимации — визуальная целостность.',             '12%', '#a78bfa', 'rgba(167,139,250,.12)'],
                     ['🔧', 'Стабильность',   'Отсутствие критических багов, вылетов, просадок FPS.',          '12%', '#4ade80', 'rgba(74,222,128,.12)'],
                     ['💡', 'Оригинальность', 'Насколько идея и реализация выделяется на рынке.',               '6%',  '#fbbf24', 'rgba(251,191,36,.12)'],
@@ -943,7 +943,7 @@ $election = $conn->query("
     <section>
         <div class="section-eyebrow">Вопросы и ответы</div>
         <h2 class="section-title">FAQ</h2>
-        <p class="section-sub" style="margin-bottom:32px;">Самые частые вопросы об экспертной программе.</p>
+        <p class="section-sub" style="margin-bottom:32px;">Возможные вопросы об экспертной программе.</p>
 
         <div class="faq-list">
             <?php
@@ -954,7 +954,7 @@ $election = $conn->query("
                 ],
                 [
                     'Анонимны ли рецензии?',
-                    'Да — рецензии экспертов анонимны для разработчика до завершения голосования. После принятия решения разработчик видит агрегированные оценки.'
+                    'Да — рецензии не видят другие эксперты до завершения голосования, но видит разработчик. После получения >50% голосов видны становятся видны всем экспертам.'
                 ],
                 [
                     'Что происходит, если игра не прошла?',
