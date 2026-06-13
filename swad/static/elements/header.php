@@ -135,96 +135,222 @@ $stmt->execute([
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 
     <style>
-        .header {
-            min-height: 68px;
-            overflow: visible;
+        .context-menu {
+            position: fixed;
+            display: none;
+            min-width: 320px;
+
+            background: rgba(20, 4, 29, 0.97);
+            backdrop-filter: blur(20px);
+
+            border: 1px solid rgba(195, 33, 120, .25);
+            border-radius: 14px;
+
+            padding: 8px;
+
+            box-shadow:
+                0 15px 40px rgba(0, 0, 0, .5),
+                0 0 25px rgba(195, 33, 120, .15);
+
+            z-index: 999999;
+            animation: menuOpen .12s ease;
         }
 
-        .header .buttons-left,
-        .header .right-section {
+        .context-menu-item {
+            width: 100%;
+
             display: flex;
-            flex-wrap: nowrap;
             align-items: center;
-            gap: 8px;
-        }
 
-        .header .button {
-            white-space: nowrap;
-            flex-shrink: 0;
-            padding: 8px 16px;
+            gap: 12px;
+
+            background: transparent;
+            border: none;
+
+            color: #fff;
+
+            padding: 11px 12px;
+            border-radius: 10px;
+
+            cursor: pointer;
+            transition: .15s;
+
             font-size: 14px;
-            line-height: 1.4;
         }
 
-        @media (max-width: 1024px) {
-            .header .buttons-left {
-                flex-wrap: wrap;
-                gap: 4px;
-            }
-
-            .header .button {
-                padding: 6px 12px;
-                font-size: 13px;
-            }
+        .context-menu-item:hover {
+            background: rgba(195, 33, 120, .18);
         }
 
-        @media (max-width: 900px) {
-            .buttons-left {
-                display: none !important;
-                /* скрываем, т.к. есть бургер */
-            }
+        .context-menu-icon {
+            width: 20px;
+            text-align: center;
+            opacity: .85;
         }
 
-        .update-progress {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-right: 15px;
-            font-family: inherit;
-        }
-
-        @media (width < 900px) {
-            .update-progress {
-                display: none;
-            }
-        }
-
-        .update-percent {
+        .shortcut {
+            margin-left: auto;
+            opacity: .55;
             font-size: 12px;
-            color: #fff;
-            margin-bottom: 3px;
         }
 
-        .update-bar {
-            width: 100px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 3px;
+        .context-menu-divider {
+            height: 1px;
+            margin: 6px 4px;
+
+            background:
+                linear-gradient(90deg,
+                    transparent,
+                    rgba(195, 33, 120, .35),
+                    transparent);
         }
 
-        .update-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #7fff9f, #42d37d);
-            width: 0%;
-            transition: width 0.4s ease;
-        }
+        @keyframes menuOpen {
+            from {
+                opacity: 0;
+                transform: translateY(-5px) scale(.97);
+            }
 
-        .update-next {
-            font-size: 11px;
-            opacity: 0.75;
-            color: #fff;
-        }
-
-        .nav-dropdown__item--accent:hover {
-            color: #ff5ba8 !important;
-            background: rgba(195, 33, 120, .08);
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
     </style>
 </head>
 
 <body>
+    <div id="custom-menu" class="context-menu">
+        <button class="context-menu-item" data-action="back">
+            <span class="context-menu-icon">←</span>
+            <span>Назад</span>
+            <span class="shortcut">Alt+←</span>
+        </button>
+
+        <button class="context-menu-item" data-action="forward">
+            <span class="context-menu-icon">→</span>
+            <span>Вперёд</span>
+            <span class="shortcut">Alt+→</span>
+        </button>
+
+        <button class="context-menu-item" data-action="reload">
+            <span class="context-menu-icon">↻</span>
+            <span>Перезагрузить</span>
+            <span class="shortcut">Ctrl+R</span>
+        </button>
+
+        <div class="context-menu-divider"></div>
+
+        <button class="context-menu-item" data-action="print">
+            <span class="context-menu-icon">🖨</span>
+            <span>Печать...</span>
+            <span class="shortcut">Ctrl+P</span>
+        </button>
+
+        <button class="context-menu-item" data-action="save">
+            <span class="context-menu-icon">💾</span>
+            <span>Сохранить страницу как...</span>
+            <span class="shortcut">Ctrl+S</span>
+        </button>
+
+        <button class="context-menu-item" data-action="translate">
+            <span class="context-menu-icon">🌐</span>
+            <span>Перевести на русский</span>
+        </button>
+
+        <button class="context-menu-item" data-action="find">
+            <span class="context-menu-icon">🔍</span>
+            <span>Поиск по странице</span>
+            <span class="shortcut">Ctrl+F</span>
+        </button>
+
+        <button class="context-menu-item" data-action="viewsource">
+            <span class="context-menu-icon">&lt;/&gt;</span>
+            <span>Просмотр кода страницы</span>
+            <span class="shortcut">Ctrl+U</span>
+        </button>
+
+        <div class="context-menu-divider"></div>
+
+        <button class="context-menu-item" data-action="inspect">
+            <span class="context-menu-icon">⚙</span>
+            <span>Посмотреть код</span>
+            <span class="shortcut">F12</span>
+        </button>
+    </div>
+
+    <script>
+        const menu = document.getElementById('custom-menu');
+
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+            menu.style.display = 'block';
+
+            const rect = menu.getBoundingClientRect();
+
+            let x = e.clientX;
+            let y = e.clientY;
+
+            if (x + rect.width > window.innerWidth) {
+                x = window.innerWidth - rect.width - 10;
+            }
+
+            if (y + rect.height > window.innerHeight) {
+                y = window.innerHeight - rect.height - 10;
+            }
+
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+        });
+
+        document.addEventListener('click', () => {
+            menu.style.display = 'none';
+        });
+
+        menu.addEventListener('click', (e) => {
+            const button = e.target.closest('.context-menu-item');
+            if (!button) return;
+
+            const action = button.dataset.action;
+
+            switch (action) {
+                case 'back':
+                    history.back();
+                    break;
+
+                case 'forward':
+                    history.forward();
+                    break;
+
+                case 'reload':
+                    location.reload();
+                    break;
+
+                case 'print':
+                    window.print();
+                    break;
+
+                case 'save':
+                    alert('Браузеры не позволяют программно открыть "Сохранить как"');
+                    break;
+
+                case 'find':
+                    alert('Используйте Ctrl+F');
+                    break;
+
+                case 'viewsource':
+                    window.open('view-source:' + location.href);
+                    break;
+
+                case 'inspect':
+                    alert('Невозможно открыть DevTools через JS');
+                    break;
+            }
+
+            menu.style.display = 'none';
+        });
+    </script>
     <div class="center-floating-block">
         <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;"></p>
     </div>
@@ -249,7 +375,7 @@ $stmt->execute([
                             </svg>
                         </button>
                         <ul class="nav-dropdown__menu" role="menu">
-                            <li><a class="nav-dropdown__item" href='/jams' role="menuitem">Спринты</a></li>
+                            <li><a class="nav-dropdown__item" href='/jams/sprints' role="menuitem">Спринты</a></li>
                             <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">Битый Пиксель</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">Медиа</a></li>
@@ -1403,6 +1529,26 @@ $stmt->execute([
                     document.body.classList.toggle('moonlight-theme', newTheme === 'moonlight');
                 });
             })();
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const burger = document.getElementById('burger');
+                const menu = document.querySelector('.buttons-left');
+
+                if (!burger || !menu) return;
+
+                burger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    menu.classList.toggle('mobile-open');
+                });
+
+                // Закрыть меню при клике вне его (по желанию)
+                document.addEventListener('click', function(e) {
+                    if (menu.classList.contains('mobile-open') && !menu.contains(e.target) && !burger.contains(e.target)) {
+                        menu.classList.remove('mobile-open');
+                    }
+                });
+            });
         </script>
 
 </body>

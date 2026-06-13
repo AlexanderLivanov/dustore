@@ -1,3 +1,4 @@
+<?php require_once('../swad/static/elements/header.php'); ?>
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -38,9 +39,9 @@
         }
 
         /* ── HEADER ── */
-        .header {
-            background: rgba(13, 4, 20, .95);
-            border-bottom: 1px solid rgba(195, 33, 120, .2);
+        .jams-header {
+            /* background: rgba(13, 4, 20, .95); */
+            /* border-bottom: 1px solid rgba(195, 33, 120, .2); */
             padding: 13px 28px;
             display: flex;
             align-items: center;
@@ -1081,13 +1082,13 @@
 
 <body>
 
-    <header class="header">
-        <div class="logo">🎮 <span class="brand">Dustore</span><span class="sep">/</span>Спринты</div>
+    <header class="jams-header" style="z-index: 1;">
+        <div class="logo"><span class="brand"></span><span class="sep"></span></div>
         <div style="display:flex;align-items:center;gap:10px">
             <div class="header-nav">
                 <a class="nav-btn active" href="sprints">Спринты</a>
-                <a class="nav-btn" href="participant">Моё участие</a>
-                <a class="nav-btn" href="admin">Админка</a>
+                <!-- <a class="nav-btn" href="participant">Моё участие</a> -->
+                <!-- <a class="nav-btn" href="admin">Админка</a> -->
             </div>
             <button class="btn-primary" onclick="openCreate()">+ Создать спринт</button>
         </div>
@@ -1096,7 +1097,7 @@
     <div class="container">
 
         <div class="hero">
-            <h1>Dustore <span>Спринты</span></h1>
+            <h1><span>Спринты</span></h1>
             <p>Создавай игры в сжатые сроки · Соревнуйся с командами · Получай признание</p>
             <div class="hero-stats">
                 <div class="hero-stat">
@@ -1248,51 +1249,53 @@
         var BANNERS = ['🎮', '🕹', '👾', '🚀', '🔥', '⚔', '🧩', '🌌', '🎲', '🏆', '💡', '🐉'];
         var AVATARS = ['👤', '🦅', '🌸', '🎭', '🦊', '🐺', '🤖', '🧠', '🎯', '⚡', '🌊', '🔮'];
         var MEDALS = ['🥇', '🥈', '🥉'];
-        var jams = [{
-            id: 1,
-            title: 'К.О.Н.Т.У.Р.',
-            desc: 'Конкурс любительских версий. Любые движки. Любые платформы',
-            theme: 'Известна до старта',
-            banner: '🎮',
-            status: 'active', // или upcoming
-            start: Date.now() + 2 * 864e5,
-            dur: 240,
-            maxP: 50,
-            curP: 0,
-            prizes: [{
-                place: '1',
-                reward: '1 000 ₽'
-            }, {
-                place: '2',
-                reward: '1 000 ₽'
-            }, {
-                place: '3',
-                reward: '1 000 ₽'
-            }],
-            experts: [{
-                name: 'Иван Иванов',
-                role: 'Эксперт',
-                av: '🦅'
-            }, {
-                name: 'Сергей Сергеев',
-                role: 'Эксперт',
-                av: '🌸'
-            }],
-            tags: ['Любая платформа', 'Любой движок', 'Авторское'],
-            host: 'Dustore'
-        }, ];
-        var curFilter = 'all',
-            selBanner = '🎮',
-            selDur = '24';
-        var prizes = [{
-                place: '1',
-                reward: ''
-            }],
-            experts = [{
-                name: '',
-                role: '',
-                av: '👤'
-            }];
+        var jams = [
+        //     {
+        //     id: 1,
+        //     title: 'К.О.Н.Т.У.Р.',
+        //     desc: 'Конкурс любительских версий. Любые движки. Любые платформы',
+        //     theme: 'Известна до старта',
+        //     banner: '🎮',
+        //     status: 'active', // или upcoming
+        //     start: Date.now() + 2 * 864e5,
+        //     dur: 240,
+        //     maxP: 50,
+        //     curP: 0,
+        //     prizes: [{
+        //         place: '1',
+        //         reward: '1 000 ₽'
+        //     }, {
+        //         place: '2',
+        //         reward: '1 000 ₽'
+        //     }, {
+        //         place: '3',
+        //         reward: '1 000 ₽'
+        //     }],
+        //     experts: [{
+        //         name: 'Иван Иванов',
+        //         role: 'Эксперт',
+        //         av: '🦅'
+        //     }, {
+        //         name: 'Сергей Сергеев',
+        //         role: 'Эксперт',
+        //         av: '🌸'
+        //     }],
+        //     tags: ['Любая платформа', 'Любой движок', 'Авторское'],
+        //     host: 'Dustore'
+        // }, ];
+        // var curFilter = 'all',
+        //     selBanner = '🎮',
+        //     selDur = '24';
+        // var prizes = [{
+        //         place: '1',
+        //         reward: ''
+        //     }],
+        //     experts = [{
+        //         name: '',
+        //         role: '',
+        //         av: '👤'
+        // }
+    ];
 
         function countdown(ts) {
             var d = ts - Date.now();
