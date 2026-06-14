@@ -375,7 +375,7 @@ $stmt->execute([
                             </svg>
                         </button>
                         <ul class="nav-dropdown__menu" role="menu">
-                            <li><a class="nav-dropdown__item" href='/jams/sprints' role="menuitem">Спринты</a></li>
+                            <li><a class="nav-dropdown__item" href='/jams' role="menuitem">Спринты</a></li>
                             <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">Битый Пиксель</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">Медиа</a></li>
@@ -385,7 +385,7 @@ $stmt->execute([
                     <!-- Dropdown «Для разработчиков» -->
                     <div class="nav-dropdown">
                         <button class="button nav-dropdown__trigger" aria-haspopup="true" aria-expanded="false">
-                            Для разработчиков
+                            Devs
                             <svg class="nav-dropdown__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
                                 <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>

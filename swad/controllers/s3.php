@@ -8,9 +8,12 @@ use Aws\S3\Exception\S3Exception;
 class S3Uploader
 {
     private $s3;
+    private $bucket;
 
-    public function __construct()
+    public function __construct($bucket = AWS_S3_BUCKET_USERCONTENT)
     {
+        $this->bucket = $bucket;
+
         $this->s3 = new S3Client([
             'version' => 'latest',
             'region'  => AWS_S3_REGION,
@@ -20,10 +23,6 @@ class S3Uploader
             ],
             'endpoint' => AWS_S3_ENDPOINT,
             'use_path_style_endpoint' => true,
-            'http' => [
-                'timeout' => 300,
-                'connect_timeout' => 30
-            ]
         ]);
     }
 
@@ -41,7 +40,7 @@ class S3Uploader
             }
 
             $result = $this->s3->putObject([
-                'Bucket' => AWS_S3_BUCKET_USERCONTENT,
+                'Bucket' => $this->bucket,
                 'Key'    => $destination,
                 'Body'   => fopen($tmp_path, 'rb'),
                 'ACL'    => 'public-read',
@@ -76,7 +75,7 @@ class S3Uploader
             error_log("Deleting S3 file with key: " . $key);
 
             $result = $this->s3->deleteObject([
-                'Bucket' => AWS_S3_BUCKET_USERCONTENT,
+                'Bucket' => $this->bucket,
                 'Key'    => $key,
             ]);
 
@@ -97,7 +96,7 @@ class S3Uploader
     {
         try {
             $this->s3->headObject([
-                'Bucket' => AWS_S3_BUCKET_USERCONTENT,
+                'Bucket' => $this->bucket,
                 'Key'    => $key,
             ]);
             return true;
