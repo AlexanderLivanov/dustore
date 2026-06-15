@@ -68,8 +68,6 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.35); border-radius: 4px; }
 
         .sprint-header {
-            /* background: rgba(13,4,20,.96); */
-            /* border-bottom: 1px solid rgba(195,33,120,.18); */
             padding: 13px 26px;
             display: flex;
             align-items: center;
@@ -77,7 +75,6 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             position: sticky;
             top: 0;
             z-index: 0;
-            backdrop-filter: blur(12px);
         }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: #e8ddf0; letter-spacing: -.3px; }
         .logo .brand { color: #c32178; }
@@ -90,7 +87,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             font-weight: 600;
             background: rgba(255,255,255,.05);
             color: rgba(255,255,255,.5);
-            transition: .15s;
+            transition: .001s;
             text-decoration: none;
             display: inline-block;
         }
@@ -105,7 +102,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             cursor: pointer;
             font-weight: 700;
             font-size: 13px;
-            transition: .15s;
+            transition: .001s;
         }
         .btn-primary:hover { background: #9e1a66; transform: translateY(-1px); }
 
@@ -157,50 +154,181 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             font-weight: 600;
             background: rgba(255,255,255,.04);
             color: rgba(255,255,255,.45);
-            transition: .15s;
+            transition: .001s;
         }
         .filter-btn.active { background: rgba(195,33,120,.18); border-color: rgba(195,33,120,.4); color: #e8ddf0; }
         .filter-btn:hover:not(.active) { background: rgba(255,255,255,.08); color: #e8ddf0; }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .empty { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.25); }
         .empty .ico { font-size: 40px; margin-bottom: 10px; }
 
+        /* ===== НОВЫЙ СТИЛЬ КАРТОЧЕК (уменьшенные) ===== */
         .card {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.09);
-            border-radius: 12px;
-            padding: 18px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
             cursor: pointer;
-            transition: .18s;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            max-width: 320px;
         }
-        .card:hover { border-color: rgba(195,33,120,.35); transform: translateY(-2px); box-shadow: 0 6px 28px rgba(195,33,120,.1); }
-        .card-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
-        .card-banner { font-size: 30px; line-height: 1; flex-shrink: 0; }
-        .card-banner img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
-        .card-meta { flex: 1; min-width: 0; }
-        .card-meta-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 3px; }
-        .card-title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-host { color: rgba(255,255,255,.3); font-size: 11px; }
-        .card-desc { color: rgba(255,255,255,.45); font-size: 12px; line-height: 1.6; margin-bottom: 11px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 11px; }
-        .tag { background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.2); color: rgba(195,33,120,.9); border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
-        .card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 11px; }
-        .stat-box { background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 11px; }
-        .stat-box .s-lbl { color: rgba(255,255,255,.3); font-size: 10px; margin-bottom: 2px; }
-        .stat-box .s-val { font-weight: 700; font-size: 13px; }
-        .prog-wrap { margin-top: 2px; }
-        .prog-lbl { display: flex; justify-content: space-between; color: rgba(255,255,255,.35); font-size: 11px; margin-bottom: 4px; }
-        .prog-lbl span { color: #e8ddf0; font-weight: 600; }
-        .prog-bar { background: rgba(255,255,255,.06); border-radius: 99px; height: 4px; overflow: hidden; }
-        .prog-fill { height: 100%; background: #c32178; border-radius: 99px; transition: width .4s; }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(195, 33, 120, 0.2);
+            border-color: rgba(195, 33, 120, 0.4);
+        }
+        .card-banner {
+            height: 130px;
+            background-size: cover;
+            background-position: center;
+            background-color: #1a0a1e;
+            position: relative;
+            mask: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+            -webkit-mask: linear-gradient(to bottom, black 0%, black 80%, transparent 100%);
+        }
+        }
+        .card-banner::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(195,33,120,0.2), rgba(0,0,0,0.6));
+            pointer-events: none;
+        }
+        .card-banner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .card-info {
+            padding: 12px 14px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.25);
+            flex: 1;
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .card-host {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+        }
+        .card-desc {
+            font-size: 12px;
+            color: rgba(255,255,255,0.65);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin: 0;
+        }
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 3px 0;
+        }
+        .tag {
+            background: rgba(195,33,120,0.15);
+            border: 1px solid rgba(195,33,120,0.3);
+            color: #e8ddf0;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 4px 0;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 4px 4px;
+            text-align: center;
+        }
+        .stat-box .s-lbl {
+            font-size: 9px;
+            color: rgba(255,255,255,0.45);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-box .s-val {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .prog-wrap {
+            margin: 4px 0 2px;
+        }
+        .prog-lbl {
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 4px;
+        }
+        .prog-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .prog-fill {
+            background: #c32178;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn-join, .btn-team, .btn-share {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 8px;
+            background: rgba(195,33,120,0.2);
+            border: 1px solid rgba(195,33,120,0.3);
+            color: #fff;
+            transition: 0.15s;
+            text-align: center;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn-join:hover, .btn-team:hover, .btn-share:hover {
+            background: rgba(195,33,120,0.4);
+            transform: translateY(-1px);
+        }
+        .btn-join {
+            background: #c32178;
+            border: none;
+        }
+        .btn-join:hover {
+            background: #9e1a66;
+        }
 
-        .badge { border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; }
-        .badge-active { background: rgba(34,197,94,.1); color: #22c55e; border: 1px solid rgba(34,197,94,.25); }
-        .badge-upcoming { background: rgba(245,158,11,.1); color: #f59e0b; border: 1px solid rgba(245,158,11,.25); }
-        .badge-ongoing { background: rgba(195,33,120,.12); color: #d946a8; border: 1px solid rgba(195,33,120,.3); }
-        .badge-finished { background: rgba(107,114,128,.1); color: rgba(255,255,255,.3); border: 1px solid rgba(255,255,255,.1); }
-
+        /* Остальные стили (модалки, формы) без изменений */
         .overlay {
             position: fixed;
             inset: 0;
@@ -212,7 +340,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             padding: 16px;
             opacity: 0;
             pointer-events: none;
-            transition: .2s;
+            transition: .001s;
         }
         .overlay.open { opacity: 1; pointer-events: all; }
         .modal, .create-modal {
@@ -248,14 +376,6 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         .prize-item, .expert-item { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 9px 13px; margin-bottom: 7px; }
         .prize-item .pi-reward, .expert-item .ex-name { font-weight: 600; font-size: 13px; }
         .prize-item .pi-place, .expert-item .ex-role { color: rgba(255,255,255,.35); font-size: 11px; }
-        .modal-actions { display: flex; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.07); }
-        .btn-join { flex: 1; background: #c32178; border: none; color: #fff; border-radius: 9px; padding: 12px; font-weight: 700; cursor: pointer; transition: .15s; text-align: center; text-decoration: none; display: inline-block; }
-        .btn-join:hover:not(:disabled) { background: #9e1a66; }
-        .btn-join:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-team { flex: 1; background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.3); color: #e8ddf0; border-radius: 9px; padding: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; }
-        .btn-team:hover { background: rgba(195,33,120,.2); }
-        .btn-share { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.5); border-radius: 9px; padding: 12px 15px; cursor: pointer; }
-
         .create-modal { max-width: 600px; }
         .steps { display: flex; gap: 6px; margin-bottom: 20px; }
         .step-tab { flex: 1; padding: 8px 0; text-align: center; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.08); }
@@ -300,6 +420,97 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         .l4t-toast-body { font-size: 12px; color: rgba(255,255,255,.45); margin-bottom: 10px; }
         .l4t-toast-btn { background: #c32178; border: none; color: #fff; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
         .l4t-toast-close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: rgba(255,255,255,.3); }
+
+        /* ===== ЛУННАЯ ТЕМА ===== */
+        body.moonlight-theme {
+            background: #05020a;
+            background-image: url("/swad/static/img/Moonlight_pict.jpeg");
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center 35%;
+        }
+        body.moonlight-theme .btn-primary,
+        body.moonlight-theme .btn-next,
+        body.moonlight-theme .btn-submit,
+        body.moonlight-theme .btn-join {
+            background: #285682 !important;
+        }
+        body.moonlight-theme .btn-primary:hover,
+        body.moonlight-theme .btn-next:hover,
+        body.moonlight-theme .btn-submit:hover,
+        body.moonlight-theme .btn-join:hover {
+            background: #193753 !important;
+        }
+        body.moonlight-theme .sprint-header,
+        body.moonlight-theme .hero,
+        body.moonlight-theme .card,
+        body.moonlight-theme .modal,
+        body.moonlight-theme .create-modal,
+        body.moonlight-theme .l4t-toast {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        body.moonlight-theme .hero::before {
+            background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(255,255,255,.04), transparent);
+        }
+        body.moonlight-theme .filter-btn,
+        body.moonlight-theme .nav-btn,
+        body.moonlight-theme .step-tab {
+            background: rgba(255,255,255,.04);
+            border-color: rgba(255,255,255,.08);
+        }
+        body.moonlight-theme .filter-btn.active,
+        body.moonlight-theme .step-tab.active {
+            background: rgb(24 105 147 / 22%);
+            border-color: rgb(25 105 151 / 40%);
+        }
+        body.moonlight-theme .form-input,
+        body.moonlight-theme .form-textarea,
+        body.moonlight-theme .dynamic-row input,
+        body.moonlight-theme .dynamic-row select {
+            background: rgba(0,0,0,.5);
+            border-color: rgba(255,255,255,.12);
+        }
+        body.moonlight-theme .stat-box,
+        body.moonlight-theme .prize-item,
+        body.moonlight-theme .expert-item,
+        body.moonlight-theme .theme-box {
+            background: rgba(0,0,0,.35);
+            border-color: rgba(255,255,255,.06);
+        }
+        body.moonlight-theme .tag {
+            background: rgba(195,33,120,.18);
+            border-color: rgba(195,33,120,.28);
+        }
+        body.moonlight-theme .overlay {
+            background: rgba(0,0,0,.85);
+        }
+        body.moonlight-theme .hero h1 span {
+            color: #e00000;
+        }
+        body.moonlight-theme .search-input {
+            background: rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #f0e6ff;
+        }
+        body.moonlight-theme .search-input:focus {
+            border-color: #4a9eff;
+        }
+        body.moonlight-theme .modal, body.moonlight-theme .create-modal {
+            background: #0a132545;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+        }
+        body.moonlight-theme .card-info {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        body.moonlight-theme .card {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        body.moonlight-theme .btn-team, body.moonlight-theme .btn-share {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+        }
     </style>
 </head>
 <body>
@@ -410,12 +621,12 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 
         <div class="step-panel" id="step3">
             <div class="sec-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <span class="section-title">🏆 Призы</span>
+                <span class="section-title">Призы</span>
                 <button class="btn-add" onclick="addPrize()">+ Добавить</button>
             </div>
             <div id="prizes-list"></div>
             <div class="sec-row" style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 10px">
-                <span class="section-title">⭐ Эксперты</span>
+                <span class="section-title">Эксперты</span>
                 <button class="btn-add" onclick="addExpert()">+ Добавить эксперта</button>
             </div>
             <div id="experts-list"></div>
@@ -430,7 +641,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 <!-- L4T Toast -->
 <div class="l4t-toast" id="l4t-toast">
     <span class="l4t-toast-close" onclick="closeToast()">✕</span>
-    <div class="l4t-toast-title">🤝 Собрать команду на L4T</div>
+    <div class="l4t-toast-title">Собрать команду на L4T</div>
     <div class="l4t-toast-body">Разместите заявку на бирже L4T — найдите программиста, художника или геймдизайнера для вашего спринта.</div>
     <a href="/l4t" class="l4t-toast-btn">Открыть биржу L4T →</a>
 </div>
@@ -532,33 +743,35 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             const status = getStatus(s);
             const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
             const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
-            const logoHtml = s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo">` : '🎮';
+            const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
             const isJoined = userSprintIds.includes(s.id);
-            let actionButton = isJoined 
-                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none; font-size: .8rem;">Панель участника</a>`
+            let actionButton = isJoined
+                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none;">Панель участника</a>`
                 : `<button class="btn-join" onclick="event.stopPropagation(); joinSprint(${s.id}, this, this.closest('.card'))">Участвовать</button>`;
             html += `<div class="card" onclick="openView(${s.id})">
-                        <div class="card-top">
-                            <div class="card-banner">${logoHtml}</div>
-                            <div class="card-meta">
-                                <div class="card-meta-row">${badgeHtml(status)}<span class="card-host">от ${escapeHtml(s.host_name || 'Dustore')}</span></div>
+                        <div class="card-banner" style="${bannerStyle}">
+                            ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
+                        </div>
+                        <div class="card-info">
+                            <div>
                                 <div class="card-title">${escapeHtml(s.title)}</div>
+                                <div class="card-host">от ${escapeHtml(s.host_name || 'Dustore')}</div>
                             </div>
-                        </div>
-                        <div class="card-desc">${escapeHtml(s.description)}</div>
-                        <div class="tags">${tags}</div>
-                        <div class="card-stats">
-                            <div class="stat-box"><div class="s-lbl">⏳ До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
-                            <div class="stat-box"><div class="s-lbl">⌛ Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
-                        </div>
-                        <div class="prog-wrap">
-                            <div class="prog-lbl"><span>👥 Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
-                            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-                        </div>
-                        <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
-                            ${actionButton}
-                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">🤝 Собрать команду</button>
-                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">🔗</button>
+                            <div class="card-desc">${escapeHtml(s.description)}</div>
+                            <div class="tags">${tags}</div>
+                            <div class="card-stats">
+                                <div class="stat-box"><div class="s-lbl">⏳ До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
+                                <div class="stat-box"><div class="s-lbl">⌛ Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
+                            </div>
+                            <div class="prog-wrap">
+                                <div class="prog-lbl"><span>👥 Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
+                                <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+                            </div>
+                            <div class="modal-actions">
+                                ${actionButton}
+                                <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Собрать команду</button>
+                                <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">🔗</button>
+                            </div>
                         </div>
                     </div>`;
         });
@@ -580,12 +793,12 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                 <div><div class="ex-name">${escapeHtml(e.username)}</div><div class="ex-role">${escapeHtml(e.role || 'Эксперт')}</div></div>
             </div>
         `).join('');
-        const logoHtml = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '🎮';
-        const themeHtml = sprint.theme ? `<div class="theme-box"><strong>🎯 Тема:</strong> ${escapeHtml(sprint.theme)}</div>` : '';
+        const logoHtml = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '';
+        const themeHtml = sprint.theme ? `<div class="theme-box"><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</div>` : '';
         const isJoined = userSprintIds.includes(sprint.id);
-        let actionButton = isJoined 
+        let actionButton = isJoined
             ? `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none;">🎮 Панель участника</a>`
-            : `<button class="btn-join" onclick="joinSprint(${sprint.id}, this, null, true)">🎮 Участвовать</button>`;
+            : `<button class="btn-join" onclick="joinSprint(${sprint.id}, this, null, true)">Участвовать</button>`;
         const modal = document.getElementById('view-modal');
         if (!modal) return;
         modal.innerHTML = `
@@ -604,13 +817,13 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                 <div class="m-stat"><div class="val">${sprint.current_participants || 0}/${sprint.max_participants}</div><div class="lbl">Участники</div></div>
             </div>
             <div class="modal-body-cols" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;">
-                <div><span class="section-title">🏆 Призы</span>${prizesHtml || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>'}</div>
-                <div><span class="section-title">⭐ Эксперты</span>${expertsHtml || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>'}</div>
+                <div><span class="section-title">Призы</span>${prizesHtml || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>'}</div>
+                <div><span class="section-title">Эксперты</span>${expertsHtml || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>'}</div>
             </div>
             <div class="modal-actions">
                 ${actionButton}
-                <button class="btn-team" onclick="window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">🤝 Собрать команду</button>
-                <button class="btn-share" onclick="shareSprint(${sprint.id})">🔗</button>
+                <button class="btn-team" onclick="window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">Собрать команду</button>
+                <button class="btn-share" onclick="shareSprint(${sprint.id})"></button>
             </div>
         `;
         document.getElementById('view-overlay').classList.add('open');
@@ -642,7 +855,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                     const actionsDiv = cardEl.querySelector('.modal-actions');
                     if (actionsDiv) {
                         actionsDiv.innerHTML = `<a href="participant.php?sprint_id=${sprintId}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none;">🎮 Панель участника</a>
-                                                <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">🤝 Команда</button>
+                                                <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
                                                 <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${sprintId})">🔗</button>`;
                     }
                 }
@@ -652,12 +865,12 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             } else {
                 alert('Ошибка: ' + result.message);
                 buttonEl.disabled = false;
-                buttonEl.textContent = '🎮 Участвовать';
+                buttonEl.textContent = 'Участвовать';
             }
         } catch (err) {
             alert('Ошибка соединения: ' + err.message);
             buttonEl.disabled = false;
-            buttonEl.textContent = '🎮 Участвовать';
+            buttonEl.textContent = 'Участвовать';
         }
     }
 
@@ -801,5 +1014,79 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         });
     });
 </script>
+
+<!-- Эффект наклона для кнопок (как в хедере) -->
+<script>
+(function() {
+    const allBtns = document.querySelectorAll(`
+        .btn-primary, .btn-join, .btn-team, .btn-share,
+        .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove,
+        .filter-btn, .nav-btn, .step-tab, .btn-close
+    `);
+    if (!allBtns.length) return;
+
+    function resetTilt(btn) { btn.style.transform = ''; }
+    function handleMouseMove(e) {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+        const maxAngle = 15;
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+        const translateY = -3;
+        const scale = 1.04;
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+    function handleMouseLeave(e) { resetTilt(e.currentTarget); }
+    allBtns.forEach(btn => {
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
+</script>
+
+<style>
+@keyframes shakeSearch {
+    0%, 100% { transform: translateX(0) rotateX(0deg) rotateY(0deg); }
+    20%      { transform: translateX(-3px) rotate(-1deg); }
+    40%      { transform: translateX(3px) rotate(1deg); }
+    60%      { transform: translateX(-2px) rotate(-0.5deg); }
+    80%      { transform: translateX(2px) rotate(0.5deg); }
+}
+.shake-it { animation: shakeSearch 0.3s ease-in-out; }
+</style>
+
+<script>
+(function() {
+    const searchWrap = document.querySelector('.search-wrap');
+    const searchInput = document.querySelector('.search-input');
+    if (!searchWrap || !searchInput) return;
+    searchWrap.addEventListener('mousemove', function(e) {
+        const rect = searchWrap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 10 - 5;
+        const maxAngle = 5;
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+        searchWrap.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
+    });
+    searchWrap.addEventListener('mouseleave', function() { searchWrap.style.transform = ''; });
+    searchInput.addEventListener('input', function() {
+        this.classList.remove('shake-it');
+        void this.offsetWidth;
+        this.classList.add('shake-it');
+        this.addEventListener('animationend', function onAnimEnd() {
+            this.classList.remove('shake-it');
+            this.removeEventListener('animationend', onAnimEnd);
+        });
+    });
+})();
+</script>
+
 </body>
 </html>
