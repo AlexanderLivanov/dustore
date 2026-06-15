@@ -557,7 +557,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                         </div>
                         <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
                             ${actionButton}
-                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">🤝 Команда</button>
+                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">🤝 Собрать команду</button>
                             <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">🔗</button>
                         </div>
                     </div>`;
@@ -609,7 +609,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             </div>
             <div class="modal-actions">
                 ${actionButton}
-                <button class="btn-team" onclick="showL4tToast()">🤝 Команда</button>
+                <button class="btn-team" onclick="window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">🤝 Собрать команду</button>
                 <button class="btn-share" onclick="shareSprint(${sprint.id})">🔗</button>
             </div>
         `;
@@ -623,7 +623,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         try {
             const formData = new FormData();
             formData.append('sprint_id', sprintId);
-            const resp = await fetch('/swad/controllers/join_sprint.php', { method: 'POST', body: formData });
+            const resp = await fetch('/swad/controllers/jams/join_sprint.php', { method: 'POST', body: formData });
             const result = await resp.json();
             if (result.success) {
                 const sprintIndex = sprints.findIndex(s => s.id == sprintId);

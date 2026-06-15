@@ -76,7 +76,6 @@ elseif ($unit === 'days') $end->modify("+{$val} days");
 elseif ($unit === 'weeks') $end->modify("+{$val} weeks");
 elseif ($unit === 'months') $end->modify("+{$val} months");
 
-// Определяем статус
 if ($now < $start) {
     $status = 'upcoming';
 } elseif ($now >= $start && $now <= $end) {
@@ -85,7 +84,6 @@ if ($now < $start) {
     $status = 'finished';
 }
 
-// Формируем строку обратного отсчёта (только для будущих событий)
 if ($status === 'upcoming') {
     $diff = $start->getTimestamp() - $now->getTimestamp();
     $days = floor($diff / 86400);
@@ -96,8 +94,6 @@ if ($status === 'upcoming') {
     $countdownStr = ($status === 'ongoing') ? 'Идёт' : 'Завершён';
 }
 
-// Теперь, когда вся логика выполнена и редиректов больше не будет,
-// можно подключать header.php (который выводит начало HTML)
 require_once('../swad/static/elements/header.php');
 ?>
 
@@ -484,7 +480,7 @@ require_once('../swad/static/elements/header.php');
                 <input type="hidden" name="sprint_id" value="<?= $sprintId ?>">
                 <div class="card">
                     <div class="card-title">📝 Карточка работы</div>
-                    <div class="form-row-s"><label class="form-label-s">Название игры *</label><input class="form-input-s" name="game_title" value="<?= htmlspecialchars($submission['game_title'] ?? '') ?>" required></div>
+                    <div class="form-row-s"><label class="form-label-s">Название игры *</label><input class="form-input-s" name="game_title" value="<?= htmlspecialchars($submission['title'] ?? '') ?>" required></div>
                     <div class="form-row-s"><label class="form-label-s">Описание</label><textarea class="form-textarea-s" name="description"><?= htmlspecialchars($submission['description'] ?? '') ?></textarea></div>
                     <div class="form-row-s"><label class="form-label-s">Движок</label><input class="form-input-s" name="engine" value="<?= htmlspecialchars($submission['engine'] ?? '') ?>"></div>
                     <div class="form-row-s"><label class="form-label-s">Резервная сылка на игру (itch.io / Google Drive / Яндекс.Диск)</label><input class="form-input-s" name="external_link" value="<?= htmlspecialchars($submission['external_link'] ?? '') ?>"></div>

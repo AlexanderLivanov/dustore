@@ -1,3 +1,14 @@
+<?php
+$isJamRequest =
+    ($_GET['action'] ?? '') === 'create_bid'
+    && ($_GET['source'] ?? '') === 'jam';
+
+// $jamId    = (int)($_GET['jam_id'] ?? 0);
+$jamTitle = $_GET['jam_title'] ?? '';
+
+$jamAction = $_GET['action'] ?? '';
+$jamId     = (int)($_GET['jam_id'] ?? 0);
+?>
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -812,6 +823,33 @@
     $pdo       = $db->connect();
     $desl4tpdo = $db->connect('desl4t');
 
+    $jamMode   = false;
+    $jamData   = null;
+    $jamAction = $_GET['action'] ?? '';
+
+    if (!empty($_GET['jam_id'])) {
+
+        $stmt = $pdo->prepare("
+            SELECT
+                id,
+                title,
+                description
+            FROM sprints
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            (int)$_GET['jam_id']
+        ]);
+
+        $jamData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($jamData) {
+            $jamMode = true;
+        }
+    }
+
     $my_bids = [];
     if (!empty($_SESSION['USERDATA']['id'])) {
         $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE bidder_id = ? ORDER BY created_at DESC");
@@ -1111,6 +1149,11 @@
                                     <div class="bid-main">
                                         <div class="bid-role"><?= htmlspecialchars($bid['search_role']) ?></div>
                                         <div class="bid-meta">
+                                            <?php if ($bid['jam_id']): ?>
+                                            <span class="bid-tag">
+                                                🎮 Джем
+                                            </span>
+                                            <?php endif; ?>
                                             <?php if ($bid['search_spec']): ?><span class="bid-tag"><?= htmlspecialchars($bid['search_spec']) ?></span><?php endif; ?>
                                             <?php if ($bid['experience']): ?><span class="bid-tag"><?= htmlspecialchars($bid['experience']) ?></span><?php endif; ?>
                                             <?php if ($bid['conditions']): ?><span class="bid-tag"><?= htmlspecialchars($bid['conditions']) ?></span><?php endif; ?>
@@ -1394,6 +1437,21 @@
     </style>
 
     <script>
+    const JAM_MODE = <?= $jamMode ? 'true' : 'false' ?>;
+    const JAM_ACTION = <?= json_encode($jamAction) ?>;
+    const JAM_DATA = <?= json_encode(
+        $jamData,
+        JSON_UNESCAPED_UNICODE
+    ) ?>;
+
+    if (
+    JAM_MODE &&
+    JAM_ACTION === 'jam'
+    ) {
+        openJamEntryModal();
+    }
+    </script>
+    <script>
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
         const USER_ID = <?= (int)($userdata['id'] ?? 0) ?>;
         let expModel = <?= json_encode($l4t_exp) ?>;
@@ -1459,12 +1517,65 @@
             },
         };
 
+        function openJamEntryModal() {
+            if (!JAM_DATA) return;
+
+            const jamTitle = JAM_DATA.title || 'Без названия';
+            const jamDesc = JAM_DATA.description || '';
+
+            const bodyHTML = `
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 500; font-size: 1rem; margin-bottom: 8px;">${esc(jamTitle)}</div>
+                    <div style="color: rgba(255,255,255,.7); line-height: 1.5; font-size: .9rem;">${esc(jamDesc)}</div>
+                </div>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.1);">
+                    <label class="modal-label">Сопроводительное сообщение (необязательно)</label>
+                    <textarea id="jamMessage" class="l4t-textarea" rows="3" placeholder="Расскажите, кого ищете в команду..."></textarea>
+                </div>
+            `;
+
+            Modal.open(
+                `Создание заявки для джема "${jamTitle}"`,
+                bodyHTML,
+                () => {
+                    const message = document.getElementById('jamMessage')?.value.trim() || '';
+                    // Переключаемся на вкладку создания заявки
+                    showView('create');
+                    showCreateTab('new_reqs');
+
+                    // Заполняем форму
+                    const goalSelect = document.querySelector('[name="goal"]');
+                    if (goalSelect) goalSelect.value = 'Найти человека в команду';
+
+                    const detailsTextarea = document.querySelector('[name="details"]');
+                    if (detailsTextarea) {
+                        let defaultText = `Собираю команду для участия в джеме "${jamTitle}".\n\n`;
+                        if (message) defaultText += `Сообщение: ${message}\n\n`;
+                        defaultText += `Ссылка на джем: https://dustore.ru/jams/${JAM_DATA.id}`;
+                        detailsTextarea.value = defaultText;
+                    }
+
+                    // Отмечаем форму как «грязную» для активации кнопки отправки
+                    resetDirty(getFormSnapshot());
+                    Modal.close();
+                },
+                { hideSave: false }
+            );
+            document.getElementById('modalSave').textContent = 'Создать заявку';
+        }
+
         document.getElementById('modalClose').addEventListener('click', () => Modal.close());
         document.getElementById('modalCancel').addEventListener('click', () => Modal.close());
         document.getElementById('modalSave').addEventListener('click', () => Modal.save());
         document.getElementById('globalModal').addEventListener('click', e => {
             if (e.target === document.getElementById('globalModal')) Modal.close();
         });
+
+        // 15.06.2026
+        // JAMS::::
+        const JAM_REQUEST = <?= json_encode($isJamRequest) ?>;
+        const JAM_ID = <?= (int)$jamId ?>;
+        const JAM_TITLE = <?= json_encode($jamTitle) ?>;
 
         /* ════════════════════════════════════════════════════════════════ */
         document.addEventListener('DOMContentLoaded', () => {
@@ -2228,7 +2339,27 @@
                     });
             }
 
+            if (JAM_MODE && JAM_ACTION === 'jam') {
+                openJamEntryModal();
+            }
+
         }); // end DOMContentLoaded
+
+        if (JAM_REQUEST) {
+            showView('create');
+
+            document.querySelector('[name="goal"]').value =
+                'Найти человека в команду';
+
+            document.querySelector('[name="details"]').value =
+        `Собираю команду для участия в джеме "${JAM_TITLE}".
+
+        Требуются:
+        - ...
+
+        Ссылка на джем:
+        https://dustore.ru/jams/${JAM_ID}`;
+        }
     </script>
 </body>
 

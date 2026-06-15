@@ -43,5 +43,5 @@ $stmt->execute([
     $_POST['description'] ?? ''
 ]);
 
-header('Location: /jams/participant.php?sprint_id=' . $sprintId);
+header('Location: /jams/participant?sprint_id=' . $sprintId);
 exit;

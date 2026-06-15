@@ -60,15 +60,24 @@ $sprint = $sprintStmt->fetch(PDO::FETCH_ASSOC);
 
 // Участники, работы, объявления, эксперты, призы
 $partStmt = $db->prepare("
-    SELECT u.id, u.username, u.role, sp.joined_at,
-           (SELECT engine FROM sprint_submissions WHERE sprint_id = ? AND user_id = u.id LIMIT 1) as engine,
-           (SELECT status FROM sprint_submissions WHERE sprint_id = ? AND user_id = u.id LIMIT 1) as submission_status
+    SELECT
+        u.id,
+        u.username,
+        u.role,
+        sp.joined_at,
+        ss.title,
+        ss.build_url,
+        ss.build_size
     FROM sprint_participants sp
-    JOIN users u ON sp.user_id = u.id
+    JOIN users u
+        ON sp.user_id = u.id
+    LEFT JOIN sprint_submissions ss
+        ON ss.sprint_id = sp.sprint_id
+       AND ss.user_id = sp.user_id
     WHERE sp.sprint_id = ?
     ORDER BY sp.joined_at DESC
 ");
-$partStmt->execute([$sprint_id, $sprint_id, $sprint_id]);
+$partStmt->execute([$sprint_id]);
 $participants = $partStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $subStmt = $db->prepare("
@@ -412,6 +421,22 @@ require_once('../swad/static/elements/header.php');
             padding-bottom: 10px;
             border-bottom: 1px solid rgba(255,255,255,.07);
         }
+
+        .list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.btn-remove {
+    background: none;
+    border: none;
+    color: #f44336;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
         .form-row-s { margin-bottom: 14px; }
         .form-label-s { display: block; color: rgba(255,255,255,.4); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
         .form-input-s {
@@ -705,7 +730,10 @@ require_once('../swad/static/elements/header.php');
         </div>
     </div>
 </div>
-
+<script>
+    const JAM_ID = <?= json_encode((int)$jamId) ?>;
+    console.log('JAM_ID set to', JAM_ID);
+</script>
 <script>
     // Данные из PHP
     const sprintId = <?= $sprint_id ?>;
@@ -721,11 +749,118 @@ require_once('../swad/static/elements/header.php');
 
     let allUsers = [];
 
-    // Загружаем список всех пользователей для выбора эксперта
-    fetch('/swad/api/get_users.php')
-        .then(r => r.json())
-        .then(users => allUsers = users)
-        .catch(console.error);
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/get_all_users.php');
+            if (!response.ok) throw new Error('Ошибка загрузки пользователей');
+            const users = await response.json();
+            allUsers = users;
+
+            const select = document.getElementById('newJudgeId');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Выберите пользователя --</option>';
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                // Поле в ответе API: username (у вас в консоли было именно username)
+                const displayName = (user.username && user.username.trim() !== '')
+                    ? user.username
+                    : `Пользователь ${user.id}`;
+                option.textContent = displayName;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Ошибка в loadUsers:', error);
+        }
+    }
+
+    async function loadJudges(jamId) {
+        try {
+            const response = await fetch(`/swad/controllers/jams/get_jam_judges.php?jam_id=${jamId}`);
+            if (!response.ok) throw new Error('Ошибка загрузки жюри');
+            const judges = await response.json();
+
+            const container = document.getElementById('judges-list');
+            if (!container) return;
+
+            if (judges.length === 0) {
+                container.innerHTML = '<div style="padding:12px; color:rgba(255,255,255,.5);">Жюри пока не назначено</div>';
+                return;
+            }
+
+            container.innerHTML = judges.map(judge => `
+                <div class="list-item" data-judge-id="${judge.id}">
+                    <span>⭐ ${escapeHtml(judge.username || `Пользователь ${judge.id}`)}</span>
+                    <button class="btn-remove" onclick="removeJudge(${judge.id})" style="background:none; border:none; color:#f44336; cursor:pointer;">✕</button>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Ошибка в loadJudges:', error);
+        }
+    }
+
+    async function addJudge() {
+        const select = document.getElementById('newJudgeId');
+        const userId = select.value;
+        if (!userId) {
+            alert('Выберите пользователя');
+            return;
+        }
+        if (typeof JAM_ID === 'undefined') {
+            alert('Ошибка: идентификатор джема не найден');
+            return;
+        }
+
+        try {
+            const response = await fetch('/swad/controllers/jams/add_judge.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jam_id: JAM_ID, user_id: userId })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Судья добавлен');
+                loadJudges(JAM_ID);
+                select.value = '';
+            } else {
+                alert(result.error || 'Ошибка при добавлении');
+            }
+        } catch (error) {
+            console.error('Ошибка addJudge:', error);
+            alert('Не удалось добавить судью');
+        }
+    }
+
+    async function removeJudge(judgeId) {
+        if (!confirm('Удалить этого судью из жюри?')) return;
+        try {
+            const response = await fetch('/swad/controllers/jams/remove_judge.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jam_id: JAM_ID, user_id: judgeId })
+            });
+            const result = await response.json();
+            if (result.success) {
+                loadJudges(JAM_ID);
+            } else {
+                alert(result.error || 'Ошибка удаления');
+            }
+        } catch (error) {
+            console.error('Ошибка removeJudge:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof JAM_ID !== 'undefined' && JAM_ID) {
+            loadUsers();
+            loadJudges(JAM_ID);
+        } else {
+            console.warn('JAM_ID не определён, жюри не загружено');
+        }
+    });
+
+    loadUsers();
 
     // ----- Сохранение активной вкладки -----
     function saveActiveTab(viewName) {
@@ -897,19 +1032,6 @@ require_once('../swad/static/elements/header.php');
             alert('Объявление отправлено');
             location.reload();
         } else alert(res.message);
-    }
-
-    async function addJudge() {
-        const userId = document.getElementById('newJudgeId').value;
-        if (!userId) return alert('Выберите пользователя');
-        const resp = await fetch('/swad/controllers/add_judge.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sprint_id: sprintId, user_id: userId })
-        });
-        const res = await resp.json();
-        if (res.success) location.reload();
-        else alert(res.message);
     }
 
     async function removeJudge(userId) {
