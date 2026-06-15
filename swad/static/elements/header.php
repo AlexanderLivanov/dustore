@@ -381,6 +381,7 @@ $stmt->execute([
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">Медиа</a></li>
                         </ul>
                     </div>
+                    
 
                     <!-- Dropdown «Для разработчиков» -->
                     <div class="nav-dropdown">
