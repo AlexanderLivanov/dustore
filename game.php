@@ -438,7 +438,14 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                     </div>
                                 <?php else: ?>
                                     <button class="gp-btn gp-btn-primary" onclick="location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">⬇ Скачать игру</button>
-                                    <a href="hidl://install?game_id=123&game_name=TestGame&game_url=https://example.com/game.zip&exe=game.exe">Install</a>
+                                    <!-- <a href="hidl://install?game_id=123&game_name=TestGame&game_url=https://example.com/game.zip&exe=game.exe">Install</a> -->
+                                    <!-- <?php
+                                    $hidl_url = "hidl://install?game_id=" . urlencode($game_id)
+                                            . "&game_name=" . urlencode($game['name'])
+                                            . "&game_url=" . urlencode($game['game_zip_url'])
+                                            . "&exe=" . urlencode($game['game_exec']);
+                                    echo '<button onclick="location.href=\'' . $hidl_url . '\'">Установить через HidL</button>';
+                                    ?> -->
                                 <?php endif; ?>
                             <?php else: ?>
                                 <p class="gp-no-file">Файл игры пока не загружен</p>

@@ -1,5 +1,5 @@
 <?php
-require_once '../config.php';
+require_once '../../config.php';
 header('Content-Type: application/json');
 session_start();
 $userId = $_SESSION['USERDATA']['id'] ?? 0;

@@ -666,7 +666,22 @@ require_once('../swad/static/elements/header.php');
                 <div class="stat-card"><div class="sc-ico">⏳</div><div class="sc-val">—</div><div class="sc-lbl">На проверке</div></div>
                 <div class="stat-card"><div class="sc-ico">🏆</div><div class="sc-val">—</div><div class="sc-lbl">Финалистов</div></div>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>#</th><th>Название игры</th><th>Участник</th><th>Движок</th><th>Оценка</th><th>Статус</th></tr></thead><tbody id="submissions-tbody"></tbody></table></div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <th>#</th>
+                        <th>Название игры</th>
+                        <th>Участник</th>
+                        <th>Движок</th>
+                        <th>Оценка</th>
+                        <th>Статус</th>
+                        <th>Файл</th>
+                    </thead>
+                    <tbody id="submissions-tbody">
+
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- ANNOUNCEMENTS -->
@@ -945,19 +960,26 @@ require_once('../swad/static/elements/header.php');
     }
     function filterParticipants(val) { renderParticipants(val.toLowerCase()); }
     function renderSubmissions() {
-        const tbody = document.getElementById('submissions-tbody');
-        if (!tbody) return;
-        tbody.innerHTML = submissions.map((s, i) => `
+    const tbody = document.getElementById('submissions-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = submissions.map((s, i) => {
+        // Проверяем, есть ли build_url
+        const fileLink = s.build_url 
+            ? `<a href="${escapeHtml(s.build_url)}" class="tbl-btn" download style="display:inline-block; text-decoration:none; padding:4px 8px;">⬇ Скачать</a>`
+            : `<span style="color:rgba(255,255,255,.3);">—</span>`;
+        return `
             <tr>
                 <td>${i+1}</td>
-                <td><div class="td-name">${escapeHtml(s.game_title)}</div></td>
-                <td>${escapeHtml(s.user_name)}</div></td>
+                <td><div class="td-name">${escapeHtml(s.game_title || s.title || 'Без названия')}</div></td>
+                <td>${escapeHtml(s.user_name)}</td>
                 <td>${escapeHtml(s.engine || '—')}</td>
                 <td style="font-weight:700;color:#c32178">${s.score ?? '—'}</td>
                 <td><span class="status-pill pill-yellow">${s.status || 'На проверке'}</span></td>
+                <td>${fileLink}</td>
             </tr>
-        `).join('');
-    }
+        `;
+    }).join('');
+}
     function renderAnnouncements() {
         const container = document.getElementById('ann-list');
         if (container) container.innerHTML = announcements.map(a => `<div class="ann-item"><div class="ann-title">${escapeHtml(a.title)}</div><div class="ann-meta">${new Date(a.created_at).toLocaleString()} · всем участникам</div></div>`).join('');

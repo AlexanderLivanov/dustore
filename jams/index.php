@@ -17,6 +17,7 @@ $stmt = $conn->query("
 ");
 $sprints = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Загружаем призы и экспертов для каждого спринта
 foreach ($sprints as &$sprint) {
     $prizeStmt = $conn->prepare("SELECT place_num, reward FROM sprint_prizes WHERE sprint_id = ? ORDER BY place_num");
     $prizeStmt->execute([$sprint['id']]);
@@ -38,14 +39,26 @@ $allUsers = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ID спринтов, в которых участвует текущий пользователь
 $userSprintIds = [];
+$userId = 0;
 if (!empty($_SESSION['USERDATA']['id'])) {
-    $uid = $_SESSION['USERDATA']['id'];
+    $userId = $_SESSION['USERDATA']['id'];
     $partStmt = $conn->prepare("SELECT sprint_id FROM sprint_participants WHERE user_id = ?");
-    $partStmt->execute([$uid]);
+    $partStmt->execute([$userId]);
     $userSprintIds = $partStmt->fetchAll(PDO::FETCH_COLUMN);
 }
-?>
 
+// Определяем, кому показывать кнопку "Оценить" (все авторизованные, кроме хоста)
+$canRateMap = [];
+foreach ($sprints as $sprint) {
+    $canRateMap[$sprint['id']] = ($userId != 0);
+}
+
+// Добавляем флаг can_rate в каждый спринт для JS
+foreach ($sprints as &$sprint) {
+    $sprint['can_rate'] = $canRateMap[$sprint['id']];
+}
+unset($sprint);
+?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -68,8 +81,6 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.35); border-radius: 4px; }
 
         .sprint-header {
-            /* background: rgba(13,4,20,.96); */
-            /* border-bottom: 1px solid rgba(195,33,120,.18); */
             padding: 13px 26px;
             display: flex;
             align-items: center;
@@ -248,13 +259,43 @@ if (!empty($_SESSION['USERDATA']['id'])) {
         .prize-item, .expert-item { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 9px 13px; margin-bottom: 7px; }
         .prize-item .pi-reward, .expert-item .ex-name { font-weight: 600; font-size: 13px; }
         .prize-item .pi-place, .expert-item .ex-role { color: rgba(255,255,255,.35); font-size: 11px; }
-        .modal-actions { display: flex; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.07); }
-        .btn-join { flex: 1; background: #c32178; border: none; color: #fff; border-radius: 9px; padding: 12px; font-weight: 700; cursor: pointer; transition: .15s; text-align: center; text-decoration: none; display: inline-block; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
+        .btn-join, .btn-team, .btn-share, .btn-rate {
+            background: #c32178;
+            border: none;
+            color: #fff;
+            border-radius: 7px;
+            padding: 6px 12px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: .15s;
+            text-align: center;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
         .btn-join:hover:not(:disabled) { background: #9e1a66; }
         .btn-join:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-team { flex: 1; background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.3); color: #e8ddf0; border-radius: 9px; padding: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .btn-team {
+            background: rgba(195,33,120,.1);
+            border: 1px solid rgba(195,33,120,.3);
+            color: #e8ddf0;
+        }
         .btn-team:hover { background: rgba(195,33,120,.2); }
-        .btn-share { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.5); border-radius: 9px; padding: 12px 15px; cursor: pointer; }
+        .btn-share {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            color: rgba(255,255,255,.5);
+        }
+        .btn-rate {
+            background: rgba(195,33,120,.2);
+            border: 1px solid #c32178;
+            color: #e8ddf0;
+        }
+        .btn-rate:hover { background: rgba(195,33,120,.4); }
 
         .create-modal { max-width: 600px; }
         .steps { display: flex; gap: 6px; margin-bottom: 20px; }
@@ -347,7 +388,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 <div class="overlay" id="create-overlay" onclick="closeCreateOverlay(event)">
     <div class="create-modal" onclick="event.stopPropagation()">
         <div class="modal-head">
-            <h2 style="color:#e8ddf0;font-size:18px;font-weight:800">🚀 Создать спринт</h2>
+            <h2 style="color:#e8ddf0;font-size:18px;font-weight:800">Создать спринт</h2>
             <button class="btn-close" onclick="closeCreate()">✕</button>
         </div>
         <div class="steps">
@@ -410,18 +451,18 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 
         <div class="step-panel" id="step3">
             <div class="sec-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <span class="section-title">🏆 Призы</span>
+                <span class="section-title">Призы</span>
                 <button class="btn-add" onclick="addPrize()">+ Добавить</button>
             </div>
             <div id="prizes-list"></div>
             <div class="sec-row" style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 10px">
-                <span class="section-title">⭐ Эксперты</span>
+                <span class="section-title">Эксперты</span>
                 <button class="btn-add" onclick="addExpert()">+ Добавить эксперта</button>
             </div>
             <div id="experts-list"></div>
             <div class="form-nav">
                 <button class="btn-back" onclick="goStep(2)">← Назад</button>
-                <button class="btn-submit" onclick="submitSprint()">🚀 Опубликовать</button>
+                <button class="btn-submit" onclick="submitSprint()">Опубликовать</button>
             </div>
         </div>
     </div>
@@ -430,7 +471,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 <!-- L4T Toast -->
 <div class="l4t-toast" id="l4t-toast">
     <span class="l4t-toast-close" onclick="closeToast()">✕</span>
-    <div class="l4t-toast-title">🤝 Собрать команду на L4T</div>
+    <div class="l4t-toast-title">Собрать команду на L4T</div>
     <div class="l4t-toast-body">Разместите заявку на бирже L4T — найдите программиста, художника или геймдизайнера для вашего спринта.</div>
     <a href="/l4t" class="l4t-toast-btn">Открыть биржу L4T →</a>
 </div>
@@ -535,8 +576,12 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             const logoHtml = s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo">` : '🎮';
             const isJoined = userSprintIds.includes(s.id);
             let actionButton = isJoined 
-                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none; font-size: .8rem;">Панель участника</a>`
+                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join">Панель участника</a>`
                 : `<button class="btn-join" onclick="event.stopPropagation(); joinSprint(${s.id}, this, this.closest('.card'))">Участвовать</button>`;
+            let rateButton = '';
+            if (s.can_rate) {
+                rateButton = `<a href="/jams/rate.php?id=${s.id}" class="btn-rate">Оценить</a>`;
+            }
             html += `<div class="card" onclick="openView(${s.id})">
                         <div class="card-top">
                             <div class="card-banner">${logoHtml}</div>
@@ -548,17 +593,18 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                         <div class="card-desc">${escapeHtml(s.description)}</div>
                         <div class="tags">${tags}</div>
                         <div class="card-stats">
-                            <div class="stat-box"><div class="s-lbl">⏳ До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
-                            <div class="stat-box"><div class="s-lbl">⌛ Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
+                            <div class="stat-box"><div class="s-lbl">До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
+                            <div class="stat-box"><div class="s-lbl">Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
                         </div>
                         <div class="prog-wrap">
-                            <div class="prog-lbl"><span>👥 Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
+                            <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
                             <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
                         </div>
                         <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
                             ${actionButton}
-                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">🤝 Собрать команду</button>
-                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">🔗</button>
+                            ${rateButton}
+                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
+                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">Поделиться</button>
                         </div>
                     </div>`;
         });
@@ -581,11 +627,15 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             </div>
         `).join('');
         const logoHtml = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '🎮';
-        const themeHtml = sprint.theme ? `<div class="theme-box"><strong>🎯 Тема:</strong> ${escapeHtml(sprint.theme)}</div>` : '';
+        const themeHtml = sprint.theme ? `<div class="theme-box"><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</div>` : '';
         const isJoined = userSprintIds.includes(sprint.id);
         let actionButton = isJoined 
-            ? `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none;">🎮 Панель участника</a>`
-            : `<button class="btn-join" onclick="joinSprint(${sprint.id}, this, null, true)">🎮 Участвовать</button>`;
+            ? `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join">Панель участника</a>`
+            : `<button class="btn-join" onclick="joinSprint(${sprint.id}, this, null, true)">Участвовать</button>`;
+        let rateButton = '';
+        if (sprint.can_rate) {
+            rateButton = `<a href="/jams/rate.php?id=${sprint.id}" class="btn-rate">Оценить</a>`;
+        }
         const modal = document.getElementById('view-modal');
         if (!modal) return;
         modal.innerHTML = `
@@ -604,13 +654,14 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                 <div class="m-stat"><div class="val">${sprint.current_participants || 0}/${sprint.max_participants}</div><div class="lbl">Участники</div></div>
             </div>
             <div class="modal-body-cols" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;">
-                <div><span class="section-title">🏆 Призы</span>${prizesHtml || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>'}</div>
-                <div><span class="section-title">⭐ Эксперты</span>${expertsHtml || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>'}</div>
+                <div><span class="section-title">Призы</span>${prizesHtml || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>'}</div>
+                <div><span class="section-title">Эксперты</span>${expertsHtml || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>'}</div>
             </div>
             <div class="modal-actions">
                 ${actionButton}
-                <button class="btn-team" onclick="window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">🤝 Собрать команду</button>
-                <button class="btn-share" onclick="shareSprint(${sprint.id})">🔗</button>
+                ${rateButton}
+                <button class="btn-team" onclick="window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">Команда</button>
+                <button class="btn-share" onclick="shareSprint(${sprint.id})">Поделиться</button>
             </div>
         `;
         document.getElementById('view-overlay').classList.add('open');
@@ -619,7 +670,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
     async function joinSprint(sprintId, buttonEl, cardEl, isModal = false) {
         if (buttonEl.disabled) return;
         buttonEl.disabled = true;
-        buttonEl.textContent = '⏳ Подождите...';
+        buttonEl.textContent = 'Подождите...';
         try {
             const formData = new FormData();
             formData.append('sprint_id', sprintId);
@@ -641,9 +692,9 @@ if (!empty($_SESSION['USERDATA']['id'])) {
                     }
                     const actionsDiv = cardEl.querySelector('.modal-actions');
                     if (actionsDiv) {
-                        actionsDiv.innerHTML = `<a href="participant.php?sprint_id=${sprintId}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none;">🎮 Панель участника</a>
-                                                <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">🤝 Команда</button>
-                                                <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${sprintId})">🔗</button>`;
+                        actionsDiv.innerHTML = `<a href="participant.php?sprint_id=${sprintId}" class="btn-join">Панель участника</a>
+                                                <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
+                                                <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${sprintId})">Поделиться</button>`;
                     }
                 }
                 if (isModal) openView(sprintId);
@@ -652,12 +703,12 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             } else {
                 alert('Ошибка: ' + result.message);
                 buttonEl.disabled = false;
-                buttonEl.textContent = '🎮 Участвовать';
+                buttonEl.textContent = 'Участвовать';
             }
         } catch (err) {
             alert('Ошибка соединения: ' + err.message);
             buttonEl.disabled = false;
-            buttonEl.textContent = '🎮 Участвовать';
+            buttonEl.textContent = 'Участвовать';
         }
     }
 
@@ -738,7 +789,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
             <div class="dynamic-row">
                 <select class="form-input user-select" onchange="updateExpert(${idx}, this.value)" style="flex:2">
                     <option value="">-- Выберите пользователя --</option>
-                    ${allUsers.map(u => `<option value="${u.id}" ${u.id == userId ? 'selected' : ''}>👤 ${escapeHtml(u.username)} (${u.role || 'пользователь'})</option>`).join('')}
+                    ${allUsers.map(u => `<option value="${u.id}" ${u.id == userId ? 'selected' : ''}>${escapeHtml(u.username)} (${u.role || 'пользователь'})</option>`).join('')}
                 </select>
                 <button class="btn-remove" onclick="removeExpert(${idx})">✕</button>
             </div>

@@ -1,5 +1,7 @@
 <?php
-require_once '../config.php';
+
+require_once '../../config.php';
+
 header('Content-Type: application/json');
 session_start();
 
@@ -39,6 +41,7 @@ if ($stmt->fetch()) {
     echo json_encode(['success' => false, 'message' => 'Вы уже участвуете']);
     exit;
 }
+
 
 // Проверка лимита
 $stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM sprint_participants WHERE sprint_id = ?");
