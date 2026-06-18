@@ -562,6 +562,31 @@ unset($sprint);
             background: rgba(255,255,255,0.08);
             border-color: rgba(255,255,255,0.2);
         }
+
+        /* ===== ЗАГРУЗОЧНЫЙ ОВЕРЛЕЙ (на весь экран, с плавностью) ===== */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #loading-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #loading-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -697,6 +722,11 @@ unset($sprint);
     <a href="/l4t" class="l4t-toast-btn">Открыть биржу L4T →</a>
 </div>
 
+<!-- ======== ЗАГРУЗОЧНЫЙ ОВЕРЛЕЙ ДЛЯ ГИФКИ (на весь экран, плавное появление) ======== -->
+<div id="loading-overlay">
+    <img src="/swad/static/img/intro_conturjam.gif" alt="Загрузка...">
+</div>
+
 <script>
     const sprintsData = <?php echo json_encode($sprints, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
     const allUsers = <?php echo json_encode($allUsers, JSON_HEX_TAG); ?>;
@@ -771,67 +801,38 @@ unset($sprint);
         }
     }
 
-    function renderGrid() {
-        const searchText = document.getElementById('search')?.value.toLowerCase() || '';
-        let filtered = sprints.filter(s => {
-            const status = getStatus(s);
-            const matchesFilter = curFilter === 'all' || status === curFilter;
-            const matchesSearch = s.title.toLowerCase().includes(searchText) || s.description.toLowerCase().includes(searchText);
-            return matchesFilter && matchesSearch;
-        });
-        const grid = document.getElementById('grid');
-        const empty = document.getElementById('empty');
-        if (!grid) return;
-        if (filtered.length === 0) {
-            grid.innerHTML = '';
-            if (empty) empty.style.display = 'block';
-            updateStats();
-            return;
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        // Берём картинку внутри оверлея
+        const img = overlay.querySelector('img');
+        if (img) {
+            // Сохраняем текущий src, сбрасываем и возвращаем
+            const src = img.src;
+            img.src = '';
+            img.src = src;
         }
-        if (empty) empty.style.display = 'none';
-        let html = '';
-        filtered.forEach(s => {
-            const status = getStatus(s);
-            const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
-            const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
-            const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
-            const isJoined = userSprintIds.includes(s.id);
-            let actionButton = isJoined
-                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join" style="display:inline-block; text-align:center; text-decoration:none;">Панель участника</a>`
-                : `<button class="btn-join" onclick="event.stopPropagation(); joinSprint(${s.id}, this, this.closest('.card'))">Участвовать</button>`;
-            let rateButton = '';
-            if (s.can_rate) {
-                rateButton = `<a href="/jams/rate.php?id=${s.id}" class="btn-rate">Оценить</a>`;
-            }
-            html += `<div class="card" onclick="openView(${s.id})">
-                        <div class="card-banner" style="${bannerStyle}">
-                            ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
-                        </div>
-                        <div class="card-desc">${escapeHtml(s.description)}</div>
-                        <div class="tags">${tags}</div>
-                        <div class="card-stats">
-                            <div class="stat-box"><div class="s-lbl">До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
-                            <div class="stat-box"><div class="s-lbl">Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
-                        </div>
-                        <div class="prog-wrap">
-                            <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
-                            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-                        </div>
-                        <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
-                            ${actionButton}
-                            ${rateButton}
-                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
-                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">Поделиться</button>
-                        </div>
-                    </div>`;
-        });
-        grid.innerHTML = html;
-        updateStats();
+        overlay.classList.remove('visible');
+        void overlay.offsetWidth; // принудительный reflow
+        overlay.classList.add('visible');
     }
+}
 
+    // ===== ОБНОВЛЁННАЯ openView =====
     function openView(id) {
         const sprint = sprints.find(s => s.id == id);
         if (!sprint) return;
+
+        // === ЕСЛИ ЭТО ЦЕЛЕВОЙ СПРИНТ (по названию) — ПОКАЗЫВАЕМ ГИФКУ И РЕДИРЕКТИМ ===
+        if (sprint.title === 'К.О.Н.Т.У.Р.') {
+            showLoadingOverlay();
+            setTimeout(() => {
+                location.href = '/jams/participant.php?sprint_id=' + sprint.id;
+            }, 1950);
+            return;
+        }
+
+        // === ОБЫЧНАЯ ЛОГИКА ДЛЯ ВСЕХ ОСТАЛЬНЫХ СПРИНТОВ ===
         const status = getStatus(sprint);
         const prizesHtml = (sprint.prizes || []).map((p, i) => {
             const medal = ['🥇','🥈','🥉'][i] || '🎖';
@@ -846,7 +847,7 @@ unset($sprint);
         const logoHtml = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '🎮';
         const themeHtml = sprint.theme ? `<div class="theme-box"><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</div>` : '';
         const isJoined = userSprintIds.includes(sprint.id);
-        let actionButton = isJoined 
+        let actionButton = isJoined
             ? `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join">Панель участника</a>`
             : `<button class="btn-join" onclick="joinSprint(${sprint.id}, this, null, true)">Участвовать</button>`;
         let rateButton = '';
@@ -884,6 +885,30 @@ unset($sprint);
         document.getElementById('view-overlay').classList.add('open');
     }
 
+    // ===== ПЕРЕХВАТ КЛИКОВ ПО ССЫЛКАМ "Панель участника" ДЛЯ ЦЕЛЕВОГО СПРИНТА =====
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a.btn-join');
+        if (link) {
+            const card = link.closest('.card');
+            if (card) {
+                const url = link.href;
+                const match = url.match(/sprint_id=(\d+)/);
+                if (match) {
+                    const sprintId = parseInt(match[1]);
+                    const sprint = sprints.find(s => s.id == sprintId);
+                    if (sprint && sprint.title === 'К.О.Н.Т.У.Р.') {
+                        e.preventDefault();
+                        showLoadingOverlay();
+                        setTimeout(() => {
+                            location.href = url;
+                        }, 1950);
+                    }
+                }
+            }
+        }
+    });
+
+    // ===== ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) =====
     async function joinSprint(sprintId, buttonEl, cardEl, isModal = false) {
         if (buttonEl.disabled) return;
         buttonEl.disabled = true;
@@ -1054,6 +1079,64 @@ unset($sprint);
         } catch (err) {
             alert('Ошибка соединения: ' + err.message);
         }
+    }
+
+    function renderGrid() {
+        const searchText = document.getElementById('search')?.value.toLowerCase() || '';
+        let filtered = sprints.filter(s => {
+            const status = getStatus(s);
+            const matchesFilter = curFilter === 'all' || status === curFilter;
+            const matchesSearch = s.title.toLowerCase().includes(searchText) || s.description.toLowerCase().includes(searchText);
+            return matchesFilter && matchesSearch;
+        });
+        const grid = document.getElementById('grid');
+        const empty = document.getElementById('empty');
+        if (!grid) return;
+        if (filtered.length === 0) {
+            grid.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+            updateStats();
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+        let html = '';
+        filtered.forEach(s => {
+            const status = getStatus(s);
+            const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
+            const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
+            const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
+            const isJoined = userSprintIds.includes(s.id);
+            let actionButton = isJoined
+                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join">Панель участника</a>`
+                : `<button class="btn-join" onclick="event.stopPropagation(); joinSprint(${s.id}, this, this.closest('.card'))">Участвовать</button>`;
+            let rateButton = '';
+            if (s.can_rate) {
+                rateButton = `<a href="/jams/rate.php?id=${s.id}" class="btn-rate">Оценить</a>`;
+            }
+            html += `<div class="card" onclick="openView(${s.id})">
+                        <div class="card-banner" style="${bannerStyle}">
+                            ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
+                        </div>
+                        <div class="card-desc">${escapeHtml(s.description)}</div>
+                        <div class="tags">${tags}</div>
+                        <div class="card-stats">
+                            <div class="stat-box"><div class="s-lbl">До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
+                            <div class="stat-box"><div class="s-lbl">Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
+                        </div>
+                        <div class="prog-wrap">
+                            <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
+                            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+                        </div>
+                        <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
+                            ${actionButton}
+                            ${rateButton}
+                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
+                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">Поделиться</button>
+                        </div>
+                    </div>`;
+        });
+        grid.innerHTML = html;
+        updateStats();
     }
 
     document.addEventListener('DOMContentLoaded', () => {

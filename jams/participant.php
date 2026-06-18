@@ -63,7 +63,7 @@ $announcements = $annStmt->fetchAll(PDO::FETCH_ASSOC);
 // $criteriaStmt = $conn->prepare("SELECT * FROM sprint_criteria WHERE sprint_id = ? ORDER BY weight DESC");
 // $criteriaStmt->execute([$sprintId]);
 // $criteria = $criteriaStmt->fetchAll(PDO::FETCH_ASSOC);
-// $timezone = new DateTimeZone('Europe/Moscow');
+ $timezone = new DateTimeZone('Europe/Moscow');
 
 $now = new DateTime('now', $timezone);
 $start = new DateTime($sprint['start_at'], $timezone);
@@ -112,8 +112,7 @@ require_once('../swad/static/elements/header.php');
             background: #0d0414;
             font-family: 'Manrope', system-ui, sans-serif;
             color: #e8ddf0;
-            background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.11) 0%, transparent 60%),
-                              radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.08) 0%, transparent 55%);
+            background: linear-gradient(180deg, #0f0a20, #240038, #780066);;
         }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
@@ -127,7 +126,17 @@ require_once('../swad/static/elements/header.php');
             position: sticky;
             top: 0;
             z-index: 0;
-            backdrop-filter: blur(12px);
+        }
+        body.moonlight-theme .sprint-header {
+            /* background: rgba(13,4,20,.96); */
+            /* border-bottom: 1px solid rgba(195,33,120,.18); */
+            padding: 13px 26px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 0;
         }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
         .logo .brand { color: #c32178; }
@@ -139,7 +148,7 @@ require_once('../swad/static/elements/header.php');
             font-weight: 600;
             background: rgba(255,255,255,.05);
             color: rgba(255,255,255,.5);
-            transition: .15s;
+            transition: .001s;
             text-decoration: none;
             display: inline-block;
         }
@@ -155,13 +164,15 @@ require_once('../swad/static/elements/header.php');
             align-items: center;
             gap: 7px;
         }
-        .participant-layout { display: flex; min-height: calc(100vh - 54px); }
+        .participant-layout { display: flex; height: 80vh; }  /* изменено: добавлена высота */
         .sidebar {
             width: 230px;
             flex-shrink: 0;
-            background: rgba(0,0,0,.25);
-            border-right: 1px solid rgba(255,255,255,.07);
-            padding: 20px 12px;
+            background: #00000030;
+            /* border-right: 1px solid rgba(255,255,255,.07);  убрано */
+            padding: 10px;               /* изменено */
+            margin: 10px 0px 10px 10px;  /* добавлено */
+            border-radius: 15px;         /* добавлено */
         }
         .sidebar-section {
             font-size: 10px;
@@ -182,7 +193,7 @@ require_once('../swad/static/elements/header.php');
             font-size: 13px;
             font-weight: 600;
             color: rgba(255,255,255,.45);
-            transition: .15s;
+            transition: .001s;
             border: 1px solid transparent;
         }
         .sidebar-item:hover { background: rgba(255,255,255,.05); color: #e8ddf0; }
@@ -210,14 +221,22 @@ require_once('../swad/static/elements/header.php');
             margin-top: 10px;
         }
         .countdown-mini .cm-val { font-size: 18px; font-weight: 800; color: #c32178; font-variant-numeric: tabular-nums; }
-        .main-content { flex: 1; padding: 26px 28px; overflow-y: auto; max-height: calc(100vh - 54px); }
+        .main-content {
+            flex: 1;
+            padding: 10px;               /* изменено */
+            margin: 10px;               /* добавлено */
+            border-radius: 15px;         /* добавлено */
+            overflow-y: auto;
+            max-height: calc(100vh - 54px);
+            background: #00000030;
+            /* фон не добавляем, остаётся прозрачным */
+        }
         .view { display: none; }
         .view.active { display: block; }
         .page-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; letter-spacing: -.3px; }
         .page-sub { color: rgba(255,255,255,.35); font-size: 13px; margin-bottom: 24px; }
         .welcome-hero {
-            background: linear-gradient(135deg, rgba(195,33,120,.12), rgba(120,20,80,.06));
-            border: 1px solid rgba(195,33,120,.2);
+            background: #00000030;
             border-radius: 14px;
             padding: 24px 28px;
             margin-bottom: 22px;
@@ -250,21 +269,46 @@ require_once('../swad/static/elements/header.php');
         .wh-prog-fill { height: 100%; background: #c32178; border-radius: 99px; }
         .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
         .stat-card {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
+            background: #00000030;
             border-radius: 12px;
             padding: 15px;
         }
         .stat-card .sc-val { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
         .stat-card .sc-lbl { font-size: 11px; color: rgba(255,255,255,.35); }
         .card {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
+            background: #00000030;
             border-radius: 12px;
             padding: 18px;
             margin-bottom: 14px;
         }
         .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        body.moonlight-theme .stat-card {
+            background: #ffffff05;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        body.moonlight-theme .stat-card .sc-val { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+        body.moonlight-theme .stat-card .sc-lbl { font-size: 11px; color: rgba(255,255,255,.35); }
+        body.moonlight-theme .card {
+            background: #ffffff05;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+
+
+        body.moonlight-theme .card-title {
             font-size: 14px;
             font-weight: 700;
             margin-bottom: 14px;
@@ -345,6 +389,210 @@ require_once('../swad/static/elements/header.php');
         .ann-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
         .ann-body { font-size: 12px; color: rgba(255,255,255,.5); line-height: 1.6; margin-bottom: 5px; }
         .ann-meta { font-size: 10px; color: rgba(255,255,255,.25); }
+
+        /* ===== Дубли для body.moonlight-theme (недостающие) ===== */
+        body.moonlight-theme .logo {
+            display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0;
+        }
+        body.moonlight-theme .logo .brand { color: #c32178; }
+        body.moonlight-theme .nav-btn {
+            padding: 7px 15px;
+            border-radius: 7px;
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255,255,255,.05);
+            color: rgba(255,255,255,.5);
+            transition: .001s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        body.moonlight-theme .nav-btn:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
+        body.moonlight-theme .timer-badge {
+            background: rgb(33 152 195 / 12%);
+            border: 1px solid rgb(33 137 195 / 0%);
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        body.moonlight-theme .participant-layout { display: flex; height: 80vh; }
+        body.moonlight-theme .sidebar {
+            width: 230px;
+            flex-shrink: 0;
+            background: #ffffff06;
+            padding: 10px;
+            margin: 10px 0px 10px 10px;
+            border-radius: 15px;
+        }
+        body.moonlight-theme .sidebar-section {
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255,255,255,.25);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            padding: 10px 10px 5px;
+            margin-top: 6px;
+        }
+        body.moonlight-theme .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,.45);
+            transition: .001s;
+            border: 1px solid transparent;
+        }
+        body.moonlight-theme .sidebar-item:hover { background: rgba(255,255,255,.05); color: #e8ddf0; }
+        body.moonlight-theme .sidebar-item.active {
+            background: rgb(25 100 154 / 12%);
+            color: #e8ddf0;
+        }
+        body.moonlight-theme .sprint-info-card {
+            background: rgb(66 189 234 / 7%);
+            border: 1px solid rgb(33 137 195 / 20%);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+        body.moonlight-theme .si-title { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
+        body.moonlight-theme .si-host { font-size: 11px; color: rgba(255,255,255,.35); margin-bottom: 10px; }
+        body.moonlight-theme .si-stat { font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 4px; }
+        body.moonlight-theme .si-stat span { color: #e8ddf0; font-weight: 600; }
+        body.moonlight-theme .countdown-mini {
+            background: #ffffff10;
+            border-radius: 7px;
+            padding: 8px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        body.moonlight-theme .countdown-mini .cm-val { font-size: 18px; font-weight: 800; color: #219cc3; font-variant-numeric: tabular-nums; }
+        body.moonlight-theme .main-content {
+            flex: 1;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 15px;
+            overflow-y: auto;
+            max-height: calc(100vh - 54px);
+            background: #ffffff06;
+        }
+        body.moonlight-theme .view { display: none; }
+        body.moonlight-theme .view.active { display: block; }
+        body.moonlight-theme .page-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; letter-spacing: -.3px; }
+        body.moonlight-theme .page-sub { color: rgba(255,255,255,.35); font-size: 13px; margin-bottom: 24px; }
+        body.moonlight-theme .welcome-hero {
+            background: #ffffff05;
+            border-radius: 14px;
+            padding: 24px 28px;
+            margin-bottom: 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        body.moonlight-theme .wh-top { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+        body.moonlight-theme .wh-avatar {
+            width: 52px; height: 52px;
+            background: rgba(195,33,120,.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        body.moonlight-theme .wh-name { font-size: 18px; font-weight: 800; }
+        body.moonlight-theme .wh-status {
+            margin-left: auto;
+            background: rgba(34,197,94,.1);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,.25);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        body.moonlight-theme .wh-progress-row { display: flex; align-items: center; gap: 14px; }
+        body.moonlight-theme .wh-prog-bar { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 99px; overflow: hidden; }
+        body.moonlight-theme .wh-prog-fill { height: 100%; background: #177692; border-radius: 99px; }
+        body.moonlight-theme .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+        body.moonlight-theme .team-member {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+        }
+        body.moonlight-theme .tm-av {
+            width: 36px; height: 36px;
+            background: rgba(195,33,120,.15);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        body.moonlight-theme .tm-name { font-size: 13px; font-weight: 600; }
+        body.moonlight-theme .me-badge { font-size: 10px; background: rgba(195,33,120,.2); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+        body.moonlight-theme .btn-primary {
+            background: #c32178;
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            padding: 11px 22px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        body.moonlight-theme .btn-primary:hover { background: #9e1a66; }
+        body.moonlight-theme .form-input-s,
+        body.moonlight-theme .form-textarea-s {
+            width: 100%;
+            background: rgba(0,0,0,.4);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 8px;
+            padding: 9px 13px;
+            color: #e8ddf0;
+            font-size: 13px;
+        }
+        body.moonlight-theme .form-label-s { display: block; color: rgba(255,255,255,.4); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+        body.moonlight-theme .form-row-s { margin-bottom: 13px; }
+        body.moonlight-theme .alert {
+            background: rgba(245,158,11,.08);
+            border: 1px solid rgba(245,158,11,.2);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            font-size: 12px;
+            color: rgba(245,158,11,.9);
+        }
+        body.moonlight-theme .alert.success { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.2); color: #22c55e; }
+        body.moonlight-theme .criteria-item {
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 9px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+        body.moonlight-theme .ci-head { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        body.moonlight-theme .ci-name { font-size: 13px; font-weight: 600; }
+        body.moonlight-theme .ci-weight { font-size: 11px; color: #c32178; font-weight: 700; }
+        body.moonlight-theme .ci-bar { height: 3px; background: rgba(255,255,255,.06); border-radius: 99px; margin-top: 8px; overflow: hidden; }
+        body.moonlight-theme .ci-bar-fill { height: 100%; background: #c32178; border-radius: 99px; }
+        body.moonlight-theme .ann-item {
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 9px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+        body.moonlight-theme .ann-item.new-ann { border-color: rgba(195,33,120,.3); background: rgba(195,33,120,.05); }
+        body.moonlight-theme .ann-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+        body.moonlight-theme .ann-body { font-size: 12px; color: rgba(255,255,255,.5); line-height: 1.6; margin-bottom: 5px; }
+        body.moonlight-theme .ann-meta { font-size: 10px; color: rgba(255,255,255,.25); }
     </style>
 </head>
 <body>
@@ -352,7 +600,13 @@ require_once('../swad/static/elements/header.php');
 <header class="sprint-header">
     <div class="logo"><span class="brand"></div>
     <div style="display:flex;align-items:center;gap:10px">
-        <div class="timer-badge">⏳ <span id="countdown-header"><?= $countdownStr ?></span></div>
+        <div class="timer-badge">
+            <!-- Иконка песочных часов вместо ⏳ -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+            </svg>
+            <span id="countdown-header"><?= $countdownStr ?></span>
+        </div>
         <a class="nav-btn" href="/jams">← К спринтам</a>
     </div>
 </header>
@@ -405,19 +659,67 @@ require_once('../swad/static/elements/header.php');
                 <?php if ($status === 'upcoming'): ?>
                     <div class="cm-lbl">до старта</div>
                 <?php elseif ($status === 'ongoing'): ?>
-                    
+
                     <div class="cm-lbl">до окончания</div>
                 <?php endif; ?>
-            </div>    
+            </div>
         </div>
         <div class="sidebar-section">Моё участие</div>
-        <div class="sidebar-item active" onclick="showView('overview',this)"><span class="ico">🏠</span> Обзор</div>
-        <div class="sidebar-item" onclick="showView('team',this)"><span class="ico">👥</span> Команда</div>
-        <div class="sidebar-item" onclick="showView('submit',this)"><span class="ico">🚀</span> Сдать работу</div>
+        <div class="sidebar-item active" onclick="showView('overview',this)">
+            <span class="ico">
+                <!-- Иконка дома -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </span>
+            Обзор
+        </div>
+        <div class="sidebar-item" onclick="showView('team',this)">
+            <span class="ico">
+                <!-- Иконка группы -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+            </span>
+            Команда
+        </div>
+        <div class="sidebar-item" onclick="showView('submit',this)">
+            <span class="ico">
+                <!-- Иконка ракеты (замена 🚀) -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2a10 10 0 0 0-7.07 17.07L12 22l7.07-2.93A10 10 0 0 0 12 2zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/>
+                </svg>
+            </span>
+            Сдать работу
+        </div>
         <div class="sidebar-section">Спринт</div>
-        <div class="sidebar-item" onclick="showView('scoreboard',this)"><span class="ico">🏆</span> Рейтинг</div>
-        <div class="sidebar-item" onclick="showView('criteria',this)"><span class="ico">📋</span> Критерии</div>
-        <div class="sidebar-item" onclick="showView('announcements',this)"><span class="ico">📢</span> Объявления</div>
+        <div class="sidebar-item" onclick="showView('scoreboard',this)">
+            <span class="ico">
+                <!-- Иконка трофея -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                </svg>
+            </span>
+            Рейтинг
+        </div>
+        <div class="sidebar-item" onclick="showView('criteria',this)">
+            <span class="ico">
+                <!-- Иконка списка (планшет) -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm4 12h-4v-2h4v2zm0-4h-4v-2h4v2zm-8 4H8v-2h2v2zm0-4H8v-2h2v2z"/>
+                </svg>
+            </span>
+            Критерии
+        </div>
+        <div class="sidebar-item" onclick="showView('announcements',this)">
+            <span class="ico">
+                <!-- Иконка громкоговорителя -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+            </span>
+            Объявления
+        </div>
     </div>
 
     <div class="main-content">
@@ -440,7 +742,16 @@ require_once('../swad/static/elements/header.php');
                 <div class="stat-card"><div class="sc-val"><?= $submission ? '1' : '0' ?></div><div class="sc-lbl">Работ сдано</div></div>
             </div>
             <!-- <div class="card"><div class="card-title">📋 Чеклист участника</div><div id="checklist"></div></div> -->
-            <div class="card"><div class="card-title">🎯 Тема спринта</div>
+            <div class="card">
+                <div class="card-title">
+                    <!-- Иконка мишени вместо 🎯 -->
+                    <span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+                        </svg>
+                        Тема спринта
+                    </span>
+                </div>
                 <div style="text-align:center;padding:20px 0">
                     <?php if ($status === 'ongoing' || $status === 'finished'): ?>
                         <div style="font-size:36px">🎲</div>
@@ -456,7 +767,16 @@ require_once('../swad/static/elements/header.php');
         <!-- Team -->
         <div class="view" id="view-team">
             <div class="page-title">Команда</div>
-            <div class="card"><div class="card-title">👥 Состав команды</div>
+            <div class="card">
+                <div class="card-title">
+                    <!-- Иконка группы (такая же как в сайдбаре) -->
+                    <span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;">
+                            <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                        </svg>
+                        Состав команды
+                    </span>
+                </div>
                 <div id="team-list">
                     <?php foreach ($team as $member): ?>
                         <div class="team-member">
@@ -479,12 +799,20 @@ require_once('../swad/static/elements/header.php');
             <form id="submissionForm" method="post" enctype="multipart/form-data" action="/swad/controllers/submit_sprint.php">
                 <input type="hidden" name="sprint_id" value="<?= $sprintId ?>">
                 <div class="card">
-                    <div class="card-title">📝 Карточка работы</div>
+                    <div class="card-title">
+                        <!-- Иконка карандаша/заметки вместо 📝 -->
+                        <span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a1.0 1.0 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                            Карточка работы
+                        </span>
+                    </div>
                     <div class="form-row-s"><label class="form-label-s">Название игры *</label><input class="form-input-s" name="game_title" value="<?= htmlspecialchars($submission['title'] ?? '') ?>" required></div>
                     <div class="form-row-s"><label class="form-label-s">Описание</label><textarea class="form-textarea-s" name="description"><?= htmlspecialchars($submission['description'] ?? '') ?></textarea></div>
                     <div class="form-row-s"><label class="form-label-s">Движок</label><input class="form-input-s" name="engine" value="<?= htmlspecialchars($submission['engine'] ?? '') ?>"></div>
                     <div class="form-row-s"><label class="form-label-s">Резервная сылка на игру (itch.io / Google Drive / Яндекс.Диск)</label><input class="form-input-s" name="external_link" value="<?= htmlspecialchars($submission['external_link'] ?? '') ?>"></div>
-                    
+
                     <div class="form-row-s">
                         <label class="form-label-s">Файл игры</label>
 
@@ -573,7 +901,16 @@ require_once('../swad/static/elements/header.php');
         <!-- Criteria -->
         <div class="view" id="view-criteria">
             <div class="page-title">Критерии оценки</div>
-            <div class="card"><div class="card-title">📊 Критерии жюри</div>
+            <div class="card">
+                <div class="card-title">
+                    <!-- Иконка графика/диаграммы вместо 📊 -->
+                    <span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;">
+                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                        </svg>
+                        Критерии жюри
+                    </span>
+                </div>
                 <?php foreach ($criteria as $c): ?>
                     <div class="criteria-item">
                         <div class="ci-head"><span class="ci-name"><?= htmlspecialchars($c['name']) ?></span><span class="ci-weight"><?= $c['weight'] ?>%</span></div>
@@ -716,5 +1053,48 @@ async function uploadBuild(file)
     }
 }
 </script>
+
+<!-- ====== Эффект наведения для всех кнопок (как в хедере) ====== -->
+<script>
+(function() {
+    // Выбираем все интерактивные элементы: .nav-btn, .btn-primary, .sidebar-item
+    const buttons = document.querySelectorAll('.nav-btn, .btn-primary, .sidebar-item');
+    if (!buttons.length) return;
+
+    function resetTilt(btn) {
+        btn.style.transform = '';
+    }
+
+    function handleMouseMove(e) {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+
+        const maxAngle = 15; // мягкий наклон
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+
+        const translateY = -3; // подъём в пикселях
+        const scale = 1.1;
+
+        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+
+    function handleMouseLeave(e) {
+        resetTilt(e.currentTarget);
+    }
+
+    buttons.forEach(btn => {
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+    });
+})();
+</script>
+<!-- ====== Конец эффекта ====== -->
+
 </body>
 </html>
