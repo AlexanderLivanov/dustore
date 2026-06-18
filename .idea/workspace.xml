@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
       <change afterPath="$PROJECT_DIR$/swad/static/img/intro_conturjam.gif" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/jams/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/index.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/jams/participant.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/participant.php" afterDir="false" />
     </list>
