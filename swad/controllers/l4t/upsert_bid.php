@@ -34,12 +34,11 @@ if (!empty($data['bid_id'])) {
         $_SESSION['USERDATA']['id']
     ]);
 } else {
-
     // CREATE
     $stmt = $pdo->prepare("
         INSERT INTO bids
-        (bidder_id, owner_type, search_role, search_spec, experience, conditions, goal, details, created_at)
-        VALUES (?,?,?,?,?,?,?, ?, NOW())
+        (bidder_id, owner_type, search_role, search_spec, experience, conditions, goal, details, created_at, stage)
+        VALUES (?,?,?,?,?,?,?,?, NOW(), 'active')
     ");
 
     $stmt->execute([

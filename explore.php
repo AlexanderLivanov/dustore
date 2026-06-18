@@ -149,6 +149,8 @@ if ($selectedGenre) {
                                             <div class="game-badge free">Бесплатно</div>
                                         <?php elseif ((time() - strtotime($game['release_date'])) < 30*24*60*60): ?>
                                             <div class="game-badge">Новинка</div>
+                                        <?php elseif ((time() - strtotime($game['release_date'])) > 1): ?>
+                                            <div class="game-badge">Скоро выйдет</div>
                                         <?php endif; ?>
                                     </div>
                                     <div class="game-info">

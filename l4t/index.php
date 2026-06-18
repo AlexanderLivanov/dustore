@@ -809,6 +809,236 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
             background: rgba(195, 33, 120, .3);
             border-radius: 4px;
         }
+
+        /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
+@media screen and (max-width: 768px) {
+    /* Основной контейнер – в колонку */
+    .view-container {
+        flex-direction: column !important;
+    }
+
+    /* Левое меню – горизонтальная полоса */
+    .left-side-menu {
+        width: 100% !important;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-around;
+        padding: 8px 0;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 0;
+    }
+    .left-side-menu .avatar-canvas {
+        width: 60px !important;
+        height: 60px !important;
+        margin: 0;
+    }
+    .left-side-menu .avatar-canvas .profile-image-container {
+        height: 60px !important;
+        width: 60px !important;
+        border-radius: 50% !important;
+        -webkit-mask-image: none !important;
+        mask-image: none !important;
+    }
+    .left-side-menu .image-subtitle {
+        display: none;
+    }
+    .left-side-menu .buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+        margin: 0;
+    }
+    .left-side-menu .left-side-button,
+    .left-side-menu .left-side-button1 {
+        margin: 0 4px;
+        padding: 4px 12px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    .left-side-menu hr {
+        display: none;
+    }
+
+    /* Правая панель – на всю ширину, без ограничения высоты */
+    .right-content-view {
+        max-height: none !important;
+        overflow-y: visible !important;
+        padding: 10px;
+    }
+    .content-background {
+        padding: 10px !important;
+    }
+
+    /* Карточки заявок – в колонку */
+    .bid-card-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+    .bid-badge {
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+    }
+    .bid-right {
+        align-items: stretch;
+        gap: 6px;
+    }
+    .respond-btn {
+        width: 100%;
+        text-align: center;
+        padding: 8px;
+    }
+    .bid-desc {
+        max-width: 100%;
+        white-space: normal;
+        overflow: visible;
+    }
+
+    /* Форма создания заявки – сетка в одну колонку */
+    .grid-2x2 {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+    }
+    .desc-row .desc-wrap {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .desc-row .desc-wrap .ok-btn {
+        width: 100%;
+        margin-top: 8px;
+        padding: 10px;
+    }
+    .switch-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    /* Модальные окна */
+    .modal-box {
+        width: 95vw;
+        padding: 16px;
+        max-height: 90vh;
+    }
+
+    /* Мои заявки */
+    .my-bid-main {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .my-bid-main .edit-btn {
+        width: 100%;
+        margin-top: 6px;
+    }
+
+    /* Отклики – вкладки */
+    .resp-sub-tabs {
+        flex-wrap: wrap;
+    }
+    .resp-sub-tab {
+        flex: 1 0 auto;
+        text-align: center;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+
+    /* Профиль – блоки друг под другом */
+    .card-body-main {
+        flex-direction: column !important;
+    }
+    .card-body-main .left,
+    .card-body-main .right {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .card-header .since {
+        margin-left: 0 !important;
+        font-size: 0.75rem;
+    }
+
+    /* Проекты – выравнивание по центру */
+    .projects-grid {
+        justify-content: center;
+    }
+
+    /* Тулбары поиска */
+    .my-bids-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .my-bids-filter-tags {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .my-bids-ftag {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+
+    /* О себе – кнопка редактирования */
+    .about-edit-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Убираем лишние отступы */
+    .profile-page {
+        padding-right: 0;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    /* Мелкие экраны – ещё меньше отступов и шрифтов */
+    .content-background {
+        padding: 6px !important;
+    }
+    .left-side-menu .left-side-button,
+    .left-side-menu .left-side-button1 {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    .bid-role {
+        font-size: 1rem;
+    }
+    .bid-meta {
+        gap: 3px;
+    }
+    .bid-tag {
+        font-size: 0.65rem;
+        padding: 1px 6px;
+    }
+    .modal-box {
+        padding: 12px;
+    }
+    .modal-title {
+        font-size: 0.9rem;
+    }
+    .l4t-input,
+    .l4t-select,
+    .l4t-textarea {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+    .switch-row span {
+        font-size: 0.8rem;
+    }
+    .resp-card {
+        padding: 10px 12px;
+    }
+    .resp-card-title {
+        font-size: 0.85rem;
+    }
+}
     </style>
 </head>
 
@@ -880,7 +1110,7 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
     $l4t_projects = json_decode($userdata['l4t_projects'] ?? '[]', true) ?: [];
     $l4t_about    = $userdata['l4t_about'] ?? '';
 
-    $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE stage = 'open' ORDER BY created_at DESC");
+    $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE stage = 'active' ORDER BY created_at DESC");
     $stmt->execute();
     $bids_array = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1230,21 +1460,15 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                                 <div class="grid-2x2">
                                     <div class="form-row">
                                         <label>Я хочу найти:</label>
-                                        <select name="role">
-                                            <option>Unity программист</option>
-                                            <option>CGI художник</option>
-                                            <option>Геймдизайнер</option>
-                                            <option>Саунд дизайнер</option>
-                                        </select>
+                                        <input type="text" name="role" class="l4t-input"
+                                            placeholder="Например, 3D-художник, программист Unity"
+                                            value="<?= htmlspecialchars($editRole ?? '') ?>">
                                     </div>
                                     <div class="form-row">
                                         <label>Уточнение:</label>
-                                        <select name="spec">
-                                            <option>Junior</option>
-                                            <option>Middle</option>
-                                            <option>Senior</option>
-                                            <option>Любой уровень</option>
-                                        </select>
+                                        <input type="text" name="spec" class="l4t-input"
+                                            placeholder="Уровень, направление (Junior, Middle, Lead…)"
+                                            value="<?= htmlspecialchars($editSpec ?? '') ?>">
                                     </div>
                                     <div class="form-row">
                                         <label>Опыт:</label>
@@ -1257,12 +1481,9 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                                     </div>
                                     <div class="form-row">
                                         <label>Условия:</label>
-                                        <select name="cond">
-                                            <option>Оплата за задачу</option>
-                                            <option>Доля в проекте</option>
-                                            <option>Оклад</option>
-                                            <option>Бесплатно/энтузиазм</option>
-                                        </select>
+                                        <input type="text" name="cond" class="l4t-input"
+                                            placeholder="Гибкий график, удалёнка, оплата за результат…"
+                                            value="<?= htmlspecialchars($editCond ?? '') ?>">
                                     </div>
                                 </div>
                                 <div class="form-row full">
