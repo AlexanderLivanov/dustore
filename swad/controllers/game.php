@@ -39,11 +39,12 @@ class Game
                 g.status,
                 g.age_rating,
                 g.release_date,
+                g.created_at,
                 g.genre,                     
                 s.name AS studio_name
             FROM games g
             JOIN studios s ON g.developer = s.id
-            ORDER BY g.release_date DESC
+            ORDER BY g.created_at DESC
             LIMIT :limit
         ");
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);

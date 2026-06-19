@@ -228,8 +228,10 @@ function checkModeration(PDO $pdo, int $gameId): void
         if ($revisionCount > 0 && $revisionCount >= $pureReject) {
             $pdo->prepare("UPDATE games SET moderation_status='revision', updated_at=NOW() WHERE id=?")
                 ->execute([$gameId]);
+                
             notifyDeveloper($pdo, $gameId, 'revision');
         } else {
+            
             $pdo->prepare("UPDATE games SET moderation_status='rejected', updated_at=NOW() WHERE id=?")
                 ->execute([$gameId]);
             notifyDeveloper($pdo, $gameId, 'rejected');
