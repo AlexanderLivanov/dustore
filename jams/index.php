@@ -94,10 +94,15 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Dustore | Спринты</title>
     <style>
-        /* ---- Базовые стили (сохранены) ---- */
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.12) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.10) 0%, transparent 55%); }
+        body {
+            min-height: 100vh;
+            background: #0d0414;
+            font-family: 'Manrope', system-ui, sans-serif;
+            color: #e8ddf0;
+            background: linear-gradient(180deg, #0f0a20, #240038, #780066);
+        }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.35); border-radius: 4px; }
@@ -111,8 +116,19 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         .btn-primary { background: #c32178; border: none; color: #fff; border-radius: 7px; padding: 8px 18px; cursor: pointer; font-weight: 700; font-size: 13px; transition: .001s; }
         .btn-primary:hover { background: #9e1a66; transform: translateY(-1px); }
         .container { max-width: 980px; margin: 0 auto; padding: 28px 18px; }
-        .hero { background: rgba(0,0,0,.3); border: 1px solid rgba(195,33,120,.2); border-radius: 14px; padding: 26px 30px; margin-bottom: 24px; position: relative; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(195,33,120,.08), transparent); pointer-events: none; }
+        .hero {
+            background: rgba(0,0,0,.3);
+            border: 1px solid rgba(195,33,120,.2);
+            border-radius: 14px;
+            padding: 26px 30px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        body.moonlight-theme .hero {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
         .hero h1 { font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.4px; }
         .hero h1 span { color: #c32178; }
         .hero p { color: rgba(255,255,255,.4); font-size: 14px; margin-bottom: 20px; }
@@ -128,35 +144,34 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         .filter-btn { padding: 7px 13px; border-radius: 7px; border: 1px solid rgba(255,255,255,.1); cursor: pointer; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.04); color: rgba(255,255,255,.45); transition: .001s; }
         .filter-btn.active { background: rgba(195,33,120,.18); border-color: rgba(195,33,120,.4); color: #e8ddf0; }
         .filter-btn:hover:not(.active) { background: rgba(255,255,255,.08); color: #e8ddf0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
         .empty { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.25); }
         .empty .ico { font-size: 40px; margin-bottom: 10px; }
 
-        /* Карточка */
         .card {
-            background: rgba(0,0,0,.35);
-            border: 1px solid rgba(255,255,255,.1);
+            background: #00000050;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform .2s, box-shadow .2s;
+            transition: transform 0.001s ease, box-shadow 0.2s ease;
             display: flex;
             flex-direction: column;
-            max-width: 320px;
+            max-width: 500px;
+            padding: 5px;
         }
         .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 16px 32px rgba(195,33,120,.2);
-            border-color: rgba(195,33,120,.4);
+            border-color: rgba(195, 33, 120, 0.4);
+            transform: scale(1.02);
         }
         .card-banner {
-            height: 130px;
+            height: 230px;
             background-size: cover;
             background-position: center;
             background-color: #1a0a1e;
             position: relative;
-            mask: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
-            -webkit-mask: linear-gradient(to bottom, black 0%, black 80%, transparent 100%);
+            border-radius: 15px;
         }
         .card-banner::after {
             content: '';
@@ -174,16 +189,65 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             background: rgba(0,0,0,.25);
             flex: 1;
         }
-        .card-title { font-size: 15px; font-weight: 700; color: #fff; margin: 0; line-height: 1.3; }
-        .card-host { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 2px; }
-        .card-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
-        .tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; }
-        .tag { background: rgba(195,33,120,.15); border: 1px solid rgba(195,33,120,.3); color: #e8ddf0; font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .card-host {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+        }
+        .card-desc {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.65);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin: 0;
+            text-align: -webkit-center;
+            background: linear-gradient(180deg, #00000040, #00000000);
+            backdrop-filter: blur(10px);
+            border-radius: 13px;
+            height: 70px;
+            position: relative;
+            z-index: 1;
+            transform: translateY(-90%);
+        }
+        body.moonlight-theme .card-desc {
+            background: linear-gradient(180deg, #ffffff07, #00000000);
+            backdrop-filter: blur(8px);
+            color: rgba(255, 255, 255, 0.85);
+            border-radius: 13px;
+            height: 70px;
+            position: relative;
+            z-index: 1;
+            transform: translateY(-90%);
+        }
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 3px 0;
+        }
+        .tag {
+            background: rgba(195,33,120,0.15);
+            border: 1px solid rgba(195,33,120,0.3);
+            color: #e8ddf0;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
         .card-stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px;
-            margin: 4px 0;
+            margin: -60px 0 0 0;
         }
         .stat-box {
             background: rgba(0,0,0,.3);
@@ -191,14 +255,78 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             padding: 4px 4px;
             text-align: center;
         }
-        .stat-box .s-lbl { font-size: 9px; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .5px; }
-        .stat-box .s-val { font-size: 12px; font-weight: 600; margin-top: 2px; }
-        .prog-wrap { margin: 4px 0 2px; }
-        .prog-lbl { font-size: 10px; display: flex; justify-content: space-between; color: rgba(255,255,255,.5); margin-bottom: 4px; }
-        .prog-bar { height: 4px; background: rgba(255,255,255,.1); border-radius: 4px; overflow: hidden; }
-        .prog-fill { background: #c32178; height: 100%; border-radius: 4px; transition: width .3s; }
+        .stat-box .s-lbl {
+            font-size: 9px;
+            color: rgba(255,255,255,0.45);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-box .s-val {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .prog-wrap {
+            margin: 4px 0 2px;
+        }
+        .prog-lbl {
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 4px;
+        }
+        .prog-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .prog-fill {
+            background: #c32178;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .btn-join, .btn-team, .btn-share {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 13px;
+            background: rgba(195,33,120,0.2);
+            border: 1px solid rgba(195,33,120,0.3);
+            color: #fff;
+            transition: 0.001s;
+            text-align: center;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn-join:hover, .btn-team:hover, .btn-share:hover {
+            background: rgba(195,33,120,0.4);
+            transform: translateY(-1px);
+            border-radius: 13px;
+        }
+        .btn-join {
+            background: #c32178;
+            border: none;
+            border-radius: 13px;
+        }
+        .btn-join:hover {
+            background: #9e1a66;
+            border-radius: 13px;
+        }
 
-        /* Модалки */
         .overlay {
             position: fixed;
             inset: 0;
@@ -233,18 +361,58 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         .modal-banner img { width: 48px; height: 48px; object-fit: cover; border-radius: 12px; }
         .modal-h2 { font-size: 22px; font-weight: 800; margin: 5px 0 2px; letter-spacing: -.3px; }
         .modal-host { color: rgba(255,255,255,.35); font-size: 12px; }
-        .btn-close {
-            background: rgba(255,255,255,.06);
+        .btn-close { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.5); border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: 16px; }
+        .btn-close:hover { background: rgba(255,255,255,.12); color: #e8ddf0; }
+        .modal-desc { color: rgba(255,255,255,.5); line-height: 1.7; margin-bottom: 16px; font-size: 13px; }
+        .theme-box { background: rgba(195,33,120,.07); border: 1px solid rgba(195,33,120,.2); border-radius: 10px; padding: 11px 15px; margin-bottom: 16px; font-size: 13px; }
+        .theme-box strong { color: #c32178; }
+        .modal-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin-bottom: 18px; }
+        .m-stat { background: rgba(255,255,255,.04); border-radius: 10px; padding: 12px; text-align: center; }
+        .m-stat .val { font-weight: 700; font-size: 14px; }
+        .m-stat .lbl { color: rgba(255,255,255,.3); font-size: 10px; margin-top: 2px; }
+        .section-title { font-weight: 700; font-size: 13px; margin: 0 0 9px; display: block; text-transform: uppercase; letter-spacing: .05em; opacity: .7; }
+        .prize-item, .expert-item { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 9px 13px; margin-bottom: 7px; }
+        .prize-item .pi-reward, .expert-item .ex-name { font-weight: 600; font-size: 13px; }
+        .prize-item .pi-place, .expert-item .ex-role { color: rgba(255,255,255,.35); font-size: 11px; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
+        .btn-join, .btn-team, .btn-share, .btn-rate {
+            background: #c32178;
+            border: none;
+            color: #fff;
+            border-radius: 13px;
+            padding: 6px 12px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: .001s;
+            text-align: center;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .btn-join:hover:not(:disabled) { background: #9e1a66; }
+        .btn-join:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-team {
+            background: rgba(195,33,120,.1);
+            border: 1px solid rgba(195,33,120,.3);
+            color: #e8ddf0;
+        }
+        .btn-team:hover { background: rgba(195,33,120,.2); }
+        .btn-share {
+            background: rgba(255,255,255,.05);
             border: 1px solid rgba(255,255,255,.1);
             color: rgba(255,255,255,.5);
-            border-radius: 7px;
-            padding: 5px 11px;
-            cursor: pointer;
-            font-size: 16px;
         }
-        .btn-close:hover { background: rgba(255,255,255,.12); color: #e8ddf0; }
+        .btn-share:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
+        .btn-rate {
+            background: rgba(195,33,120,.2);
+            border: 1px solid #c32178;
+            color: #e8ddf0;
+        }
+        .btn-rate:hover { background: rgba(195,33,120,.4); }
 
-        /* Вкладки */
         .tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 16px; flex-wrap: wrap; }
         .tab-btn {
             padding: 8px 16px;
@@ -263,7 +431,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         .tab-panel.active { display: block; }
         .tab-panel p, .tab-panel div { color: rgba(255,255,255,.7); line-height: 1.7; }
 
-        /* Стили для описания с кнопкой "Ещё" */
         .desc-content {
             max-height: 120px;
             overflow: hidden;
@@ -284,7 +451,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         }
         .desc-more-btn:hover { text-decoration: underline; }
 
-        /* Форма регистрации */
         .form-group { margin-bottom: 14px; }
         .form-label { display: block; color: rgba(255,255,255,.45); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
         .form-input, .form-textarea {
@@ -303,60 +469,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
         .radio-group input[type="radio"] { accent-color: #c32178; width: 18px; height: 18px; }
 
-        /* Кнопки в модалке */
-        .modal-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 22px;
-            padding-top: 18px;
-            border-top: 1px solid rgba(255,255,255,.07);
-            flex-wrap: wrap;
-        }
-        .btn-join, .btn-team, .btn-share, .btn-rate, .btn-submit {
-            padding: 7px 16px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 7px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            border: none;
-            transition: .001s;
-        }
-        .btn-join { background: #c32178; color: #fff; }
-        .btn-join:hover { background: #9e1a66; }
-        .btn-join:disabled { opacity: .6; cursor: not-allowed; }
-        .btn-team {
-            background: rgba(195,33,120,.1);
-            border: 1px solid rgba(195,33,120,.3);
-            color: #e8ddf0;
-        }
-        .btn-team:hover { background: rgba(195,33,120,.2); }
-        .btn-share {
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.1);
-            color: rgba(255,255,255,.5);
-        }
-        .btn-share:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
-        .btn-rate {
-            background: rgba(195,33,120,.2);
-            border: 1px solid #c32178;
-            color: #e8ddf0;
-        }
-        .btn-rate:hover { background: rgba(195,33,120,.4); }
-        .btn-submit {
-            background: #c32178;
-            color: #fff;
-            border: none;
-            padding: 8px 24px;
-            font-size: 14px;
-        }
-        .btn-submit:hover { background: #9e1a66; }
-
-        /* Модалка согласия с регламентом */
         .rules-consent-overlay {
             position: fixed;
             inset: 0;
@@ -415,27 +527,135 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         }
         .rules-consent-modal .btn-decline:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
 
-        /* Лунная тема */
-        body.moonlight-theme { background: #05020a; background-image: url("/swad/static/img/Moonlight_pict.jpeg"); background-size: cover; background-attachment: fixed; background-position: center 35%; }
-        body.moonlight-theme .btn-primary, body.moonlight-theme .btn-join, body.moonlight-theme .btn-submit { background: #285682 !important; }
-        body.moonlight-theme .btn-primary:hover, body.moonlight-theme .btn-join:hover, body.moonlight-theme .btn-submit:hover { background: #193753 !important; }
-        body.moonlight-theme .sprint-header, body.moonlight-theme .hero, body.moonlight-theme .card, body.moonlight-theme .modal, body.moonlight-theme .rules-consent-modal { border-color: rgba(255,255,255,.08); }
-        body.moonlight-theme .hero::before { background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(255,255,255,.04), transparent); }
-        body.moonlight-theme .filter-btn, body.moonlight-theme .nav-btn { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
-        body.moonlight-theme .filter-btn.active { background: rgba(24,105,147,.22); border-color: rgba(25,105,151,.4); }
-        body.moonlight-theme .search-input { background: rgba(0,0,0,.6); border-color: rgba(255,255,255,.2); color: #f0e6ff; }
-        body.moonlight-theme .search-input:focus { border-color: #4a9eff; }
-        body.moonlight-theme .modal, body.moonlight-theme .rules-consent-modal { background: rgba(10,19,37,.27); border: 1px solid rgba(255,255,255,.15); box-shadow: 0 0 60px rgba(0,0,0,.6); backdrop-filter: blur(20px); }
-        body.moonlight-theme .card-info { background: rgba(0,0,0,.4); }
-        body.moonlight-theme .card { background: rgba(0,0,0,.5); }
-        body.moonlight-theme .btn-team, body.moonlight-theme .btn-share { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+        body.moonlight-theme {
+            background: #05020a;
+            background-image: url("/swad/static/img/Moonlight_pict.jpeg");
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center 35%;
+        }
+        body.moonlight-theme .btn-primary,
+        body.moonlight-theme .btn-next,
+        body.moonlight-theme .btn-submit,
+        body.moonlight-theme .btn-join {
+            background: #285682 !important;
+        }
+        body.moonlight-theme .btn-primary:hover,
+        body.moonlight-theme .btn-next:hover,
+        body.moonlight-theme .btn-submit:hover,
+        body.moonlight-theme .btn-join:hover {
+            background: #193753 !important;
+        }
+        body.moonlight-theme .sprint-header,
+        body.moonlight-theme .hero,
+        body.moonlight-theme .card,
+        body.moonlight-theme .modal,
+        body.moonlight-theme .create-modal,
+        body.moonlight-theme .l4t-toast {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        body.moonlight-theme .hero::before {
+            background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(255,255,255,.04), transparent);
+        }
+        body.moonlight-theme .filter-btn,
+        body.moonlight-theme .nav-btn,
+        body.moonlight-theme .step-tab {
+            background: rgba(255,255,255,.04);
+            border-color: rgba(255,255,255,.08);
+        }
+        body.moonlight-theme .filter-btn.active,
+        body.moonlight-theme .step-tab.active {
+            background: rgb(24 105 147 / 22%);
+            border-color: rgb(25 105 151 / 40%);
+        }
+        body.moonlight-theme .form-input,
+        body.moonlight-theme .form-textarea,
+        body.moonlight-theme .dynamic-row input,
+        body.moonlight-theme .dynamic-row select {
+            background: rgba(0,0,0,.5);
+            border-color: rgba(255,255,255,.12);
+        }
+        body.moonlight-theme .stat-box,
+        body.moonlight-theme .prize-item,
+        body.moonlight-theme .expert-item,
+        body.moonlight-theme .theme-box {
+            background: rgba(0,0,0,.35);
+            border-color: rgba(255,255,255,.06);
+        }
+        body.moonlight-theme .tag {
+            background: rgba(195,33,120,.18);
+            border-color: rgba(195,33,120,.28);
+        }
+        body.moonlight-theme .overlay {
+            background: rgba(0,0,0,.85);
+        }
+        body.moonlight-theme .hero h1 span {
+            color: #e00000;
+        }
+        body.moonlight-theme .search-input {
+            background: rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #f0e6ff;
+        }
+        body.moonlight-theme .search-input:focus {
+            border-color: #4a9eff;
+        }
+        body.moonlight-theme .modal, body.moonlight-theme .create-modal {
+            background: #0a132545;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+        }
+        body.moonlight-theme .card-info {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        body.moonlight-theme .card {
+            background: #ffffff07;
+            padding: 5px;
+        }
+        body.moonlight-theme .btn-team, body.moonlight-theme .btn-share {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+        }
 
-        /* Дополнительно для форм */
         .form-row { margin-bottom: 12px; }
         .form-row label { display: block; font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
         .form-row input, .form-row textarea { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.3); color: #e8ddf0; font-size: 13px; }
         .form-row input:focus, .form-row textarea:focus { border-color: #c32178; outline: none; }
         .form-row textarea { min-height: 60px; resize: vertical; }
+        .btn-submit {
+            background: #c32178;
+            color: #fff;
+            border: none;
+            padding: 8px 24px;
+            font-size: 14px;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+        .btn-submit:hover { background: #9e1a66; }
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #loading-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #loading-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -494,7 +714,7 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
     </div>
 </div>
 
-<!-- Модалка регистрации на спринт -->
+<!-- Модалка регистрации -->
 <div class="overlay" id="register-overlay" onclick="closeRegister(event)">
     <div class="modal modal-sm" onclick="event.stopPropagation()">
         <div class="modal-head">
@@ -511,41 +731,17 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
                 </div>
             </div>
             <div id="solo-fields">
-                <div class="form-group">
-                    <label class="form-label">Псевдоним (никнейм)</label>
-                    <input class="form-input" id="reg-alias" placeholder="Ваш игровой ник" value="<?= htmlspecialchars($currentUsername) ?>">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Город</label>
-                    <input class="form-input" id="reg-city" placeholder="Город">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Дополнительная информация о себе</label>
-                    <textarea class="form-textarea" id="reg-extra" rows="3" placeholder="Расскажите о своих навыках, опыте..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ссылки (портфолио, соцсети) – каждая с новой строки</label>
-                    <textarea class="form-textarea" id="reg-links" rows="2" placeholder="https://..."></textarea>
-                </div>
+                <div class="form-group"><label class="form-label">Псевдоним (никнейм)</label><input class="form-input" id="reg-alias" placeholder="Ваш игровой ник" value="<?= htmlspecialchars($currentUsername) ?>"></div>
+                <div class="form-group"><label class="form-label">Город</label><input class="form-input" id="reg-city" placeholder="Город"></div>
+                <div class="form-group"><label class="form-label">Дополнительная информация о себе</label><textarea class="form-textarea" id="reg-extra" rows="3" placeholder="Расскажите о своих навыках, опыте..."></textarea></div>
+                <div class="form-group"><label class="form-label">Ссылки (портфолио, соцсети) – каждая с новой строки</label><textarea class="form-textarea" id="reg-links" rows="2" placeholder="https://..."></textarea></div>
             </div>
             <div id="team-fields" style="display:none;">
                 <p style="color:rgba(255,255,255,.5); font-size:13px;">Для команды заполните информацию о себе как участнике команды. Остальные участники должны будут зарегистрироваться отдельно.</p>
-                <div class="form-group">
-                    <label class="form-label">Ваш псевдоним в команде</label>
-                    <input class="form-input" id="reg-team-alias" placeholder="Ваш ник" value="<?= htmlspecialchars($currentUsername) ?>">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Город</label>
-                    <input class="form-input" id="reg-team-city" placeholder="Город">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Дополнительная информация о вас</label>
-                    <textarea class="form-textarea" id="reg-team-extra" rows="3" placeholder="Ваши навыки, роль в команде..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ваши ссылки</label>
-                    <textarea class="form-textarea" id="reg-team-links" rows="2" placeholder="https://..."></textarea>
-                </div>
+                <div class="form-group"><label class="form-label">Ваш псевдоним в команде</label><input class="form-input" id="reg-team-alias" placeholder="Ваш ник" value="<?= htmlspecialchars($currentUsername) ?>"></div>
+                <div class="form-group"><label class="form-label">Город</label><input class="form-input" id="reg-team-city" placeholder="Город"></div>
+                <div class="form-group"><label class="form-label">Дополнительная информация о вас</label><textarea class="form-textarea" id="reg-team-extra" rows="3" placeholder="Ваши навыки, роль в команде..."></textarea></div>
+                <div class="form-group"><label class="form-label">Ваши ссылки</label><textarea class="form-textarea" id="reg-team-links" rows="2" placeholder="https://..."></textarea></div>
             </div>
             <div class="modal-actions" style="border-top: none; padding-top: 0; margin-top: 10px;">
                 <button type="submit" class="btn-submit" style="width:100%;">Зарегистрироваться</button>
@@ -554,7 +750,7 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
     </div>
 </div>
 
-<!-- Модалка создания спринта (оставлена без изменений) -->
+<!-- Модалка создания спринта -->
 <div class="overlay" id="create-overlay" onclick="closeCreateOverlay(event)">
     <div class="modal" style="max-width:600px;" onclick="event.stopPropagation()">
         <div class="modal-head">
@@ -567,86 +763,31 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             <button class="tab-btn" onclick="goStep(3)">3. Призы и эксперты</button>
         </div>
         <div class="step-panel active" id="step1">
-            <div class="form-group">
-                <label class="form-label">Логотип</label>
-                <input type="file" id="f-logo" accept="image/*" class="form-input">
-                <div id="logo-preview" style="margin-top:10px"></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Название <span class="req">*</span></label>
-                <input class="form-input" id="f-title" placeholder="Pixel Chaos Sprint #4">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Описание <span class="req">*</span></label>
-                <textarea class="form-textarea" id="f-desc" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Тема</label>
-                <input class="form-input" id="f-theme" placeholder="Киберпанк / Выживание / ...">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Теги (через запятую)</label>
-                <input class="form-input" id="f-tags" placeholder="Unity, 48h, Пиксель-арт">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Регламент (правила) – поддерживается Markdown</label>
-                <textarea class="form-textarea" id="f-rules" rows="4" placeholder="Правила участия, требования к работам..."></textarea>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Полезные ссылки (каждая с новой строки)</label>
-                <textarea class="form-textarea" id="f-links" rows="2" placeholder="https://..."></textarea>
-            </div>
+            <div class="form-group"><label class="form-label">Логотип</label><input type="file" id="f-logo" accept="image/*" class="form-input"><div id="logo-preview" style="margin-top:10px"></div></div>
+            <div class="form-group"><label class="form-label">Название <span class="req">*</span></label><input class="form-input" id="f-title" placeholder="Pixel Chaos Sprint #4"></div>
+            <div class="form-group"><label class="form-label">Описание <span class="req">*</span></label><textarea class="form-textarea" id="f-desc" rows="3"></textarea></div>
+            <div class="form-group"><label class="form-label">Тема</label><input class="form-input" id="f-theme" placeholder="Киберпанк / Выживание / ..."></div>
+            <div class="form-group"><label class="form-label">Теги (через запятую)</label><input class="form-input" id="f-tags" placeholder="Unity, 48h, Пиксель-арт"></div>
+            <div class="form-group"><label class="form-label">Регламент (правила) – поддерживается Markdown</label><textarea class="form-textarea" id="f-rules" rows="4" placeholder="Правила участия, требования к работам..."></textarea></div>
+            <div class="form-group"><label class="form-label">Полезные ссылки (каждая с новой строки)</label><textarea class="form-textarea" id="f-links" rows="2" placeholder="https://..."></textarea></div>
             <div class="form-nav"><button class="btn-next" onclick="goStep(2)">Далее →</button></div>
         </div>
         <div class="step-panel" id="step2">
-            <div class="form-group">
-                <label class="form-label">Регистрация с</label>
-                <input class="form-input" type="datetime-local" id="f-reg-start">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Регистрация до</label>
-                <input class="form-input" type="datetime-local" id="f-reg-end">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Начало джема</label>
-                <input class="form-input" type="datetime-local" id="f-jam-start">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Окончание джема (приём работ)</label>
-                <input class="form-input" type="datetime-local" id="f-jam-end">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Голосование с</label>
-                <input class="form-input" type="datetime-local" id="f-vote-start">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Голосование до</label>
-                <input class="form-input" type="datetime-local" id="f-vote-end">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Макс. участников</label>
-                <input class="form-input" type="number" id="f-maxp" value="100">
-            </div>
-            <div class="form-nav">
-                <button class="btn-back" onclick="goStep(1)">← Назад</button>
-                <button class="btn-next" onclick="goStep(3)">Далее →</button>
-            </div>
+            <div class="form-group"><label class="form-label">Регистрация с</label><input class="form-input" type="datetime-local" id="f-reg-start"></div>
+            <div class="form-group"><label class="form-label">Регистрация до</label><input class="form-input" type="datetime-local" id="f-reg-end"></div>
+            <div class="form-group"><label class="form-label">Начало джема</label><input class="form-input" type="datetime-local" id="f-jam-start"></div>
+            <div class="form-group"><label class="form-label">Окончание джема (приём работ)</label><input class="form-input" type="datetime-local" id="f-jam-end"></div>
+            <div class="form-group"><label class="form-label">Голосование с</label><input class="form-input" type="datetime-local" id="f-vote-start"></div>
+            <div class="form-group"><label class="form-label">Голосование до</label><input class="form-input" type="datetime-local" id="f-vote-end"></div>
+            <div class="form-group"><label class="form-label">Макс. участников</label><input class="form-input" type="number" id="f-maxp" value="100"></div>
+            <div class="form-nav"><button class="btn-back" onclick="goStep(1)">← Назад</button><button class="btn-next" onclick="goStep(3)">Далее →</button></div>
         </div>
         <div class="step-panel" id="step3">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <span class="section-title">Призы</span>
-                <button class="btn-add" onclick="addPrize()">+ Добавить</button>
-            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px"><span class="section-title">Призы</span><button class="btn-add" onclick="addPrize()">+ Добавить</button></div>
             <div id="prizes-list"></div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 10px">
-                <span class="section-title">Эксперты</span>
-                <button class="btn-add" onclick="addExpert()">+ Добавить эксперта</button>
-            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 10px"><span class="section-title">Эксперты</span><button class="btn-add" onclick="addExpert()">+ Добавить эксперта</button></div>
             <div id="experts-list"></div>
-            <div class="form-nav">
-                <button class="btn-back" onclick="goStep(2)">← Назад</button>
-                <button class="btn-submit" onclick="submitSprint()">Опубликовать</button>
-            </div>
+            <div class="form-nav"><button class="btn-back" onclick="goStep(2)">← Назад</button><button class="btn-submit" onclick="submitSprint()">Опубликовать</button></div>
         </div>
     </div>
 </div>
@@ -664,17 +805,14 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
     let prizes = [{ place: '1', reward: '' }];
     let selectedExperts = [];
     let isRedirecting = false;
-    let pendingSprintId = null; // для согласия с регламентом
+    let pendingSprintId = null;
 
-    // Элементы модалок
     const viewOverlay = document.getElementById('view-overlay');
     const viewModal = document.getElementById('view-modal');
     const rulesOverlay = document.getElementById('rules-consent-overlay');
     const rulesBody = document.getElementById('rules-body');
     const registerOverlay = document.getElementById('register-overlay');
-    const registerForm = document.getElementById('register-form');
 
-    // ---------- Вспомогательные функции ----------
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -685,49 +823,29 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         });
     }
 
-    // Простой парсер Markdown (поддерживает жирный, курсив, ссылки, заголовки, списки, переносы)
     function markdownToHtml(text) {
         if (!text) return '';
-        // Экранируем HTML
         let html = escapeHtml(text);
-        // Заголовки
         html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
         html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
         html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-        // Жирный и курсив
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        // Ссылки [текст](url)
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-        // Списки (маркированные)
         html = html.replace(/^\- (.*$)/gim, '<li>$1</li>');
         html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-        // Переносы строк
         html = html.replace(/\n/g, '<br>');
         return html;
     }
 
-    function getPhase(sprint) {
-        return sprint.phase || 'finished';
-    }
+    function getPhase(sprint) { return sprint.phase || 'finished'; }
 
     function formatDateRange(start, end) {
         if (!start) return '—';
         const d1 = new Date(start);
         const d2 = end ? new Date(end) : null;
-        if (d2) {
-            return d1.toLocaleDateString() + ' – ' + d2.toLocaleDateString();
-        }
+        if (d2) return d1.toLocaleDateString() + ' – ' + d2.toLocaleDateString();
         return d1.toLocaleDateString();
-    }
-
-    function countdownTo(date) {
-        const diff = new Date(date) - new Date();
-        if (diff <= 0) return 'Уже началось';
-        const days = Math.floor(diff / 864e5);
-        const hours = Math.floor((diff % 864e5) / 36e5);
-        if (days > 0) return days + 'д ' + hours + 'ч';
-        return hours + 'ч';
     }
 
     function badgeHtml(phase) {
@@ -750,7 +868,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         document.getElementById('stat-active').textContent = activeCount;
     }
 
-    // ---------- Рендеринг сетки ----------
     function renderGrid() {
         const searchText = document.getElementById('search').value.toLowerCase();
         let filtered = sprints.filter(s => {
@@ -798,7 +915,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         updateStats();
     }
 
-    // ---------- Модалка просмотра ----------
     function openView(id) {
         if (isRedirecting) return;
         const sprint = sprints.find(s => s.id == id);
@@ -808,7 +924,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         const isJoined = userSprintIds.includes(sprint.id);
         const canRate = sprint.can_rate && phase === 'voting';
 
-        // Преобразуем описание и регламент через Markdown
         const descHtml = markdownToHtml(sprint.description || '');
         const rulesHtml = markdownToHtml(sprint.rules || '');
         const linksHtml = markdownToHtml(sprint.useful_links || '');
@@ -828,7 +943,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         const logoHtml = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '🎮';
         const themeHtml = sprint.theme ? `<p><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</p>` : '';
 
-        // Определяем кнопки
         let actionButton = '';
         if (isJoined) {
             actionButton = `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join">Панель участника</a>`;
@@ -843,7 +957,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
 
         let rateButton = canRate ? `<a href="/jams/rate.php?id=${sprint.id}" class="btn-rate">Оценить</a>` : '';
 
-        // Собираем модалку
         viewModal.innerHTML = `
             <div class="modal-head">
                 <div class="modal-title-row">
@@ -905,7 +1018,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             </div>
         `;
 
-        // Активируем табы
         viewModal.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 viewModal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -922,8 +1034,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             const newUrl = window.location.pathname + '?sprint=' + sprint.id;
             history.pushState({sprint: sprint.id}, '', newUrl);
         }
-
-        // Сбрасываем состояние кнопки "Ещё"
         const descContent = document.getElementById('desc-content');
         if (descContent) descContent.classList.remove('expanded');
     }
@@ -942,7 +1052,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         alert('Ссылка скопирована');
     }
 
-    // ---------- Кнопка "Ещё" для описания ----------
     function toggleDesc() {
         const content = document.getElementById('desc-content');
         if (content) {
@@ -954,17 +1063,14 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         }
     }
 
-    // ---------- Логика участия с регламентом и регистрацией ----------
     function startJoin(sprintId) {
         const sprint = sprints.find(s => s.id == sprintId);
         if (!sprint) return;
         if (sprint.rules) {
-            // Показываем регламент
             pendingSprintId = sprintId;
             rulesBody.innerHTML = markdownToHtml(sprint.rules);
             rulesOverlay.style.display = 'flex';
         } else {
-            // Сразу открываем регистрацию
             openRegister(sprintId);
         }
     }
@@ -983,10 +1089,8 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         }
     }
 
-    // ---------- Модалка регистрации ----------
     function openRegister(sprintId) {
         document.getElementById('reg-sprint-id').value = sprintId;
-        // Сбрасываем поля
         document.getElementById('reg-alias').value = currentUsername;
         document.getElementById('reg-city').value = '';
         document.getElementById('reg-extra').value = '';
@@ -995,7 +1099,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         document.getElementById('reg-team-city').value = '';
         document.getElementById('reg-team-extra').value = '';
         document.getElementById('reg-team-links').value = '';
-        // По умолчанию соло
         document.querySelector('input[name="participant_type"][value="solo"]').checked = true;
         toggleTeamFields();
         registerOverlay.style.display = 'flex';
@@ -1012,7 +1115,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         document.getElementById('team-fields').style.display = (type === 'team') ? 'block' : 'none';
     }
 
-    // Отправка формы регистрации
     async function submitRegistration(e) {
         e.preventDefault();
         const sprintId = document.getElementById('reg-sprint-id').value;
@@ -1045,7 +1147,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             });
             const result = await resp.json();
             if (result.success) {
-                // Обновляем данные
                 const sprintIndex = sprints.findIndex(s => s.id == sprintId);
                 if (sprintIndex !== -1) {
                     sprints[sprintIndex].current_participants = result.new_count;
@@ -1053,8 +1154,8 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
                 }
                 alert('Вы успешно зарегистрировались!');
                 closeRegister();
-                closeView(); // закрываем модалку просмотра
-                openView(sprintId); // открываем заново с обновлёнными кнопками
+                closeView();
+                openView(sprintId);
                 renderGrid();
             } else {
                 alert('Ошибка: ' + result.message);
@@ -1064,7 +1165,6 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         }
     }
 
-    // ---------- Фильтры ----------
     function setFilter(f, el) {
         curFilter = f;
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -1072,7 +1172,7 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         renderGrid();
     }
 
-    // ---------- Создание спринта (без изменений) ----------
+    // ---------- Создание спринта ----------
     function openCreate() {
         prizes = [{ place: '1', reward: '' }];
         selectedExperts = [];
@@ -1173,14 +1273,12 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
     // ---------- Инициализация ----------
     document.addEventListener('DOMContentLoaded', function() {
         renderGrid();
-
         if (sprintFromGet) {
             const sprint = sprints.find(s => s.id == sprintFromGet);
             if (sprint) {
                 setTimeout(() => openView(sprintFromGet), 300);
             }
         }
-
         window.addEventListener('popstate', function(event) {
             if (event.state && event.state.sprint) {
                 openView(event.state.sprint);
@@ -1188,13 +1286,11 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
                 closeView();
             }
         });
-
         document.addEventListener('click', function(e) {
             if (e.target === viewOverlay) closeView();
             if (e.target === rulesOverlay) closeRulesConsent();
             if (e.target === registerOverlay) closeRegister();
         });
-
         document.getElementById('f-logo')?.addEventListener('change', function() {
             const preview = document.getElementById('logo-preview');
             if (this.files[0]) {
@@ -1204,7 +1300,7 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         });
     });
 
-    // Эффект наклона для кнопок
+    // Эффект наклона для кнопок вне .grid
     (function() {
         const allBtns = document.querySelectorAll(`
             .btn-primary, .btn-join, .btn-team, .btn-share,
@@ -1215,6 +1311,7 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         function resetTilt(btn) { btn.style.transform = ''; }
         function handleMouseMove(e) {
             const btn = e.currentTarget;
+            if (btn.closest('.grid')) return;
             const rect = btn.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -1232,6 +1329,52 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
             btn.addEventListener('mousemove', handleMouseMove);
             btn.addEventListener('mouseleave', handleMouseLeave);
         });
+    })();
+
+    // Эффект наклона для кнопок внутри .grid (делегирование)
+    (function() {
+        const grid = document.getElementById('grid');
+        if (!grid) return;
+        let currentTarget = null;
+        function resetTilt(el) { if (el) el.style.transform = ''; }
+        function applyTilt(el, e) {
+            const rect = el.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const nx = (x / rect.width) * 2 - 1;
+            const ny = (y / rect.height) * 2 - 1;
+            const maxAngle = 15;
+            const rotateY = maxAngle * nx;
+            const rotateX = -maxAngle * ny;
+            const translateY = -3;
+            const scale = 1.04;
+            el.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+        }
+        function onMouseMove(e) {
+            const target = e.target.closest(`
+                .btn-primary, .btn-join, .btn-team, .btn-share,
+                .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove,
+                .filter-btn, .nav-btn, .step-tab, .btn-close
+            `);
+            if (!target) {
+                if (currentTarget) resetTilt(currentTarget);
+                currentTarget = null;
+                return;
+            }
+            if (currentTarget && currentTarget !== target) {
+                resetTilt(currentTarget);
+            }
+            currentTarget = target;
+            applyTilt(target, e);
+        }
+        function onMouseLeave() {
+            if (currentTarget) {
+                resetTilt(currentTarget);
+                currentTarget = null;
+            }
+        }
+        grid.addEventListener('mousemove', onMouseMove);
+        grid.addEventListener('mouseleave', onMouseLeave);
     })();
 
     // Анимация поиска

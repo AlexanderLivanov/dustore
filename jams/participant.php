@@ -53,7 +53,7 @@ function getSprintPhase($sprint) {
 }
 $phase = getSprintPhase($sprint);
 
-// Подсчёт времени до следующего события (для таймера)
+// Подсчёт времени до следующего события
 function getNextEvent($sprint) {
     $now = new DateTime('now', new DateTimeZone('Europe/Moscow'));
     $events = [];
@@ -81,7 +81,7 @@ if ($nextEvent) {
     $countdownLabel = '';
 }
 
-// Загружаем участников (всех, не только команду)
+// Загружаем участников (всех)
 $teamStmt = $conn->prepare("
     SELECT u.id, u.username, u.role, sp.joined_at
     FROM sprint_participants sp
@@ -101,10 +101,6 @@ $annStmt = $conn->prepare("SELECT * FROM sprint_announcements WHERE sprint_id = 
 $annStmt->execute([$sprintId]);
 $announcements = $annStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Критерии (если есть)
-// $criteriaStmt = $conn->prepare("SELECT * FROM sprint_criteria WHERE sprint_id = ? ORDER BY weight DESC");
-// $criteriaStmt->execute([$sprintId]);
-// $criteria = $criteriaStmt->fetchAll(PDO::FETCH_ASSOC);
 $criteria = [];
 
 require_once('../swad/static/elements/header.php');
@@ -116,10 +112,15 @@ require_once('../swad/static/elements/header.php');
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title><?= htmlspecialchars($sprint['title']) ?> — Панель участника</title>
     <style>
-        /* ---- Стили (сокращены) ---- */
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background: linear-gradient(180deg, #0f0a20, #240038, #780066); }
+        body {
+            min-height: 100vh;
+            background: #0d0414;
+            font-family: 'Manrope', system-ui, sans-serif;
+            color: #e8ddf0;
+            background: linear-gradient(180deg, #0f0a20, #240038, #780066);
+        }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
         .sprint-header { padding: 13px 26px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 0; }
@@ -383,7 +384,6 @@ require_once('../swad/static/elements/header.php');
 </script>
 
 <script>
-    // Загрузка билда (без изменений)
     const LARGE       = 500 * 1024 * 1024;
     const SMALL_CHUNK = 5 * 1024 * 1024;
     const LARGE_CHUNK = 50 * 1024 * 1024;
@@ -433,7 +433,7 @@ require_once('../swad/static/elements/header.php');
     }
 </script>
 
-<!-- Эффект наклона (как в хедере) -->
+<!-- Эффект наклона -->
 <script>
 (function() {
     const buttons = document.querySelectorAll('.nav-btn, .btn-primary, .sidebar-item, .btn-team');
