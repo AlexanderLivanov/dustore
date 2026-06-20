@@ -203,7 +203,7 @@ unset($sprint);
             height: 230px;
             background-size: cover;
             background-position: center;
-            background-color: #1a0a1e;
+            background-color: #ffffff05;
             position: relative;
             border-radius: 15px;
 
