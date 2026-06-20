@@ -42,7 +42,6 @@ if ($stmt->fetch()) {
     exit;
 }
 
-
 // Проверка лимита
 $stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM sprint_participants WHERE sprint_id = ?");
 $stmt->execute([$sprint_id]);
@@ -52,9 +51,35 @@ if ($current >= $sprint['max_participants']) {
     exit;
 }
 
-// Добавляем
-$stmt = $conn->prepare("INSERT INTO sprint_participants (sprint_id, user_id, joined_at) VALUES (?, ?, NOW())");
-$stmt->execute([$sprint_id, $user_id]);
+// Получаем данные из формы
+$participant_type = $_POST['participant_type'] ?? 'solo';
+$alias = trim($_POST['alias'] ?? '');
+$city = trim($_POST['city'] ?? '');
+$extra_info = trim($_POST['extra_info'] ?? '');
+$links = trim($_POST['links'] ?? '');
+
+// Если псевдоним не передан, используем username пользователя
+if (empty($alias)) {
+    $stmt = $conn->prepare("SELECT username FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $alias = $stmt->fetchColumn() ?: 'Участник';
+}
+
+// Добавляем участника с дополнительными полями
+$stmt = $conn->prepare("
+    INSERT INTO sprint_participants 
+    (sprint_id, user_id, joined_at, participant_type, alias, city, extra_info, links) 
+    VALUES (?, ?, NOW(), ?, ?, ?, ?, ?)
+");
+$stmt->execute([
+    $sprint_id,
+    $user_id,
+    $participant_type,
+    $alias,
+    $city,
+    $extra_info,
+    $links
+]);
 
 $newCount = $current + 1;
 echo json_encode(['success' => true, 'new_count' => $newCount]);

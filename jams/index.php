@@ -17,7 +17,7 @@ $stmt = $conn->query("
 ");
 $sprints = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Загружаем призы и экспертов для каждого спринта
+// Загружаем призы и экспертов
 foreach ($sprints as &$sprint) {
     $prizeStmt = $conn->prepare("SELECT place_num, reward FROM sprint_prizes WHERE sprint_id = ? ORDER BY place_num");
     $prizeStmt->execute([$sprint['id']]);
@@ -47,17 +47,45 @@ if (!empty($_SESSION['USERDATA']['id'])) {
     $userSprintIds = $partStmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-// Определяем, кому показывать кнопку "Оценить" (все авторизованные, кроме хоста)
+// Функция определения фазы
+function getPhase($s) {
+    $now = new DateTime('now', new DateTimeZone('Europe/Moscow'));
+    $regStart = isset($s['registration_start']) ? new DateTime($s['registration_start'], new DateTimeZone('Europe/Moscow')) : null;
+    $regEnd   = isset($s['registration_end']) ? new DateTime($s['registration_end'], new DateTimeZone('Europe/Moscow')) : null;
+    $jamStart = isset($s['jam_start']) ? new DateTime($s['jam_start'], new DateTimeZone('Europe/Moscow')) : null;
+    $jamEnd   = isset($s['jam_end']) ? new DateTime($s['jam_end'], new DateTimeZone('Europe/Moscow')) : null;
+    $voteStart = isset($s['voting_start']) ? new DateTime($s['voting_start'], new DateTimeZone('Europe/Moscow')) : null;
+    $voteEnd   = isset($s['voting_end']) ? new DateTime($s['voting_end'], new DateTimeZone('Europe/Moscow')) : null;
+
+    if ($regStart && $now < $regStart) return 'upcoming';
+    if ($regStart && $regEnd && $now >= $regStart && $now < $regEnd) return 'registration';
+    if ($regEnd && $jamStart && $now >= $regEnd && $now < $jamStart) return 'pre_jam';
+    if ($jamStart && $jamEnd && $now >= $jamStart && $now < $jamEnd) return 'jam';
+    if ($jamEnd && $voteStart && $now >= $jamEnd && $now < $voteStart) return 'post_jam';
+    if ($voteStart && $voteEnd && $now >= $voteStart && $now < $voteEnd) return 'voting';
+    return 'finished';
+}
+
+foreach ($sprints as &$s) {
+    $s['phase'] = getPhase($s);
+}
+unset($s);
+
+// Определяем, может ли пользователь оценивать
 $canRateMap = [];
 foreach ($sprints as $sprint) {
     $canRateMap[$sprint['id']] = ($userId != 0);
 }
-
-// Добавляем флаг can_rate в каждый спринт для JS
-foreach ($sprints as &$sprint) {
-    $sprint['can_rate'] = $canRateMap[$sprint['id']];
+foreach ($sprints as &$s) {
+    $s['can_rate'] = $canRateMap[$s['id']];
 }
-unset($sprint);
+unset($s);
+
+// Определяем ID спринта из GET
+$sprintFromGet = isset($_GET['sprint']) ? (int)$_GET['sprint'] : 0;
+
+// Получаем username текущего пользователя для подстановки в псевдоним
+$currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -66,132 +94,60 @@ unset($sprint);
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Dustore | Спринты</title>
     <style>
+        /* ---- Базовые стили (сохранены) ---- */
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            min-height: 100vh;
-            background: #0d0414;
-            font-family: 'Manrope', system-ui, sans-serif;
-            color: #e8ddf0;
-            background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.12) 0%, transparent 60%),
-                              radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.10) 0%, transparent 55%);
-        }
+        body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.12) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.10) 0%, transparent 55%); }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.35); border-radius: 4px; }
-
-        .sprint-header {
-            padding: 13px 26px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 0;
-        }
+        .sprint-header { padding: 13px 26px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 0; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: #e8ddf0; letter-spacing: -.3px; }
         .logo .brand { color: #c32178; }
         .header-nav { display: flex; gap: 6px; }
-        .nav-btn {
-            padding: 7px 16px;
-            border-radius: 7px;
-            border: none;
-            font-size: 13px;
-            font-weight: 600;
-            background: rgba(255,255,255,.05);
-            color: rgba(255,255,255,.5);
-            transition: .001s;
-            text-decoration: none;
-            display: inline-block;
-        }
+        .nav-btn { padding: 7px 16px; border-radius: 7px; border: none; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .001s; text-decoration: none; display: inline-block; }
         .nav-btn:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
         .nav-btn.active { background: rgba(195,33,120,.15); color: #e8ddf0; border: 1px solid rgba(195,33,120,.3); }
-        .btn-primary {
-            background: #c32178;
-            border: none;
-            color: #fff;
-            border-radius: 7px;
-            padding: 8px 18px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 13px;
-            transition: .001s;
-        }
+        .btn-primary { background: #c32178; border: none; color: #fff; border-radius: 7px; padding: 8px 18px; cursor: pointer; font-weight: 700; font-size: 13px; transition: .001s; }
         .btn-primary:hover { background: #9e1a66; transform: translateY(-1px); }
-
         .container { max-width: 980px; margin: 0 auto; padding: 28px 18px; }
-        .hero {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(195,33,120,.2);
-            border-radius: 14px;
-            padding: 26px 30px;
-            margin-bottom: 24px;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(195,33,120,.08), transparent);
-            pointer-events: none;
-        }
+        .hero { background: rgba(0,0,0,.3); border: 1px solid rgba(195,33,120,.2); border-radius: 14px; padding: 26px 30px; margin-bottom: 24px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(195,33,120,.08), transparent); pointer-events: none; }
         .hero h1 { font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.4px; }
         .hero h1 span { color: #c32178; }
         .hero p { color: rgba(255,255,255,.4); font-size: 14px; margin-bottom: 20px; }
         .hero-stats { display: flex; gap: 28px; flex-wrap: wrap; }
         .hero-stat .val { font-size: 20px; font-weight: 800; color: #e8ddf0; }
         .hero-stat .lbl { color: rgba(255,255,255,.35); font-size: 11px; margin-top: 2px; }
-
         .toolbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
         .search-wrap { position: relative; flex: 1; min-width: 180px; }
         .search-ico { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.3); font-size: 13px; pointer-events: none; }
-        .search-input {
-            width: 100%;
-            background: rgba(0,0,0,.4);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 8px;
-            padding: 8px 12px 8px 32px;
-            color: #e8ddf0;
-            font-size: 13px;
-            outline: none;
-        }
+        .search-input { width: 100%; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 8px 12px 8px 32px; color: #e8ddf0; font-size: 13px; outline: none; }
         .search-input:focus { border-color: #c32178; }
         .filters { display: flex; gap: 5px; flex-wrap: wrap; }
-        .filter-btn {
-            padding: 7px 13px;
-            border-radius: 7px;
-            border: 1px solid rgba(255,255,255,.1);
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            background: rgba(255,255,255,.04);
-            color: rgba(255,255,255,.45);
-            transition: .001s;
-        }
+        .filter-btn { padding: 7px 13px; border-radius: 7px; border: 1px solid rgba(255,255,255,.1); cursor: pointer; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.04); color: rgba(255,255,255,.45); transition: .001s; }
         .filter-btn.active { background: rgba(195,33,120,.18); border-color: rgba(195,33,120,.4); color: #e8ddf0; }
         .filter-btn:hover:not(.active) { background: rgba(255,255,255,.08); color: #e8ddf0; }
-
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .empty { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.25); }
         .empty .ico { font-size: 40px; margin-bottom: 10px; }
 
-        /* ===== НОВЫЙ СТИЛЬ КАРТОЧЕК (уменьшенные) ===== */
+        /* Карточка */
         .card {
-            background: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0,0,0,.35);
+            border: 1px solid rgba(255,255,255,.1);
             border-radius: 20px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform .2s, box-shadow .2s;
             display: flex;
             flex-direction: column;
             max-width: 320px;
         }
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 16px 32px rgba(195, 33, 120, 0.2);
-            border-color: rgba(195, 33, 120, 0.4);
+            box-shadow: 0 16px 32px rgba(195,33,120,.2);
+            border-color: rgba(195,33,120,.4);
         }
         .card-banner {
             height: 130px;
@@ -202,64 +158,27 @@ unset($sprint);
             mask: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
             -webkit-mask: linear-gradient(to bottom, black 0%, black 80%, transparent 100%);
         }
-        }
         .card-banner::after {
-            content: "";
+            content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(195,33,120,0.2), rgba(0,0,0,0.6));
+            background: linear-gradient(135deg, rgba(195,33,120,.2), rgba(0,0,0,.6));
             pointer-events: none;
         }
-        .card-banner img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
+        .card-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .card-info {
             padding: 12px 14px 14px;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(0,0,0,.25);
             flex: 1;
         }
-        .card-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: #fff;
-            margin: 0;
-            line-height: 1.3;
-        }
-        .card-host {
-            font-size: 11px;
-            color: rgba(255,255,255,0.5);
-            margin-top: 2px;
-        }
-        .card-desc {
-            font-size: 12px;
-            color: rgba(255,255,255,0.65);
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin: 0;
-        }
-        .tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin: 3px 0;
-        }
-        .tag {
-            background: rgba(195,33,120,0.15);
-            border: 1px solid rgba(195,33,120,0.3);
-            color: #e8ddf0;
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 20px;
-        }
+        .card-title { font-size: 15px; font-weight: 700; color: #fff; margin: 0; line-height: 1.3; }
+        .card-host { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 2px; }
+        .card-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+        .tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; }
+        .tag { background: rgba(195,33,120,.15); border: 1px solid rgba(195,33,120,.3); color: #e8ddf0; font-size: 10px; padding: 2px 8px; border-radius: 20px; }
         .card-stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -267,175 +186,108 @@ unset($sprint);
             margin: 4px 0;
         }
         .stat-box {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,.3);
             border-radius: 10px;
             padding: 4px 4px;
             text-align: center;
         }
-        .stat-box .s-lbl {
-            font-size: 9px;
-            color: rgba(255,255,255,0.45);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .stat-box .s-val {
-            font-size: 12px;
-            font-weight: 600;
-            margin-top: 2px;
-        }
-        .prog-wrap {
-            margin: 4px 0 2px;
-        }
-        .prog-lbl {
-            font-size: 10px;
-            display: flex;
-            justify-content: space-between;
-            color: rgba(255,255,255,0.5);
-            margin-bottom: 4px;
-        }
-        .prog-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .prog-fill {
-            background: #c32178;
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-        .modal-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 1px solid rgba(255,255,255,0.08);
-        }
-        .btn-join, .btn-team, .btn-share {
-            flex: 1;
-            padding: 5px 0;
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: 8px;
-            background: rgba(195,33,120,0.2);
-            border: 1px solid rgba(195,33,120,0.3);
-            color: #fff;
-            transition: 0.15s;
-            text-align: center;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-        .btn-join:hover, .btn-team:hover, .btn-share:hover {
-            background: rgba(195,33,120,0.4);
-            transform: translateY(-1px);
-        }
-        .btn-join {
-            background: #c32178;
-            border: none;
-        }
-        .btn-join:hover {
-            background: #9e1a66;
-        }
+        .stat-box .s-lbl { font-size: 9px; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .5px; }
+        .stat-box .s-val { font-size: 12px; font-weight: 600; margin-top: 2px; }
+        .prog-wrap { margin: 4px 0 2px; }
+        .prog-lbl { font-size: 10px; display: flex; justify-content: space-between; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+        .prog-bar { height: 4px; background: rgba(255,255,255,.1); border-radius: 4px; overflow: hidden; }
+        .prog-fill { background: #c32178; height: 100%; border-radius: 4px; transition: width .3s; }
 
-        /* Остальные стили (модалки, формы) без изменений */
+        /* Модалки */
         .overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,.75);
+            background: rgba(0,0,0,.8);
             z-index: 200;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             padding: 16px;
-            opacity: 0;
-            pointer-events: none;
-            transition: .001s;
         }
-        .overlay.open { opacity: 1; pointer-events: all; }
-        .modal, .create-modal {
+        .overlay.open { display: flex; }
+        .modal {
             background: #160822;
             border: 1px solid rgba(195,33,120,.3);
             border-radius: 14px;
-            max-width: 740px;
+            max-width: 900px;
             width: 100%;
             max-height: 92vh;
             overflow-y: auto;
             padding: 28px;
-            transform: translateY(16px);
-            transition: .2s;
             box-shadow: 0 0 60px rgba(195,33,120,.15);
         }
-        .overlay.open .modal, .overlay.open .create-modal { transform: translateY(0); }
-        .modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+        .modal-sm { max-width: 600px; }
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
         .modal-title-row { display: flex; gap: 14px; align-items: center; }
         .modal-banner { font-size: 42px; line-height: 1; }
         .modal-banner img { width: 48px; height: 48px; object-fit: cover; border-radius: 12px; }
-        .modal-h2 { font-size: 20px; font-weight: 800; margin: 5px 0 2px; letter-spacing: -.3px; }
+        .modal-h2 { font-size: 22px; font-weight: 800; margin: 5px 0 2px; letter-spacing: -.3px; }
         .modal-host { color: rgba(255,255,255,.35); font-size: 12px; }
-        .btn-close { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.5); border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: 16px; }
-        .btn-close:hover { background: rgba(255,255,255,.12); color: #e8ddf0; }
-        .modal-desc { color: rgba(255,255,255,.5); line-height: 1.7; margin-bottom: 16px; font-size: 13px; }
-        .theme-box { background: rgba(195,33,120,.07); border: 1px solid rgba(195,33,120,.2); border-radius: 10px; padding: 11px 15px; margin-bottom: 16px; font-size: 13px; }
-        .theme-box strong { color: #c32178; }
-        .modal-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin-bottom: 18px; }
-        .m-stat { background: rgba(255,255,255,.04); border-radius: 10px; padding: 12px; text-align: center; }
-        .m-stat .val { font-weight: 700; font-size: 14px; }
-        .m-stat .lbl { color: rgba(255,255,255,.3); font-size: 10px; margin-top: 2px; }
-        .section-title { font-weight: 700; font-size: 13px; margin: 0 0 9px; display: block; text-transform: uppercase; letter-spacing: .05em; opacity: .7; }
-        .prize-item, .expert-item { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 9px 13px; margin-bottom: 7px; }
-        .prize-item .pi-reward, .expert-item .ex-name { font-weight: 600; font-size: 13px; }
-        .prize-item .pi-place, .expert-item .ex-role { color: rgba(255,255,255,.35); font-size: 11px; }
-        .modal-actions { display: flex; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
-        .btn-join, .btn-team, .btn-share, .btn-rate {
-            background: #c32178;
-            border: none;
-            color: #fff;
-            border-radius: 7px;
-            padding: 6px 12px;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            transition: .15s;
-            text-align: center;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-        .btn-join:hover:not(:disabled) { background: #9e1a66; }
-        .btn-join:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-team {
-            background: rgba(195,33,120,.1);
-            border: 1px solid rgba(195,33,120,.3);
-            color: #e8ddf0;
-        }
-        .btn-team:hover { background: rgba(195,33,120,.2); }
-        .btn-share {
-            background: rgba(255,255,255,.05);
+        .btn-close {
+            background: rgba(255,255,255,.06);
             border: 1px solid rgba(255,255,255,.1);
             color: rgba(255,255,255,.5);
+            border-radius: 7px;
+            padding: 5px 11px;
+            cursor: pointer;
+            font-size: 16px;
         }
-        .btn-rate {
-            background: rgba(195,33,120,.2);
-            border: 1px solid #c32178;
-            color: #e8ddf0;
-        }
-        .btn-rate:hover { background: rgba(195,33,120,.4); }
+        .btn-close:hover { background: rgba(255,255,255,.12); color: #e8ddf0; }
 
-        .create-modal { max-width: 600px; }
-        .steps { display: flex; gap: 6px; margin-bottom: 20px; }
-        .step-tab { flex: 1; padding: 8px 0; text-align: center; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.08); }
-        .step-tab.active { background: rgba(195,33,120,.18); border-color: rgba(195,33,120,.4); color: #e8ddf0; }
-        .step-panel { display: none; }
-        .step-panel.active { display: block; }
+        /* Вкладки */
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 16px; flex-wrap: wrap; }
+        .tab-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,.4);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: .001s;
+        }
+        .tab-btn:hover { color: #e8ddf0; }
+        .tab-btn.active { color: #e8ddf0; border-bottom-color: #c32178; }
+        .tab-panel { display: none; padding: 8px 0 16px; }
+        .tab-panel.active { display: block; }
+        .tab-panel p, .tab-panel div { color: rgba(255,255,255,.7); line-height: 1.7; }
+
+        /* Стили для описания с кнопкой "Ещё" */
+        .desc-content {
+            max-height: 120px;
+            overflow: hidden;
+            position: relative;
+            transition: max-height .3s ease;
+        }
+        .desc-content.expanded { max-height: none; }
+        .desc-content .desc-text { white-space: pre-wrap; word-break: break-word; }
+        .desc-more-btn {
+            background: none;
+            border: none;
+            color: #c32178;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 4px 0;
+            margin-top: 6px;
+        }
+        .desc-more-btn:hover { text-decoration: underline; }
+
+        /* Форма регистрации */
+        .form-group { margin-bottom: 14px; }
         .form-label { display: block; color: rgba(255,255,255,.45); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
-        .form-label .req { color: #f87171; margin-left: 3px; }
-        .form-input, .form-textarea, .dynamic-row input, .dynamic-row select {
+        .form-input, .form-textarea {
             width: 100%;
             background: rgba(0,0,0,.4);
             border: 1px solid rgba(255,255,255,.14);
@@ -447,146 +299,143 @@ unset($sprint);
         }
         .form-input:focus, .form-textarea:focus { border-color: #c32178; }
         .form-textarea { resize: vertical; }
-        .form-group { margin-bottom: 13px; }
-        .duration-group { display: flex; gap: 8px; }
-        .duration-group .form-input { width: auto; flex: 1; }
-        .duration-group select { width: auto; flex-shrink: 0; }
-        .dynamic-row { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
-        .btn-remove { background: rgba(239,68,68,.1); border: none; color: #f87171; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
-        .btn-add { background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.25); color: rgba(195,33,120,.9); border-radius: 7px; padding: 5px 12px; cursor: pointer; font-size: 12px; font-weight: 600; }
-        .form-nav { display: flex; gap: 8px; margin-top: 20px; }
-        .btn-next, .btn-submit { flex: 2; background: #c32178; border: none; color: #fff; border-radius: 9px; padding: 12px; cursor: pointer; font-weight: 700; }
-        .btn-next:hover, .btn-submit:hover { background: #9e1a66; }
-        .btn-back { flex: 1; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.5); border-radius: 9px; padding: 12px; cursor: pointer; }
-        .btn-back:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
-        .l4t-toast {
-            position: fixed; bottom: 24px; right: 24px; z-index: 999;
-            background: #160822; border: 1px solid rgba(195,33,120,.4); border-radius: 10px;
-            padding: 14px 18px; box-shadow: 0 8px 32px rgba(195,33,120,.2);
-            transform: translateY(20px); opacity: 0; transition: .3s; pointer-events: none;
-            max-width: 320px;
-        }
-        .l4t-toast.show { transform: translateY(0); opacity: 1; pointer-events: all; }
-        .l4t-toast-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-        .l4t-toast-body { font-size: 12px; color: rgba(255,255,255,.45); margin-bottom: 10px; }
-        .l4t-toast-btn { background: #c32178; border: none; color: #fff; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
-        .l4t-toast-close { position: absolute; top: 10px; right: 12px; cursor: pointer; color: rgba(255,255,255,.3); }
+        .radio-group { display: flex; gap: 20px; margin-top: 6px; }
+        .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+        .radio-group input[type="radio"] { accent-color: #c32178; width: 18px; height: 18px; }
 
-        /* ===== ЛУННАЯ ТЕМА ===== */
-        body.moonlight-theme {
-            background: #05020a;
-            background-image: url("/swad/static/img/Moonlight_pict.jpeg");
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center 35%;
-        }
-        body.moonlight-theme .btn-primary,
-        body.moonlight-theme .btn-next,
-        body.moonlight-theme .btn-submit,
-        body.moonlight-theme .btn-join {
-            background: #285682 !important;
-        }
-        body.moonlight-theme .btn-primary:hover,
-        body.moonlight-theme .btn-next:hover,
-        body.moonlight-theme .btn-submit:hover,
-        body.moonlight-theme .btn-join:hover {
-            background: #193753 !important;
-        }
-        body.moonlight-theme .sprint-header,
-        body.moonlight-theme .hero,
-        body.moonlight-theme .card,
-        body.moonlight-theme .modal,
-        body.moonlight-theme .create-modal,
-        body.moonlight-theme .l4t-toast {
-            border-color: rgba(255, 255, 255, 0.08);
-        }
-        body.moonlight-theme .hero::before {
-            background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(255,255,255,.04), transparent);
-        }
-        body.moonlight-theme .filter-btn,
-        body.moonlight-theme .nav-btn,
-        body.moonlight-theme .step-tab {
-            background: rgba(255,255,255,.04);
-            border-color: rgba(255,255,255,.08);
-        }
-        body.moonlight-theme .filter-btn.active,
-        body.moonlight-theme .step-tab.active {
-            background: rgb(24 105 147 / 22%);
-            border-color: rgb(25 105 151 / 40%);
-        }
-        body.moonlight-theme .form-input,
-        body.moonlight-theme .form-textarea,
-        body.moonlight-theme .dynamic-row input,
-        body.moonlight-theme .dynamic-row select {
-            background: rgba(0,0,0,.5);
-            border-color: rgba(255,255,255,.12);
-        }
-        body.moonlight-theme .stat-box,
-        body.moonlight-theme .prize-item,
-        body.moonlight-theme .expert-item,
-        body.moonlight-theme .theme-box {
-            background: rgba(0,0,0,.35);
-            border-color: rgba(255,255,255,.06);
-        }
-        body.moonlight-theme .tag {
-            background: rgba(195,33,120,.18);
-            border-color: rgba(195,33,120,.28);
-        }
-        body.moonlight-theme .overlay {
-            background: rgba(0,0,0,.85);
-        }
-        body.moonlight-theme .hero h1 span {
-            color: #e00000;
-        }
-        body.moonlight-theme .search-input {
-            background: rgba(0, 0, 0, 0.6);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #f0e6ff;
-        }
-        body.moonlight-theme .search-input:focus {
-            border-color: #4a9eff;
-        }
-        body.moonlight-theme .modal, body.moonlight-theme .create-modal {
-            background: #0a132545;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(20px);
-        }
-        body.moonlight-theme .card-info {
-            background: rgba(0, 0, 0, 0.4);
-        }
-        body.moonlight-theme .card {
-            background: rgba(0, 0, 0, 0.5);
-        }
-        body.moonlight-theme .btn-team, body.moonlight-theme .btn-share {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.2);
-        }
-
-        /* ===== ЗАГРУЗОЧНЫЙ ОВЕРЛЕЙ (на весь экран, с плавностью) ===== */
-        #loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.92);
+        /* Кнопки в модалке */
+        .modal-actions {
             display: flex;
+            gap: 8px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255,255,255,.07);
+            flex-wrap: wrap;
+        }
+        .btn-join, .btn-team, .btn-share, .btn-rate, .btn-submit {
+            padding: 7px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 7px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(4px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+            gap: 5px;
+            border: none;
+            transition: .001s;
         }
-        #loading-overlay.visible {
-            opacity: 1;
-            pointer-events: auto;
+        .btn-join { background: #c32178; color: #fff; }
+        .btn-join:hover { background: #9e1a66; }
+        .btn-join:disabled { opacity: .6; cursor: not-allowed; }
+        .btn-team {
+            background: rgba(195,33,120,.1);
+            border: 1px solid rgba(195,33,120,.3);
+            color: #e8ddf0;
         }
-        #loading-overlay img {
+        .btn-team:hover { background: rgba(195,33,120,.2); }
+        .btn-share {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            color: rgba(255,255,255,.5);
+        }
+        .btn-share:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
+        .btn-rate {
+            background: rgba(195,33,120,.2);
+            border: 1px solid #c32178;
+            color: #e8ddf0;
+        }
+        .btn-rate:hover { background: rgba(195,33,120,.4); }
+        .btn-submit {
+            background: #c32178;
+            color: #fff;
+            border: none;
+            padding: 8px 24px;
+            font-size: 14px;
+        }
+        .btn-submit:hover { background: #9e1a66; }
+
+        /* Модалка согласия с регламентом */
+        .rules-consent-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.9);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .rules-consent-overlay.open { display: flex; }
+        .rules-consent-modal {
+            background: #160822;
+            border: 1px solid rgba(195,33,120,.3);
+            border-radius: 14px;
+            max-width: 600px;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
+            padding: 28px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
+        .rules-consent-modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+        .rules-consent-modal .rules-body {
+            font-size: 13px;
+            color: rgba(255,255,255,.7);
+            background: rgba(0,0,0,.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .rules-consent-modal .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .rules-consent-modal .btn-agree {
+            background: #c32178;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 7px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .rules-consent-modal .btn-agree:hover { background: #9e1a66; }
+        .rules-consent-modal .btn-decline {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            color: rgba(255,255,255,.5);
+            padding: 8px 20px;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+        .rules-consent-modal .btn-decline:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
+
+        /* Лунная тема */
+        body.moonlight-theme { background: #05020a; background-image: url("/swad/static/img/Moonlight_pict.jpeg"); background-size: cover; background-attachment: fixed; background-position: center 35%; }
+        body.moonlight-theme .btn-primary, body.moonlight-theme .btn-join, body.moonlight-theme .btn-submit { background: #285682 !important; }
+        body.moonlight-theme .btn-primary:hover, body.moonlight-theme .btn-join:hover, body.moonlight-theme .btn-submit:hover { background: #193753 !important; }
+        body.moonlight-theme .sprint-header, body.moonlight-theme .hero, body.moonlight-theme .card, body.moonlight-theme .modal, body.moonlight-theme .rules-consent-modal { border-color: rgba(255,255,255,.08); }
+        body.moonlight-theme .hero::before { background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(255,255,255,.04), transparent); }
+        body.moonlight-theme .filter-btn, body.moonlight-theme .nav-btn { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+        body.moonlight-theme .filter-btn.active { background: rgba(24,105,147,.22); border-color: rgba(25,105,151,.4); }
+        body.moonlight-theme .search-input { background: rgba(0,0,0,.6); border-color: rgba(255,255,255,.2); color: #f0e6ff; }
+        body.moonlight-theme .search-input:focus { border-color: #4a9eff; }
+        body.moonlight-theme .modal, body.moonlight-theme .rules-consent-modal { background: rgba(10,19,37,.27); border: 1px solid rgba(255,255,255,.15); box-shadow: 0 0 60px rgba(0,0,0,.6); backdrop-filter: blur(20px); }
+        body.moonlight-theme .card-info { background: rgba(0,0,0,.4); }
+        body.moonlight-theme .card { background: rgba(0,0,0,.5); }
+        body.moonlight-theme .btn-team, body.moonlight-theme .btn-share { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+
+        /* Дополнительно для форм */
+        .form-row { margin-bottom: 12px; }
+        .form-row label { display: block; font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+        .form-row input, .form-row textarea { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.3); color: #e8ddf0; font-size: 13px; }
+        .form-row input:focus, .form-row textarea:focus { border-color: #c32178; outline: none; }
+        .form-row textarea { min-height: 60px; resize: vertical; }
     </style>
 </head>
 <body>
@@ -618,7 +467,8 @@ unset($sprint);
         <div class="filters">
             <button class="filter-btn active" onclick="setFilter('all',this)">Все</button>
             <button class="filter-btn" onclick="setFilter('registration',this)">Регистрация</button>
-            <button class="filter-btn" onclick="setFilter('ongoing',this)">Идут</button>
+            <button class="filter-btn" onclick="setFilter('jam',this)">Джем</button>
+            <button class="filter-btn" onclick="setFilter('voting',this)">Голосование</button>
             <button class="filter-btn" onclick="setFilter('finished',this)">Завершены</button>
         </div>
     </div>
@@ -627,22 +477,95 @@ unset($sprint);
     <div class="empty" id="empty" style="display:none"><div class="ico">🔍</div><p>Спринты не найдены</p></div>
 </div>
 
-<!-- VIEW MODAL -->
-<div class="overlay" id="view-overlay" onclick="closeView(event)"><div class="modal" id="view-modal" onclick="event.stopPropagation()"></div></div>
+<!-- Модалка просмотра спринта -->
+<div class="overlay" id="view-overlay" onclick="closeView(event)">
+    <div class="modal" id="view-modal" onclick="event.stopPropagation()"></div>
+</div>
 
-<!-- CREATE MODAL -->
+<!-- Модалка согласия с регламентом -->
+<div class="rules-consent-overlay" id="rules-consent-overlay" onclick="closeRulesConsent(event)">
+    <div class="rules-consent-modal" onclick="event.stopPropagation()">
+        <h3>📜 Ознакомьтесь с регламентом</h3>
+        <div class="rules-body" id="rules-body"></div>
+        <div class="actions">
+            <button class="btn-decline" onclick="closeRulesConsent()">Отказаться</button>
+            <button class="btn-agree" onclick="agreeToRules()">Принять и продолжить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка регистрации на спринт -->
+<div class="overlay" id="register-overlay" onclick="closeRegister(event)">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+        <div class="modal-head">
+            <h3 style="color:#e8ddf0;font-size:18px;font-weight:800">Регистрация на спринт</h3>
+            <button class="btn-close" onclick="closeRegister()">✕</button>
+        </div>
+        <form id="register-form" onsubmit="submitRegistration(event)">
+            <input type="hidden" id="reg-sprint-id" value="">
+            <div class="form-group">
+                <label class="form-label">Тип участия</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="participant_type" value="solo" checked onchange="toggleTeamFields()"> Соло</label>
+                    <label><input type="radio" name="participant_type" value="team" onchange="toggleTeamFields()"> Команда</label>
+                </div>
+            </div>
+            <div id="solo-fields">
+                <div class="form-group">
+                    <label class="form-label">Псевдоним (никнейм)</label>
+                    <input class="form-input" id="reg-alias" placeholder="Ваш игровой ник" value="<?= htmlspecialchars($currentUsername) ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Город</label>
+                    <input class="form-input" id="reg-city" placeholder="Город">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дополнительная информация о себе</label>
+                    <textarea class="form-textarea" id="reg-extra" rows="3" placeholder="Расскажите о своих навыках, опыте..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ссылки (портфолио, соцсети) – каждая с новой строки</label>
+                    <textarea class="form-textarea" id="reg-links" rows="2" placeholder="https://..."></textarea>
+                </div>
+            </div>
+            <div id="team-fields" style="display:none;">
+                <p style="color:rgba(255,255,255,.5); font-size:13px;">Для команды заполните информацию о себе как участнике команды. Остальные участники должны будут зарегистрироваться отдельно.</p>
+                <div class="form-group">
+                    <label class="form-label">Ваш псевдоним в команде</label>
+                    <input class="form-input" id="reg-team-alias" placeholder="Ваш ник" value="<?= htmlspecialchars($currentUsername) ?>">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Город</label>
+                    <input class="form-input" id="reg-team-city" placeholder="Город">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дополнительная информация о вас</label>
+                    <textarea class="form-textarea" id="reg-team-extra" rows="3" placeholder="Ваши навыки, роль в команде..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ваши ссылки</label>
+                    <textarea class="form-textarea" id="reg-team-links" rows="2" placeholder="https://..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions" style="border-top: none; padding-top: 0; margin-top: 10px;">
+                <button type="submit" class="btn-submit" style="width:100%;">Зарегистрироваться</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модалка создания спринта (оставлена без изменений) -->
 <div class="overlay" id="create-overlay" onclick="closeCreateOverlay(event)">
-    <div class="create-modal" onclick="event.stopPropagation()">
+    <div class="modal" style="max-width:600px;" onclick="event.stopPropagation()">
         <div class="modal-head">
             <h2 style="color:#e8ddf0;font-size:18px;font-weight:800">Создать спринт</h2>
             <button class="btn-close" onclick="closeCreate()">✕</button>
         </div>
-        <div class="steps">
-            <button class="step-tab active" id="tab1" onclick="goStep(1)">1. Основное</button>
-            <button class="step-tab" id="tab2" onclick="goStep(2)">2. Время</button>
-            <button class="step-tab" id="tab3" onclick="goStep(3)">3. Призы и эксперты</button>
+        <div class="tabs" style="border-bottom:1px solid rgba(255,255,255,.1);">
+            <button class="tab-btn active" onclick="goStep(1)">1. Основное</button>
+            <button class="tab-btn" onclick="goStep(2)">2. Даты</button>
+            <button class="tab-btn" onclick="goStep(3)">3. Призы и эксперты</button>
         </div>
-
         <div class="step-panel active" id="step1">
             <div class="form-group">
                 <label class="form-label">Логотип</label>
@@ -665,25 +588,40 @@ unset($sprint);
                 <label class="form-label">Теги (через запятую)</label>
                 <input class="form-input" id="f-tags" placeholder="Unity, 48h, Пиксель-арт">
             </div>
-            <div class="form-nav"><button class="btn-next" onclick="goStep(2)">Далее →</button></div>
-        </div>
-
-        <div class="step-panel" id="step2">
             <div class="form-group">
-                <label class="form-label">Дата и время старта <span class="req">*</span></label>
-                <input class="form-input" type="datetime-local" id="f-datetime">
+                <label class="form-label">Регламент (правила) – поддерживается Markdown</label>
+                <textarea class="form-textarea" id="f-rules" rows="4" placeholder="Правила участия, требования к работам..."></textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Длительность</label>
-                <div class="duration-group">
-                    <input class="form-input" type="number" id="f-dur" value="24" style="width:100px">
-                    <select id="f-dur-unit" class="form-input">
-                        <option value="hours">Часы</option>
-                        <option value="days" selected>Дни</option>
-                        <option value="weeks">Недели</option>
-                        <option value="months">Месяцы</option>
-                    </select>
-                </div>
+                <label class="form-label">Полезные ссылки (каждая с новой строки)</label>
+                <textarea class="form-textarea" id="f-links" rows="2" placeholder="https://..."></textarea>
+            </div>
+            <div class="form-nav"><button class="btn-next" onclick="goStep(2)">Далее →</button></div>
+        </div>
+        <div class="step-panel" id="step2">
+            <div class="form-group">
+                <label class="form-label">Регистрация с</label>
+                <input class="form-input" type="datetime-local" id="f-reg-start">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Регистрация до</label>
+                <input class="form-input" type="datetime-local" id="f-reg-end">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Начало джема</label>
+                <input class="form-input" type="datetime-local" id="f-jam-start">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Окончание джема (приём работ)</label>
+                <input class="form-input" type="datetime-local" id="f-jam-end">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Голосование с</label>
+                <input class="form-input" type="datetime-local" id="f-vote-start">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Голосование до</label>
+                <input class="form-input" type="datetime-local" id="f-vote-end">
             </div>
             <div class="form-group">
                 <label class="form-label">Макс. участников</label>
@@ -694,14 +632,13 @@ unset($sprint);
                 <button class="btn-next" onclick="goStep(3)">Далее →</button>
             </div>
         </div>
-
         <div class="step-panel" id="step3">
-            <div class="sec-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
                 <span class="section-title">Призы</span>
                 <button class="btn-add" onclick="addPrize()">+ Добавить</button>
             </div>
             <div id="prizes-list"></div>
-            <div class="sec-row" style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 10px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 10px">
                 <span class="section-title">Эксперты</span>
                 <button class="btn-add" onclick="addExpert()">+ Добавить эксперта</button>
             </div>
@@ -714,28 +651,30 @@ unset($sprint);
     </div>
 </div>
 
-<!-- L4T Toast -->
-<div class="l4t-toast" id="l4t-toast">
-    <span class="l4t-toast-close" onclick="closeToast()">✕</span>
-    <div class="l4t-toast-title">Собрать команду на L4T</div>
-    <div class="l4t-toast-body">Разместите заявку на бирже L4T — найдите программиста, художника или геймдизайнера для вашего спринта.</div>
-    <a href="/l4t" class="l4t-toast-btn">Открыть биржу L4T →</a>
-</div>
-
-<!-- ======== ЗАГРУЗОЧНЫЙ ОВЕРЛЕЙ ДЛЯ ГИФКИ (на весь экран, плавное появление) ======== -->
-<div id="loading-overlay">
-    <img src="/swad/static/img/intro_conturjam.gif" alt="Загрузка...">
-</div>
-
 <script>
+    // Данные из PHP
     const sprintsData = <?php echo json_encode($sprints, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
     const allUsers = <?php echo json_encode($allUsers, JSON_HEX_TAG); ?>;
+    const sprintFromGet = <?php echo (int)$sprintFromGet; ?>;
+    const currentUsername = <?php echo json_encode($currentUsername); ?>;
+
     let sprints = sprintsData;
     let userSprintIds = <?php echo json_encode($userSprintIds); ?>;
     let curFilter = 'all';
     let prizes = [{ place: '1', reward: '' }];
     let selectedExperts = [];
+    let isRedirecting = false;
+    let pendingSprintId = null; // для согласия с регламентом
 
+    // Элементы модалок
+    const viewOverlay = document.getElementById('view-overlay');
+    const viewModal = document.getElementById('view-modal');
+    const rulesOverlay = document.getElementById('rules-consent-overlay');
+    const rulesBody = document.getElementById('rules-body');
+    const registerOverlay = document.getElementById('register-overlay');
+    const registerForm = document.getElementById('register-form');
+
+    // ---------- Вспомогательные функции ----------
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -746,28 +685,44 @@ unset($sprint);
         });
     }
 
-    function getStatus(sprint) {
-        const now = new Date();
-        const start = new Date(sprint.start_at);
-        let end = new Date(start);
-        const unit = sprint.duration_unit;
-        const val = sprint.duration_value;
-        if (unit === 'hours') end.setHours(end.getHours() + val);
-        else if (unit === 'days') end.setDate(end.getDate() + val);
-        else if (unit === 'weeks') end.setDate(end.getDate() + val * 7);
-        else if (unit === 'months') end.setMonth(end.getMonth() + val);
-        if (now < start) return 'upcoming';
-        if (now > end) return 'finished';
-        return 'ongoing';
+    // Простой парсер Markdown (поддерживает жирный, курсив, ссылки, заголовки, списки, переносы)
+    function markdownToHtml(text) {
+        if (!text) return '';
+        // Экранируем HTML
+        let html = escapeHtml(text);
+        // Заголовки
+        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+        // Жирный и курсив
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Ссылки [текст](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        // Списки (маркированные)
+        html = html.replace(/^\- (.*$)/gim, '<li>$1</li>');
+        html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        // Переносы строк
+        html = html.replace(/\n/g, '<br>');
+        return html;
     }
 
-    function formatDuration(dur, unit) {
-        const units = { hours: 'ч', days: 'д', weeks: 'нед', months: 'мес' };
-        return dur + ' ' + (units[unit] || unit);
+    function getPhase(sprint) {
+        return sprint.phase || 'finished';
     }
 
-    function countdown(startDate) {
-        const diff = new Date(startDate) - new Date();
+    function formatDateRange(start, end) {
+        if (!start) return '—';
+        const d1 = new Date(start);
+        const d2 = end ? new Date(end) : null;
+        if (d2) {
+            return d1.toLocaleDateString() + ' – ' + d2.toLocaleDateString();
+        }
+        return d1.toLocaleDateString();
+    }
+
+    function countdownTo(date) {
+        const diff = new Date(date) - new Date();
         if (diff <= 0) return 'Уже началось';
         const days = Math.floor(diff / 864e5);
         const hours = Math.floor((diff % 864e5) / 36e5);
@@ -775,196 +730,341 @@ unset($sprint);
         return hours + 'ч';
     }
 
-    function badgeHtml(status) {
+    function badgeHtml(phase) {
         const map = {
-            registration: ['badge-active', 'Регистрация'],
-            upcoming: ['badge-upcoming', 'Скоро'],
-            ongoing: ['badge-ongoing', 'Идёт'],
-            finished: ['badge-finished', 'Завершён']
+            'registration': ['badge-active', 'Регистрация'],
+            'upcoming': ['badge-upcoming', 'Скоро'],
+            'jam': ['badge-ongoing', 'Джем'],
+            'voting': ['badge-voting', 'Голосование'],
+            'finished': ['badge-finished', 'Завершён']
         };
-        const [cls, txt] = map[status] || map.upcoming;
+        const [cls, txt] = map[phase] || map.finished;
         return `<span class="badge ${cls}">${txt}</span>`;
     }
 
     function updateStats() {
-        const totalEl = document.getElementById('stat-total');
-        const membersEl = document.getElementById('stat-members');
-        const activeEl = document.getElementById('stat-active');
-        if (totalEl) totalEl.textContent = sprints.length;
-        if (membersEl) {
-            const totalMembers = sprints.reduce((sum, s) => sum + (s.current_participants || 0), 0);
-            membersEl.textContent = totalMembers;
-        }
-        if (activeEl) {
-            const activeCount = sprints.filter(s => getStatus(s) !== 'finished').length;
-            activeEl.textContent = activeCount;
-        }
+        document.getElementById('stat-total').textContent = sprints.length;
+        const totalMembers = sprints.reduce((sum, s) => sum + (s.current_participants || 0), 0);
+        document.getElementById('stat-members').textContent = totalMembers;
+        const activeCount = sprints.filter(s => s.phase !== 'finished').length;
+        document.getElementById('stat-active').textContent = activeCount;
     }
 
-function showLoadingOverlay() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        // Берём картинку внутри оверлея
-        const img = overlay.querySelector('img');
-        if (img) {
-            // Сохраняем текущий src, сбрасываем и возвращаем
-            const src = img.src;
-            img.src = '';
-            img.src = src;
+    // ---------- Рендеринг сетки ----------
+    function renderGrid() {
+        const searchText = document.getElementById('search').value.toLowerCase();
+        let filtered = sprints.filter(s => {
+            const phase = s.phase || 'finished';
+            const matchesFilter = curFilter === 'all' || phase === curFilter;
+            const matchesSearch = s.title.toLowerCase().includes(searchText) || s.description.toLowerCase().includes(searchText);
+            return matchesFilter && matchesSearch;
+        });
+        const grid = document.getElementById('grid');
+        const empty = document.getElementById('empty');
+        if (filtered.length === 0) {
+            grid.innerHTML = '';
+            empty.style.display = 'block';
+            updateStats();
+            return;
         }
-        overlay.classList.remove('visible');
-        void overlay.offsetWidth; // принудительный reflow
-        overlay.classList.add('visible');
+        empty.style.display = 'none';
+        let html = '';
+        filtered.forEach(s => {
+            const phase = s.phase || 'finished';
+            const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
+            const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
+            const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
+            html += `<div class="card" onclick="openView(${s.id})">
+                        <div class="card-banner" style="${bannerStyle}">
+                            ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
+                        </div>
+                        <div class="card-info">
+                            <div class="card-title">${escapeHtml(s.title)}</div>
+                            <div class="card-host">от ${escapeHtml(s.host_name || 'Dustore')}</div>
+                            <div class="card-desc">${escapeHtml(s.description)}</div>
+                            <div class="tags">${tags}</div>
+                            <div class="card-stats">
+                                <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${s.registration_start ? formatDateRange(s.registration_start, s.registration_end) : '—'}</div></div>
+                                <div class="stat-box"><div class="s-lbl">Джем</div><div class="s-val">${s.jam_start ? formatDateRange(s.jam_start, s.jam_end) : '—'}</div></div>
+                            </div>
+                            <div class="prog-wrap">
+                                <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
+                                <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+                            </div>
+                        </div>
+                    </div>`;
+        });
+        grid.innerHTML = html;
+        updateStats();
     }
-}
 
-    // ===== ОБНОВЛЁННАЯ openView =====
+    // ---------- Модалка просмотра ----------
     function openView(id) {
+        if (isRedirecting) return;
         const sprint = sprints.find(s => s.id == id);
         if (!sprint) return;
 
-        // === ЕСЛИ ЭТО ЦЕЛЕВОЙ СПРИНТ (по названию) — ПОКАЗЫВАЕМ ГИФКУ И РЕДИРЕКТИМ ===
-        if (sprint.title === 'К.О.Н.Т.У.Р.') {
-            showLoadingOverlay();
-            setTimeout(() => {
-                location.href = '/jams/participant.php?sprint_id=' + sprint.id;
-            }, 1950);
-            return;
-        }
+        const phase = sprint.phase || 'finished';
+        const isJoined = userSprintIds.includes(sprint.id);
+        const canRate = sprint.can_rate && phase === 'voting';
 
-        // === ОБЫЧНАЯ ЛОГИКА ДЛЯ ВСЕХ ОСТАЛЬНЫХ СПРИНТОВ ===
-        const status = getStatus(sprint);
+        // Преобразуем описание и регламент через Markdown
+        const descHtml = markdownToHtml(sprint.description || '');
+        const rulesHtml = markdownToHtml(sprint.rules || '');
+        const linksHtml = markdownToHtml(sprint.useful_links || '');
+
         const prizesHtml = (sprint.prizes || []).map((p, i) => {
             const medal = ['🥇','🥈','🥉'][i] || '🎖';
             return `<div class="prize-item"><span style="font-size:20px">${medal}</span><div><div class="pi-place">${p.place_num} место</div><div class="pi-reward">${escapeHtml(p.reward)}</div></div></div>`;
-        }).join('');
+        }).join('') || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>';
+
         const expertsHtml = (sprint.experts || []).map(e => `
             <div class="expert-item">
                 <span class="av">👤</span>
                 <div><div class="ex-name">${escapeHtml(e.username)}</div><div class="ex-role">${escapeHtml(e.role || 'Эксперт')}</div></div>
             </div>
-        `).join('');
+        `).join('') || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>';
+
         const logoHtml = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '🎮';
-        const themeHtml = sprint.theme ? `<div class="theme-box"><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</div>` : '';
-        const isJoined = userSprintIds.includes(sprint.id);
-        let actionButton = isJoined
-            ? `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join">Панель участника</a>`
-            : `<button class="btn-join" onclick="joinSprint(${sprint.id}, this, null, true)">Участвовать</button>`;
-        let rateButton = '';
-        if (sprint.can_rate) {
-            rateButton = `<a href="/jams/rate.php?id=${sprint.id}" class="btn-rate">Оценить</a>`;
+        const themeHtml = sprint.theme ? `<p><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</p>` : '';
+
+        // Определяем кнопки
+        let actionButton = '';
+        if (isJoined) {
+            actionButton = `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join">Панель участника</a>`;
+        } else {
+            const canJoin = (phase === 'registration' || phase === 'upcoming' || phase === 'pre_jam');
+            if (canJoin) {
+                actionButton = `<button class="btn-join" onclick="startJoin(${sprint.id})">Участвовать</button>`;
+            } else {
+                actionButton = `<button class="btn-join" disabled>Регистрация закрыта</button>`;
+            }
         }
-        const modal = document.getElementById('view-modal');
-        if (!modal) return;
-        modal.innerHTML = `
+
+        let rateButton = canRate ? `<a href="/jams/rate.php?id=${sprint.id}" class="btn-rate">Оценить</a>` : '';
+
+        // Собираем модалку
+        viewModal.innerHTML = `
             <div class="modal-head">
                 <div class="modal-title-row">
                     <span class="modal-banner">${logoHtml}</span>
-                    <div>${badgeHtml(status)}<div class="modal-h2">${escapeHtml(sprint.title)}</div><div class="modal-host">Организатор: ${escapeHtml(sprint.host_name || 'Dustore')}</div></div>
+                    <div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            ${badgeHtml(phase)}
+                            <span style="font-size:12px; color:rgba(255,255,255,.4);">${sprint.current_participants || 0} участников</span>
+                        </div>
+                        <div class="modal-h2">${escapeHtml(sprint.title)}</div>
+                        <div class="modal-host">Организатор: ${escapeHtml(sprint.host_name || 'Dustore')}</div>
+                    </div>
                 </div>
                 <button class="btn-close" onclick="closeView()">✕</button>
             </div>
-            <p class="modal-desc">${escapeHtml(sprint.description)}</p>
-            ${themeHtml}
-            <div class="modal-stats">
-                <div class="m-stat"><div class="val">${countdown(sprint.start_at)}</div><div class="lbl">До старта</div></div>
-                <div class="m-stat"><div class="val">${formatDuration(sprint.duration_value, sprint.duration_unit)}</div><div class="lbl">Длительность</div></div>
-                <div class="m-stat"><div class="val">${sprint.current_participants || 0}/${sprint.max_participants}</div><div class="lbl">Участники</div></div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="overview">Обзор</button>
+                <button class="tab-btn" data-tab="dates">Даты</button>
+                <button class="tab-btn" data-tab="prizes">Призы и эксперты</button>
+                ${sprint.rules ? `<button class="tab-btn" data-tab="rules">Регламент</button>` : ''}
+                ${sprint.useful_links ? `<button class="tab-btn" data-tab="links">Ссылки</button>` : ''}
             </div>
-            <div class="modal-body-cols" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;">
-                <div><span class="section-title">Призы</span>${prizesHtml || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>'}</div>
-                <div><span class="section-title">Эксперты</span>${expertsHtml || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>'}</div>
+
+            <div class="tab-panel active" id="tab-overview">
+                <div class="desc-wrapper">
+                    <div class="desc-content" id="desc-content">
+                        <div class="desc-text">${descHtml}</div>
+                    </div>
+                    ${descHtml.length > 300 ? `<button class="desc-more-btn" onclick="toggleDesc()">Ещё</button>` : ''}
+                </div>
+                ${themeHtml}
             </div>
+
+            <div class="tab-panel" id="tab-dates">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div><strong>Регистрация:</strong> ${sprint.registration_start ? formatDateRange(sprint.registration_start, sprint.registration_end) : '—'}</div>
+                    <div><strong>Джем:</strong> ${sprint.jam_start ? formatDateRange(sprint.jam_start, sprint.jam_end) : '—'}</div>
+                    <div><strong>Голосование:</strong> ${sprint.voting_start ? formatDateRange(sprint.voting_start, sprint.voting_end) : '—'}</div>
+                    <div><strong>Макс. участников:</strong> ${sprint.max_participants}</div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tab-prizes">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                    <div><strong>Призы</strong><br>${prizesHtml}</div>
+                    <div><strong>Эксперты</strong><br>${expertsHtml}</div>
+                </div>
+            </div>
+
+            ${sprint.rules ? `<div class="tab-panel" id="tab-rules"><div class="rules-text">${rulesHtml}</div></div>` : ''}
+            ${sprint.useful_links ? `<div class="tab-panel" id="tab-links"><div class="links-text">${linksHtml}</div></div>` : ''}
+
             <div class="modal-actions">
                 ${actionButton}
                 ${rateButton}
-                <button class="btn-team" onclick="window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">Команда</button>
-                <button class="btn-share" onclick="shareSprint(${sprint.id})">Поделиться</button>
+                <button class="btn-team" onclick="event.stopPropagation(); window.location.href='/l4t/?action=jam&jam_id='+${sprint.id};">Команда</button>
+                <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${sprint.id})">Поделиться</button>
             </div>
         `;
-        document.getElementById('view-overlay').classList.add('open');
+
+        // Активируем табы
+        viewModal.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                viewModal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const tabId = this.dataset.tab;
+                viewModal.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                const panel = document.getElementById('tab-' + tabId);
+                if (panel) panel.classList.add('active');
+            });
+        });
+
+        viewOverlay.style.display = 'flex';
+        if (history.pushState) {
+            const newUrl = window.location.pathname + '?sprint=' + sprint.id;
+            history.pushState({sprint: sprint.id}, '', newUrl);
+        }
+
+        // Сбрасываем состояние кнопки "Ещё"
+        const descContent = document.getElementById('desc-content');
+        if (descContent) descContent.classList.remove('expanded');
     }
 
-    // ===== ПЕРЕХВАТ КЛИКОВ ПО ССЫЛКАМ "Панель участника" ДЛЯ ЦЕЛЕВОГО СПРИНТА =====
-    document.addEventListener('click', function(e) {
-        const link = e.target.closest('a.btn-join');
-        if (link) {
-            const card = link.closest('.card');
-            if (card) {
-                const url = link.href;
-                const match = url.match(/sprint_id=(\d+)/);
-                if (match) {
-                    const sprintId = parseInt(match[1]);
-                    const sprint = sprints.find(s => s.id == sprintId);
-                    if (sprint && sprint.title === 'К.О.Н.Т.У.Р.') {
-                        e.preventDefault();
-                        showLoadingOverlay();
-                        setTimeout(() => {
-                            location.href = url;
-                        }, 1950);
-                    }
-                }
-            }
-        }
-    });
-
-    // ===== ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) =====
-    async function joinSprint(sprintId, buttonEl, cardEl, isModal = false) {
-        if (buttonEl.disabled) return;
-        buttonEl.disabled = true;
-        buttonEl.textContent = 'Подождите...';
-        try {
-            const formData = new FormData();
-            formData.append('sprint_id', sprintId);
-            const resp = await fetch('/swad/controllers/jams/join_sprint.php', { method: 'POST', body: formData });
-            const result = await resp.json();
-            if (result.success) {
-                const sprintIndex = sprints.findIndex(s => s.id == sprintId);
-                if (sprintIndex !== -1) {
-                    sprints[sprintIndex].current_participants = result.new_count;
-                    userSprintIds.push(sprintId);
-                }
-                if (cardEl) {
-                    const countSpan = cardEl.querySelector('.prog-lbl span:last-child');
-                    if (countSpan) {
-                        const max = sprints[sprintIndex].max_participants;
-                        countSpan.textContent = `${result.new_count} / ${max}`;
-                        const fill = cardEl.querySelector('.prog-fill');
-                        if (fill) fill.style.width = `${Math.min(100, Math.round(result.new_count / max * 100))}%`;
-                    }
-                    const actionsDiv = cardEl.querySelector('.modal-actions');
-                    if (actionsDiv) {
-                        actionsDiv.innerHTML = `<a href="participant.php?sprint_id=${sprintId}" class="btn-join">Панель участника</a>
-                                                <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
-                                                <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${sprintId})">Поделиться</button>`;
-                    }
-                }
-                if (isModal) openView(sprintId);
-                else renderGrid();
-                alert('Вы успешно присоединились к спринту!');
-            } else {
-                alert('Ошибка: ' + result.message);
-                buttonEl.disabled = false;
-                buttonEl.textContent = 'Участвовать';
-            }
-        } catch (err) {
-            alert('Ошибка соединения: ' + err.message);
-            buttonEl.disabled = false;
-            buttonEl.textContent = 'Участвовать';
+    function closeView(e) {
+        if (e && e.target !== viewOverlay) return;
+        viewOverlay.style.display = 'none';
+        if (history.pushState) {
+            history.pushState({}, '', window.location.pathname);
         }
     }
 
     function shareSprint(id) {
-        const url = window.location.href + '?sprint=' + id;
+        const url = window.location.origin + window.location.pathname + '?sprint=' + id;
         navigator.clipboard.writeText(url);
         alert('Ссылка скопирована');
     }
 
-    function closeView(e) {
-        const overlay = document.getElementById('view-overlay');
-        if (!e || e.target === overlay) overlay.classList.remove('open');
+    // ---------- Кнопка "Ещё" для описания ----------
+    function toggleDesc() {
+        const content = document.getElementById('desc-content');
+        if (content) {
+            content.classList.toggle('expanded');
+            const btn = document.querySelector('.desc-more-btn');
+            if (btn) {
+                btn.textContent = content.classList.contains('expanded') ? 'Свернуть' : 'Ещё';
+            }
+        }
     }
 
+    // ---------- Логика участия с регламентом и регистрацией ----------
+    function startJoin(sprintId) {
+        const sprint = sprints.find(s => s.id == sprintId);
+        if (!sprint) return;
+        if (sprint.rules) {
+            // Показываем регламент
+            pendingSprintId = sprintId;
+            rulesBody.innerHTML = markdownToHtml(sprint.rules);
+            rulesOverlay.style.display = 'flex';
+        } else {
+            // Сразу открываем регистрацию
+            openRegister(sprintId);
+        }
+    }
+
+    function closeRulesConsent(e) {
+        if (e && e.target !== rulesOverlay) return;
+        rulesOverlay.style.display = 'none';
+        pendingSprintId = null;
+    }
+
+    function agreeToRules() {
+        if (pendingSprintId) {
+            rulesOverlay.style.display = 'none';
+            openRegister(pendingSprintId);
+            pendingSprintId = null;
+        }
+    }
+
+    // ---------- Модалка регистрации ----------
+    function openRegister(sprintId) {
+        document.getElementById('reg-sprint-id').value = sprintId;
+        // Сбрасываем поля
+        document.getElementById('reg-alias').value = currentUsername;
+        document.getElementById('reg-city').value = '';
+        document.getElementById('reg-extra').value = '';
+        document.getElementById('reg-links').value = '';
+        document.getElementById('reg-team-alias').value = currentUsername;
+        document.getElementById('reg-team-city').value = '';
+        document.getElementById('reg-team-extra').value = '';
+        document.getElementById('reg-team-links').value = '';
+        // По умолчанию соло
+        document.querySelector('input[name="participant_type"][value="solo"]').checked = true;
+        toggleTeamFields();
+        registerOverlay.style.display = 'flex';
+    }
+
+    function closeRegister(e) {
+        if (e && e.target !== registerOverlay) return;
+        registerOverlay.style.display = 'none';
+    }
+
+    function toggleTeamFields() {
+        const type = document.querySelector('input[name="participant_type"]:checked').value;
+        document.getElementById('solo-fields').style.display = (type === 'solo') ? 'block' : 'none';
+        document.getElementById('team-fields').style.display = (type === 'team') ? 'block' : 'none';
+    }
+
+    // Отправка формы регистрации
+    async function submitRegistration(e) {
+        e.preventDefault();
+        const sprintId = document.getElementById('reg-sprint-id').value;
+        const type = document.querySelector('input[name="participant_type"]:checked').value;
+        let alias, city, extra, links;
+        if (type === 'solo') {
+            alias = document.getElementById('reg-alias').value.trim() || currentUsername;
+            city = document.getElementById('reg-city').value.trim();
+            extra = document.getElementById('reg-extra').value.trim();
+            links = document.getElementById('reg-links').value.trim();
+        } else {
+            alias = document.getElementById('reg-team-alias').value.trim() || currentUsername;
+            city = document.getElementById('reg-team-city').value.trim();
+            extra = document.getElementById('reg-team-extra').value.trim();
+            links = document.getElementById('reg-team-links').value.trim();
+        }
+
+        const formData = new FormData();
+        formData.append('sprint_id', sprintId);
+        formData.append('participant_type', type);
+        formData.append('alias', alias);
+        formData.append('city', city);
+        formData.append('extra_info', extra);
+        formData.append('links', links);
+
+        try {
+            const resp = await fetch('/swad/controllers/jams/join_sprint.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await resp.json();
+            if (result.success) {
+                // Обновляем данные
+                const sprintIndex = sprints.findIndex(s => s.id == sprintId);
+                if (sprintIndex !== -1) {
+                    sprints[sprintIndex].current_participants = result.new_count;
+                    userSprintIds.push(parseInt(sprintId));
+                }
+                alert('Вы успешно зарегистрировались!');
+                closeRegister();
+                closeView(); // закрываем модалку просмотра
+                openView(sprintId); // открываем заново с обновлёнными кнопками
+                renderGrid();
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        } catch (err) {
+            alert('Ошибка соединения: ' + err.message);
+        }
+    }
+
+    // ---------- Фильтры ----------
     function setFilter(f, el) {
         curFilter = f;
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -972,16 +1072,7 @@ function showLoadingOverlay() {
         renderGrid();
     }
 
-    function showL4tToast() {
-        const toast = document.getElementById('l4t-toast');
-        if (toast) {
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 10000);
-        }
-    }
-    function closeToast() { document.getElementById('l4t-toast')?.classList.remove('show'); }
-
-    // ---------- CREATE SPRINT LOGIC ----------
+    // ---------- Создание спринта (без изменений) ----------
     function openCreate() {
         prizes = [{ place: '1', reward: '' }];
         selectedExperts = [];
@@ -989,30 +1080,35 @@ function showLoadingOverlay() {
         document.getElementById('f-desc').value = '';
         document.getElementById('f-theme').value = '';
         document.getElementById('f-tags').value = '';
-        document.getElementById('f-datetime').value = '';
-        document.getElementById('f-dur').value = '24';
-        document.getElementById('f-dur-unit').value = 'days';
+        document.getElementById('f-rules').value = '';
+        document.getElementById('f-links').value = '';
+        document.getElementById('f-reg-start').value = '';
+        document.getElementById('f-reg-end').value = '';
+        document.getElementById('f-jam-start').value = '';
+        document.getElementById('f-jam-end').value = '';
+        document.getElementById('f-vote-start').value = '';
+        document.getElementById('f-vote-end').value = '';
         document.getElementById('f-maxp').value = '100';
         document.getElementById('f-logo').value = '';
         document.getElementById('logo-preview').innerHTML = '';
         buildPrizes();
         renderExpertsSelects();
         goStep(1);
-        document.getElementById('create-overlay').classList.add('open');
+        document.getElementById('create-overlay').style.display = 'flex';
     }
 
-    function closeCreate() { document.getElementById('create-overlay').classList.remove('open'); }
+    function closeCreate() { document.getElementById('create-overlay').style.display = 'none'; }
     function closeCreateOverlay(e) { if (e.target === document.getElementById('create-overlay')) closeCreate(); }
+
     function goStep(n) {
-        for (let i = 1; i <= 3; i++) {
-            document.getElementById(`step${i}`)?.classList.toggle('active', i === n);
-            document.getElementById(`tab${i}`)?.classList.toggle('active', i === n);
-        }
+        document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('#create-overlay .tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('step' + n).classList.add('active');
+        document.querySelector('#create-overlay .tab-btn:nth-child(' + n + ')').classList.add('active');
     }
 
     function buildPrizes() {
         const container = document.getElementById('prizes-list');
-        if (!container) return;
         container.innerHTML = prizes.map((p, i) => `
             <div class="dynamic-row">
                 <span style="font-size:18px; flex-shrink:0">${['🥇','🥈','🥉'][i] || '🎖'}</span>
@@ -1021,12 +1117,12 @@ function showLoadingOverlay() {
             </div>
         `).join('');
     }
+
     function addPrize() { prizes.push({ place: String(prizes.length + 1), reward: '' }); buildPrizes(); }
     function removePrize(idx) { prizes.splice(idx, 1); prizes.forEach((p, i) => p.place = String(i+1)); buildPrizes(); }
 
     function renderExpertsSelects() {
         const container = document.getElementById('experts-list');
-        if (!container) return;
         container.innerHTML = selectedExperts.map((userId, idx) => `
             <div class="dynamic-row">
                 <select class="form-input user-select" onchange="updateExpert(${idx}, this.value)" style="flex:2">
@@ -1038,193 +1134,145 @@ function showLoadingOverlay() {
         `).join('');
         if (selectedExperts.length === 0) container.innerHTML = '<div style="color:rgba(255,255,255,.3); padding:8px 0;">Нет экспертов, нажмите "Добавить эксперта"</div>';
     }
+
     function addExpert() { selectedExperts.push(''); renderExpertsSelects(); }
     function updateExpert(idx, value) { selectedExperts[idx] = value ? parseInt(value) : ''; }
     function removeExpert(idx) { selectedExperts.splice(idx, 1); renderExpertsSelects(); }
 
     async function submitSprint() {
-        const title = document.getElementById('f-title')?.value.trim() || '';
-        const desc = document.getElementById('f-desc')?.value.trim() || '';
-        const datetime = document.getElementById('f-datetime')?.value || '';
-        if (!title || !desc || !datetime) {
-            alert('Заполните название, описание и дату старта');
-            return;
-        }
+        const title = document.getElementById('f-title').value.trim();
+        const desc = document.getElementById('f-desc').value.trim();
+        if (!title || !desc) { alert('Заполните название и описание'); return; }
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', desc);
-        formData.append('theme', document.getElementById('f-theme')?.value.trim() || '');
-        formData.append('tags', document.getElementById('f-tags')?.value.trim() || '');
-        formData.append('start_at', datetime.replace('T', ' ') + ':00');
-        formData.append('duration_value', document.getElementById('f-dur')?.value || '24');
-        formData.append('duration_unit', document.getElementById('f-dur-unit')?.value || 'days');
-        formData.append('max_participants', document.getElementById('f-maxp')?.value || '100');
-        const logoFile = document.getElementById('f-logo')?.files[0];
+        formData.append('theme', document.getElementById('f-theme').value.trim());
+        formData.append('tags', document.getElementById('f-tags').value.trim());
+        formData.append('rules', document.getElementById('f-rules').value.trim());
+        formData.append('useful_links', document.getElementById('f-links').value.trim());
+        formData.append('registration_start', document.getElementById('f-reg-start').value);
+        formData.append('registration_end', document.getElementById('f-reg-end').value);
+        formData.append('jam_start', document.getElementById('f-jam-start').value);
+        formData.append('jam_end', document.getElementById('f-jam-end').value);
+        formData.append('voting_start', document.getElementById('f-vote-start').value);
+        formData.append('voting_end', document.getElementById('f-vote-end').value);
+        formData.append('max_participants', document.getElementById('f-maxp').value);
+        const logoFile = document.getElementById('f-logo').files[0];
         if (logoFile) formData.append('logo', logoFile);
-        const validPrizes = prizes.filter(p => p.reward && p.reward.trim() !== '');
-        formData.append('prizes', JSON.stringify(validPrizes));
-        const validExperts = selectedExperts.filter(id => id && id !== '');
-        formData.append('experts', JSON.stringify(validExperts));
+        formData.append('prizes', JSON.stringify(prizes.filter(p => p.reward.trim())));
+        formData.append('experts', JSON.stringify(selectedExperts.filter(id => id)));
 
         try {
-            const response = await fetch('/swad/controllers/create_sprint.php', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (result.success) {
-                alert('Спринт успешно создан!');
-                closeCreate();
-                location.reload();
-            } else {
-                alert('Ошибка: ' + (result.message || 'Неизвестная ошибка'));
-            }
-        } catch (err) {
-            alert('Ошибка соединения: ' + err.message);
-        }
+            const resp = await fetch('/swad/controllers/create_sprint.php', { method: 'POST', body: formData });
+            const result = await resp.json();
+            if (result.success) { alert('Спринт создан!'); closeCreate(); location.reload(); }
+            else alert('Ошибка: ' + result.message);
+        } catch (err) { alert('Ошибка: ' + err.message); }
     }
 
-    function renderGrid() {
-        const searchText = document.getElementById('search')?.value.toLowerCase() || '';
-        let filtered = sprints.filter(s => {
-            const status = getStatus(s);
-            const matchesFilter = curFilter === 'all' || status === curFilter;
-            const matchesSearch = s.title.toLowerCase().includes(searchText) || s.description.toLowerCase().includes(searchText);
-            return matchesFilter && matchesSearch;
-        });
-        const grid = document.getElementById('grid');
-        const empty = document.getElementById('empty');
-        if (!grid) return;
-        if (filtered.length === 0) {
-            grid.innerHTML = '';
-            if (empty) empty.style.display = 'block';
-            updateStats();
-            return;
-        }
-        if (empty) empty.style.display = 'none';
-        let html = '';
-        filtered.forEach(s => {
-            const status = getStatus(s);
-            const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
-            const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
-            const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
-            const isJoined = userSprintIds.includes(s.id);
-            let actionButton = isJoined
-                ? `<a href="participant.php?sprint_id=${s.id}" class="btn-join">Панель участника</a>`
-                : `<button class="btn-join" onclick="event.stopPropagation(); joinSprint(${s.id}, this, this.closest('.card'))">Участвовать</button>`;
-            let rateButton = '';
-            if (s.can_rate) {
-                rateButton = `<a href="/jams/rate.php?id=${s.id}" class="btn-rate">Оценить</a>`;
-            }
-            html += `<div class="card" onclick="openView(${s.id})">
-                        <div class="card-banner" style="${bannerStyle}">
-                            ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
-                        </div>
-                        <div class="card-desc">${escapeHtml(s.description)}</div>
-                        <div class="tags">${tags}</div>
-                        <div class="card-stats">
-                            <div class="stat-box"><div class="s-lbl">До старта</div><div class="s-val">${countdown(s.start_at)}</div></div>
-                            <div class="stat-box"><div class="s-lbl">Длительность</div><div class="s-val">${formatDuration(s.duration_value, s.duration_unit)}</div></div>
-                        </div>
-                        <div class="prog-wrap">
-                            <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
-                            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-                        </div>
-                        <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
-                            ${actionButton}
-                            ${rateButton}
-                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
-                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">Поделиться</button>
-                        </div>
-                    </div>`;
-        });
-        grid.innerHTML = html;
-        updateStats();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
+    // ---------- Инициализация ----------
+    document.addEventListener('DOMContentLoaded', function() {
         renderGrid();
-        setInterval(renderGrid, 30000);
-        const logoInput = document.getElementById('f-logo');
-        if (logoInput) logoInput.addEventListener('change', function() {
+
+        if (sprintFromGet) {
+            const sprint = sprints.find(s => s.id == sprintFromGet);
+            if (sprint) {
+                setTimeout(() => openView(sprintFromGet), 300);
+            }
+        }
+
+        window.addEventListener('popstate', function(event) {
+            if (event.state && event.state.sprint) {
+                openView(event.state.sprint);
+            } else {
+                closeView();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target === viewOverlay) closeView();
+            if (e.target === rulesOverlay) closeRulesConsent();
+            if (e.target === registerOverlay) closeRegister();
+        });
+
+        document.getElementById('f-logo')?.addEventListener('change', function() {
             const preview = document.getElementById('logo-preview');
-            if (preview && this.files[0]) {
+            if (this.files[0]) {
                 const url = URL.createObjectURL(this.files[0]);
                 preview.innerHTML = `<img src="${url}" style="max-width:100px; border-radius:8px">`;
-            } else if (preview) preview.innerHTML = '';
+            } else preview.innerHTML = '';
         });
     });
-</script>
 
-<!-- Эффект наклона для кнопок (как в хедере) -->
-<script>
-(function() {
-    const allBtns = document.querySelectorAll(`
-        .btn-primary, .btn-join, .btn-team, .btn-share,
-        .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove,
-        .filter-btn, .nav-btn, .step-tab, .btn-close
-    `);
-    if (!allBtns.length) return;
+    // Эффект наклона для кнопок
+    (function() {
+        const allBtns = document.querySelectorAll(`
+            .btn-primary, .btn-join, .btn-team, .btn-share,
+            .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove,
+            .filter-btn, .nav-btn, .tab-btn, .btn-close
+        `);
+        if (!allBtns.length) return;
+        function resetTilt(btn) { btn.style.transform = ''; }
+        function handleMouseMove(e) {
+            const btn = e.currentTarget;
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const nx = (x / rect.width) * 2 - 1;
+            const ny = (y / rect.height) * 2 - 1;
+            const maxAngle = 15;
+            const rotateY = maxAngle * nx;
+            const rotateX = -maxAngle * ny;
+            const translateY = -3;
+            const scale = 1.04;
+            btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+        }
+        function handleMouseLeave(e) { resetTilt(e.currentTarget); }
+        allBtns.forEach(btn => {
+            btn.addEventListener('mousemove', handleMouseMove);
+            btn.addEventListener('mouseleave', handleMouseLeave);
+        });
+    })();
 
-    function resetTilt(btn) { btn.style.transform = ''; }
-    function handleMouseMove(e) {
-        const btn = e.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const nx = (x / rect.width) * 2 - 1;
-        const ny = (y / rect.height) * 2 - 1;
-        const maxAngle = 15;
-        const rotateY = maxAngle * nx;
-        const rotateX = -maxAngle * ny;
-        const translateY = -3;
-        const scale = 1.04;
-        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-    }
-    function handleMouseLeave(e) { resetTilt(e.currentTarget); }
-    allBtns.forEach(btn => {
-        btn.addEventListener('mousemove', handleMouseMove);
-        btn.addEventListener('mouseleave', handleMouseLeave);
-    });
-})();
+    // Анимация поиска
+    (function() {
+        const searchWrap = document.querySelector('.search-wrap');
+        const searchInput = document.querySelector('.search-input');
+        if (!searchWrap || !searchInput) return;
+        searchWrap.addEventListener('mousemove', function(e) {
+            const rect = searchWrap.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const nx = (x / rect.width) * 2 - 1;
+            const ny = (y / rect.height) * 10 - 5;
+            const maxAngle = 5;
+            const rotateY = maxAngle * nx;
+            const rotateX = -maxAngle * ny;
+            searchWrap.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
+        });
+        searchWrap.addEventListener('mouseleave', function() { searchWrap.style.transform = ''; });
+        searchInput.addEventListener('input', function() {
+            this.classList.remove('shake-it');
+            void this.offsetWidth;
+            this.classList.add('shake-it');
+            this.addEventListener('animationend', function onAnimEnd() {
+                this.classList.remove('shake-it');
+                this.removeEventListener('animationend', onAnimEnd);
+            });
+        });
+    })();
 </script>
 
 <style>
-@keyframes shakeSearch {
-    0%, 100% { transform: translateX(0) rotateX(0deg) rotateY(0deg); }
-    20%      { transform: translateX(-3px) rotate(-1deg); }
-    40%      { transform: translateX(3px) rotate(1deg); }
-    60%      { transform: translateX(-2px) rotate(-0.5deg); }
-    80%      { transform: translateX(2px) rotate(0.5deg); }
-}
-.shake-it { animation: shakeSearch 0.3s ease-in-out; }
+    @keyframes shakeSearch {
+        0%, 100% { transform: translateX(0) rotateX(0deg) rotateY(0deg); }
+        20% { transform: translateX(-3px) rotate(-1deg); }
+        40% { transform: translateX(3px) rotate(1deg); }
+        60% { transform: translateX(-2px) rotate(-0.5deg); }
+        80% { transform: translateX(2px) rotate(0.5deg); }
+    }
+    .shake-it { animation: shakeSearch 0.3s ease-in-out; }
 </style>
-
-<script>
-(function() {
-    const searchWrap = document.querySelector('.search-wrap');
-    const searchInput = document.querySelector('.search-input');
-    if (!searchWrap || !searchInput) return;
-    searchWrap.addEventListener('mousemove', function(e) {
-        const rect = searchWrap.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const nx = (x / rect.width) * 2 - 1;
-        const ny = (y / rect.height) * 10 - 5;
-        const maxAngle = 5;
-        const rotateY = maxAngle * nx;
-        const rotateX = -maxAngle * ny;
-        searchWrap.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
-    });
-    searchWrap.addEventListener('mouseleave', function() { searchWrap.style.transform = ''; });
-    searchInput.addEventListener('input', function() {
-        this.classList.remove('shake-it');
-        void this.offsetWidth;
-        this.classList.add('shake-it');
-        this.addEventListener('animationend', function onAnimEnd() {
-            this.classList.remove('shake-it');
-            this.removeEventListener('animationend', onAnimEnd);
-        });
-    });
-})();
-</script>
 
 </body>
 </html>

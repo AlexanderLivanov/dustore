@@ -26,7 +26,7 @@ if (!$sprint_id) {
         echo "<h2>У вас нет созданных спринтов</h2><a href='/jams'>Вернуться к списку спринтов</a>";
         exit;
     }
-    // Вывод страницы выбора
+    // Вывод страницы выбора (оставлен без изменений)
     ?>
     <!DOCTYPE html>
     <html lang="ru">
@@ -58,7 +58,7 @@ $sprintStmt = $db->prepare("SELECT * FROM sprints WHERE id = ?");
 $sprintStmt->execute([$sprint_id]);
 $sprint = $sprintStmt->fetch(PDO::FETCH_ASSOC);
 
-// Участники, работы, объявления, эксперты, призы
+// Участники, работы, объявления, эксперты, призы (без изменений)
 $partStmt = $db->prepare("
     SELECT
         u.id,
@@ -113,7 +113,7 @@ $newTodayStmt = $db->prepare("SELECT COUNT(*) FROM sprint_participants WHERE spr
 $newTodayStmt->execute([$sprint_id]);
 $newToday = $newTodayStmt->fetchColumn();
 
-// Данные для графика за 7 дней
+// Данные для графика (без изменений)
 $chartData = [];
 $chartLabels = [];
 for ($i = 6; $i >= 0; $i--) {
@@ -136,400 +136,107 @@ require_once('../swad/static/elements/header.php');
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title><?= htmlspecialchars($sprint['title']) ?> — Админка</title>
     <style>
+        /* ---- Стили (сокращены, основные классы сохранены) ---- */
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            min-height: 100vh;
-            background: #0d0414;
-            font-family: 'Manrope', system-ui, sans-serif;
-            color: #e8ddf0;
-            background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.1) 0%, transparent 60%),
-                              radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.08) 0%, transparent 55%);
-        }
+        body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.1) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.08) 0%, transparent 55%); }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
-        .sprint-header {
-            padding: 13px 26px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 0;
-            backdrop-filter: blur(12px);
-        }
+        .sprint-header { padding: 13px 26px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 0; backdrop-filter: blur(12px); }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
         .logo .brand { color: #c32178; }
-        .nav-btn {
-            padding: 7px 15px;
-            border-radius: 7px;
-            border: none;
-            font-size: 12px;
-            font-weight: 600;
-            background: rgba(255,255,255,.05);
-            color: rgba(255,255,255,.5);
-            transition: .15s;
-            text-decoration: none;
-            display: inline-block;
-        }
+        .nav-btn { padding: 7px 15px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .15s; text-decoration: none; display: inline-block; }
         .nav-btn:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
-        .badge-live {
-            background: rgba(34,197,94,.12);
-            color: #22c55e;
-            border: 1px solid rgba(34,197,94,.25);
-            border-radius: 20px;
-            padding: 2px 10px;
-            font-size: 11px;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .badge-live::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #22c55e;
-            animation: pulse 1.5s infinite;
-        }
+        .badge-live { background: rgba(34,197,94,.12); color: #22c55e; border: 1px solid rgba(34,197,94,.25); border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+        .badge-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
         .admin-layout { display: flex; min-height: calc(100vh - 54px); }
-        .sidebar {
-            width: 220px;
-            flex-shrink: 0;
-            background: rgba(0,0,0,.25);
-            border-right: 1px solid rgba(255,255,255,.07);
-            padding: 20px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .sidebar-section {
-            font-size: 10px;
-            font-weight: 700;
-            color: rgba(255,255,255,.25);
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            padding: 10px 10px 5px;
-            margin-top: 6px;
-        }
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 9px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            color: rgba(255,255,255,.45);
-            transition: .15s;
-            border: 1px solid transparent;
-        }
+        .sidebar { width: 220px; flex-shrink: 0; background: rgba(0,0,0,.25); border-right: 1px solid rgba(255,255,255,.07); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+        .sidebar-section { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.25); text-transform: uppercase; letter-spacing: .08em; padding: 10px 10px 5px; margin-top: 6px; }
+        .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.45); transition: .15s; border: 1px solid transparent; }
         .sidebar-item:hover { background: rgba(255,255,255,.05); color: #e8ddf0; }
-        .sidebar-item.active {
-            background: rgba(195,33,120,.12);
-            color: #e8ddf0;
-            border-color: rgba(195,33,120,.25);
-        }
+        .sidebar-item.active { background: rgba(195,33,120,.12); color: #e8ddf0; border-color: rgba(195,33,120,.25); }
         .sidebar-item .ico { font-size: 16px; width: 20px; text-align: center; }
-        .sidebar-badge {
-            margin-left: auto;
-            background: rgba(195,33,120,.25);
-            color: #e8ddf0;
-            border-radius: 10px;
-            padding: 1px 7px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-        .main-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 26px 28px;
-            max-height: calc(100vh - 54px);
-        }
+        .sidebar-badge { margin-left: auto; background: rgba(195,33,120,.25); color: #e8ddf0; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+        .main-content { flex: 1; overflow-y: auto; padding: 26px 28px; max-height: calc(100vh - 54px); }
         .view { display: none; }
         .view.active { display: block; }
         .page-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; letter-spacing: -.3px; }
         .page-sub { color: rgba(255,255,255,.35); font-size: 13px; margin-bottom: 24px; }
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 12px;
-            padding: 16px;
-        }
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+        .stat-card { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 16px; }
         .stat-card .sc-ico { font-size: 22px; margin-bottom: 8px; }
         .stat-card .sc-val { font-size: 22px; font-weight: 800; margin-bottom: 2px; }
         .stat-card .sc-lbl { font-size: 11px; color: rgba(255,255,255,.35); }
         .stat-card .sc-delta { font-size: 11px; margin-top: 4px; }
         .sc-delta.up { color: #22c55e; }
         .sc-delta.down { color: #f87171; }
-        .chart-wrap {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 12px;
-            padding: 18px;
-            margin-bottom: 18px;
-        }
+        .chart-wrap { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
         .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .chart-title { font-size: 14px; font-weight: 700; }
         .chart-tabs { display: flex; gap: 4px; }
-        .chart-tab {
-            padding: 5px 12px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            background: rgba(255,255,255,.05);
-            color: rgba(255,255,255,.4);
-        }
+        .chart-tab { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.4); }
         .chart-tab.active { background: rgba(195,33,120,.18); color: #e8ddf0; border: 1px solid rgba(195,33,120,.3); }
         .chart-area { height: 160px; position: relative; overflow: hidden; }
         .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 100%; padding-top: 10px; }
         .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .chart-bar {
-            width: 100%;
-            border-radius: 4px 4px 0 0;
-            background: linear-gradient(180deg, rgba(195,33,120,.7), rgba(195,33,120,.25));
-            transition: height .6s cubic-bezier(.4,0,.2,1);
-            min-height: 4px;
-        }
+        .chart-bar { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, rgba(195,33,120,.7), rgba(195,33,120,.25)); transition: height .6s cubic-bezier(.4,0,.2,1); min-height: 4px; }
         .chart-bar:hover { background: linear-gradient(180deg, rgba(195,33,120,1), rgba(195,33,120,.4)); }
-        .chart-bar::after {
-            content: attr(data-val);
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px;
-            color: rgba(255,255,255,.4);
-            white-space: nowrap;
-        }
+        .chart-bar::after { content: attr(data-val); position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 9px; color: rgba(255,255,255,.4); white-space: nowrap; }
         .chart-lbl { font-size: 9px; color: rgba(255,255,255,.25); text-align: center; }
-        .chart-grid {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding-bottom: 20px;
-        }
+        .chart-grid { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 20px; }
         .chart-gridline { border-top: 1px solid rgba(255,255,255,.05); width: 100%; }
         .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
         .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
-        .list-card {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 12px;
-            padding: 16px;
-        }
+        .list-card { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 16px; }
         .list-card-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
-        .list-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,.05);
-        }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
         .list-item:last-child { border-bottom: none; padding-bottom: 0; }
         .li-rank { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
         .li-info { flex: 1; min-width: 0; }
         .li-name { font-size: 13px; font-weight: 600; color: #e8ddf0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .li-sub { font-size: 11px; color: rgba(255,255,255,.3); }
         .li-val { font-size: 13px; font-weight: 700; color: #c32178; flex-shrink: 0; }
-        .table-wrap {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        .table-toolbar {
-            padding: 14px 16px;
-            border-bottom: 1px solid rgba(255,255,255,.07);
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .tbl-search {
-            flex: 1;
-            background: rgba(255,255,255,.04);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 7px;
-            padding: 7px 12px;
-            color: #e8ddf0;
-            font-size: 12px;
-            outline: none;
-        }
+        .table-wrap { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; overflow: hidden; }
+        .table-toolbar { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; gap: 10px; align-items: center; }
+        .tbl-search { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 7px; padding: 7px 12px; color: #e8ddf0; font-size: 12px; outline: none; }
         .tbl-search:focus { border-color: #c32178; }
-        .tbl-btn {
-            padding: 7px 14px;
-            border-radius: 7px;
-            border: 1px solid rgba(195,33,120,.3);
-            background: rgba(195,33,120,.1);
-            color: #e8ddf0;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-        }
+        .tbl-btn { padding: 7px 14px; border-radius: 7px; border: 1px solid rgba(195,33,120,.3); background: rgba(195,33,120,.1); color: #e8ddf0; cursor: pointer; font-size: 12px; font-weight: 600; }
         .tbl-btn:hover { background: rgba(195,33,120,.2); }
         table { width: 100%; border-collapse: collapse; }
-        thead th {
-            padding: 10px 14px;
-            text-align: left;
-            font-size: 10px;
-            font-weight: 700;
-            color: rgba(255,255,255,.3);
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(255,255,255,.07);
-        }
+        thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: rgba(255,255,255,.3); text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,.07); }
         tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: .15s; cursor: pointer; }
         tbody tr:hover { background: rgba(195,33,120,.05); }
         tbody td { padding: 11px 14px; font-size: 12px; color: rgba(255,255,255,.7); }
         td .td-name { color: #e8ddf0; font-weight: 600; font-size: 13px; }
         td .td-sub { color: rgba(255,255,255,.3); font-size: 11px; }
-        .status-pill {
-            border-radius: 20px;
-            padding: 2px 9px;
-            font-size: 10px;
-            font-weight: 700;
-            display: inline-block;
-        }
+        .status-pill { border-radius: 20px; padding: 2px 9px; font-size: 10px; font-weight: 700; display: inline-block; }
         .pill-green { background: rgba(34,197,94,.1); color: #22c55e; border: 1px solid rgba(34,197,94,.2); }
         .pill-yellow { background: rgba(245,158,11,.1); color: #f59e0b; border: 1px solid rgba(245,158,11,.2); }
         .pill-gray { background: rgba(255,255,255,.05); color: rgba(255,255,255,.3); border: 1px solid rgba(255,255,255,.1); }
         .pill-pink { background: rgba(195,33,120,.1); color: #d946a8; border: 1px solid rgba(195,33,120,.25); }
-        .settings-section {
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 14px;
-        }
-        .settings-section-title {
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,.07);
-        }
-
-        .list-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(255,255,255,.1);
-}
-.btn-remove {
-    background: none;
-    border: none;
-    color: #f44336;
-    cursor: pointer;
-    font-size: 1.1rem;
-}
-
+        .settings-section { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 20px; margin-bottom: 14px; }
+        .settings-section-title { font-size: 13px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); }
         .form-row-s { margin-bottom: 14px; }
         .form-label-s { display: block; color: rgba(255,255,255,.4); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
-        .form-input-s {
-            width: 100%;
-            background: rgba(0,0,0,.4);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 8px;
-            padding: 9px 13px;
-            color: #e8ddf0;
-            font-size: 13px;
-            outline: none;
-        }
+        .form-input-s { width: 100%; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 9px 13px; color: #e8ddf0; font-size: 13px; outline: none; }
         .form-input-s:focus { border-color: #c32178; }
-        .logo-preview {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .logo-preview img {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        .btn-sm {
-            background: rgba(195,33,120,.1);
-            border: 1px solid rgba(195,33,120,.25);
-            color: #e8ddf0;
-            border-radius: 6px;
-            padding: 4px 10px;
-            cursor: pointer;
-            font-size: 11px;
-        }
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,.05);
-        }
+        .logo-preview { margin-top: 10px; display: flex; align-items: center; gap: 12px; }
+        .logo-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+        .btn-sm { background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.25); color: #e8ddf0; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 11px; }
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
         .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
         .toggle-info .ti-title { font-size: 13px; font-weight: 600; color: #e8ddf0; }
         .toggle-info .ti-desc { font-size: 11px; color: rgba(255,255,255,.3); margin-top: 2px; }
-        .toggle {
-            position: relative;
-            width: 40px;
-            height: 22px;
-            flex-shrink: 0;
-        }
+        .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
         .toggle input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider {
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,.1);
-            border-radius: 22px;
-            cursor: pointer;
-            transition: .2s;
-        }
-        .toggle-slider::before {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #fff;
-            left: 3px;
-            top: 3px;
-            transition: .2s;
-        }
+        .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,.1); border-radius: 22px; cursor: pointer; transition: .2s; }
+        .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; left: 3px; top: 3px; transition: .2s; }
         .toggle input:checked + .toggle-slider { background: #c32178; }
         .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
-        .btn-save {
-            background: #c32178;
-            border: none;
-            color: #fff;
-            border-radius: 8px;
-            padding: 10px 22px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-        }
+        .btn-save { background: #c32178; border: none; color: #fff; border-radius: 8px; padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
         .btn-save:hover { background: #9e1a66; }
-        .btn-danger {
-            background: rgba(239,68,68,.1);
-            border: 1px solid rgba(239,68,68,.25);
-            color: #f87171;
-            border-radius: 8px;
-            padding: 10px 22px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-        }
+        .btn-danger { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #f87171; border-radius: 8px; padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
         .btn-danger:hover { background: rgba(239,68,68,.2); }
         .feed-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
         .feed-item:last-child { border-bottom: none; }
@@ -537,45 +244,13 @@ require_once('../swad/static/elements/header.php');
         .feed-text { font-size: 12px; color: rgba(255,255,255,.6); line-height: 1.5; }
         .feed-text strong { color: #e8ddf0; }
         .feed-time { font-size: 10px; color: rgba(255,255,255,.25); margin-top: 2px; }
-        .donut-stub {
-            width: 100px; height: 100px; border-radius: 50%; margin: 10px auto;
-            background: conic-gradient(#c32178 0% 45%, rgba(195,33,120,.3) 45% 70%, rgba(255,255,255,.08) 70% 100%);
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .donut-stub::after { content: ''; position: absolute; width: 60px; height: 60px; border-radius: 50%; background: #0d0414; }
-        .donut-center { position: relative; z-index: 1; text-align: center; }
-        .donut-center .dv { font-size: 16px; font-weight: 800; color: #e8ddf0; }
-        .donut-center .dl { font-size: 9px; color: rgba(255,255,255,.3); }
-        .donut-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
-        .dl-item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: rgba(255,255,255,.5); }
-        .dl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .ann-item {
-            background: rgba(255,255,255,.03);
-            border: 1px solid rgba(255,255,255,.07);
-            border-radius: 9px;
-            padding: 12px 14px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
+        .ann-item { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; }
         .ann-item:hover { border-color: rgba(195,33,120,.3); background: rgba(195,33,120,.04); }
         .ann-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
         .ann-meta { font-size: 11px; color: rgba(255,255,255,.3); }
-        .ann-textarea {
-            width: 100%;
-            background: rgba(0,0,0,.4);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 8px;
-            padding: 10px 13px;
-            color: #e8ddf0;
-            font-size: 13px;
-            outline: none;
-            resize: vertical;
-            min-height: 90px;
-        }
+        .ann-textarea { width: 100%; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 10px 13px; color: #e8ddf0; font-size: 13px; outline: none; resize: vertical; min-height: 90px; }
         .ann-textarea:focus { border-color: #c32178; }
+        .btn-remove { background: none; border: none; color: #f44336; cursor: pointer; font-size: 1.1rem; }
     </style>
 </head>
 <body>
@@ -609,7 +284,7 @@ require_once('../swad/static/elements/header.php');
     </div>
 
     <div class="main-content">
-        <!-- DASHBOARD -->
+        <!-- DASHBOARD (без изменений) -->
         <div class="view" id="view-dashboard">
             <div class="page-title">Дашборд</div>
             <div class="page-sub"><?= htmlspecialchars($sprint['title']) ?> · Статус: <?= $sprint['status'] ?></div>
@@ -629,7 +304,7 @@ require_once('../swad/static/elements/header.php');
             </div>
         </div>
 
-        <!-- ANALYTICS -->
+        <!-- ANALYTICS (без изменений) -->
         <div class="view" id="view-analytics">
             <div class="page-title">Аналитика</div>
             <div class="page-sub">Детальная статистика спринта</div>
@@ -642,23 +317,23 @@ require_once('../swad/static/elements/header.php');
             <div class="chart-wrap"><div class="chart-head"><span class="chart-title">Активность по часам суток</span></div><div class="chart-area"><div class="chart-bars" id="hourlyChart"></div></div></div>
         </div>
 
-        <!-- ACTIVITY -->
+        <!-- ACTIVITY (без изменений) -->
         <div class="view" id="view-activity">
             <div class="page-title">Активность</div>
             <div class="page-sub">Лента событий в реальном времени</div>
             <div class="list-card"><div class="list-card-title">🔴 Последние события</div><div id="feed-list"></div></div>
         </div>
 
-        <!-- PARTICIPANTS -->
+        <!-- PARTICIPANTS (без изменений) -->
         <div class="view" id="view-participants">
             <div class="page-title">Участники <span style="font-size:14px;color:rgba(255,255,255,.35)"><?= $totalParticipants ?></span></div>
             <div class="table-wrap">
                 <div class="table-toolbar"><input class="tbl-search" placeholder="Поиск..." oninput="filterParticipants(this.value)"><button class="tbl-btn">⬇ Экспорт CSV</button><button class="tbl-btn" onclick="sendMassNotification()">📢 Рассылка</button></div>
-                <table><thead>运转<th>#</th><th>Участник</th><th>Движок</th><th>Роль</th><th>Статус</th><th>Регистрация</th><th>Действия</th></tr></thead><tbody id="participants-tbody"></tbody></table>
+                <table><thead><th>#</th><th>Участник</th><th>Движок</th><th>Роль</th><th>Статус</th><th>Регистрация</th><th>Действия</th></tr></thead><tbody id="participants-tbody"></tbody></table>
             </div>
         </div>
 
-        <!-- SUBMISSIONS -->
+        <!-- SUBMISSIONS (без изменений) -->
         <div class="view" id="view-submissions">
             <div class="page-title">Работы <span style="font-size:14px;color:rgba(255,255,255,.35)"><?= $totalSubmissions ?></span></div>
             <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
@@ -677,14 +352,12 @@ require_once('../swad/static/elements/header.php');
                         <th>Статус</th>
                         <th>Файл</th>
                     </thead>
-                    <tbody id="submissions-tbody">
-
-                    </tbody>
+                    <tbody id="submissions-tbody"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- ANNOUNCEMENTS -->
+        <!-- ANNOUNCEMENTS (без изменений) -->
         <div class="view" id="view-announcements">
             <div class="page-title">Объявления</div>
             <div class="settings-section">
@@ -696,7 +369,7 @@ require_once('../swad/static/elements/header.php');
             <div class="list-card"><div class="list-card-title">📋 История объявлений</div><div id="ann-list"></div></div>
         </div>
 
-        <!-- SETTINGS -->
+        <!-- SETTINGS (ОБНОВЛЁН) -->
         <div class="view" id="view-settings">
             <div class="page-title">Параметры спринта</div>
             <div class="settings-section">
@@ -712,12 +385,27 @@ require_once('../swad/static/elements/header.php');
                     </div>
                 </div>
                 <div class="form-row-s"><label class="form-label-s">Название спринта</label><input class="form-input-s" id="set-title" value="<?= htmlspecialchars($sprint['title']) ?>"></div>
-                <div class="form-row-s"><label class="form-label-s">Тема (скрыта до старта)</label><input class="form-input-s" id="set-theme" value="<?= htmlspecialchars($sprint['theme'] ?? '') ?>" placeholder="Тема..."></div>
-                <div class="form-row-s" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div><label class="form-label-s">Дата начала</label><input class="form-input-s" type="datetime-local" id="set-start_at" value="<?= date('Y-m-d\TH:i', strtotime($sprint['start_at'])) ?>"></div>
-                    <div><label class="form-label-s">Длительность</label><input class="form-input-s" id="set-dur_val" value="<?= $sprint['duration_value'] ?>" style="width:80px;display:inline"><select id="set-dur_unit" class="form-input-s" style="width:auto;display:inline"><?php foreach(['hours','days','weeks','months'] as $u): ?><option value="<?= $u ?>" <?= $sprint['duration_unit']==$u ? 'selected' : '' ?>><?= $u ?></option><?php endforeach; ?></select></div>
+                <!-- Новое поле: Описание -->
+                <div class="form-row-s"><label class="form-label-s">Описание спринта</label><textarea class="form-input-s" id="set-description" rows="4"><?= htmlspecialchars($sprint['description'] ?? '') ?></textarea></div>
+                <!-- Новое поле: Полезные ссылки -->
+                <div class="form-row-s"><label class="form-label-s">Полезные ссылки (каждая с новой строки)</label><textarea class="form-input-s" id="set-useful_links" rows="3"><?= htmlspecialchars($sprint['useful_links'] ?? '') ?></textarea></div>
+                <!-- Новое поле: Регламент -->
+                <div class="form-row-s"><label class="form-label-s">Регламент (показывается перед регистрацией)</label><textarea class="form-input-s" id="set-rules" rows="6"><?= htmlspecialchars($sprint['rules'] ?? '') ?></textarea></div>
+
+                <!-- Блок с датами (новые поля) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+                    <div><label class="form-label-s">Регистрация с</label><input class="form-input-s" type="datetime-local" id="set-registration_start" value="<?= date('Y-m-d\TH:i', strtotime($sprint['registration_start'] ?? 'now')) ?>"></div>
+                    <div><label class="form-label-s">Регистрация до</label><input class="form-input-s" type="datetime-local" id="set-registration_end" value="<?= date('Y-m-d\TH:i', strtotime($sprint['registration_end'] ?? '')) ?>"></div>
+                    <div><label class="form-label-s">Начало джема</label><input class="form-input-s" type="datetime-local" id="set-jam_start" value="<?= date('Y-m-d\TH:i', strtotime($sprint['jam_start'] ?? '')) ?>"></div>
+                    <div><label class="form-label-s">Окончание джема (приём работ)</label><input class="form-input-s" type="datetime-local" id="set-jam_end" value="<?= date('Y-m-d\TH:i', strtotime($sprint['jam_end'] ?? '')) ?>"></div>
+                    <div><label class="form-label-s">Голосование с</label><input class="form-input-s" type="datetime-local" id="set-voting_start" value="<?= date('Y-m-d\TH:i', strtotime($sprint['voting_start'] ?? '')) ?>"></div>
+                    <div><label class="form-label-s">Голосование до</label><input class="form-input-s" type="datetime-local" id="set-voting_end" value="<?= date('Y-m-d\TH:i', strtotime($sprint['voting_end'] ?? '')) ?>"></div>
                 </div>
-                <div class="form-row-s"><label class="form-label-s">Макс. участников</label><input class="form-input-s" type="number" id="set-maxp" value="<?= $sprint['max_participants'] ?>" style="width:160px"></div>
+
+                <!-- Удалены старые поля start_at, duration_value, duration_unit, max_participants -->
+                <!-- оставляем max_participants, если нужно -->
+                <div class="form-row-s" style="margin-top:12px;"><label class="form-label-s">Макс. участников</label><input class="form-input-s" type="number" id="set-maxp" value="<?= $sprint['max_participants'] ?>" style="width:160px"></div>
+
                 <button class="btn-save" onclick="saveSettings()">Сохранить изменения</button>
             </div>
             <div class="settings-section">
@@ -731,22 +419,24 @@ require_once('../swad/static/elements/header.php');
             <div style="display:flex;gap:10px"><button class="btn-save" onclick="saveSettings()">Сохранить изменения</button><button class="btn-danger" onclick="if(confirm('Удалить спринт?')) deleteSprint()">Удалить спринт</button></div>
         </div>
 
-        <!-- JUDGES -->
+        <!-- JUDGES (без изменений) -->
         <div class="view" id="view-judges">
             <div class="page-title">Жюри</div>
             <div class="settings-section"><div class="settings-section-title">➕ Добавить судью</div><div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end"><select class="form-input-s" id="newJudgeId"><option value="">-- Выберите пользователя --</select><button class="btn-save" onclick="addJudge()">+ Добавить</button></div></div>
             <div class="list-card"><div class="list-card-title">⭐ Текущее жюри</div><div id="judges-list"></div></div>
         </div>
 
-        <!-- PRIZES -->
+        <!-- PRIZES (без изменений) -->
         <div class="view" id="view-prizes">
             <div class="page-title">Призы</div>
             <div class="settings-section"><div class="settings-section-title">🏆 Призовые места</div><div id="prizes-settings"></div><button class="tbl-btn" onclick="addPrize()">+ Добавить место</button></div>
         </div>
     </div>
 </div>
+
 <script>
-    const JAM_ID = <?= json_encode((int)$jamId) ?>;
+    // JAM_ID и прочие данные
+    const JAM_ID = <?= json_encode((int)$sprint_id) ?>;
     console.log('JAM_ID set to', JAM_ID);
 </script>
 <script>
@@ -770,18 +460,13 @@ require_once('../swad/static/elements/header.php');
             if (!response.ok) throw new Error('Ошибка загрузки пользователей');
             const users = await response.json();
             allUsers = users;
-
             const select = document.getElementById('newJudgeId');
             if (!select) return;
-
             select.innerHTML = '<option value="">-- Выберите пользователя --</option>';
             users.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.id;
-                // Поле в ответе API: username (у вас в консоли было именно username)
-                const displayName = (user.username && user.username.trim() !== '')
-                    ? user.username
-                    : `Пользователь ${user.id}`;
+                const displayName = (user.username && user.username.trim() !== '') ? user.username : `Пользователь ${user.id}`;
                 option.textContent = displayName;
                 select.appendChild(option);
             });
@@ -795,15 +480,12 @@ require_once('../swad/static/elements/header.php');
             const response = await fetch(`/swad/controllers/jams/get_jam_judges.php?jam_id=${jamId}`);
             if (!response.ok) throw new Error('Ошибка загрузки жюри');
             const judges = await response.json();
-
             const container = document.getElementById('judges-list');
             if (!container) return;
-
             if (judges.length === 0) {
                 container.innerHTML = '<div style="padding:12px; color:rgba(255,255,255,.5);">Жюри пока не назначено</div>';
                 return;
             }
-
             container.innerHTML = judges.map(judge => `
                 <div class="list-item" data-judge-id="${judge.id}">
                     <span>⭐ ${escapeHtml(judge.username || `Пользователь ${judge.id}`)}</span>
@@ -818,15 +500,8 @@ require_once('../swad/static/elements/header.php');
     async function addJudge() {
         const select = document.getElementById('newJudgeId');
         const userId = select.value;
-        if (!userId) {
-            alert('Выберите пользователя');
-            return;
-        }
-        if (typeof JAM_ID === 'undefined') {
-            alert('Ошибка: идентификатор джема не найден');
-            return;
-        }
-
+        if (!userId) { alert('Выберите пользователя'); return; }
+        if (typeof JAM_ID === 'undefined') { alert('Ошибка: идентификатор джема не найден'); return; }
         try {
             const response = await fetch('/swad/controllers/jams/add_judge.php', {
                 method: 'POST',
@@ -960,15 +635,11 @@ require_once('../swad/static/elements/header.php');
     }
     function filterParticipants(val) { renderParticipants(val.toLowerCase()); }
     function renderSubmissions() {
-    const tbody = document.getElementById('submissions-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = submissions.map((s, i) => {
-        // Проверяем, есть ли build_url
-        const fileLink = s.build_url 
-            ? `<a href="${escapeHtml(s.build_url)}" class="tbl-btn" download style="display:inline-block; text-decoration:none; padding:4px 8px;">⬇ Скачать</a>`
-            : `<span style="color:rgba(255,255,255,.3);">—</span>`;
-        return `
-            <tr>
+        const tbody = document.getElementById('submissions-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = submissions.map((s, i) => {
+            const fileLink = s.build_url ? `<a href="${escapeHtml(s.build_url)}" class="tbl-btn" download style="display:inline-block; text-decoration:none; padding:4px 8px;">⬇ Скачать</a>` : `<span style="color:rgba(255,255,255,.3);">—</span>`;
+            return `<tr>
                 <td>${i+1}</td>
                 <td><div class="td-name">${escapeHtml(s.game_title || s.title || 'Без названия')}</div></td>
                 <td>${escapeHtml(s.user_name)}</td>
@@ -976,10 +647,9 @@ require_once('../swad/static/elements/header.php');
                 <td style="font-weight:700;color:#c32178">${s.score ?? '—'}</td>
                 <td><span class="status-pill pill-yellow">${s.status || 'На проверке'}</span></td>
                 <td>${fileLink}</td>
-            </tr>
-        `;
-    }).join('');
-}
+            </tr>`;
+        }).join('');
+    }
     function renderAnnouncements() {
         const container = document.getElementById('ann-list');
         if (container) container.innerHTML = announcements.map(a => `<div class="ann-item"><div class="ann-title">${escapeHtml(a.title)}</div><div class="ann-meta">${new Date(a.created_at).toLocaleString()} · всем участникам</div></div>`).join('');
@@ -1000,15 +670,20 @@ require_once('../swad/static/elements/header.php');
         `).join('');
     }
 
-    // ----- AJAX-функции -----
+    // ----- AJAX-функции (обновлены для новых полей) -----
     async function saveSettings() {
         const formData = new FormData();
         formData.append('sprint_id', sprintId);
         formData.append('title', document.getElementById('set-title').value);
-        formData.append('theme', document.getElementById('set-theme').value);
-        formData.append('start_at', document.getElementById('set-start_at').value);
-        formData.append('duration_value', document.getElementById('set-dur_val').value);
-        formData.append('duration_unit', document.getElementById('set-dur_unit').value);
+        formData.append('description', document.getElementById('set-description').value);
+        formData.append('useful_links', document.getElementById('set-useful_links').value);
+        formData.append('rules', document.getElementById('set-rules').value);
+        formData.append('registration_start', document.getElementById('set-registration_start').value);
+        formData.append('registration_end', document.getElementById('set-registration_end').value);
+        formData.append('jam_start', document.getElementById('set-jam_start').value);
+        formData.append('jam_end', document.getElementById('set-jam_end').value);
+        formData.append('voting_start', document.getElementById('set-voting_start').value);
+        formData.append('voting_end', document.getElementById('set-voting_end').value);
         formData.append('max_participants', document.getElementById('set-maxp').value);
         const logoFile = document.getElementById('set-logo').files[0];
         if (logoFile) formData.append('logo', logoFile);

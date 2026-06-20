@@ -1718,7 +1718,16 @@ function fmtBytes($b)
                     <?php endif; ?>
 
                     <!-- Audio player for music/sfx -->
-                    <?php if (in_array($asset['category'], ['music', 'sfx']) && !empty($asset['preview_audio'])): ?>
+                    <?php 
+                    // Определяем источник аудио для превью
+                    $audioSrc = '';
+                    if (!empty($asset['preview_audio'])) {
+                        $audioSrc = $asset['preview_audio'];
+                    } elseif (in_array($asset['category'], ['music', 'sfx']) && !empty($asset['asset_file_path'])) {
+                        $audioSrc = $asset['asset_file_path'];
+                    }
+                    if (!empty($audioSrc)): 
+                    ?>
                         <div class="ap-section">
                             <div class="ap-section-title">🎵 Аудио-превью</div>
                             <div class="audio-player">
@@ -1733,7 +1742,7 @@ function fmtBytes($b)
                                     <canvas class="audio-waveform" id="waveformCanvas" height="36"></canvas>
                                 </div>
                             </div>
-                            <audio id="assetAudio" src="<?= htmlspecialchars($asset['preview_audio']) ?>" preload="metadata"></audio>
+                            <audio id="assetAudio" src="<?= htmlspecialchars($audioSrc) ?>" preload="metadata"></audio>
                         </div>
                     <?php endif; ?>
                 </div>

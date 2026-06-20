@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../swad/config.php');
+require_once('../swad/controllers/s3.php');
 
 if (empty($_SESSION['USERDATA']['id'])) {
     header('Location: /login');
@@ -81,48 +82,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Handle asset file
-        $file_size = 0;
-        if (!empty($_FILES['asset_file']['tmp_name'])) {
-            $fname = uniqid('asset_') . '_' . basename($_FILES['asset_file']['name']);
-            $dir   = '../uploads/assets/files/';
-            if (!is_dir($dir)) mkdir($dir, 0755, true);
-            move_uploaded_file($_FILES['asset_file']['tmp_name'], $dir . $fname);
-            $file_size = $_FILES['asset_file']['size'];
-        }
+        // Handle asset file → загрузка в S3
+$asset_file_path = null;
+$file_size = 0;
+if (!empty($_FILES['asset_file']['tmp_name'])) {
+    $uploader = new S3Uploader();
+    // Генерируем уникальное имя файла в S3
+    $ext = strtolower(pathinfo($_FILES['asset_file']['name'], PATHINFO_EXTENSION));
+    $s3_key = 'assets/files/' . uniqid('asset_', true) . '.' . $ext;
+    $s3_url = $uploader->uploadFile($_FILES['asset_file']['tmp_name'], $s3_key);
+    if ($s3_url) {
+        $asset_file_path = $s3_url; // сохраняем S3-URL
+        $file_size = $_FILES['asset_file']['size'];
+    } else {
+        // Обработать ошибку загрузки в S3
+        throw new Exception('Не удалось загрузить файл в облако');
+    }
+}
 
         if (!$name || !$category || !$description) {
             throw new Exception('Заполните обязательные поля: название, категория, описание');
         }
 
         $stmt = $pdo->prepare("INSERT INTO assets
-            (name, description, category, formats, price, studio_name, path_to_cover,
-             previews, file_size_bytes, license, engine_compatibility, version, status,
-             downloads_count, avg_rating, tags, contents, dev_share,
-             poly_count, texture_size, rigged, animated, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,0,?,?,?,?,?,?,?,NOW())");
+    (name, description, category, formats, price, studio_name, path_to_cover,
+     previews, file_size_bytes, license, engine_compatibility, version, status,
+     downloads_count, avg_rating, tags, contents, dev_share,
+     poly_count, texture_size, rigged, animated, created_at, asset_file_path)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,0,?,?,?,?,?,?,?,NOW(),?)");
 
         $stmt->execute([
-            $name,
-            $description,
-            $category,
-            json_encode($formats, JSON_UNESCAPED_UNICODE),
-            $price,
-            $studio['name'],
-            $cover_path,
-            json_encode($previews, JSON_UNESCAPED_UNICODE),
-            $file_size,
-            $license,
-            json_encode($engines, JSON_UNESCAPED_UNICODE),
-            $version,
-            $tags,
-            json_encode($contents, JSON_UNESCAPED_UNICODE),
-            $dev_share,
-            $poly_count,
-            $texture_size,
-            $rigged,
-            $animated
-        ]);
+    $name,
+    $description,
+    $category,
+    json_encode($formats, JSON_UNESCAPED_UNICODE),
+    $price,
+    $studio['name'],
+    $cover_path,
+    json_encode($previews, JSON_UNESCAPED_UNICODE),
+    $file_size,
+    $license,
+    json_encode($engines, JSON_UNESCAPED_UNICODE),
+    $version,
+    $tags,
+    json_encode($contents, JSON_UNESCAPED_UNICODE),
+    $dev_share,
+    $poly_count,
+    $texture_size,
+    $rigged,
+    $animated,
+    $asset_file_path   // ← добавляем сюда
+]);
 
         $new_id = $pdo->lastInsertId();
         $success = $new_id;
