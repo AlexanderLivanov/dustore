@@ -14,7 +14,7 @@
 
 body {
     font-family: "Bahnschrift Light", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--gradient);
+    background: linear-gradient(180deg, #0f0a20, #240038, #780066);
     color: #fff;
 }
 
@@ -60,7 +60,7 @@ select {
 }
 
 .main-container {
-    background: linear-gradient(#0f0a20, #2e0f32, #c32178);
+    background: linear-gradient(180deg, #0f0a20, #240038, #780066);
     height: calc(100vh - 70px - 10px); /* хедер + небольшой отступ */
     overflow: hidden;
     width: 100vw;

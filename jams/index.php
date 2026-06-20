@@ -73,8 +73,7 @@ unset($sprint);
             background: #0d0414;
             font-family: 'Manrope', system-ui, sans-serif;
             color: #e8ddf0;
-            background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.12) 0%, transparent 60%),
-                              radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.10) 0%, transparent 55%);
+            background: linear-gradient(180deg, #0f0a20, #240038, #780066);
         }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -129,13 +128,18 @@ unset($sprint);
             position: relative;
             overflow: hidden;
         }
-        .hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(195,33,120,.08), transparent);
-            pointer-events: none;
+
+
+        body.moonlight-theme .hero {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 26px 30px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
         }
+
         .hero h1 { font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.4px; }
         .hero h1 span { color: #c32178; }
         .hero p { color: rgba(255,255,255,.4); font-size: 14px; margin-bottom: 20px; }
@@ -172,35 +176,37 @@ unset($sprint);
         .filter-btn.active { background: rgba(195,33,120,.18); border-color: rgba(195,33,120,.4); color: #e8ddf0; }
         .filter-btn:hover:not(.active) { background: rgba(255,255,255,.08); color: #e8ddf0; }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
         .empty { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.25); }
         .empty .ico { font-size: 40px; margin-bottom: 10px; }
 
         /* ===== НОВЫЙ СТИЛЬ КАРТОЧЕК (уменьшенные) ===== */
         .card {
-            background: rgba(0, 0, 0, 0.35);
+            background: #00000050;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.001s ease, box-shadow 0.2s ease;
             display: flex;
             flex-direction: column;
-            max-width: 320px;
+            max-width: 500px;
+            padding: 5px;
         }
         .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 16px 32px rgba(195, 33, 120, 0.2);
+            /* Убираем transform, чтобы не перебивать JS-эффект наклона */
+            /* transform: translateY(-4px); */
             border-color: rgba(195, 33, 120, 0.4);
+            transform: scale(1.02); /* только масштаб, без наклона */
         }
         .card-banner {
-            height: 130px;
+            height: 230px;
             background-size: cover;
             background-position: center;
             background-color: #1a0a1e;
             position: relative;
-            mask: linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
-            -webkit-mask: linear-gradient(to bottom, black 0%, black 80%, transparent 100%);
+            border-radius: 15px;
+
         }
         }
         .card-banner::after {
@@ -237,15 +243,39 @@ unset($sprint);
             margin-top: 2px;
         }
         .card-desc {
-            font-size: 12px;
-            color: rgba(255,255,255,0.65);
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.65);
             line-height: 1.5;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             margin: 0;
+            text-align: -webkit-center;
+            background: linear-gradient(180deg, #00000040, #00000000);
+            backdrop-filter: blur(10px);
+            border-radius: 13px;
+            height: 70px;
+
+            /* НОВОЕ: поднимаем на половину высоты, чтобы середина была на нижней грани баннера */
+            position: relative;
+            z-index: 1;
+            transform: translateY(-90%);
         }
+
+        body.moonlight-theme .card-desc {
+            background: linear-gradient(180deg, #ffffff07, #00000000);
+            backdrop-filter: blur(8px);
+            color: rgba(255, 255, 255, 0.85);
+            border-radius: 13px;
+            height: 70px;
+
+            /* НОВОЕ: те же свойства для лунной темы */
+            position: relative;
+            z-index: 1;
+            transform: translateY(-90%);
+        }
+
         .tags {
             display: flex;
             flex-wrap: wrap;
@@ -264,7 +294,7 @@ unset($sprint);
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px;
-            margin: 4px 0;
+            margin: -60px 0 0 0;
         }
         .stat-box {
             background: rgba(0,0,0,0.3);
@@ -307,7 +337,7 @@ unset($sprint);
         }
         .modal-actions {
             display: flex;
-            gap: 8px;
+            gap: 5px;
             margin-top: 6px;
             padding-top: 6px;
             border-top: 1px solid rgba(255,255,255,0.08);
@@ -317,11 +347,11 @@ unset($sprint);
             padding: 5px 0;
             font-size: 11px;
             font-weight: 600;
-            border-radius: 8px;
+            border-radius: 13px;
             background: rgba(195,33,120,0.2);
             border: 1px solid rgba(195,33,120,0.3);
             color: #fff;
-            transition: 0.15s;
+            transition: 0.001s;
             text-align: center;
             cursor: pointer;
             display: inline-flex;
@@ -332,13 +362,16 @@ unset($sprint);
         .btn-join:hover, .btn-team:hover, .btn-share:hover {
             background: rgba(195,33,120,0.4);
             transform: translateY(-1px);
+            border-radius: 13px;
         }
         .btn-join {
             background: #c32178;
             border: none;
+            border-radius: 13px;
         }
         .btn-join:hover {
             background: #9e1a66;
+            border-radius: 13px;
         }
 
         /* Остальные стили (модалки, формы) без изменений */
@@ -394,18 +427,18 @@ unset($sprint);
             background: #c32178;
             border: none;
             color: #fff;
-            border-radius: 7px;
+            border-radius: 13px;
             padding: 6px 12px;
             font-weight: 600;
             font-size: 12px;
             cursor: pointer;
-            transition: .15s;
+            transition: .001s;
             text-align: center;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
+            gap: 5px;
         }
         .btn-join:hover:not(:disabled) { background: #9e1a66; }
         .btn-join:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -556,7 +589,8 @@ unset($sprint);
             background: rgba(0, 0, 0, 0.4);
         }
         body.moonlight-theme .card {
-            background: rgba(0, 0, 0, 0.5);
+            background: #ffffff07;
+            padding: 5px;
         }
         body.moonlight-theme .btn-team, body.moonlight-theme .btn-share {
             background: rgba(255,255,255,0.08);
@@ -1153,19 +1187,25 @@ function showLoadingOverlay() {
     });
 </script>
 
-<!-- Эффект наклона для кнопок (как в хедере) -->
+<!-- ====== СКРИПТ ДЛЯ КНОПОК ВНЕ .grid (статические) ====== -->
 <script>
 (function() {
+    // Выбираем все интерактивные элементы, но исключаем те, что находятся внутри .grid
     const allBtns = document.querySelectorAll(`
         .btn-primary, .btn-join, .btn-team, .btn-share,
         .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove,
         .filter-btn, .nav-btn, .step-tab, .btn-close
     `);
+
     if (!allBtns.length) return;
 
     function resetTilt(btn) { btn.style.transform = ''; }
+
     function handleMouseMove(e) {
         const btn = e.currentTarget;
+        // Если кнопка находится внутри .grid — пропускаем, т.к. там работает делегирование
+        if (btn.closest('.grid')) return;
+
         const rect = btn.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -1178,11 +1218,71 @@ function showLoadingOverlay() {
         const scale = 1.04;
         btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
     }
+
     function handleMouseLeave(e) { resetTilt(e.currentTarget); }
+
     allBtns.forEach(btn => {
         btn.addEventListener('mousemove', handleMouseMove);
         btn.addEventListener('mouseleave', handleMouseLeave);
     });
+})();
+</script>
+
+<!-- ====== СКРИПТ ДЛЯ КНОПОК ВНУТРИ .grid (делегирование) ====== -->
+<script>
+(function() {
+    const grid = document.getElementById('grid');
+    if (!grid) return;
+
+    let currentTarget = null;
+
+    function resetTilt(el) {
+        if (el) el.style.transform = '';
+    }
+
+    function applyTilt(el, e) {
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const nx = (x / rect.width) * 2 - 1;
+        const ny = (y / rect.height) * 2 - 1;
+        const maxAngle = 15;
+        const rotateY = maxAngle * nx;
+        const rotateX = -maxAngle * ny;
+        const translateY = -3;
+        const scale = 1.04;
+        el.style.transform =
+            `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    }
+
+    function onMouseMove(e) {
+        // Ищем только кнопки, но не карточку (.card)
+        const target = e.target.closest(`
+            .btn-primary, .btn-join, .btn-team, .btn-share,
+            .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove,
+            .filter-btn, .nav-btn, .step-tab, .btn-close
+        `);
+        if (!target) {
+            if (currentTarget) resetTilt(currentTarget);
+            currentTarget = null;
+            return;
+        }
+        if (currentTarget && currentTarget !== target) {
+            resetTilt(currentTarget);
+        }
+        currentTarget = target;
+        applyTilt(target, e);
+    }
+
+    function onMouseLeave() {
+        if (currentTarget) {
+            resetTilt(currentTarget);
+            currentTarget = null;
+        }
+    }
+
+    grid.addEventListener('mousemove', onMouseMove);
+    grid.addEventListener('mouseleave', onMouseLeave);
 })();
 </script>
 

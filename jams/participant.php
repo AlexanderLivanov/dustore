@@ -112,7 +112,7 @@ require_once('../swad/static/elements/header.php');
             background: #0d0414;
             font-family: 'Manrope', system-ui, sans-serif;
             color: #e8ddf0;
-            background: linear-gradient(180deg, #0f0a20, #240038, #780066);;
+            background: linear-gradient(180deg, #0f0a20, #240038, #780066);
         }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
