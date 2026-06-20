@@ -187,7 +187,7 @@ unset($sprint);
             border-radius: 20px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.001s ease, box-shadow 0.2s ease;
+            transition: transform 0.001s ease;
             display: flex;
             flex-direction: column;
             max-width: 500px;
@@ -314,7 +314,7 @@ unset($sprint);
             margin-top: 2px;
         }
         .prog-wrap {
-            margin: 4px 0 2px;
+            margin: 5px 20px 5px;
         }
         .prog-lbl {
             font-size: 10px;
@@ -1161,12 +1161,6 @@ function showLoadingOverlay() {
                             <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
                             <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
                         </div>
-                        <div class="modal-actions" style="margin-top:12px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px">
-                            ${actionButton}
-                            ${rateButton}
-                            <button class="btn-team" onclick="event.stopPropagation(); showL4tToast()">Команда</button>
-                            <button class="btn-share" onclick="event.stopPropagation(); shareSprint(${s.id})">Поделиться</button>
-                        </div>
                     </div>`;
         });
         grid.innerHTML = html;
@@ -1215,7 +1209,7 @@ function showLoadingOverlay() {
         const rotateY = maxAngle * nx;
         const rotateX = -maxAngle * ny;
         const translateY = -3;
-        const scale = 1.04;
+        const scale = 1.05;
         btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
     }
 
@@ -1250,7 +1244,7 @@ function showLoadingOverlay() {
         const rotateY = maxAngle * nx;
         const rotateX = -maxAngle * ny;
         const translateY = -3;
-        const scale = 1.04;
+        const scale = 1.06;
         el.style.transform =
             `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
     }
