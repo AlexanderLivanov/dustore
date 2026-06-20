@@ -245,9 +245,9 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
         }
         .card-stats {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 6px;
-            margin: -60px 0 0 0;
+            margin: 6px 0 4px;
         }
         .stat-box {
             background: rgba(0,0,0,.3);
@@ -869,51 +869,50 @@ $currentUsername = $_SESSION['USERDATA']['username'] ?? 'Участник';
     }
 
     function renderGrid() {
-        const searchText = document.getElementById('search').value.toLowerCase();
-        let filtered = sprints.filter(s => {
-            const phase = s.phase || 'finished';
-            const matchesFilter = curFilter === 'all' || phase === curFilter;
-            const matchesSearch = s.title.toLowerCase().includes(searchText) || s.description.toLowerCase().includes(searchText);
-            return matchesFilter && matchesSearch;
-        });
-        const grid = document.getElementById('grid');
-        const empty = document.getElementById('empty');
-        if (filtered.length === 0) {
-            grid.innerHTML = '';
-            empty.style.display = 'block';
-            updateStats();
-            return;
-        }
-        empty.style.display = 'none';
-        let html = '';
-        filtered.forEach(s => {
-            const phase = s.phase || 'finished';
-            const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
-            const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
-            const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
-            html += `<div class="card" onclick="openView(${s.id})">
-                        <div class="card-banner" style="${bannerStyle}">
-                            ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
-                        </div>
-                        <div class="card-info">
-                            <div class="card-title">${escapeHtml(s.title)}</div>
-                            <div class="card-host">от ${escapeHtml(s.host_name || 'Dustore')}</div>
-                            <div class="card-desc">${escapeHtml(s.description)}</div>
-                            <div class="tags">${tags}</div>
-                            <div class="card-stats">
-                                <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${s.registration_start ? formatDateRange(s.registration_start, s.registration_end) : '—'}</div></div>
-                                <div class="stat-box"><div class="s-lbl">Джем</div><div class="s-val">${s.jam_start ? formatDateRange(s.jam_start, s.jam_end) : '—'}</div></div>
-                            </div>
-                            <div class="prog-wrap">
-                                <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
-                                <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-                            </div>
-                        </div>
-                    </div>`;
-        });
-        grid.innerHTML = html;
+    const searchText = document.getElementById('search').value.toLowerCase();
+    let filtered = sprints.filter(s => {
+        const phase = s.phase || 'finished';
+        const matchesFilter = curFilter === 'all' || phase === curFilter;
+        const matchesSearch = s.title.toLowerCase().includes(searchText) || s.description.toLowerCase().includes(searchText);
+        return matchesFilter && matchesSearch;
+    });
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    if (filtered.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
         updateStats();
+        return;
     }
+    empty.style.display = 'none';
+    let html = '';
+    filtered.forEach(s => {
+        const phase = s.phase || 'finished';
+        const pct = Math.min(100, Math.round(((s.current_participants || 0) / s.max_participants) * 100));
+        const tags = (s.tags ? s.tags.split(',') : []).map(t => `<span class="tag">${escapeHtml(t.trim())}</span>`).join('');
+        const bannerStyle = s.logo_url ? `background-image: url('${escapeHtml(s.logo_url)}'); background-size: cover; background-position: center;` : '';
+        html += `<div class="card" onclick="openView(${s.id})">
+                    <div class="card-banner" style="${bannerStyle}">
+                        ${s.logo_url ? `<img src="${escapeHtml(s.logo_url)}" alt="logo" style="display:none;">` : ''}
+                    </div>
+                    <div class="card-info">
+                        <div class="card-title">${escapeHtml(s.title)}</div>
+                        <div class="card-stats">
+                            <div class="stat-box"><div class="s-lbl">Статус</div><div class="s-val">${escapeHtml(s.status || '—')}</div></div>
+                            <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${s.registration_start ? formatDateRange(s.registration_start, s.registration_end) : '—'}</div></div>
+                            <div class="stat-box"><div class="s-lbl">Джем</div><div class="s-val">${s.jam_start ? formatDateRange(s.jam_start, s.jam_end) : '—'}</div></div>
+                        </div>
+                        <div class="tags">${tags}</div>
+                        <div class="prog-wrap">
+                            <div class="prog-lbl"><span>Участники</span><span>${s.current_participants || 0} / ${s.max_participants}</span></div>
+                            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+                        </div>
+                    </div>
+                </div>`;
+    });
+    grid.innerHTML = html;
+    updateStats();
+}
 
     function openView(id) {
         if (isRedirecting) return;
