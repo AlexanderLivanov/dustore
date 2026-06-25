@@ -6,6 +6,12 @@ session_start();
 $db = (new Database())->connect();
 if (!$db) die('Ошибка подключения к БД');
 
+$allowedAdmins = ['TheCreator', 'asfasgag', 'Eshward_Williams', 'testuser']; // список никнеймов с правами
+$username = $_SESSION['USERDATA']['username'] ?? '';
+if (!in_array($username, $allowedAdmins)) {
+    die('У вас нет доступа к админке');
+}
+
 $userId = $_SESSION['USERDATA']['id'] ?? 0;
 if (!$userId) {
     header('Location: /login');
@@ -17,16 +23,14 @@ if (!$sprint_id && isset($_SESSION['last_admin_sprint'])) {
     $sprint_id = (int)$_SESSION['last_admin_sprint'];
 }
 
-// Если ID не передан – показываем список спринтов пользователя
 if (!$sprint_id) {
-    $sprintListStmt = $db->prepare("SELECT id, title, status, start_at FROM sprints WHERE host_user_id = ? ORDER BY created_at DESC");
-    $sprintListStmt->execute([$userId]);
+    $sprintListStmt = $db->prepare("SELECT id, title, status, start_at FROM sprints ORDER BY created_at DESC");
+    $sprintListStmt->execute();
     $userSprints = $sprintListStmt->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($userSprints)) {
-        echo "<h2>У вас нет созданных спринтов</h2><a href='/jams'>Вернуться к списку спринтов</a>";
-        exit;
-    }
-    // Вывод страницы выбора (оставлен без изменений)
+    // if (empty($userSprints)) {
+    //     echo "<h2>У вас нет созданных спринтов</h2><a href='/jams'>Вернуться к списку спринтов</a>";
+    //     exit;
+    // }
     ?>
     <!DOCTYPE html>
     <html lang="ru">
@@ -35,6 +39,8 @@ if (!$sprint_id) {
     <?php foreach ($userSprints as $s): ?>
         <div class="sprint-item">
             <div><strong><?= htmlspecialchars($s['title']) ?></strong> (<?= $s['status'] ?>)<br><small>Старт: <?= date('d.m.Y H:i', strtotime($s['start_at'])) ?></small></div>
+            <br>
+            <br>
             <a href="admin.php?id=<?= $s['id'] ?>" class="btn">Управлять</a>
         </div>
     <?php endforeach; ?>
@@ -44,21 +50,18 @@ if (!$sprint_id) {
     exit;
 }
 
-// Проверка прав (только хост)
-$check = $db->prepare("SELECT host_user_id FROM sprints WHERE id = ?");
-$check->execute([$sprint_id]);
-if ($check->fetchColumn() != $userId) {
-    die('У вас нет прав на управление этим спринтом');
-}
+// $check = $db->prepare("SELECT host_user_id FROM sprints WHERE id = ?");
+// $check->execute([$sprint_id]);
+// if ($check->fetchColumn() != $userId) {
+//     die('У вас нет прав на управление этим спринтом');
+// }
 
 $_SESSION['last_admin_sprint'] = $sprint_id;
 
-// Загружаем данные спринта
 $sprintStmt = $db->prepare("SELECT * FROM sprints WHERE id = ?");
 $sprintStmt->execute([$sprint_id]);
 $sprint = $sprintStmt->fetch(PDO::FETCH_ASSOC);
 
-// Участники, работы, объявления, эксперты, призы (без изменений)
 $partStmt = $db->prepare("
     SELECT
         u.id,
@@ -69,11 +72,8 @@ $partStmt = $db->prepare("
         ss.build_url,
         ss.build_size
     FROM sprint_participants sp
-    JOIN users u
-        ON sp.user_id = u.id
-    LEFT JOIN sprint_submissions ss
-        ON ss.sprint_id = sp.sprint_id
-       AND ss.user_id = sp.user_id
+    JOIN users u ON sp.user_id = u.id
+    LEFT JOIN sprint_submissions ss ON ss.sprint_id = sp.sprint_id AND ss.user_id = sp.user_id
     WHERE sp.sprint_id = ?
     ORDER BY sp.joined_at DESC
 ");
@@ -113,7 +113,6 @@ $newTodayStmt = $db->prepare("SELECT COUNT(*) FROM sprint_participants WHERE spr
 $newTodayStmt->execute([$sprint_id]);
 $newToday = $newTodayStmt->fetchColumn();
 
-// Данные для графика (без изменений)
 $chartData = [];
 $chartLabels = [];
 for ($i = 6; $i >= 0; $i--) {
@@ -126,7 +125,6 @@ for ($i = 6; $i >= 0; $i--) {
 $hourlyData = array_fill(0, 24, 0);
 $hourlyLabels = range(0, 23);
 
-// ========== ПОДКЛЮЧАЕМ header.php ==========
 require_once('../swad/static/elements/header.php');
 ?>
 <!DOCTYPE html>
@@ -136,7 +134,7 @@ require_once('../swad/static/elements/header.php');
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title><?= htmlspecialchars($sprint['title']) ?> — Админка</title>
     <style>
-        /* ---- Стили (сокращены, основные классы сохранены) ---- */
+        /* ... (стили оставлены без изменений, только для краткости) ... */
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.1) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.08) 0%, transparent 55%); }
@@ -284,7 +282,7 @@ require_once('../swad/static/elements/header.php');
     </div>
 
     <div class="main-content">
-        <!-- DASHBOARD (без изменений) -->
+        <!-- DASHBOARD -->
         <div class="view" id="view-dashboard">
             <div class="page-title">Дашборд</div>
             <div class="page-sub"><?= htmlspecialchars($sprint['title']) ?> · Статус: <?= $sprint['status'] ?></div>
@@ -304,7 +302,7 @@ require_once('../swad/static/elements/header.php');
             </div>
         </div>
 
-        <!-- ANALYTICS (без изменений) -->
+        <!-- ANALYTICS -->
         <div class="view" id="view-analytics">
             <div class="page-title">Аналитика</div>
             <div class="page-sub">Детальная статистика спринта</div>
@@ -317,14 +315,14 @@ require_once('../swad/static/elements/header.php');
             <div class="chart-wrap"><div class="chart-head"><span class="chart-title">Активность по часам суток</span></div><div class="chart-area"><div class="chart-bars" id="hourlyChart"></div></div></div>
         </div>
 
-        <!-- ACTIVITY (без изменений) -->
+        <!-- ACTIVITY -->
         <div class="view" id="view-activity">
             <div class="page-title">Активность</div>
             <div class="page-sub">Лента событий в реальном времени</div>
             <div class="list-card"><div class="list-card-title">🔴 Последние события</div><div id="feed-list"></div></div>
         </div>
 
-        <!-- PARTICIPANTS (без изменений) -->
+        <!-- PARTICIPANTS -->
         <div class="view" id="view-participants">
             <div class="page-title">Участники <span style="font-size:14px;color:rgba(255,255,255,.35)"><?= $totalParticipants ?></span></div>
             <div class="table-wrap">
@@ -333,7 +331,7 @@ require_once('../swad/static/elements/header.php');
             </div>
         </div>
 
-        <!-- SUBMISSIONS (без изменений) -->
+        <!-- SUBMISSIONS -->
         <div class="view" id="view-submissions">
             <div class="page-title">Работы <span style="font-size:14px;color:rgba(255,255,255,.35)"><?= $totalSubmissions ?></span></div>
             <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
@@ -357,7 +355,7 @@ require_once('../swad/static/elements/header.php');
             </div>
         </div>
 
-        <!-- ANNOUNCEMENTS (без изменений) -->
+        <!-- ANNOUNCEMENTS -->
         <div class="view" id="view-announcements">
             <div class="page-title">Объявления</div>
             <div class="settings-section">
@@ -369,7 +367,7 @@ require_once('../swad/static/elements/header.php');
             <div class="list-card"><div class="list-card-title">📋 История объявлений</div><div id="ann-list"></div></div>
         </div>
 
-        <!-- SETTINGS (ОБНОВЛЁН) -->
+        <!-- SETTINGS (обновлён) -->
         <div class="view" id="view-settings">
             <div class="page-title">Параметры спринта</div>
             <div class="settings-section">
@@ -385,14 +383,17 @@ require_once('../swad/static/elements/header.php');
                     </div>
                 </div>
                 <div class="form-row-s"><label class="form-label-s">Название спринта</label><input class="form-input-s" id="set-title" value="<?= htmlspecialchars($sprint['title']) ?>"></div>
-                <!-- Новое поле: Описание -->
-                <div class="form-row-s"><label class="form-label-s">Описание спринта</label><textarea class="form-input-s" id="set-description" rows="4"><?= htmlspecialchars($sprint['description'] ?? '') ?></textarea></div>
-                <!-- Новое поле: Полезные ссылки -->
+                <!-- Описание (используется как лор-текст на главной) -->
+                <div class="form-row-s"><label class="form-label-s">Описание / Лор-текст (показывается в Обзоре)</label><textarea class="form-input-s" id="set-description" rows="6"><?= htmlspecialchars($sprint['description'] ?? '') ?></textarea></div>
+                <!-- Тема -->
+                <div class="form-row-s"><label class="form-label-s">Тема джема</label><input class="form-input-s" id="set-theme" value="<?= htmlspecialchars($sprint['theme'] ?? '') ?>"></div>
+                <!-- Сеттинг -->
+                <div class="form-row-s"><label class="form-label-s">Сеттинг</label><input class="form-input-s" id="set-setting" value="<?= htmlspecialchars($sprint['setting'] ?? '') ?>"></div>
+                <!-- Полезные ссылки -->
                 <div class="form-row-s"><label class="form-label-s">Полезные ссылки (каждая с новой строки)</label><textarea class="form-input-s" id="set-useful_links" rows="3"><?= htmlspecialchars($sprint['useful_links'] ?? '') ?></textarea></div>
-                <!-- Новое поле: Регламент -->
+                <!-- Регламент -->
                 <div class="form-row-s"><label class="form-label-s">Регламент (показывается перед регистрацией)</label><textarea class="form-input-s" id="set-rules" rows="6"><?= htmlspecialchars($sprint['rules'] ?? '') ?></textarea></div>
 
-                <!-- Блок с датами (новые поля) -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
                     <div><label class="form-label-s">Регистрация с</label><input class="form-input-s" type="datetime-local" id="set-registration_start" value="<?= date('Y-m-d\TH:i', strtotime($sprint['registration_start'] ?? 'now')) ?>"></div>
                     <div><label class="form-label-s">Регистрация до</label><input class="form-input-s" type="datetime-local" id="set-registration_end" value="<?= date('Y-m-d\TH:i', strtotime($sprint['registration_end'] ?? '')) ?>"></div>
@@ -402,8 +403,6 @@ require_once('../swad/static/elements/header.php');
                     <div><label class="form-label-s">Голосование до</label><input class="form-input-s" type="datetime-local" id="set-voting_end" value="<?= date('Y-m-d\TH:i', strtotime($sprint['voting_end'] ?? '')) ?>"></div>
                 </div>
 
-                <!-- Удалены старые поля start_at, duration_value, duration_unit, max_participants -->
-                <!-- оставляем max_participants, если нужно -->
                 <div class="form-row-s" style="margin-top:12px;"><label class="form-label-s">Макс. участников</label><input class="form-input-s" type="number" id="set-maxp" value="<?= $sprint['max_participants'] ?>" style="width:160px"></div>
 
                 <button class="btn-save" onclick="saveSettings()">Сохранить изменения</button>
@@ -419,14 +418,14 @@ require_once('../swad/static/elements/header.php');
             <div style="display:flex;gap:10px"><button class="btn-save" onclick="saveSettings()">Сохранить изменения</button><button class="btn-danger" onclick="if(confirm('Удалить спринт?')) deleteSprint()">Удалить спринт</button></div>
         </div>
 
-        <!-- JUDGES (без изменений) -->
+        <!-- JUDGES -->
         <div class="view" id="view-judges">
             <div class="page-title">Жюри</div>
             <div class="settings-section"><div class="settings-section-title">➕ Добавить судью</div><div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end"><select class="form-input-s" id="newJudgeId"><option value="">-- Выберите пользователя --</select><button class="btn-save" onclick="addJudge()">+ Добавить</button></div></div>
             <div class="list-card"><div class="list-card-title">⭐ Текущее жюри</div><div id="judges-list"></div></div>
         </div>
 
-        <!-- PRIZES (без изменений) -->
+        <!-- PRIZES -->
         <div class="view" id="view-prizes">
             <div class="page-title">Призы</div>
             <div class="settings-section"><div class="settings-section-title">🏆 Призовые места</div><div id="prizes-settings"></div><button class="tbl-btn" onclick="addPrize()">+ Добавить место</button></div>
@@ -435,12 +434,7 @@ require_once('../swad/static/elements/header.php');
 </div>
 
 <script>
-    // JAM_ID и прочие данные
     const JAM_ID = <?= json_encode((int)$sprint_id) ?>;
-    console.log('JAM_ID set to', JAM_ID);
-</script>
-<script>
-    // Данные из PHP
     const sprintId = <?= $sprint_id ?>;
     const participants = <?= json_encode($participants) ?>;
     const submissions = <?= json_encode($submissions) ?>;
@@ -552,7 +546,6 @@ require_once('../swad/static/elements/header.php');
 
     loadUsers();
 
-    // ----- Сохранение активной вкладки -----
     function saveActiveTab(viewName) {
         localStorage.setItem('admin_active_tab_' + sprintId, viewName);
     }
@@ -582,7 +575,6 @@ require_once('../swad/static/elements/header.php');
     });
     restoreActiveTab();
 
-    // ----- Вспомогательные функции отрисовки -----
     function buildBar(containerId, data, labels) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -659,23 +651,26 @@ require_once('../swad/static/elements/header.php');
         if (container) container.innerHTML = experts.map(e => `<div class="list-item"><div class="li-rank">⭐</div><div class="li-info"><div class="li-name">${escapeHtml(e.username)}</div><div class="li-sub">${escapeHtml(e.role || 'Эксперт')}</div></div><button class="tbl-btn" onclick="removeJudge(${e.id})">Убрать</button></div>`).join('');
     }
     function renderPrizes() {
-        const container = document.getElementById('prizes-settings');
-        if (!container) return;
-        container.innerHTML = prizes.map(p => `
-            <div style="display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;margin-bottom:8px">
-                <span style="font-size:20px;text-align:center">${['🥇','🥈','🥉'][p.place_num-1] || '🎖'}</span>
-                <input class="form-input-s" value="${escapeHtml(p.reward)}" id="prize-${p.id}" data-id="${p.id}">
-                <button class="btn-save" onclick="updatePrize(${p.id}, document.getElementById('prize-${p.id}').value)">✓</button>
-            </div>
-        `).join('');
-    }
+    const container = document.getElementById('prizes-settings');
+    if (!container) return;
+    container.innerHTML = prizes.map(p => `
+        <div style="display:grid; grid-template-columns:40px 1fr 1fr 1fr auto; gap:8px; align-items:center; margin-bottom:8px;">
+            <span style="font-size:20px; text-align:center;">${['🥇','🥈','🥉'][p.place_num-1] || '🎖'}</span>
+            <input class="form-input-s" value="${escapeHtml(p.special_nomination || '')}" placeholder="Название номинации" id="nom-${p.id}" data-id="${p.id}" data-field="special_nomination">
+            <input class="form-input-s" value="${escapeHtml(p.reward || '')}" placeholder="Описание приза" id="reward-${p.id}" data-id="${p.id}" data-field="reward">
+            <input class="form-input-s" value="${escapeHtml(p.issued_by || '')}" placeholder="Кто выдаёт" id="issued-${p.id}" data-id="${p.id}" data-field="issued_by">
+            <button class="btn-save" onclick="updatePrize(${p.id})">✓</button>
+        </div>
+    `).join('');
+}
 
-    // ----- AJAX-функции (обновлены для новых полей) -----
     async function saveSettings() {
         const formData = new FormData();
         formData.append('sprint_id', sprintId);
         formData.append('title', document.getElementById('set-title').value);
         formData.append('description', document.getElementById('set-description').value);
+        formData.append('theme', document.getElementById('set-theme').value);
+        formData.append('setting', document.getElementById('set-setting').value);
         formData.append('useful_links', document.getElementById('set-useful_links').value);
         formData.append('rules', document.getElementById('set-rules').value);
         formData.append('registration_start', document.getElementById('set-registration_start').value);
@@ -687,7 +682,7 @@ require_once('../swad/static/elements/header.php');
         formData.append('max_participants', document.getElementById('set-maxp').value);
         const logoFile = document.getElementById('set-logo').files[0];
         if (logoFile) formData.append('logo', logoFile);
-        // toggles (можно добавить позже)
+
         const resp = await fetch('/swad/controllers/update_sprint_settings.php', { method: 'POST', body: formData });
         const res = await resp.json();
         if (res.success) {
@@ -743,19 +738,22 @@ require_once('../swad/static/elements/header.php');
         else alert(res.message);
     }
 
-    async function updatePrize(prizeId, reward) {
-        const resp = await fetch('/swad/controllers/update_prize.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prize_id: prizeId, reward })
-        });
-        const res = await resp.json();
-        if (res.success) alert('Сохранено');
-        else alert(res.message);
-    }
+    async function updatePrize(prizeId) {
+    const special_nomination = document.getElementById('nom-' + prizeId).value.trim();
+    const reward = document.getElementById('reward-' + prizeId).value.trim();
+    const issued_by = document.getElementById('issued-' + prizeId).value.trim();
+    const resp = await fetch('/swad/controllers/update_prize.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prize_id: prizeId, reward, special_nomination, issued_by })
+    });
+    const res = await resp.json();
+    if (res.success) alert('Сохранено');
+    else alert(res.message);
+}
 
     async function addPrize() {
-        const resp = await fetch('/swad/controllers/add_prize.php', {
+        const resp = await fetch('/swad/controllers/jams/add_prize.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sprint_id: sprintId })
@@ -798,7 +796,6 @@ require_once('../swad/static/elements/header.php');
         });
     }
 
-    // Инициализация
     renderDashboard();
     renderAnalytics();
     renderActivity();
@@ -809,7 +806,6 @@ require_once('../swad/static/elements/header.php');
     renderPrizes();
     populateUserSelect();
 
-    // Предпросмотр логотипа
     document.getElementById('set-logo')?.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {

@@ -5,12 +5,37 @@ require_once '../../config.php';
 header('Content-Type: application/json');
 session_start();
 
-if (empty($_SESSION['USERDATA']['id'])) {
+// ---- Проверяем авторизацию ----
+$user_id = 0;
+
+// 1. Если есть USERDATA (обычный вход)
+if (!empty($_SESSION['USERDATA']['id'])) {
+    $user_id = (int)$_SESSION['USERDATA']['id'];
+}
+// 2. Если пользователь зашёл через Telegram (есть telegram_id)
+elseif (!empty($_SESSION['telegram_id'])) {
+    $dbInst = new Database();
+    $conn = $dbInst->connect();
+    if ($conn) {
+        $stmt = $conn->prepare("SELECT id FROM users WHERE telegram_id = ?");
+        $stmt->execute([$_SESSION['telegram_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $user_id = (int)$row['id'];
+            // Дополнительно загружаем USERDATA для единообразия
+            $stmt2 = $conn->prepare("SELECT * FROM users WHERE id = ?");
+            $stmt2->execute([$user_id]);
+            $_SESSION['USERDATA'] = $stmt2->fetch(PDO::FETCH_ASSOC);
+        }
+    }
+}
+
+if (!$user_id) {
     echo json_encode(['success' => false, 'message' => 'Авторизуйтесь']);
     exit;
 }
 
-$user_id = $_SESSION['USERDATA']['id'];
+// ---- Основной код ----
 $sprint_id = (int)($_POST['sprint_id'] ?? 0);
 
 if (!$sprint_id) {
@@ -45,7 +70,7 @@ if ($stmt->fetch()) {
 // Проверка лимита
 $stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM sprint_participants WHERE sprint_id = ?");
 $stmt->execute([$sprint_id]);
-$current = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+$current = (int)$stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
 if ($current >= $sprint['max_participants']) {
     echo json_encode(['success' => false, 'message' => 'Лимит участников достигнут']);
     exit;

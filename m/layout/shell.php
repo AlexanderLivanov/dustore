@@ -12,6 +12,7 @@ $page_titles = [
     'profile'   => 'Профиль — Dustore',
     'search'    => 'Поиск — Dustore',
     'developer' => ($dev_title ?? 'Студия') . ' — Dustore',
+    'sprints'   => 'Спринты — Dustore',   // <-- это
 ];
 $meta_title = $page_titles[$page] ?? 'Dustore';
 
@@ -19,6 +20,7 @@ $nav_items = [
     ['page' => 'home',    'href' => '/m/',        'icon' => 'home',     'label' => 'Главная'],
     ['page' => 'catalog', 'href' => '/m/catalog', 'icon' => 'grid-3x3', 'label' => 'Каталог'],
     ['page' => 'library', 'href' => '/m/library', 'icon' => 'library',  'label' => 'Библиотека'],
+    ['page' => 'sprints', 'href' => '/m/sprints', 'icon' => 'run',     'label' => 'Спринты'],
     ['page' => 'profile', 'href' => '/m/profile', 'icon' => 'user',     'label' => 'Профиль'],
 ];
 

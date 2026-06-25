@@ -6,10 +6,6 @@
         }
 } */
 
-body {
-    user-select: none;
-}
-
 ::selection {
     background: #c32178;
     color: #fff;
@@ -237,3 +233,4 @@ body.moonlight-theme {
     background-attachment: fixed;
     background-position: center 50%;
 }
+

@@ -547,7 +547,44 @@ $stmt->execute([
                 </div>
             </div>
         </div>
+        <script>
+         // Улучшенная обработка бургера для тач-устройств и закрытие по клику вне
+document.addEventListener('DOMContentLoaded', function() {
+    const burger = document.getElementById('burger');
+    const menu = document.querySelector('.buttons-left');
 
+    if (!burger || !menu) return;
+
+    function toggleMenu(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        menu.classList.toggle('mobile-open');
+    }
+
+    // Клик и касание
+    burger.addEventListener('click', toggleMenu);
+    burger.addEventListener('touchstart', toggleMenu, { passive: false });
+
+    // Закрытие при клике/тапе вне меню и бургера
+    function closeMenu(e) {
+        if (menu.classList.contains('mobile-open') &&
+            !menu.contains(e.target) &&
+            !burger.contains(e.target)) {
+            menu.classList.remove('mobile-open');
+        }
+    }
+
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('touchstart', closeMenu, { passive: true });
+
+    // При ресайзе окна > 900px закрываем мобильное меню (если открыто)
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 901) {
+            menu.classList.remove('mobile-open');
+        }
+    });
+});
+        </script>
 
         <script>
             function updateUserActivity() {

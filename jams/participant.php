@@ -33,7 +33,29 @@ $sprintStmt->execute([$sprintId]);
 $sprint = $sprintStmt->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) die('Спринт не найден');
 
-// Функция определения текущей фазы
+// ---------- Функции ----------
+function markdownToHtml($text) {
+    if (!$text) return '';
+    $html = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    // Заголовки
+    $html = preg_replace('/^### (.*$)/m', '<h3>$1</h3>', $html);
+    $html = preg_replace('/^## (.*$)/m', '<h2>$1</h2>', $html);
+    $html = preg_replace('/^# (.*$)/m', '<h1>$1</h1>', $html);
+    // Жирный и курсив
+    $html = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $html);
+    $html = preg_replace('/\*(.+?)\*/', '<em>$1</em>', $html);
+    // Markdown-ссылки [текст](url)
+    $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2" target="_blank" rel="noopener">$1</a>', $html);
+    // Авто-ссылки (голые URL)
+    $html = preg_replace('/(?<![">])(https?:\/\/[^\s]+)/', '<a href="$1" target="_blank" rel="noopener">$1</a>', $html);
+    // Списки
+    $html = preg_replace('/^\- (.*$)/m', '<li>$1</li>', $html);
+    $html = preg_replace('/(<li>.*<\/li>)/s', '<ul>$1</ul>', $html);
+    // Переносы строк
+    $html = nl2br($html);
+    return $html;
+}
+
 function getSprintPhase($sprint) {
     $now = new DateTime('now', new DateTimeZone('Europe/Moscow'));
     $regStart = isset($sprint['registration_start']) ? new DateTime($sprint['registration_start'], new DateTimeZone('Europe/Moscow')) : null;
@@ -51,7 +73,20 @@ function getSprintPhase($sprint) {
     if ($voteStart && $voteEnd && $now >= $voteStart && $now < $voteEnd) return 'voting';
     return 'finished';
 }
+
 $phase = getSprintPhase($sprint);
+
+// Карта фаз на русский
+$phaseMap = [
+    'upcoming'     => 'Скоро',
+    'registration' => 'Регистрация',
+    'pre_jam'      => 'Скоро джем',
+    'jam'          => 'Джем',
+    'post_jam'     => 'Завершён джем',
+    'voting'       => 'Голосование',
+    'finished'     => 'Завершён'
+];
+$phaseRu = $phaseMap[$phase] ?? $phase;
 
 // Подсчёт времени до следующего события
 function getNextEvent($sprint) {
@@ -162,10 +197,14 @@ require_once('../swad/static/elements/header.php');
         .stat-card .sc-lbl { font-size: 11px; color: rgba(255,255,255,.35); }
         .card { background: #00000030; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
         .card-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; justify-content: space-between; align-items: center; }
-        .team-member { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
-        .tm-av { width: 36px; height: 36px; background: rgba(195,33,120,.15); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-        .tm-name { font-size: 13px; font-weight: 600; }
-        .me-badge { font-size: 10px; background: rgba(195,33,120,.2); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+        .team-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 14px 12px; text-align: center; transition: .15s; }
+        .team-card:hover { background: rgba(195,33,120,.08); border-color: rgba(195,33,120,.2); transform: translateY(-2px); }
+        .team-card .tc-av { width: 48px; height: 48px; background: rgba(195,33,120,.15); border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .team-card .tc-name { font-size: 13px; font-weight: 600; }
+        .team-card .tc-name a { color: #e8ddf0; text-decoration: none; }
+        .team-card .tc-name a:hover { color: #c32178; }
+        .team-card .tc-badge { font-size: 9px; background: rgba(195,33,120,.2); border-radius: 4px; padding: 1px 6px; display: inline-block; margin-top: 4px; }
         .btn-primary { background: #c32178; border: none; color: #fff; border-radius: 8px; padding: 11px 22px; font-weight: 700; cursor: pointer; }
         .btn-primary:hover { background: #9e1a66; }
         .btn-team { background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.3); color: #e8ddf0; border-radius: 7px; padding: 7px 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: .15s; }
@@ -191,6 +230,13 @@ require_once('../swad/static/elements/header.php');
         .drop-zone:hover { border-color: #c32178; background: rgba(195,33,120,.05); }
         #jam-progress { margin-top: 12px; }
         #jam-bar { height: 8px; background: #c32178; border-radius: 999px; width: 0%; transition: width .3s; }
+        .md-content { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.7; }
+        .md-content h1, .md-content h2, .md-content h3 { color: #e8ddf0; margin: 0 0 8px 0; }
+        .md-content ul { padding-left: 20px; margin: 6px 0; }
+        .md-content li { margin-bottom: 3px; }
+        .md-content a { color: #c32178; text-decoration: none; }
+        .md-content a:hover { text-decoration: underline; }
+        .md-content strong { color: #fff; }
     </style>
 </head>
 <body>
@@ -212,7 +258,7 @@ require_once('../swad/static/elements/header.php');
             <div class="si-title"><?= htmlspecialchars($sprint['title']) ?></div>
             <div class="si-host">от <?= htmlspecialchars($sprint['host_name'] ?? 'Dustore') ?></div>
             <div class="si-stat">Участников <span><?= count($team) ?> / <?= $sprint['max_participants'] ?></span></div>
-            <div class="si-stat">Текущий этап <span><?= $phase ?></span></div>
+            <div class="si-stat">Текущий этап <span><?= $phaseRu ?></span></div>
             <div class="countdown-mini">
                 <div class="cm-val" id="countdown-sidebar"><?= $countdownStr ?></div>
                 <div class="cm-lbl"><?= $countdownLabel ?></div>
@@ -246,8 +292,15 @@ require_once('../swad/static/elements/header.php');
             <div class="stats-row">
                 <div class="stat-card"><div class="sc-val"><?= count($team) ?></div><div class="sc-lbl">Участников</div></div>
                 <div class="stat-card"><div class="sc-val"><?= $submission ? '1' : '0' ?></div><div class="sc-lbl">Работ сдано</div></div>
-                <div class="stat-card"><div class="sc-val"><?= $phase ?></div><div class="sc-lbl">Текущий этап</div></div>
+                <div class="stat-card"><div class="sc-val"><?= $phaseRu ?></div><div class="sc-lbl">Текущий этап</div></div>
             </div>
+            <!-- Описание спринта (с MD) -->
+            <?php if (!empty($sprint['description'])): ?>
+                <div class="card">
+                    <div class="card-title"><span>📖 Описание спринта</span></div>
+                    <div class="md-content"><?= markdownToHtml($sprint['description']) ?></div>
+                </div>
+            <?php endif; ?>
             <div class="card">
                 <div class="card-title"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>Тема спринта</span></div>
                 <div style="text-align:center;padding:20px 0">
@@ -263,13 +316,13 @@ require_once('../swad/static/elements/header.php');
             <?php if (!empty($sprint['rules'])): ?>
                 <div class="card">
                     <div class="card-title"><span>📜 Регламент</span></div>
-                    <div style="white-space:pre-line; font-size:13px; color:rgba(255,255,255,.7);"><?= htmlspecialchars($sprint['rules']) ?></div>
+                    <div class="md-content"><?= markdownToHtml($sprint['rules']) ?></div>
                 </div>
             <?php endif; ?>
             <?php if (!empty($sprint['useful_links'])): ?>
                 <div class="card">
                     <div class="card-title"><span>🔗 Полезные ссылки</span></div>
-                    <div style="white-space:pre-line; font-size:13px; color:rgba(255,255,255,.7);"><?= htmlspecialchars($sprint['useful_links']) ?></div>
+                    <div class="md-content"><?= markdownToHtml($sprint['useful_links']) ?></div>
                 </div>
             <?php endif; ?>
         </div>
@@ -282,11 +335,16 @@ require_once('../swad/static/elements/header.php');
                     <span>👥 Все участники</span>
                     <a href="/l4t?action=create_team&sprint_id=<?= $sprintId ?>" class="btn-team" style="font-size:12px; padding:6px 12px;">+ Создать команду</a>
                 </div>
-                <div id="team-list">
+                <div class="team-grid" id="team-list">
                     <?php foreach ($team as $member): ?>
-                        <div class="team-member">
-                            <div class="tm-av">👤</div>
-                            <div><div class="tm-name"><?= htmlspecialchars($member['username']) ?><?= $member['id'] == $userId ? ' <span class="me-badge">Я</span>' : '' ?></div><div class="tm-role"><?= htmlspecialchars($member['role'] ?? 'Участник') ?></div></div>
+                        <div class="team-card">
+                            <div class="tc-av">👤</div>
+                            <div class="tc-name">
+                                <a href="/player/<?= urlencode($member['username']) ?>"><?= htmlspecialchars($member['username']) ?></a>
+                            </div>
+                            <?php if ($member['id'] == $userId): ?>
+                                <div class="tc-badge">Я</div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>

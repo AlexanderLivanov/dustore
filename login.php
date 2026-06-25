@@ -189,7 +189,6 @@ require_once('swad/controllers/email_auth.php');
             <button class="tab-btn" onclick="switchTab('register')">Регистрация</button>
             <?php endif; ?>
             <button class="tab-btn" onclick="switchTab('telegram')">Telegram</button>
-            
         </div>
 
         <!-- ────── LOGIN ────── -->
@@ -227,7 +226,6 @@ require_once('swad/controllers/email_auth.php');
                         <div class="field-error" id="l-email-error">Введите корректный email</div>
                     </div>
                     <button type="button" class="btn-primary" onclick="loginStep1()">Продолжить →</button>
-                    
                 </div>
 
                 <div class="step" id="ls-2">
@@ -274,13 +272,14 @@ require_once('swad/controllers/email_auth.php');
                        value="<?= htmlspecialchars($_SESSION['unverified_email'] ?? '') ?>">
             </form>
         </div>
-        
+
         <!-- ────── REGISTER ────── -->
         <?php if (REGISTRATION_ENABLED): ?>
         <div id="panel-register" class="form-panel">
             <form method="POST" id="reg-form" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                 <input type="hidden" name="action" value="register">
+                <input type="hidden" name="backUrl" value="<?= htmlspecialchars($_GET['backUrl'] ?? '/') ?>">
                 <div class="hp-field" aria-hidden="true">
                     <input type="text" name="website" tabindex="-1" autocomplete="off">
                 </div>

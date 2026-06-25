@@ -30,8 +30,7 @@ if ($page === 'dev') {
     $page = 'developer';
 }
 
-$allowed = ['home','catalog','game','library','profile','search','developer'];
-if (!in_array($page, $allowed, true)) {
+$allowed = ['home','catalog','game','library','profile','search','developer','sprints','/login'];if (!in_array($page, $allowed, true)) {
     header('Location: /m/', true, 302);
     exit;
 }

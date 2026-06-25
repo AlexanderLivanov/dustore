@@ -58,10 +58,10 @@ function userAuthentication($db, $auth_data)
         $db->Insert(
             "INSERT INTO `users`
         (`first_name`, `last_name`, `telegram_id`, `telegram_username`,
-         `username`, `telegram_token`, `profile_picture`, `auth_date`, `global_role`)
+         `username`, `telegram_token`, `profile_picture`, `auth_date`, `global_role`, `email_verified`)
         VALUES
         (:first_name, :last_name, :telegram_id, :telegram_username,
-         :username, :telegram_token, :profile_picture, :auth_date, 0)",
+         :username, :telegram_token, :profile_picture, :auth_date, 0, 1)",
             $params
         );
     }
