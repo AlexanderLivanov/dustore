@@ -5,16 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/swad/controllers/create_sprint.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/update_sprint_settings.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/upload_asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/upload_asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/participant.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/participant.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/sprints.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/download_asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/download_asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/jams/join_sprint.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/jams/join_sprint.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,7 +27,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;Merging main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/xampp/htdocs/swad/static/img&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   }
