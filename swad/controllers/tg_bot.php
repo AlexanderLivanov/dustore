@@ -2,10 +2,10 @@
 // require_once("../config.php");
 // ── Прокси-конфигурация ───────────────────────────────────────────────────
 // Эстония, SOCKS5. Обновить при смене прокси.
-define('TG_PROXY_HOST', '212.102.146.114');
-define('TG_PROXY_PORT', 9288);
-define('TG_PROXY_USER', 't25kLy');
-define('TG_PROXY_PASS', 'UJ0MmV');
+define('TG_PROXY_HOST', '163.198.212.117');
+define('TG_PROXY_PORT', 8000);
+define('TG_PROXY_USER', 'LERmb4');
+define('TG_PROXY_PASS', 'WTT8gq');
 
 /**
  * Общая функция curl для Telegram API через SOCKS5-прокси.

@@ -697,6 +697,8 @@ if (in_array($mod_status, ['pending','rejected'])):
 <?php endif; ?>
 
 <?php
+// send_group_message(-1002916906978, '🆕 <b>Бот снова работает</b>', true, 'https://dustore.ru/');
+
 $extra_js = <<<JS
 <script>
 const LARGE       = 500 * 1024 * 1024;

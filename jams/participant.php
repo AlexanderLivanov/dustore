@@ -33,6 +33,16 @@ $sprintStmt->execute([$sprintId]);
 $sprint = $sprintStmt->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) die('Спринт не найден');
 
+// experts
+$expStmt = $conn->prepare("
+    SELECT u.id, u.username, u.role, u.profile_picture
+    FROM sprint_experts se
+    JOIN users u ON se.user_id = u.id
+    WHERE se.sprint_id = ?
+");
+$expStmt->execute([$sprintId]);
+$sprintExperts = $expStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // ---------- Функции ----------
 function markdownToHtml($text) {
     if (!$text) return '';
@@ -126,6 +136,45 @@ $teamStmt = $conn->prepare("
 $teamStmt->execute([$sprintId]);
 $team = $teamStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Команда текущего участника
+$myTeamStmt = $conn->prepare("
+    SELECT t.* FROM team_members tm
+    JOIN sprint_teams t ON t.id = tm.team_id
+    WHERE tm.sprint_id = ? AND tm.user_id = ?
+");
+$myTeamStmt->execute([$sprintId, $userId]);
+$myTeam = $myTeamStmt->fetch(PDO::FETCH_ASSOC);
+
+$myTeamMembers = [];
+if ($myTeam) {
+    $mmStmt = $conn->prepare("
+        SELECT u.id, u.username, u.profile_picture, tm.member_role
+        FROM team_members tm JOIN users u ON u.id = tm.user_id
+        WHERE tm.team_id = ?
+        ORDER BY (tm.member_role = 'captain') DESC, tm.joined_at ASC
+    ");
+    $mmStmt->execute([$myTeam['id']]);
+    $myTeamMembers = $mmStmt->fetchAll(PDO::FETCH_ASSOC);
+}
+$isCaptain = $myTeam && (int)$myTeam['captain_id'] === (int)$userId;
+
+// Входящие приглашения (если ещё не в команде)
+$myInvites = [];
+if (!$myTeam) {
+    $invStmt = $conn->prepare("
+        SELECT ti.id AS invite_id, t.id AS team_id, t.team_name, t.team_limit,
+               iu.username AS inviter_name,
+               (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS members_count
+        FROM team_invites ti
+        JOIN sprint_teams t ON t.id = ti.team_id
+        JOIN users iu ON iu.id = ti.inviter_id
+        WHERE ti.invitee_id = ? AND ti.sprint_id = ? AND ti.status = 'pending'
+        ORDER BY ti.created_at DESC
+    ");
+    $invStmt->execute([$userId, $sprintId]);
+    $myInvites = $invStmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 // Работа пользователя
 $subStmt = $conn->prepare("SELECT * FROM sprint_submissions WHERE sprint_id = ? AND user_id = ?");
 $subStmt->execute([$sprintId, $userId]);
@@ -165,7 +214,7 @@ require_once('../swad/static/elements/header.php');
         .nav-btn:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
         .timer-badge { background: rgba(195,33,120,.12); border: 1px solid rgba(195,33,120,.3); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; }
         .participant-layout { display: flex; height: 80vh; }
-        .sidebar { width: 230px; flex-shrink: 0; background: #00000030; padding: 10px; margin: 10px 0px 10px 10px; border-radius: 15px; }
+        .sidebar { width: 230px; flex-shrink: 0; background: #00000030; padding: 10px; margin: 10px 0px 10px 10px; border-radius: 15px; overflow-y: auto; overflow-x: hidden;  }
         .sidebar-section { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.25); text-transform: uppercase; letter-spacing: .08em; padding: 10px 10px 5px; margin-top: 6px; }
         .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.45); transition: .001s; border: 1px solid transparent; }
         .sidebar-item:hover { background: rgba(255,255,255,.05); color: #e8ddf0; }
@@ -263,6 +312,22 @@ require_once('../swad/static/elements/header.php');
                 <div class="cm-val" id="countdown-sidebar"><?= $countdownStr ?></div>
                 <div class="cm-lbl"><?= $countdownLabel ?></div>
             </div>
+            <?php $sprint['telegram_channel'] = 'https://t.me/+7kctWUmcnnwzYjAy'; ?>
+            <?php if (!empty($sprint['telegram_channel'])): ?>
+            <a href="<?= htmlspecialchars($sprint['telegram_channel']) ?>" 
+            target="_blank" rel="noopener"
+            style="display:flex; align-items:center; gap:8px; margin-top:10px;
+                    background:rgba(0,136,204,.15); border:1px solid rgba(0,136,204,.3);
+                    border-radius:8px; padding:8px 10px; color:#7dd3f7;
+                    font-size:12px; font-weight:700; text-decoration:none; transition:.15s;"
+            onmouseover="this.style.background='rgba(0,136,204,.25)'"
+            onmouseout="this.style.background='rgba(0,136,204,.15)'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.93.43l-2.58-1.9-1.24 1.2c-.14.13-.26.25-.53.25l.19-2.67 4.84-4.37c.21-.19-.05-.29-.32-.1L7.54 14.44l-2.52-.79c-.55-.17-.56-.55.11-.81l9.85-3.8c.46-.17.86.11.66.76z"/>
+                </svg>
+                Telegram-канал джема
+            </a>
+            <?php endif; ?>
         </div>
         <div class="sidebar-section">Моё участие</div>
         <div class="sidebar-item active" onclick="showView('overview',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></span>Обзор</div>
@@ -270,6 +335,9 @@ require_once('../swad/static/elements/header.php');
         <div class="sidebar-item" onclick="showView('submit',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-7.07 17.07L12 22l7.07-2.93A10 10 0 0 0 12 2zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg></span>Сдать работу</div>
         <div class="sidebar-section">Спринт</div>
         <div class="sidebar-item" onclick="showView('scoreboard',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg></span>Рейтинг</div>
+        <div class="sidebar-item" onclick="showView('experts')" id="nav-experts">
+            <span>🏅</span> Эксперты
+        </div>
         <div class="sidebar-item" onclick="showView('criteria',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm4 12h-4v-2h4v2zm0-4h-4v-2h4v2zm-8 4H8v-2h2v2zm0-4H8v-2h2v2z"/></svg></span>Критерии</div>
         <div class="sidebar-item" onclick="showView('announcements',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></span>Объявления</div>
     </div>
@@ -294,6 +362,66 @@ require_once('../swad/static/elements/header.php');
                 <div class="stat-card"><div class="sc-val"><?= $submission ? '1' : '0' ?></div><div class="sc-lbl">Работ сдано</div></div>
                 <div class="stat-card"><div class="sc-val"><?= $phaseRu ?></div><div class="sc-lbl">Текущий этап</div></div>
             </div>
+            <!-- ── Моя команда ── -->
+            <div class="card" id="my-team">
+                <div class="card-title">
+                    <span>🛡️ Моя команда</span>
+                    <?php if (!$myTeam): ?>
+                        <a href="/l4t?action=create_team&jam_id=<?= $sprintId ?>" class="btn-team" style="font-size:12px;padding:6px 12px;">+ Создать команду</a>
+                    <?php elseif ($isCaptain): ?>
+                        <button class="btn-team" style="font-size:12px;padding:6px 12px;cursor:pointer;" onclick="inviteToTeam(<?= (int)$myTeam['id'] ?>)">+ Пригласить</button>
+                    <?php endif; ?>
+                </div>
+                <?php if ($myTeam): ?>
+                    <div style="margin-bottom:10px;">
+                        <div style="font-weight:700;"><?= htmlspecialchars($myTeam['team_name']) ?></div>
+                        <?php if (!empty($myTeam['team_desc'])): ?>
+                            <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;"><?= htmlspecialchars($myTeam['team_desc']) ?></div>
+                        <?php endif; ?>
+                        <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:5px;">
+                            <?= count($myTeamMembers) ?> / <?= (int)$myTeam['team_limit'] ?> ·
+                            <?= $myTeam['visibility'] === 'private' ? 'приватная' : 'публичная' ?>
+                        </div>
+                    </div>
+                    <div class="team-grid">
+                        <?php foreach ($myTeamMembers as $m): ?>
+                            <div class="team-card">
+                                <div class="tc-av">
+                                    <?php if (!empty($m['profile_picture'])): ?>
+                                        <img src="<?= htmlspecialchars($m['profile_picture']) ?>" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+                                    <?php else: ?>
+                                        <?= $m['member_role'] === 'captain' ? '👑' : '👤' ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="tc-name"><a href="/player/<?= urlencode($m['username']) ?>"><?= htmlspecialchars($m['username']) ?></a></div>
+                                <div class="tc-badge"><?= $m['member_role'] === 'captain' ? 'Капитан' : 'Участник' ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn-team" style="cursor:pointer;background:rgba(244,67,54,.1);border-color:rgba(244,67,54,.3);color:#f88;" onclick="leaveTeam()">Выйти из команды</button>
+                    </div>
+                <?php else: ?>
+                    <div style="color:rgba(255,255,255,.5);font-size:13px;">Вы участвуете <strong style="color:#e8ddf0;">соло</strong>. Создайте команду или примите приглашение ниже.</div>
+                <?php endif; ?>
+            </div>
+
+            <!-- ── Приглашения ── -->
+            <?php if (!empty($myInvites)): ?>
+            <div class="card" id="invites">
+                <div class="card-title"><span>✉️ Приглашения в команды</span></div>
+                <?php foreach ($myInvites as $inv): ?>
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:13px;">«<?= htmlspecialchars($inv['team_name']) ?>»</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,.35);">от <?= htmlspecialchars($inv['inviter_name']) ?> · <?= (int)$inv['members_count'] ?>/<?= (int)$inv['team_limit'] ?></div>
+                        </div>
+                        <button class="btn-team" style="cursor:pointer;" onclick="respondInvite(<?= (int)$inv['invite_id'] ?>,'accept')">Принять</button>
+                        <button class="btn-team" style="cursor:pointer;background:rgba(255,255,255,.05);" onclick="respondInvite(<?= (int)$inv['invite_id'] ?>,'decline')">Отклонить</button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
             <!-- Описание спринта (с MD) -->
             <?php if (!empty($sprint['description'])): ?>
                 <div class="card">
@@ -429,15 +557,79 @@ require_once('../swad/static/elements/header.php');
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <!-- Experts view -->
+<div class="view" id="view-experts">
+    <div class="page-title">Эксперты джема</div>
+    <div class="page-sub">Специалисты, которые оценивают работы участников</div>
+    <?php if (empty($sprintExperts)): ?>
+        <div class="card" style="text-align:center; padding:40px; color:rgba(255,255,255,.3);">
+            Эксперты ещё не назначены
+        </div>
+    <?php else: ?>
+        <div class="card">
+            <div class="team-grid">
+                <?php foreach ($sprintExperts as $exp): ?>
+                <div class="team-card">
+                    <div class="tc-av">
+                        <?php if (!empty($exp['profile_picture'])): ?>
+                            <img src="<?= htmlspecialchars($exp['profile_picture']) ?>" 
+                                 style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+                        <?php else: ?>
+                            🏅
+                        <?php endif; ?>
+                    </div>
+                    <div class="tc-name">
+                        <a href="/player/<?= urlencode($exp['username']) ?>">
+                            <?= htmlspecialchars($exp['username']) ?>
+                        </a>
+                        <?php if (!empty($exp['role'])): ?>
+                            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;">
+                                <?= htmlspecialchars($exp['role']) ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
     </div>
 </div>
 
 <script>
-    function showView(name, el) {
+    function showView(name) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-'+name).classList.add('active');
         document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-        if (el) el.classList.add('active');
+        document.getElementById('view-' + name).classList.add('active');
+        document.getElementById('nav-' + name).classList.add('active');
+    }
+</script>
+<script>
+    const SPRINT_ID_T = <?= (int)$sprintId ?>;
+
+    function teamApi(url, payload) {
+        return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r => r.json());
+    }
+    async function respondInvite(inviteId, action) {
+        const d = await teamApi('/swad/controllers/jams/respond_invite.php', { invite_id: inviteId, action });
+        d.success ? location.reload() : alert(d.message || 'Ошибка');
+    }
+    async function inviteToTeam(teamId) {
+        const nick = prompt('Никнейм участника для приглашения:');
+        if (!nick) return;
+        const d = await teamApi('/swad/controllers/jams/invite_member.php', { team_id: teamId, username: nick.trim() });
+        alert(d.message || (d.success ? 'Приглашение отправлено' : 'Ошибка'));
+    }
+    async function leaveTeam() {
+        if (!confirm('Выйти из команды?')) return;
+        const d = await teamApi('/swad/controllers/jams/leave_team.php', { sprint_id: SPRINT_ID_T });
+        d.success ? location.reload() : alert(d.message || 'Ошибка');
+    }
+    if (location.hash === '#invites') {
+        const el = document.getElementById('invites') || document.getElementById('my-team');
+        if (el) { el.scrollIntoView({ behavior: 'smooth' }); el.style.outline = '1px solid rgba(195,33,120,.5)'; }
     }
 </script>
 

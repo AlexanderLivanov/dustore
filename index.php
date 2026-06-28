@@ -86,19 +86,20 @@ mobile_redirect_if_needed();
             </div>
         </section>
 
-        <!-- <section class="slider-section" style="padding: 0">
+        <section class="slider-section" style="padding: 0">
             <div class="slider-container">
                 <div class="slider-track">
                     <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
                         <div class="slide-overlay"></div>
                         <div class="slide-content">
-                            <h2>3 сентября состоится презентация проекта!</h2>
-                            <p>Мы расскажем обо всех наших преимуществах и сделаем полный обзор Платформы</p>
-                            <a href="https://t.me/dustore_official" target="_blank" class="btn">Следить за новостями</a>
+                            <h2>Совместный аномальный джем с К.О.Н.Т.У.Р</h2>
+                            <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 5 по 13 августа.</p>
+                            <a href="https://t.me/+T5CajyXvgvpmMjRi" target="_blank" class="btn">Группа для участников джема</a>
+                            <a href="https://dustore.ru/jams" target="_blank" class="btn">Страница джема</a>
                         </div>
                     </div>
 
-                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=1351&q=80');">
+                    <!-- <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&auto=format&fit=crop&w=1351&q=80');">
                         <div class="slide-overlay"></div>
                         <div class="slide-content">
                             <h2>С 1 августа проходит первое бета-тестирование платформы</h2>
@@ -124,21 +125,21 @@ mobile_redirect_if_needed();
                             <a href="/devs" class="btn">Начать разработку</a>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <div class="slider-arrows">
-                    <div class="slider-arrow prev">❮</div>
-                    <div class="slider-arrow next">❯</div>
+                    <!-- <div class="slider-arrow prev">❮</div>
+                    <div class="slider-arrow next">❯</div> -->
                 </div>
 
                 <div class="slider-nav">
                     <div class="slider-dot active"></div>
+                    <!-- <div class="slider-dot"></div>
                     <div class="slider-dot"></div>
-                    <div class="slider-dot"></div>
-                    <div class="slider-dot"></div>
+                    <div class="slider-dot"></div> -->
                 </div>
             </div>
-        </section> -->
+        </section>
 
         <!-- Что это? -->
         <section class="stats">
