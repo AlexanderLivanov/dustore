@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayInspired — Сообщения</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+<div id="toasts"></div>
+
+<header class="site-header">
+  <div class="header-bar">
+    <a class="logo" href="feed.html">StayInspired</a>
+    <nav class="site-nav">
+      <a class="nav-btn" href="feed.html">Лента</a>
+      <a class="nav-btn" href="discover.html">Открытия</a>
+      <a class="nav-btn active" href="messages.html">
+        Сообщения
+        <svg class="nav-scribble" viewBox="0 0 80 9" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2 6 C 14 2, 26 8, 40 4 S 66 8, 78 3"/>
+        </svg>
+      </a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="header-search">
+      <span style="color:var(--ink-25);font-size:14px;">⌕</span>
+      <input type="text" placeholder="Поиск…">
+      <span class="header-kbd">⌘K</span>
+    </div>
+    <a class="btn-primary" href="feed.html">Написать статью</a>
+    <div class="profile-wrap">
+      <button class="avatar avatar-md avatar-btn" id="prof-btn" aria-expanded="false">А</button>
+      <div class="profile-menu" id="prof-menu">
+        <div class="pm-head">
+          <div class="pm-name">Александр</div>
+          <div class="pm-handle">@alexander</div>
+        </div>
+        <a class="pm-item" href="profile.html">Мой профиль</a>
+        <a class="pm-item" href="profile.html#settings">Настройки</a>
+        <a class="pm-item danger" href="index.html">Выйти</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="msg-layout">
+
+  <!-- ── Chat list ── -->
+  <div class="chat-list">
+    <div class="cl-head">
+      <h2>Сообщения</h2>
+      <div class="search-mini">
+        <span style="color:var(--ink-25);">⌕</span>
+        <input type="text" placeholder="Поиск чатов…">
+      </div>
+    </div>
+    <div class="chat-items">
+      <div class="chat-item active"
+        onclick="selectChat(this,'Мира Оконкво','МО',true,'@miradraws')">
+        <div class="ci-av">МО<div class="online-dot"></div></div>
+        <div class="ci-info">
+          <div class="ci-name">Мира Оконкво</div>
+          <div class="ci-prev">Спасибо за отзыв!…</div>
+        </div>
+        <div class="ci-meta">
+          <span class="ci-time">14:22</span>
+          <span class="ci-badge">2</span>
+        </div>
+      </div>
+      <div class="chat-item" onclick="selectChat(this,'Даниэль Вей','ДВ',false,'@dvey')">
+        <div class="ci-av">ДВ</div>
+        <div class="ci-info">
+          <div class="ci-name">Даниэль Вей</div>
+          <div class="ci-prev">Точно! Увидимся на…</div>
+        </div>
+        <div class="ci-meta"><span class="ci-time">вчера</span></div>
+      </div>
+      <div class="chat-item" onclick="selectChat(this,'Sol','So',true,'@solmaking')">
+        <div class="ci-av">So<div class="online-dot"></div></div>
+        <div class="ci-info">
+          <div class="ci-name">Sol</div>
+          <div class="ci-prev">Ты пробовал Fraunces?</div>
+        </div>
+        <div class="ci-meta">
+          <span class="ci-time">пн</span>
+          <span class="ci-badge">1</span>
+        </div>
+      </div>
+      <div class="chat-item" onclick="selectChat(this,'Тимур','Ти',false,'@tmr')">
+        <div class="ci-av">Ти</div>
+        <div class="ci-info">
+          <div class="ci-name">Тимур</div>
+          <div class="ci-prev">👋</div>
+        </div>
+        <div class="ci-meta"><span class="ci-time">сб</span></div>
+      </div>
+      <div class="chat-item" onclick="selectChat(this,'Ная','На',true,'@naya.writes')">
+        <div class="ci-av">На<div class="online-dot"></div></div>
+        <div class="ci-info">
+          <div class="ci-name">Ная</div>
+          <div class="ci-prev">Какой следующий пост?</div>
+        </div>
+        <div class="ci-meta"><span class="ci-time">пт</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dialog ── -->
+  <div class="dialog">
+    <div class="dlg-head">
+      <div class="dlg-av">МО<div class="online-dot"></div></div>
+      <div>
+        <div class="dlg-name" id="dlg-name">Мира Оконкво</div>
+        <div class="dlg-status" id="dlg-status">онлайн · @miradraws</div>
+      </div>
+      <div class="dlg-acts">
+        <button class="dlg-act" onclick="toast('Поиск по диалогу')">⌕</button>
+        <button class="dlg-act" onclick="toast('Профиль пользователя')">☰</button>
+      </div>
+    </div>
+
+    <div class="msgs-area" id="msgs-area">
+      <div class="msg-day"><span>Сегодня</span></div>
+      <div class="msg-row">
+        <div class="msg-av">МО</div>
+        <div class="bubble">Привет! Видела твой комментарий — очень точно подмечено.
+          <span class="btime">14:18</span></div>
+      </div>
+      <div class="msg-row">
+        <div class="msg-av">МО</div>
+        <div class="bubble">Как насчёт совместного треда — рубрика «сделали вместе»?
+          <span class="btime">14:19</span></div>
+      </div>
+      <div class="msg-row mine">
+        <div class="msg-av">А</div>
+        <div class="bubble">Привет! Звучит интересно. Что именно ты представляешь?
+          <span class="btime">14:21</span></div>
+      </div>
+    </div>
+
+    <div class="msg-input-bar">
+      <div class="msg-input-wrap">
+        <button class="msg-attach" onclick="toast('Прикрепить файл')">＋</button>
+        <textarea id="msg-ta" rows="1" placeholder="Написать…"></textarea>
+      </div>
+      <button class="msg-send" onclick="sendMsg()">→</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/ui.js"></script>
+<script src="js/messages.js"></script>
+</body>
+</html>

@@ -1469,10 +1469,18 @@ $sprintData = [
                         $links = explode("\n", $sprint['useful_links'] ?? '');
                         foreach ($links as $link):
                             $link = trim($link);
-                            if ($link):
+                            if ($link === '') continue;
+                            // Формат строки: "URL (подпись)" — разбираем на адрес и подпись
+                            if (preg_match('/^(\S+)\s*\((.+)\)\s*$/u', $link, $m)) {
+                                $url   = $m[1];
+                                $label = trim($m[2]);
+                            } else {
+                                $url   = $link;
+                                $label = $link;
+                            }
                         ?>
-                            <a href="<?= e($link) ?>" target="_blank"><?= e($link) ?></a>
-                        <?php endif; endforeach; ?>
+                            <a href="<?= e($url) ?>" target="_blank" rel="noopener"><?= e($label) ?></a>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>

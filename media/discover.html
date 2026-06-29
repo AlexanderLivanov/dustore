@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayInspired — Открытия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+<div id="toasts"></div>
+
+<header class="site-header">
+  <div class="header-bar">
+    <a class="logo" href="feed.html">StayInspired</a>
+    <nav class="site-nav">
+      <a class="nav-btn" href="feed.html" data-page="feed.html">Лента</a>
+      <a class="nav-btn active" href="discover.html" data-page="discover.html">
+        Открытия
+        <svg class="nav-scribble" viewBox="0 0 80 9" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2 6 C 14 2, 26 8, 40 4 S 66 8, 78 3"/>
+        </svg>
+      </a>
+      <a class="nav-btn" href="messages.html" data-page="messages.html">
+        Сообщения <span class="nav-badge">3</span>
+      </a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="header-search">
+      <span style="color:var(--ink-25);font-size:14px;">⌕</span>
+      <input type="text" placeholder="Поиск…">
+      <span class="header-kbd">⌘K</span>
+    </div>
+    <a class="btn-primary" href="feed.html">Написать статью</a>
+    <div class="profile-wrap">
+      <button class="avatar avatar-md avatar-btn" id="prof-btn" aria-expanded="false">А</button>
+      <div class="profile-menu" id="prof-menu">
+        <div class="pm-head">
+          <div class="pm-name">Александр</div>
+          <div class="pm-handle">@alexander</div>
+        </div>
+        <a class="pm-item" href="profile.html">Мой профиль</a>
+        <a class="pm-item" href="profile.html#settings">Настройки</a>
+        <a class="pm-item danger" href="index.html">Выйти</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="page-wide">
+  <div class="eyebrow" style="margin-bottom:28px;">Открытия недели</div>
+
+  <div class="disc-grid">
+    <div class="disc-card wide" onclick="toast('Открыть тред')">
+      <div class="dc-tag">✦ в центре внимания</div>
+      <div class="dc-q">Что вы выбросили из процесса — и сразу стало легче работать?</div>
+      <div class="dc-meta">128 ответов · 3 ч назад</div>
+    </div>
+    <div class="disc-card" onclick="toast('Открыть тред')">
+      <div class="dc-tag">↳ вопрос</div>
+      <div class="dc-q">Как выглядит ваш «ритуал» начала работы?</div>
+      <div class="dc-meta">47 ответов</div>
+    </div>
+    <div class="disc-card" onclick="toast('Открыть тред')">
+      <div class="dc-tag">✶ резонанс</div>
+      <div class="dc-q">Лучший совет, который вы получили не от человека?</div>
+      <div class="dc-meta">94 ответа</div>
+    </div>
+    <div class="disc-card" onclick="toast('Открыть тред')">
+      <div class="dc-tag">🖼 показали</div>
+      <div class="dc-q">Покажите рабочее место в одном кадре.</div>
+      <div class="dc-meta">210 ответов</div>
+    </div>
+    <div class="disc-card wide" onclick="toast('Открыть тред')">
+      <div class="dc-tag">↳ коллаборация</div>
+      <div class="dc-q">Кто хочет сделать совместный пост о вдохновении в повседневном?</div>
+      <div class="dc-meta">12 откликнулись · открытый тред</div>
+    </div>
+    <div class="disc-card" onclick="toast('Открыть тред')">
+      <div class="dc-tag">✦ дебют</div>
+      <div class="dc-q">Первый пост новых авторов этой недели.</div>
+      <div class="dc-meta">8 авторов</div>
+    </div>
+    <div class="disc-card" onclick="toast('Открыть тред')">
+      <div class="dc-tag">⏱ быстрый вопрос</div>
+      <div class="dc-q">Что вы слушаете во время работы прямо сейчас?</div>
+      <div class="dc-meta">63 ответа · активный</div>
+    </div>
+    <div class="disc-card" onclick="toast('Открыть тред')">
+      <div class="dc-tag">↩ ответить</div>
+      <div class="dc-q">Расскажите о провале, который стал уроком.</div>
+      <div class="dc-meta">51 ответ</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/ui.js"></script>
+</body>
+</html>
