@@ -5,7 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/create_team.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/get_team.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/invite_member.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/leave_team.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/respond_invite.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/search_participants.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/devs/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/edit.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/participant.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/participant.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/l4t/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/tg_bot.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/tg_bot.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,7 +41,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Merging main&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/xampp/htdocs/swad/static/img&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   }

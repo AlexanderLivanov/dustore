@@ -1057,27 +1057,12 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
     $jamData   = null;
     $jamAction = $_GET['action'] ?? '';
 
-    if (!empty($_GET['jam_id'])) {
-
-        $stmt = $pdo->prepare("
-            SELECT
-                id,
-                title,
-                description
-            FROM sprints
-            WHERE id = ?
-            LIMIT 1
-        ");
-
-        $stmt->execute([
-            (int)$_GET['jam_id']
-        ]);
-
+    $jamLookupId = (int)($_GET['jam_id'] ?? $_GET['sprint_id'] ?? 0);
+    if ($jamLookupId) {
+        $stmt = $pdo->prepare("SELECT id, title, description FROM sprints WHERE id = ? LIMIT 1");
+        $stmt->execute([$jamLookupId]);
         $jamData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($jamData) {
-            $jamMode = true;
-        }
+        if ($jamData) { $jamMode = true; }
     }
 
     $my_bids = [];
@@ -1783,6 +1768,180 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                 { hideSave: false }
             );
             document.getElementById('modalSave').textContent = 'Создать заявку';
+        }
+
+        /* ── Автокомплит участников ── */
+        function attachUserAutocomplete(input, sprintId) {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'position:relative;flex:1;';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+            input.style.width = '100%';
+
+            const dd = document.createElement('div');
+            dd.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:50;background:#1c0c2a;'
+                + 'border:1px solid rgba(195,33,120,.35);border-radius:8px;margin-top:4px;'
+                + 'max-height:200px;overflow:auto;display:none;';
+            wrap.appendChild(dd);
+
+            let timer;
+            input.addEventListener('input', () => {
+                const q = input.value.trim();
+                clearTimeout(timer);
+                if (q.length < 4) { dd.style.display = 'none'; return; }
+                timer = setTimeout(() => {
+                    fetch(`/swad/controllers/jams/search_participants.php?sprint_id=${sprintId}&q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(list => {
+                            if (!list.length) {
+                                dd.innerHTML = '<div style="padding:8px 10px;color:rgba(255,255,255,.4);font-size:.82rem;">Никого не найдено</div>';
+                            } else {
+                                dd.innerHTML = list.map(u => {
+                                    const handle  = u.username || u.telegram_username || '';
+                                    const display = u.username || ('@' + (u.telegram_username || ''));
+                                    return `
+                                    <div class="ac-item" data-u="${esc(handle)}"
+                                         style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:.85rem;color:#e8ddf0;">
+                                        ${u.profile_picture ? `<img src="${esc(u.profile_picture)}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;">` : '<span>👤</span>'}
+                                        ${esc(display)}
+                                    </div>`;
+                                }).join('');
+                            }
+                            dd.style.display = 'block';
+                        });
+                }, 250);
+            });
+            dd.addEventListener('click', e => {
+                const item = e.target.closest('.ac-item');
+                if (!item) return;
+                input.value = item.dataset.u;
+                dd.style.display = 'none';
+            });
+            dd.addEventListener('mouseover', e => { const i = e.target.closest('.ac-item'); if (i) i.style.background = 'rgba(195,33,120,.15)'; });
+            dd.addEventListener('mouseout',  e => { const i = e.target.closest('.ac-item'); if (i) i.style.background = ''; });
+            document.addEventListener('click', e => { if (!wrap.contains(e.target)) dd.style.display = 'none'; });
+        }
+
+        /* ── Командный модал джема ── */
+        function openTeamModal() {
+            if (!JAM_DATA) return;
+            const sprintId = JAM_DATA.id;
+            const jamTitle = JAM_DATA.title || 'джем';
+
+            fetch(`/swad/controllers/jams/get_team.php?sprint_id=${sprintId}`)
+                .then(r => r.json())
+                .then(state => {
+                    if (!state.success) { alert(state.message || 'Ошибка'); return; }
+                    if (!state.in_sprint) {
+                        Modal.open(`Команда — ${esc(jamTitle)}`,
+                            `<div style="color:rgba(255,255,255,.7);line-height:1.6;">Чтобы собрать команду, сначала зарегистрируйтесь на джем.</div>
+                             <div style="margin-top:14px;"><a class="modal-btn modal-btn-primary" style="text-decoration:none;display:inline-block;" href="/jams?sprint=${sprintId}">Открыть джем</a></div>`,
+                            null, { hideSave: true });
+                        return;
+                    }
+                    if (state.has_team) renderTeamView(state);
+                    else renderCreateTeam(sprintId, jamTitle);
+                })
+                .catch(() => alert('Не удалось загрузить команду'));
+        }
+
+        function renderCreateTeam(sprintId, jamTitle) {
+            Modal.open(`Создать команду — ${esc(jamTitle)}`, `
+                <div class="modal-field">
+                    <label class="modal-label">Название команды *</label>
+                    <input class="l4t-input" id="tName" maxlength="120" placeholder="Например, Pixel Wizards">
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Описание</label>
+                    <textarea class="l4t-textarea" id="tDesc" maxlength="2000" placeholder="Кого ищете, что за проект..."></textarea>
+                </div>
+                <div class="modal-row">
+                    <div style="flex:1;">
+                        <label class="modal-label">Видимость</label>
+                        <select class="l4t-select" id="tVis"><option value="public">Публичная</option><option value="private">Приватная</option></select>
+                    </div>
+                    <div style="width:120px;">
+                        <label class="modal-label">Лимит</label>
+                        <input class="l4t-input" id="tLimit" type="number" min="2" max="20" value="5">
+                    </div>
+                </div>`, () => {
+                const name = document.getElementById('tName').value.trim();
+                if (!name) { alert('Введите название'); return; }
+                apiPost('/swad/controllers/jams/create_team.php', {
+                    sprint_id: sprintId,
+                    team_name: name,
+                    team_desc: document.getElementById('tDesc').value.trim(),
+                    visibility: document.getElementById('tVis').value,
+                    team_limit: parseInt(document.getElementById('tLimit').value) || 5,
+                }).then(d => {
+                    if (!d.success) { alert(d.message || 'Ошибка'); return; }
+                    renderInviteStep(d.team_id);
+                });
+            });
+            document.getElementById('modalSave').textContent = 'Создать';
+        }
+
+        function renderInviteStep(teamId, sprintId) {
+            Modal.open('Команда создана 🎉', `
+                <div style="color:rgba(255,255,255,.75);line-height:1.6;margin-bottom:14px;">Пригласите участников по нику — им придёт уведомление в профиль.</div>
+                <div class="modal-row">
+                    <input class="l4t-input" id="invNick" placeholder="Ник участника (от 4 символов)" autocomplete="off">
+                    <button class="modal-btn modal-btn-primary" id="invBtn" style="flex:none;">Пригласить</button>
+                </div>
+                <div id="invResult" style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:8px;"></div>`,
+                null, { hideSave: true });
+            attachUserAutocomplete(document.getElementById('invNick'), sprintId);
+            document.getElementById('invBtn').addEventListener('click', () => {
+                const nick = document.getElementById('invNick').value.trim();
+                if (!nick) return;
+                apiPost('/swad/controllers/jams/invite_member.php', { team_id: teamId, username: nick }).then(d => {
+                    const r = document.getElementById('invResult');
+                    r.textContent = d.message || (d.success ? 'Приглашение отправлено' : 'Ошибка');
+                    r.style.color = d.success ? '#5b8def' : '#f44336';
+                    if (d.success) document.getElementById('invNick').value = '';
+                });
+            });
+        }
+
+        function renderTeamView(state) {
+            const t = state.team;
+            const membersHtml = (state.members || []).map(m => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+                    <span>${m.member_role === 'captain' ? '👑' : '👤'}</span>
+                    <a href="/l4t?username=${esc(m.username)}" target="_blank" style="color:#e8ddf0;text-decoration:none;">${esc(m.username)}</a>
+                    ${m.member_role === 'captain' ? '<span style="font-size:.7rem;color:rgba(255,255,255,.4);">капитан</span>' : ''}
+                </div>`).join('');
+            let body = `
+                <div style="margin-bottom:12px;">
+                    <div style="font-weight:600;font-size:1rem;">${esc(t.team_name)}</div>
+                    ${t.team_desc ? `<div style="color:rgba(255,255,255,.6);font-size:.88rem;margin-top:4px;">${esc(t.team_desc)}</div>` : ''}
+                    <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:6px;">${state.members.length} / ${t.team_limit} · ${t.visibility === 'private' ? 'приватная' : 'публичная'}</div>
+                </div>
+                <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:10px;">${membersHtml}</div>`;
+            if (state.is_captain) {
+                body += `
+                <div class="modal-row" style="margin-top:14px;">
+                    <input class="l4t-input" id="invNick" placeholder="Пригласить по нику">
+                    <button class="modal-btn modal-btn-primary" id="invBtn" style="flex:none;">Пригласить</button>
+                </div>
+                <div id="invResult" style="font-size:.8rem;margin-top:8px;"></div>`;
+            }
+            Modal.open('Моя команда', body, null, { hideSave: true });
+            if (document.getElementById('invNick')) {
+                document.getElementById('invNick').placeholder = 'Ник участника (от 4 символов)';
+                document.getElementById('invNick').setAttribute('autocomplete', 'off');
+                attachUserAutocomplete(document.getElementById('invNick'), t.sprint_id);
+            }
+            document.getElementById('invBtn')?.addEventListener('click', () => {
+                const nick = document.getElementById('invNick').value.trim();
+                if (!nick) return;
+                apiPost('/swad/controllers/jams/invite_member.php', { team_id: t.id, username: nick }).then(d => {
+                    const r = document.getElementById('invResult');
+                    r.textContent = d.message || (d.success ? 'Отправлено' : 'Ошибка');
+                    r.style.color = d.success ? '#5b8def' : '#f44336';
+                    if (d.success) document.getElementById('invNick').value = '';
+                });
+            });
         }
 
         document.getElementById('modalClose').addEventListener('click', () => Modal.close());
@@ -2558,6 +2717,10 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                             alert(d.message || 'Не удалось отправить отклик');
                         }
                     });
+            }
+
+            if (JAM_MODE && JAM_ACTION === 'create_team') {
+                openTeamModal();
             }
 
             if (JAM_MODE && JAM_ACTION === 'jam') {

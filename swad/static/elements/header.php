@@ -517,14 +517,15 @@ $stmt->execute([
                             <path d="M4.217 7c-.274 0 -.544 .054 -.797 .161c-1.426 .615 -1.767 2.562 -1.078 4.335c.563 1.451 1.71 2.504 2.941 2.504c.274 0 .544 -.054 .797 -.161c1.426 -.615 1.767 -2.562 1.078 -4.335c-.563 -1.451 -1.71 -2.504 -2.941 -2.504z" />
                         </svg>
                     </button>
-                    <button class="button" style="padding: 6px;" onclick="location.href='/notifications'">
-                        <!--<?= $unread_notif_count ?> -->
-                        <svg xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            class="icon icon-tabler icons-tabler-filled icon-tabler-bell"
+                    <button class="button" style="padding: 6px; position: relative;" onclick="location.href='/notifications'">
+                        <?php if (!empty($unread_notif_count)): ?>
+                            <span style="position:absolute; top:5px; right:5px; width:9px; height:9px;
+                                        border-radius:50%; background:#ff3b3b;
+                                        border:2px solid var(--header-bg, #160822);
+                                        box-shadow:0 0 6px rgba(255,59,59,.7);"></span>
+                        <?php endif; ?>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                            fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-bell"
                             style="vertical-align: middle;">
                             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                             <path d="M14.235 19c.865 0 1.322 1.024 .745 1.668a3.992 3.992 0 0 1 -2.98 1.332a3.992 3.992 0 0 1 -2.98 -1.332c-.552 -.616 -.158 -1.579 .634 -1.661l.11 -.006h4.471z" />

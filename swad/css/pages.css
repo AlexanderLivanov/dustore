@@ -499,10 +499,11 @@ body.moonlight-theme .btn-secondary:hover {
     display: flex;
     transition: transform 0.5s ease-in-out;
     height: 100%;
+    justify-self: center;
 }
 
 .slider-slide {
-    min-width: 100%;
+    width: 180vh;
     height: 100%;
     position: relative;
     background-size: cover;
@@ -510,6 +511,7 @@ body.moonlight-theme .btn-secondary:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+
 }
 
 .slide-overlay {
