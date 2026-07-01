@@ -2687,6 +2687,7 @@ body.moonlight-theme .profile-right {
     flex-direction: column;
     box-shadow: 0px 0px 0px 1px #fdfdfd12;
     background: #ffffff05;
+    border-radius: 15px;
 }
 body.moonlight-theme .avatar-wrapper {
     position: relative;

@@ -55,7 +55,7 @@ body{
 }
 .app{
   display:grid;grid-template-columns:340px 1fr;gap:14px;
-  height:85dvh;padding:14px;max-width:1280px;margin:0 auto;
+  height:88dvh;padding:10px;width:97vw;margin:0 auto;
 }
 .panel{
   background:var(--glass);border:1px solid var(--glass-br);
@@ -69,7 +69,6 @@ body{
 .brand .glyph{
   width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
   background:linear-gradient(135deg,var(--p),var(--p2));font-family:"JetBrains Mono";font-size:15px;
-  box-shadow:0 0 24px rgba(195,33,120,.55);
 }
 .brand small{font-family:"JetBrains Mono";font-weight:500;color:var(--mut);font-size:11px;letter-spacing:1px;text-transform:uppercase}
 .tabs{display:flex;gap:6px;margin-top:14px;padding:4px;background:rgba(0,0,0,.25);border-radius:13px}
@@ -78,9 +77,9 @@ body{
   color:var(--mut);font:600 13px Inter;letter-spacing:.3px;transition:.18s;display:flex;align-items:center;justify-content:center;gap:7px
 }
 .tab .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.0;transition:.18s}
-.tab.active{color:#fff;background:linear-gradient(135deg,var(--p),var(--p2));box-shadow:0 6px 18px -6px var(--p)}
+.tab.active{color:#fff;background: linear-gradient(135deg, #4a7bbb, #4a7bbb);box-shadow:0 0px 0px 0px var(--p)}
 .tab.active .dot{opacity:1}
-.tab[data-tab=studio].active{background:linear-gradient(135deg,var(--s),#0e7490);box-shadow:0 6px 18px -6px var(--s)}
+.tab[data-tab=studio].active{background:linear-gradient(135deg,var(--s),#0e7490);box-shadow:0 0px 0px 0px var(--s)}
 
 .list{flex:1;min-height:0;overflow-y:auto;padding:8px 10px 14px}
 .list::-webkit-scrollbar{width:8px}.list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:8px}
@@ -130,10 +129,16 @@ body{
 /* лента-таймлайн с центральным «позвоночником» */
 .thread{flex:1;min-height:0;overflow-y:auto;padding:26px 28px;position:relative}
 .thread::-webkit-scrollbar{width:8px}.thread::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:8px}
-.thread::before{                       /* сам позвоночник */
-  content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;transform:translateX(-50%);
-  background:linear-gradient(var(--p2),rgba(255,255,255,.06) 18%,rgba(255,255,255,.06) 82%,var(--p2));
-  opacity:.5;
+.thread::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(rgba(255, 255, 255, .06) 18%, rgba(255, 255, 255, .06) 82%);
+    opacity: .5;
 }
 .msg{display:grid;grid-template-columns:1fr 30px 1fr;align-items:start;margin:14px 0;position:relative}
 .lane{grid-column:2;display:flex;justify-content:center;padding-top:14px}
@@ -169,7 +174,7 @@ body{
 .send{
   flex:none;width:46px;height:46px;border:0;border-radius:14px;cursor:pointer;align-self:flex-end;
   background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-size:20px;
-  display:grid;place-items:center;transition:.16s;box-shadow:0 8px 20px -8px var(--p)
+  display:grid;place-items:center;transition:.16s;box-shadow:0 0px 0px 0px var(--p)
 }
 .send:hover{transform:translateY(-1px)}.send:active{transform:translateY(0)}
 .send:disabled{opacity:.4;cursor:default;transform:none}
@@ -196,6 +201,18 @@ body{
   .msg.them .bubble,.msg.mine .bubble{grid-column:2;justify-self:start;max-width:88%}
   .msg.them .bubble::after,.msg.mine .bubble::after{display:none}
 }
+
+@keyframes shakeSearch {
+    0%, 100% { transform: translateX(0) rotateX(0deg) rotateY(0deg); }
+    20%      { transform: translateX(-3px) rotate(-1deg); }
+    40%      { transform: translateX(3px) rotate(1deg); }
+    60%      { transform: translateX(-2px) rotate(-0.5deg); }
+    80%      { transform: translateX(2px) rotate(0.5deg); }
+}
+.shake-it {
+    animation: shakeSearch 0.3s ease-in-out;
+}
+
 </style>
 </head>
 <body>

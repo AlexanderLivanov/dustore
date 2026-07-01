@@ -5,21 +5,50 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/create_team.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/get_team.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/invite_member.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/leave_team.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/respond_invite.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/search_participants.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/chat/_helpers.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/chat/api.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/chat/index.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/jams/jam1/index.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/css/components.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/css/layout.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/css/pages.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/css/tokens.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/discover.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/feed.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/js/feed.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/js/messages.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/js/ui.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/media/messages.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/add_external_judge.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/deck.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/controllers/jams/send_announcment.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/edit.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/brokenpixel/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/brokenpixel/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/admin.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/jams/participant.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/participant.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/l4t/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/tg_bot.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/tg_bot.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/README.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/css/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/img/logo_sym.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/img/stayinsp_logo_horizontal.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/img/stayinsp_logo_quadratic.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/index.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/js/fullpage.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/js/script.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/news.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/media/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/media/subscriptions.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/README.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/admin.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/analytics.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/assets/css/styles.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/assets/js/app.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/employees.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/index.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/projects.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/reviews.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaurma/studio.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/player.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/player.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
