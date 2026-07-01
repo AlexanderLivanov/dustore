@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayInspired — Лента</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+<div id="toasts"></div>
+
+<!-- ═══════════════════════════════════════
+     ARTICLE READER OVERLAY (slide-up)
+════════════════════════════════════════ -->
+<div class="article-overlay" id="article-overlay">
+  <div class="ao-topbar">
+    <button class="ao-back" onclick="closeArticle()">← Назад</button>
+    <span class="ao-meta" id="ao-meta">Статья · 5 мин чтения</span>
+    <div class="ao-actions">
+      <button class="btn-ghost" onclick="toast('Сохранено в закладки')">Сохранить</button>
+      <button class="btn-ghost" onclick="copyLink()">Поделиться</button>
+    </div>
+  </div>
+  <div class="ao-body">
+    <div class="ao-article">
+      <h1 class="ao-title" id="ao-title">Заголовок статьи</h1>
+      <div class="ao-byline">
+        <div class="avatar avatar-sm" style="background:var(--ink);color:var(--paper);">А</div>
+        <div>
+          <div class="by-name" id="ao-author">Александр</div>
+          <div class="by-detail" id="ao-detail">@alexander · только что</div>
+        </div>
+      </div>
+      <div class="ao-content" id="ao-content">
+        <p>Здесь будет полный текст статьи. Начните писать в редакторе — и текст появится здесь при публикации.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     EDITOR OVERLAY (slide-up)
+════════════════════════════════════════ -->
+<div class="editor-overlay" id="editor-overlay">
+  <div class="editor-topbar">
+    <span class="logo">StayInspired</span>
+    <span class="editor-status" id="ed-status">Черновик</span>
+    <div class="editor-topbar-right">
+      <button class="btn-ghost" onclick="closeEditor()">Отмена</button>
+      <button class="btn-ghost" onclick="saveDraft()">Сохранить черновик</button>
+      <button class="btn-primary" onclick="publishArticle()">Опубликовать</button>
+    </div>
+  </div>
+  <div class="editor-body">
+    <div class="editor-write">
+      <textarea class="editor-title" id="ed-title" rows="1"
+        placeholder="Заголовок статьи…" maxlength="120"></textarea>
+      <div class="editor-divider"><span>текст</span></div>
+      <div class="editor-toolbar">
+        <button class="tb-btn" title="Жирный"><b>B</b></button>
+        <button class="tb-btn" title="Курсив"><i>I</i></button>
+        <button class="tb-btn" title="Ссылка" onclick="toast('Вставить ссылку')">↗</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" onclick="toast('Заголовок H2')">H₂</button>
+        <button class="tb-btn" onclick="toast('Цитата')">"  "</button>
+        <button class="tb-btn" onclick="toast('Код')">{ }</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" onclick="toast('Список')">≡</button>
+        <button class="tb-btn" onclick="toast('Изображение')">🖼</button>
+        <button class="tb-btn" onclick="toast('Разделитель')">—</button>
+      </div>
+      <textarea class="editor-content" id="ed-content" rows="1"
+        placeholder="Начните писать здесь. Хорошее повествование начинается с конкретной детали — не с введения…"></textarea>
+    </div>
+    <div class="editor-stats">
+      <div class="estat-block">
+        <h4>SEO</h4>
+        <div class="seo-ring">
+          <svg viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="var(--rule)" stroke-width="6"/>
+            <circle id="seo-arc" cx="40" cy="40" r="34" fill="none"
+              stroke="var(--ink)" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="213.6" stroke-dashoffset="213.6"
+              transform="rotate(-90 40 40)"
+              style="transition:stroke-dashoffset .5s,stroke .5s"/>
+          </svg>
+          <div class="seo-score-num" id="seo-num">0</div>
+          <div class="seo-score-lbl" id="seo-lbl">нет контента</div>
+        </div>
+        <div class="seo-tip" id="seo-tip">Добавьте заголовок и хотя бы 300 символов текста.</div>
+      </div>
+      <div class="estat-block">
+        <h4>Статистика</h4>
+        <div class="estat-row"><span class="estat-label">Символов</span><span class="estat-value" id="s-chars">0</span></div>
+        <div class="estat-row"><span class="estat-label">Слов</span><span class="estat-value" id="s-words">0</span></div>
+        <div class="estat-row"><span class="estat-label">Абзацев</span><span class="estat-value" id="s-paras">—</span></div>
+        <div class="estat-row"><span class="estat-label">Время чтения</span><span class="estat-value" id="s-read">—</span></div>
+      </div>
+      <div class="estat-block">
+        <h4>Читаемость</h4>
+        <div class="readab-bar-wrap"><div class="readab-bar" id="readab-bar" style="width:0%"></div></div>
+        <div class="readab-label" id="readab-label">Начните писать</div>
+        <div class="estat-row" style="margin-top:10px;">
+          <span class="estat-label">Длинные предложения</span>
+          <span class="estat-value" id="s-long">—</span>
+        </div>
+        <div class="estat-row">
+          <span class="estat-label">Средняя длина слова</span>
+          <span class="estat-value" id="s-avgword">—</span>
+        </div>
+      </div>
+      <div class="estat-block">
+        <h4>Теги</h4>
+        <input class="tag-input" id="tag-input" type="text"
+          placeholder="Добавить тег…" onkeydown="addTag(event)">
+        <div class="tags-wrap" id="tags-wrap"></div>
+      </div>
+      <div class="estat-block">
+        <h4>Обложка</h4>
+        <button class="btn-ghost" style="width:100%;padding:12px;font-size:11px;"
+          onclick="toast('Загрузить обложку')">＋ Добавить обложку</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     HEADER
+════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-bar">
+    <a class="logo" href="feed.html">StayInspired</a>
+    <nav class="site-nav">
+      <a class="nav-btn active" href="feed.html" data-page="feed.html">
+        Лента
+        <svg class="nav-scribble" viewBox="0 0 80 9" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2 6 C 14 2, 26 8, 40 4 S 66 8, 78 3"/>
+        </svg>
+      </a>
+      <a class="nav-btn" href="discover.html" data-page="discover.html">Открытия</a>
+      <a class="nav-btn" href="messages.html" data-page="messages.html">
+        Сообщения <span class="nav-badge">3</span>
+      </a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="header-search">
+      <span style="color:var(--ink-25);font-size:14px;">⌕</span>
+      <input type="text" placeholder="Поиск…">
+      <span class="header-kbd">⌘K</span>
+    </div>
+    <button class="btn-primary" onclick="openEditor()">Написать статью</button>
+    <div class="profile-wrap">
+      <button class="avatar avatar-md avatar-btn" id="prof-btn"
+        aria-expanded="false" aria-label="Профиль">А</button>
+      <div class="profile-menu" id="prof-menu">
+        <div class="pm-head">
+          <div class="pm-name">Александр</div>
+          <div class="pm-handle">@alexander</div>
+        </div>
+        <a class="pm-item" href="profile.html">Мой профиль</a>
+        <a class="pm-item" href="profile.html#drafts">Черновики</a>
+        <a class="pm-item" href="profile.html#settings">Настройки</a>
+        <a class="pm-item danger" href="index.html">Выйти</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════
+     MAIN GRID
+════════════════════════════════════════ -->
+<div class="app-grid">
+
+  <!-- ── MAIN COLUMN ── -->
+  <main class="main-col">
+    <div class="eyebrow" style="margin-bottom:20px;">Сегодня</div>
+
+    <!-- COMPOSE -->
+    <section class="compose-area">
+      <div class="compose-row">
+        <div class="avatar avatar-md" style="margin-top:4px;">А</div>
+        <textarea class="compose-ta" id="compose-ta" rows="1"
+          placeholder="Что вдохновляет вас сейчас?" maxlength="400"
+          data-autogrow></textarea>
+      </div>
+      <div class="upgrade-hint" id="upgrade-hint">
+        <span>✦</span>
+        <span>Это похоже на <strong>статью</strong> — хотите перейти в редактор?</span>
+        <button class="uh-btn" onclick="openEditorFromCompose()">Открыть редактор</button>
+      </div>
+      <div class="compose-foot">
+        <div class="compose-tools">
+          <button class="ctool" onclick="toast('Прикрепить изображение')">🖼</button>
+          <button class="ctool" onclick="toast('Вставить ссылку')">🔗</button>
+          <button class="ctool" onclick="toast('Добавить теги')">✦</button>
+        </div>
+        <span class="char-cnt" id="compose-cnt">400</span>
+        <button class="btn-primary" onclick="publishPost()">Опубликовать</button>
+      </div>
+    </section>
+
+    <!-- FEED TABS -->
+    <div class="feed-tabs">
+      <button class="feed-tab active" onclick="feedTab(this)">Все</button>
+      <button class="feed-tab" onclick="feedTab(this)">В резонансе</button>
+      <button class="feed-tab" onclick="feedTab(this)">Читаемые</button>
+    </div>
+
+    <!-- FEED POSTS -->
+    <div class="feed" id="feed">
+
+      <!-- 1. SPARK — большая цитата, первый пост с обводкой #1 -->
+      <article class="post spark">
+        <div class="post-header">
+          <div class="post-meta">
+            <span class="circled">1<svg viewBox="0 0 40 40"><path d="M20 4 C32 4 37 12 36 21 C35 31 27 37 19 36 C9 35 4 27 5 18 C6 9 11 5 20 4Z"/></svg></span>
+            <b>Мира Оконкво</b><span class="dot">·</span>
+            <span>@miradraws</span><span class="dot">·</span><span>2 ч</span>
+          </div>
+          <button class="post-menu-btn" aria-label="Меню поста">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Поделиться ссылкой</button>
+            <button class="pd-item" onclick="toast('Форма ответа открыта')"><span class="pd-icon">↩</span>Написать ответ</button>
+            <button class="pd-item danger" onclick="toast('Жалоба отправлена')"><span class="pd-icon">⚑</span>Пожаловаться</button>
+          </div>
+        </div>
+        <p class="post-body">Тебе не нужна идея получше. Нужно <span class="hl">выпустить</span> ту, которую ты бесконечно правишь в голове.</p>
+        <div class="react">
+          <button class="react-btn resonate" data-base="96"><span class="glyph">✶</span><span class="react-cnt"> 96</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;14</button>
+          <button class="react-btn" onclick="toast('Сохранено')">⤴&nbsp;Сохранить</button>
+        </div>
+      </article>
+
+      <!-- 2. NOTE с изображением -->
+      <article class="post note">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Даниэль Вей</b><span class="dot">·</span>
+            <span>@dvey</span><span class="dot">·</span><span>4 ч</span>
+          </div>
+          <button class="post-menu-btn" aria-label="Меню поста">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Поделиться ссылкой</button>
+            <button class="pd-item" onclick="toast('Форма ответа открыта')"><span class="pd-icon">↩</span>Написать ответ</button>
+            <button class="pd-item danger" onclick="toast('Жалоба отправлена')"><span class="pd-icon">⚑</span>Пожаловаться</button>
+          </div>
+        </div>
+        <p class="post-body">Утро, старые блокноты, прошлый я — оказался умнее.</p>
+        <!-- Изображение-плейсхолдер -->
+        <div class="post-media">
+          <div style="width:100%;aspect-ratio:16/9;background:var(--paper-3);border:1px solid var(--rule);display:grid;place-items:center;">
+            <div style="text-align:center;color:var(--ink-25);">
+              <div style="font-size:36px;margin-bottom:8px;">🖼</div>
+              <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;">Изображение · 1200×675</div>
+            </div>
+          </div>
+        </div>
+        <div class="react">
+          <button class="react-btn resonate" data-base="41"><span class="glyph">✶</span><span class="react-cnt"> 41</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;6</button>
+          <button class="react-btn" onclick="toast('Сохранено')">⤴&nbsp;Сохранить</button>
+        </div>
+      </article>
+
+      <!-- 3. POST с видео -->
+      <article class="post note">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Sol</b><span class="dot">·</span>
+            <span>@solmaking</span><span class="dot">·</span><span>5 ч</span>
+          </div>
+          <button class="post-menu-btn" aria-label="Меню поста">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Поделиться ссылкой</button>
+            <button class="pd-item" onclick="toast('Форма ответа открыта')"><span class="pd-icon">↩</span>Написать ответ</button>
+            <button class="pd-item danger" onclick="toast('Жалоба отправлена')"><span class="pd-icon">⚑</span>Пожаловаться</button>
+          </div>
+        </div>
+        <p class="post-body">Записал процесс работы — оказывается, я всё делаю наоборот.</p>
+        <!-- Видео-плейсхолдер -->
+        <div class="post-media">
+          <div class="post-video-wrap" onclick="toast('Видео — скоро ▶')">
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);display:grid;place-items:center;">
+              <div style="text-align:center;color:rgba(255,255,255,.4);">
+                <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;">Видео · 2:34</div>
+              </div>
+            </div>
+            <div class="play-btn">▶</div>
+          </div>
+        </div>
+        <div class="react">
+          <button class="react-btn resonate" data-base="203"><span class="glyph">✶</span><span class="react-cnt"> 203</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;22</button>
+          <button class="react-btn" onclick="toast('Сохранено')">⤴&nbsp;Сохранить</button>
+        </div>
+      </article>
+
+      <!-- 4. ARTICLE CARD — превью статьи -->
+      <article class="post article-card">
+        <div class="post-header">
+          <div class="post-meta">
+            <span style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);">✦ Статья</span>
+            <span class="dot">·</span>
+            <b>Ная</b><span class="dot">·</span>
+            <span>@naya.writes</span><span class="dot">·</span><span>7 ч</span>
+          </div>
+          <button class="post-menu-btn" aria-label="Меню поста">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Поделиться ссылкой</button>
+            <button class="pd-item" onclick="toast('Форма ответа открыта')"><span class="pd-icon">↩</span>Написать ответ</button>
+            <button class="pd-item danger" onclick="toast('Жалоба отправлена')"><span class="pd-icon">⚑</span>Пожаловаться</button>
+          </div>
+        </div>
+        <div class="article-preview">
+          <div class="ap-title">Почему черновик лучше идеального текста</div>
+          <div class="ap-excerpt">Перфекционизм — это не стандарт качества. Это способ никогда не начать. Каждый раз, когда вы откладываете публикацию в ожидании «правильного момента», вы теряете возможность получить обратную связь, которая сделала бы текст действительно лучше…</div>
+        </div>
+        <div class="react">
+          <button class="react-btn resonate" data-base="58"><span class="glyph">✶</span><span class="react-cnt"> 58</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="openArticle('Почему черновик лучше идеального текста','Ная','@naya.writes · 7 ч','Перфекционизм — это не стандарт качества. Это способ никогда не начать.\n\nКаждый раз, когда вы откладываете публикацию в ожидании «правильного момента», вы теряете возможность получить обратную связь, которая сделала бы текст действительно лучше.\n\nЧерновик — это не незаконченный текст. Это первый разговор с читателем. Он может быть неловким, угловатым, недосказанным — и всё равно живым.\n\nСамое страшное, что может случиться с хорошей идеей — это то, что она останется только в вашей голове.')">→&nbsp;Читать</button>
+          <button class="react-btn" onclick="toast('Сохранено')">⤴&nbsp;Сохранить</button>
+        </div>
+      </article>
+
+      <!-- 5. LINE — афоризм -->
+      <article class="post line">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Тимур</b><span class="dot">·</span>
+            <span>@tmr</span><span class="dot">·</span><span>9 ч</span>
+          </div>
+          <button class="post-menu-btn" aria-label="Меню поста">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Поделиться ссылкой</button>
+            <button class="pd-item" onclick="toast('Форма ответа открыта')"><span class="pd-icon">↩</span>Написать ответ</button>
+            <button class="pd-item danger" onclick="toast('Жалоба отправлена')"><span class="pd-icon">⚑</span>Пожаловаться</button>
+          </div>
+        </div>
+        <p class="post-body">сначала сделай уродливую версию.</p>
+        <div class="react">
+          <button class="react-btn resonate" data-base="312"><span class="glyph">✶</span><span class="react-cnt"> 312</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;44</button>
+          <button class="react-btn" onclick="toast('Сохранено')">⤴&nbsp;Сохранить</button>
+        </div>
+      </article>
+
+      <!-- 6. THREAD с веткой ответа -->
+      <article class="post thread">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Ирис Кан</b><span class="dot">·</span>
+            <span>@iris</span><span class="dot">·</span><span>12 ч</span>
+          </div>
+          <button class="post-menu-btn" aria-label="Меню поста">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Поделиться ссылкой</button>
+            <button class="pd-item" onclick="toast('Форма ответа открыта')"><span class="pd-icon">↩</span>Написать ответ</button>
+            <button class="pd-item danger" onclick="toast('Жалоба отправлена')"><span class="pd-icon">⚑</span>Пожаловаться</button>
+          </div>
+        </div>
+        <p class="post-body">Какая маленькая вещь вдохновила вас на этой неделе?</p>
+        <div class="reply-thread">
+          <div class="post-meta"><b>Лука Мор</b><span class="dot">·</span><span>@luka</span><span class="dot">·</span><span>11 ч</span></div>
+          <p class="post-body">Сосед чинил велосипед во дворе и напевал. Просто потому что.</p>
+        </div>
+        <div class="react">
+          <button class="react-btn resonate" data-base="87"><span class="glyph">✶</span><span class="react-cnt"> 87</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;31</button>
+          <button class="react-btn" onclick="toast('Сохранено')">⤴&nbsp;Сохранить</button>
+        </div>
+      </article>
+
+    </div><!-- /feed -->
+  </main>
+
+  <!-- ── ASIDE ── -->
+  <aside class="aside-col">
+    <div class="aside-block">
+      <h3>Кого почитать</h3>
+      <div class="who">
+        <div class="who-av">ИК</div>
+        <div><div class="who-name">Ирис Кан</div><div class="who-handle">@iris</div></div>
+        <button class="follow-btn" onclick="toggleFollow(this)">Читать</button>
+      </div>
+      <div class="who">
+        <div class="who-av">ЛМ</div>
+        <div><div class="who-name">Лука Мор</div><div class="who-handle">@luka</div></div>
+        <button class="follow-btn" onclick="toggleFollow(this)">Читать</button>
+      </div>
+      <div class="who">
+        <div class="who-av">ЭР</div>
+        <div><div class="who-name">Эва Рейн</div><div class="who-handle">@evarain</div></div>
+        <button class="follow-btn" onclick="toggleFollow(this)">Читать</button>
+      </div>
+    </div>
+
+    <div class="aside-block">
+      <h3>Ветки в резонансе</h3>
+      <a class="trend" href="discover.html">
+        <div class="trend-q">Что вы выбросили — и стало легче?</div>
+        <div class="trend-n">128 голосов</div>
+      </a>
+      <a class="trend" href="discover.html">
+        <div class="trend-q">Лучший совет не от человека?</div>
+        <div class="trend-n">94 голоса</div>
+      </a>
+      <a class="trend" href="discover.html">
+        <div class="trend-q">Рабочее место в одном кадре.</div>
+        <div class="trend-n">210 голосов</div>
+      </a>
+    </div>
+
+    <div class="aside-footer">
+      <a href="#">О проекте</a> · <a href="#">Правила</a><br>
+      StayInspired © 2026
+    </div>
+  </aside>
+
+</div><!-- /app-grid -->
+
+<script src="js/ui.js"></script>
+<script src="js/feed.js"></script>
+<script>
+// Article reader
+function openArticle(title, author, detail, content) {
+  document.getElementById('ao-title').textContent  = title;
+  document.getElementById('ao-author').textContent = author;
+  document.getElementById('ao-detail').textContent = detail;
+  const words = content.split(/\s+/).length;
+  document.getElementById('ao-meta').textContent =
+    'Статья · ' + Math.max(1, Math.round(words / 200)) + ' мин чтения';
+  // convert newlines to paragraphs
+  document.getElementById('ao-content').innerHTML =
+    content.split(/\n\n+/).map(p => `<p>${p.replace(/\n/g,'<br>')}</p>`).join('');
+  const overlay = document.getElementById('article-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeArticle() {
+  document.getElementById('article-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeArticle();
+    closeEditor();
+  }
+});
+</script>
+</body>
+</html>

@@ -457,29 +457,388 @@ require_once('../swad/static/elements/header.php');
 
         <!-- Team (Участники) -->
         <div class="view" id="view-team">
-            <div class="page-title">Участники спринта</div>
-            <div class="card">
-                <div class="card-title">
-                    <span>👥 Все участники</span>
-                    <a href="/l4t?action=create_team&sprint_id=<?= $sprintId ?>" class="btn-team" style="font-size:12px; padding:6px 12px;">+ Создать команду</a>
-                </div>
-                <div class="team-grid" id="team-list">
-                    <?php foreach ($team as $member): ?>
-                        <div class="team-card">
-                            <div class="tc-av">👤</div>
-                            <div class="tc-name">
-                                <a href="/player/<?= urlencode($member['username']) ?>"><?= htmlspecialchars($member['username']) ?></a>
-                            </div>
-                            <?php if ($member['id'] == $userId): ?>
-                                <div class="tc-badge">Я</div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-                <div style="margin-top:12px; text-align:center;">
-                    <a href="/l4t?action=find_team&sprint_id=<?= $sprintId ?>" class="btn-team">🔍 Найти команду на L4T</a>
-                </div>
+<script>window.DECK_SPRINT_ID = <?= (int)$sprintId ?>;</script>            <!--
+  ============================================================
+  БЛОК «РЕКРУТИНГ ОТРЯДА» (колода участников)
+  Вставь этот блок в participant.php туда, где сейчас сетка карточек.
+  Зависит только от переменной JS-уровня: window.DECK_SPRINT_ID.
+  Перед этим блоком объяви:
+      <script>window.DECK_SPRINT_ID = <?= (int)$sprint_id ?>;</script>
+  Использует эндпоинты:
+      /swad/controllers/jams/deck.php           (GET ?sprint_id=)
+      /swad/controllers/jams/invite_member.php  (POST team_id, username)
+  ============================================================
+-->
+
+<style>
+    .deck-wrap { max-width: 460px; margin: 0 auto; padding: 16px; }
+    .deck-head { text-align: center; margin-bottom: 14px; }
+    .deck-head h2 { font-size: 22px; font-weight: 800; color: #e8ddf0; letter-spacing: -.3px; }
+    .deck-head .deck-sub { font-size: 13px; color: rgba(255,255,255,.45); margin-top: 4px; }
+    .deck-slots { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; color: #5b8def; background: rgba(91,141,239,.12); border: 1px solid rgba(91,141,239,.3); border-radius: 20px; padding: 3px 12px; }
+
+    .deck-stage { position: relative; height: 460px; margin: 10px 0 18px; perspective: 1000px; }
+
+    /* карта */
+    .pcard {
+        position: absolute; inset: 0;
+        background: linear-gradient(160deg, #1c0c2a, #14041d);
+        border: 1px solid rgba(195,33,120,.35);
+        border-radius: 18px;
+        box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.03);
+        display: flex; flex-direction: column;
+        overflow: hidden;
+        will-change: transform, opacity;
+        touch-action: pan-y;
+    }
+    .pcard-top { padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .pcard-alias { font-size: 24px; font-weight: 800; color: #e8ddf0; letter-spacing: -.4px; }
+    .pcard-handle { font-size: 12px; color: rgba(195,33,120,.85); margin-top: 2px; font-weight: 600; }
+    .pcard-city { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 6px; display: flex; align-items: center; gap: 5px; }
+
+    .pcard-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+    .pcard-field { margin-bottom: 14px; }
+    .pcard-field .f-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.35); margin-bottom: 4px; }
+    .pcard-field .f-value { font-size: 13px; line-height: 1.55; color: rgba(255,255,255,.8); white-space: pre-wrap; word-break: break-word; }
+    .pcard-field .f-value a { color: #5b8def; }
+    .pcard-empty { color: rgba(255,255,255,.25); font-style: italic; }
+
+    /* индикаторы свайпа поверх карты */
+    .pcard-stamp { position: absolute; top: 26px; padding: 6px 14px; font-size: 18px; font-weight: 800; letter-spacing: .08em; border-radius: 10px; opacity: 0; transition: opacity .1s; pointer-events: none; text-transform: uppercase; }
+    .pcard-stamp.nope { right: 18px; transform: rotate(12deg); color: #ff5b6e; border: 3px solid #ff5b6e; }
+    .pcard-stamp.like { left: 18px; transform: rotate(-12deg); color: #38d39f; border: 3px solid #38d39f; }
+
+    /* стопка-«колода» под текущей картой (для глубины) */
+    .pcard.is-stack { pointer-events: none; }
+
+    .deck-actions { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 4px; }
+    .deck-btn { width: 60px; height: 60px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); cursor: pointer; font-size: 26px; display: flex; align-items: center; justify-content: center; transition: transform .12s, background .12s; }
+    .deck-btn:hover { transform: scale(1.08); }
+    .deck-btn.nope { color: #ff5b6e; border-color: rgba(255,91,110,.4); }
+    .deck-btn.nope:hover { background: rgba(255,91,110,.12); }
+    .deck-btn.like { color: #38d39f; border-color: rgba(56,211,159,.4); }
+    .deck-btn.like:hover { background: rgba(56,211,159,.12); }
+    .deck-btn.shuffle { width: 50px; height: 50px; font-size: 20px; color: #c32178; border-color: rgba(195,33,120,.4); }
+    .deck-btn.shuffle:hover { background: rgba(195,33,120,.12); }
+
+    .deck-hint { text-align: center; font-size: 11px; color: rgba(255,255,255,.3); margin-top: 12px; }
+
+    /* пустое / служебные состояния */
+    .deck-state { text-align: center; padding: 60px 24px; color: rgba(255,255,255,.45); }
+    .deck-state .ds-ico { font-size: 46px; margin-bottom: 12px; }
+    .deck-state .ds-title { font-size: 17px; font-weight: 700; color: #e8ddf0; margin-bottom: 6px; }
+    .deck-state .ds-sub { font-size: 13px; line-height: 1.5; }
+
+    /* анимация перемешивания */
+    @keyframes shuffleCard {
+        0%   { transform: translate(0,0) rotate(0); }
+        25%  { transform: translate(-60px,-12px) rotate(-8deg); }
+        50%  { transform: translate(60px,8px) rotate(7deg); }
+        75%  { transform: translate(-30px,6px) rotate(-4deg); }
+        100% { transform: translate(0,0) rotate(0); }
+    }
+    .shuffling .pcard { animation: shuffleCard .5s ease-in-out; }
+
+    /* онбординг */
+    .deck-onboard-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.82); z-index: 400; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .deck-onboard-overlay.open { display: flex; }
+    .deck-onboard { max-width: 380px; width: 100%; background: #160822; border: 1px solid rgba(195,33,120,.35); border-radius: 16px; padding: 26px; text-align: center; }
+    .deck-onboard h3 { font-size: 20px; font-weight: 800; color: #e8ddf0; margin-bottom: 14px; }
+    .deck-onboard .ob-row { display: flex; align-items: flex-start; gap: 12px; text-align: left; margin: 12px 0; font-size: 13px; color: rgba(255,255,255,.75); line-height: 1.45; }
+    .deck-onboard .ob-row .ob-ico { font-size: 22px; flex-shrink: 0; width: 28px; text-align: center; }
+    .deck-onboard .ob-cap { font-size: 12px; color: rgba(255,255,255,.4); margin: 16px 0 18px; }
+    .deck-onboard .ob-btn { width: 100%; background: #c32178; border: none; color: #fff; border-radius: 10px; padding: 12px; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .deck-onboard .ob-btn:hover { background: #9e1a66; }
+</style>
+
+<div class="deck-wrap" id="deck-wrap">
+    <div class="deck-head">
+        <h2>🃏 Рекрутинг отряда</h2>
+        <div class="deck-sub">Собери команду из соло-бойцов спринта</div>
+        <div class="deck-slots" id="deck-slots" style="display:none;"></div>
+    </div>
+
+    <div class="deck-stage" id="deck-stage">
+        <!-- карты вставляются сюда -->
+        <div class="deck-state" id="deck-loading">
+            <div class="ds-ico">🃏</div>
+            <div class="ds-title">Готовим колоду…</div>
+        </div>
+    </div>
+
+    <div class="deck-actions" id="deck-actions" style="display:none;">
+        <button class="deck-btn nope" id="btn-nope" title="Пропустить (←)">✕</button>
+        <button class="deck-btn shuffle" id="btn-shuffle" title="Перемешать">🔀</button>
+        <button class="deck-btn like" id="btn-like" title="Позвать в отряд (→)">✓</button>
+    </div>
+    <div class="deck-hint" id="deck-hint" style="display:none;">← пропустить &nbsp;·&nbsp; → позвать &nbsp;·&nbsp; 🔀 перемешать</div>
+</div>
+
+<!-- онбординг -->
+<div class="deck-onboard-overlay" id="deck-onboard-overlay">
+    <div class="deck-onboard">
+        <h3>🃏 Рекрутинг отряда</h3>
+        <div class="ob-row"><span class="ob-ico">👉</span><span><b>Свайп вправо / →</b> — позвать бойца в свой отряд. Улетит приглашение.</span></div>
+        <div class="ob-row"><span class="ob-ico">👈</span><span><b>Свайп влево / ←</b> — пропустить и показать следующего.</span></div>
+        <div class="ob-row"><span class="ob-ico">🔀</span><span><b>Перемешать</b> — затасовать колоду заново.</span></div>
+        <div class="ob-cap">Слоты в команде ограничены — выбирай с умом, капитан.</div>
+        <button class="ob-btn" onclick="Deck.closeOnboard()">Понял, погнали →</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    const SPRINT_ID = window.DECK_SPRINT_ID || 0;
+    const stage   = document.getElementById('deck-stage');
+    const actions = document.getElementById('deck-actions');
+    const hintEl  = document.getElementById('deck-hint');
+    const slotsEl = document.getElementById('deck-slots');
+
+    let state = { teamId: 0, slotsLeft: 0, deck: [], idx: 0, busy: false };
+
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+    }
+    // авто-ссылки в тексте
+    function linkify(s) {
+        return esc(s).replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    }
+
+    function toast(msg) {
+        // используем существующий тост страницы, если есть; иначе alert-fallback
+        if (window.Toast?.show) { window.Toast.show(msg, 2200); return; }
+        const t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1c0c2a;border:1px solid rgba(195,33,120,.4);color:#e8ddf0;padding:10px 18px;border-radius:10px;font-size:13px;z-index:500;box-shadow:0 8px 30px rgba(0,0,0,.5);';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2200);
+    }
+
+    function showState(ico, title, sub) {
+        stage.innerHTML = `<div class="deck-state"><div class="ds-ico">${ico}</div><div class="ds-title">${esc(title)}</div><div class="ds-sub">${sub}</div></div>`;
+        actions.style.display = 'none';
+        hintEl.style.display  = 'none';
+        slotsEl.style.display = 'none';
+    }
+
+    function updateSlots() {
+        if (state.slotsLeft > 0) {
+            slotsEl.textContent = 'Свободных слотов: ' + state.slotsLeft;
+            slotsEl.style.display = 'inline-block';
+        } else {
+            slotsEl.style.display = 'none';
+        }
+    }
+
+    function cardHTML(p) {
+        const fields = [];
+        if (p.extra_info) fields.push(`<div class="pcard-field"><div class="f-label">О бойце</div><div class="f-value">${linkify(p.extra_info)}</div></div>`);
+        if (p.links)      fields.push(`<div class="pcard-field"><div class="f-label">Ссылки</div><div class="f-value">${linkify(p.links)}</div></div>`);
+        if (!fields.length) fields.push(`<div class="pcard-field"><div class="f-value pcard-empty">Боец не оставил о себе информации</div></div>`);
+
+        const handle = p.handle ? '@' + esc(p.handle) : '';
+        const city   = p.city ? `<div class="pcard-city">📍 ${esc(p.city)}</div>` : '';
+        return `
+            <div class="pcard-top">
+                <div class="pcard-alias">${esc(p.alias || p.handle || 'Боец')}</div>
+                ${handle ? `<div class="pcard-handle">${handle}</div>` : ''}
+                ${city}
             </div>
+            <div class="pcard-body">${fields.join('')}</div>
+            <div class="pcard-stamp like">В отряд</div>
+            <div class="pcard-stamp nope">Мимо</div>`;
+    }
+
+    function render() {
+        if (state.slotsLeft <= 0) {
+            showState('🎖', 'Отряд в сборе!', 'Все слоты заняты. Ты собрал полную команду.');
+            return;
+        }
+        if (state.idx >= state.deck.length) {
+            showState('🃏', 'Бойцы кончились', 'Перемешай колоду или загляни позже — соло-участники ещё подтянутся.');
+            // оставим кнопку перемешать доступной
+            actions.style.display = 'flex';
+            document.getElementById('btn-nope').style.visibility = 'hidden';
+            document.getElementById('btn-like').style.visibility = 'hidden';
+            return;
+        }
+
+        document.getElementById('btn-nope').style.visibility = 'visible';
+        document.getElementById('btn-like').style.visibility = 'visible';
+
+        // верхняя карта + одна «подложка» для глубины
+        const top  = state.deck[state.idx];
+        const next = state.deck[state.idx + 1];
+        stage.innerHTML = '';
+        if (next) {
+            const back = document.createElement('div');
+            back.className = 'pcard is-stack';
+            back.style.transform = 'scale(.95) translateY(10px)';
+            back.style.opacity = '.6';
+            back.innerHTML = cardHTML(next);
+            stage.appendChild(back);
+        }
+        const card = document.createElement('div');
+        card.className = 'pcard';
+        card.id = 'pcard-top';
+        card.innerHTML = cardHTML(top);
+        stage.appendChild(card);
+
+        attachDrag(card, top);
+        actions.style.display = 'flex';
+        hintEl.style.display  = 'block';
+        updateSlots();
+    }
+
+    // свайп: drag мышью/тачем
+    function attachDrag(card, person) {
+        let startX = 0, startY = 0, dx = 0, dy = 0, dragging = false;
+        const likeStamp = card.querySelector('.pcard-stamp.like');
+        const nopeStamp = card.querySelector('.pcard-stamp.nope');
+
+        function down(x, y) { dragging = true; startX = x; startY = y; card.style.transition = 'none'; }
+        function move(x, y) {
+            if (!dragging) return;
+            dx = x - startX; dy = y - startY;
+            card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
+            likeStamp.style.opacity = dx > 0 ? Math.min(1, dx / 100) : 0;
+            nopeStamp.style.opacity = dx < 0 ? Math.min(1, -dx / 100) : 0;
+        }
+        function up() {
+            if (!dragging) return;
+            dragging = false;
+            card.style.transition = 'transform .3s ease, opacity .3s ease';
+            const TH = 110;
+            if (dx > TH)      fly(card, person, 'like');
+            else if (dx < -TH) fly(card, person, 'nope');
+            else {
+                card.style.transform = '';
+                likeStamp.style.opacity = 0;
+                nopeStamp.style.opacity = 0;
+            }
+        }
+
+        card.addEventListener('mousedown', e => { down(e.clientX, e.clientY); });
+        window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+        window.addEventListener('mouseup', up);
+        card.addEventListener('touchstart', e => { const t = e.touches[0]; down(t.clientX, t.clientY); }, { passive: true });
+        card.addEventListener('touchmove',  e => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
+        card.addEventListener('touchend', up);
+    }
+
+    // карта улетает + действие
+    function fly(card, person, dir) {
+        if (state.busy) return;
+        const off = dir === 'like' ? window.innerWidth : -window.innerWidth;
+        card.style.transform = `translate(${off}px, -40px) rotate(${dir === 'like' ? 20 : -20}deg)`;
+        card.style.opacity = '0';
+
+        if (dir === 'like') invite(person);
+
+        setTimeout(() => { state.idx++; render(); }, 280);
+    }
+
+    // программный свайп (кнопки/стрелки)
+    function swipe(dir) {
+        const card = document.getElementById('pcard-top');
+        if (!card || state.busy) return;
+        if (state.idx >= state.deck.length) return;
+        fly(card, state.deck[state.idx], dir);
+    }
+
+    function invite(person) {
+        if (!person.handle) { toast('У бойца нет ника — пригласить нельзя'); return; }
+        state.busy = true;
+        fetch('/swad/controllers/jams/invite_member.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ team_id: state.teamId, username: person.handle })
+        })
+        .then(r => r.json())
+        .then(d => {
+            state.busy = false;
+            if (d.success) {
+                toast('📨 Приглашение улетело к ' + (person.alias || person.handle));
+                state.slotsLeft = Math.max(0, state.slotsLeft - 1); // оптимистично
+                updateSlots();
+            } else {
+                toast('⚠ ' + (d.message || 'Не удалось пригласить'));
+            }
+        })
+        .catch(() => { state.busy = false; toast('⚠ Ошибка соединения'); });
+    }
+
+    function load() {
+        showState('🃏', 'Готовим колоду…', '');
+        fetch(`/swad/controllers/jams/deck.php?sprint_id=${SPRINT_ID}`)
+            .then(r => r.json())
+            .then(d => {
+                if (!d.eligible) {
+                    if (d.reason === 'not_captain')
+                        showState('🔒', 'Колода — для капитанов', 'Создай команду и стань капитаном, чтобы набирать бойцов в отряд.');
+                    else
+                        showState('⚠', 'Недоступно', 'Не удалось открыть колоду. Попробуй позже.');
+                    return;
+                }
+                state.teamId    = d.team_id;
+                state.slotsLeft = d.slots_left;
+                // прячем уже приглашённых
+                state.deck      = (d.deck || []).filter(p => !p.already_invited);
+                state.idx       = 0;
+
+                if (state.slotsLeft <= 0) { render(); return; }
+                if (!state.deck.length) {
+                    showState('🃏', 'Пока пусто', 'Соло-участников в спринте нет. Загляни позже — они ещё подтянутся.');
+                    actions.style.display = 'flex';
+                    document.getElementById('btn-nope').style.visibility = 'hidden';
+                    document.getElementById('btn-like').style.visibility = 'hidden';
+                    return;
+                }
+                maybeOnboard(render);
+            })
+            .catch(() => showState('⚠', 'Ошибка', 'Не удалось загрузить колоду.'));
+    }
+
+    function shuffle() {
+        // визуальное перемешивание + перезагрузка колоды с сервера (свежий RAND())
+        stage.classList.add('shuffling');
+        setTimeout(() => { stage.classList.remove('shuffling'); load(); }, 520);
+    }
+
+    // онбординг — показываем один раз за сессию (без localStorage: артефактные ограничения,
+    // тут обычная страница, но держим в window, чтобы не зависеть от хранилища провайдера)
+    function maybeOnboard(cb) {
+        if (window.__deckOnboarded) { cb(); return; }
+        const ov = document.getElementById('deck-onboard-overlay');
+        ov.classList.add('open');
+        Deck._afterOnboard = cb;
+    }
+
+    window.Deck = {
+        closeOnboard() {
+            document.getElementById('deck-onboard-overlay').classList.remove('open');
+            window.__deckOnboarded = true;
+            if (Deck._afterOnboard) { const cb = Deck._afterOnboard; Deck._afterOnboard = null; cb(); }
+        }
+    };
+
+    // кнопки
+    document.getElementById('btn-nope').addEventListener('click', () => swipe('nope'));
+    document.getElementById('btn-like').addEventListener('click', () => swipe('like'));
+    document.getElementById('btn-shuffle').addEventListener('click', shuffle);
+
+    // стрелки
+    document.addEventListener('keydown', e => {
+        if (document.getElementById('deck-onboard-overlay').classList.contains('open')) return;
+        if (e.key === 'ArrowLeft')  swipe('nope');
+        if (e.key === 'ArrowRight') swipe('like');
+    });
+
+    if (!SPRINT_ID) { showState('⚠', 'Нет спринта', 'Не указан sprint_id.'); return; }
+    load();
+})();
+</script>
         </div>
 
         <!-- Submit -->

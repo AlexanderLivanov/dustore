@@ -1,75 +1,395 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Профиль — MySocial</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayInspired — Профиль</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages.css">
 </head>
 <body>
-  <header class="app-header">
-    <div class="logo">MySocial</div>
-    <input class="search" placeholder="Искать по профилю">
-  </header>
+<div id="toasts"></div>
 
-  <main class="page">
-    <section class="profile-header">
-      <img class="profile-avatar" src="https://picsum.photos/seed/pavatar/200" alt="avatar">
-      <div>
-        <div style="font-weight:800; font-size: 20px;">A L</div>
-        <div class="profile-stats">
-          <span>Подписчики: <b>1 204</b></span>
-          <span>Подписки: <b>238</b></span>
-          <span>Посты: <b>56</b></span>
+<header class="site-header">
+  <div class="header-bar">
+    <a class="logo" href="feed.html">StayInspired</a>
+    <nav class="site-nav">
+      <a class="nav-btn" href="feed.html">Лента</a>
+      <a class="nav-btn" href="discover.html">Открытия</a>
+      <a class="nav-btn" href="messages.html">Сообщения <span class="nav-badge">3</span></a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="header-search">
+      <span style="color:var(--ink-25);font-size:14px;">⌕</span>
+      <input type="text" placeholder="Поиск…">
+      <span class="header-kbd">⌘K</span>
+    </div>
+    <a class="btn-primary" href="feed.html">Написать статью</a>
+    <div class="profile-wrap">
+      <button class="avatar avatar-md avatar-btn" id="prof-btn" aria-expanded="false">А</button>
+      <div class="profile-menu" id="prof-menu">
+        <div class="pm-head">
+          <div class="pm-name">Александр</div>
+          <div class="pm-handle">@alexander</div>
         </div>
-        <div style="margin-top:8px; color:#b4b8c7;">Описание профиля — пара строк о себе, проекте и ссылках.</div>
+        <a class="pm-item" href="profile.html">Мой профиль</a>
+        <a class="pm-item" href="profile.html#settings" onclick="switchTab('settings')">Настройки</a>
+        <a class="pm-item danger" href="index.html">Выйти</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Profile hero ── -->
+<div class="profile-hero">
+  <div class="profile-hero-inner">
+    <div class="profile-top">
+      <div class="profile-av">А</div>
+      <div class="profile-info">
+        <div class="profile-name">Александр</div>
+        <div class="profile-handle">@alexander</div>
+        <div class="profile-bio">Строю платформы для разработчиков. Думаю вслух о дизайне, продукте и вдохновении.</div>
+        <div class="profile-stats">
+          <div>
+            <div class="pstat-val">142</div>
+            <div class="pstat-lbl">Публикации</div>
+          </div>
+          <div>
+            <div class="pstat-val">2.4к</div>
+            <div class="pstat-lbl">Читатели</div>
+          </div>
+          <div>
+            <div class="pstat-val">318</div>
+            <div class="pstat-lbl">Читает</div>
+          </div>
+          <div>
+            <div class="pstat-val">8.1к</div>
+            <div class="pstat-lbl">Резонансов</div>
+          </div>
+        </div>
       </div>
       <div class="profile-actions">
-        <button>Редактировать</button>
-        <button>Поделиться</button>
+        <button class="btn-ghost" onclick="switchTab('settings')">Редактировать профиль</button>
+        <button class="btn-ghost" onclick="copyLink()">Поделиться</button>
       </div>
-    </section>
+    </div>
 
-    <!-- Мини-навигатор профиля -->
-    <section class="post-card" style="display:flex; gap:10px; justify-content:space-between;">
-      <button class="icon-btn" style="flex:1;">Посты</button>
-      <button class="icon-btn" style="flex:1;">Медиа</button>
-      <button class="icon-btn" style="flex:1;">Закладки</button>
-      <button class="icon-btn" style="flex:1;">О себе</button>
-    </section>
+    <!-- Profile tabs -->
+    <div class="profile-tabs">
+      <button class="profile-tab active" id="tab-posts"    onclick="switchTab('posts')">Посты</button>
+      <button class="profile-tab"        id="tab-articles" onclick="switchTab('articles')">Статьи</button>
+      <button class="profile-tab"        id="tab-saved"    onclick="switchTab('saved')">Сохранённое</button>
+      <button class="profile-tab"        id="tab-drafts"   onclick="switchTab('drafts')">Черновики</button>
+      <button class="profile-tab"        id="tab-settings" onclick="switchTab('settings')">Настройки</button>
+    </div>
+  </div>
+</div>
 
-    <!-- Лента постов профиля (обычный скролл) -->
-    <article class="post-card">
-      <div class="post-head">
-        <img class="avatar" src="https://picsum.photos/seed/me1/80" alt="avatar">
-        <div class="author-name">A L</div>
-        <span class="badge">Автор</span>
-      </div>
-      <div class="post-body">
-        <div class="post-text" data-full="Подробный текст о разработке мини-соцсети, UI и анимациях...">
-          Недавний пост о разработке фронтенда: fullPage, адаптивные «чёлка/подбородок», и модалки.
+<!-- ── Profile body ── -->
+<div class="profile-body">
+
+  <!-- POSTS TAB -->
+  <div class="tab-panel active" id="panel-posts">
+    <div class="feed">
+
+      <article class="post spark">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Александр</b><span class="dot">·</span><span>@alexander</span>
+            <span class="dot">·</span><span>2 ч</span>
+          </div>
+          <button class="post-menu-btn">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Скопировать ссылку</button>
+            <button class="pd-item danger" onclick="toast('Пост удалён')"><span class="pd-icon">✕</span>Удалить</button>
+          </div>
         </div>
-        <button class="read-more" data-read-more>Читать полностью</button>
-      </div>
-      <div class="post-foot">
-        <div class="actions">
-          <button class="icon-btn">👍</button>
-          <button class="icon-btn">👎</button>
-          <button class="icon-btn">💬</button>
-          <button class="icon-btn">↗</button>
+        <p class="post-body">Дизайн — это не то, как вещь выглядит.<br>Это <span class="hl">как она работает</span>.</p>
+        <div class="react">
+          <button class="react-btn resonate" data-base="214"><span class="glyph">✶</span><span class="react-cnt"> 214</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;28</button>
         </div>
-        <div class="meta">18.08.2025 • 310 просмотров</div>
+      </article>
+
+      <article class="post note">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Александр</b><span class="dot">·</span><span>@alexander</span>
+            <span class="dot">·</span><span>вчера</span>
+          </div>
+          <button class="post-menu-btn">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Скопировать ссылку</button>
+            <button class="pd-item danger" onclick="toast('Пост удалён')"><span class="pd-icon">✕</span>Удалить</button>
+          </div>
+        </div>
+        <p class="post-body">Три месяца работы над SDK — и вот момент, когда первый клиент скачал файл быстрее, чем через прямую ссылку. Тихая победа.</p>
+        <div class="react">
+          <button class="react-btn resonate" data-base="89"><span class="glyph">✶</span><span class="react-cnt"> 89</span>&nbsp;отзывается</button>
+          <button class="react-btn" onclick="toast('Открыть тред')">↳&nbsp;12</button>
+        </div>
+      </article>
+
+    </div>
+  </div>
+
+  <!-- ARTICLES TAB -->
+  <div class="tab-panel" id="panel-articles">
+    <div class="feed">
+      <article class="post article-card">
+        <div class="post-header">
+          <div class="post-meta">
+            <span style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);">✦ Статья</span>
+            <span class="dot">·</span><span>3 дня назад</span><span class="dot">·</span><span>7 мин чтения</span>
+          </div>
+          <button class="post-menu-btn">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="copyLink()"><span class="pd-icon">🔗</span>Скопировать ссылку</button>
+            <button class="pd-item" onclick="toast('Открыт редактор')"><span class="pd-icon">✎</span>Редактировать</button>
+            <button class="pd-item danger" onclick="toast('Статья удалена')"><span class="pd-icon">✕</span>Удалить</button>
+          </div>
+        </div>
+        <div class="article-preview">
+          <div class="ap-title">Почему я перестал использовать Jira и что из этого вышло</div>
+          <div class="ap-excerpt">Шесть месяцев назад наша команда отказалась от тикет-трекеров в пользу простого текстового файла. Вот что мы потеряли, что приобрели, и почему я не собираюсь возвращаться…</div>
+        </div>
+        <div class="react">
+          <button class="react-btn resonate" data-base="431"><span class="glyph">✶</span><span class="react-cnt"> 431</span>&nbsp;отзывается</button>
+          <button class="react-btn">↳&nbsp;67</button>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <!-- SAVED TAB -->
+  <div class="tab-panel" id="panel-saved">
+    <div class="feed">
+      <article class="post note">
+        <div class="post-header">
+          <div class="post-meta">
+            <b>Мира Оконкво</b><span class="dot">·</span><span>@miradraws</span>
+            <span class="dot">·</span><span>2 ч</span>
+            <span class="dot">·</span>
+            <span style="font-family:var(--f-mono);font-size:9.5px;color:var(--ink-25);">⤴ сохранено</span>
+          </div>
+          <button class="post-menu-btn">···</button>
+          <div class="post-dropdown">
+            <button class="pd-item" onclick="toast('Убрано из сохранённого')"><span class="pd-icon">⤴</span>Убрать из сохранённого</button>
+          </div>
+        </div>
+        <p class="post-body">Тебе не нужна идея получше. Нужно <span class="hl">выпустить</span> ту, которую ты бесконечно правишь в голове.</p>
+        <div class="react">
+          <button class="react-btn resonate" data-base="96"><span class="glyph">✶</span><span class="react-cnt"> 96</span>&nbsp;отзывается</button>
+          <button class="react-btn">↳&nbsp;14</button>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <!-- DRAFTS TAB -->
+  <div class="tab-panel" id="panel-drafts">
+    <div style="padding:20px 0;">
+      <div style="border:1px solid var(--rule);padding:20px;margin-bottom:12px;cursor:pointer;transition:background .15s;"
+        onmouseenter="this.style.background='var(--paper-2)'" onmouseleave="this.style.background=''"
+        onclick="toast('Открыть черновик в редакторе')">
+        <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);margin-bottom:8px;">
+          Черновик · Сохранён вчера в 16:34
+        </div>
+        <div style="font-family:var(--f-display);font-optical-sizing:auto;font-size:18px;font-weight:300;margin-bottom:6px;">
+          О том, как мы переписали авторизацию за выходные
+        </div>
+        <div style="font-size:12px;color:var(--ink-45);">320 слов · ~2 мин чтения</div>
       </div>
-    </article>
-  </main>
+      <div style="border:1px solid var(--rule);padding:20px;cursor:pointer;transition:background .15s;"
+        onmouseenter="this.style.background='var(--paper-2)'" onmouseleave="this.style.background=''"
+        onclick="toast('Открыть черновик в редакторе')">
+        <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);margin-bottom:8px;">
+          Черновик · Сохранён 3 дня назад
+        </div>
+        <div style="font-family:var(--f-display);font-optical-sizing:auto;font-size:18px;font-weight:300;margin-bottom:6px;">
+          [без заголовка]
+        </div>
+        <div style="font-size:12px;color:var(--ink-45);">45 слов</div>
+      </div>
+    </div>
+  </div>
 
-  <nav class="app-footer">
-    <button data-nav="index.html">🏠 Лента</button>
-    <button data-nav="subscriptions.html">⭐ Подписки</button>
-    <button data-nav="news.html">📰 Новости</button>
-    <button class="active" data-nav="profile.html">👤 Профиль</button>
-  </nav>
+  <!-- SETTINGS TAB -->
+  <div class="tab-panel" id="panel-settings">
 
-  <script src="script.js"></script>
+    <!-- Профиль -->
+    <div class="settings-section">
+      <h3>Профиль</h3>
+      <div class="form-group">
+        <label class="form-label">Имя</label>
+        <input class="form-input" type="text" value="Александр">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Никнейм</label>
+        <input class="form-input" type="text" value="@alexander">
+      </div>
+      <div class="form-group">
+        <label class="form-label">О себе</label>
+        <textarea class="form-input" rows="3" style="resize:vertical;">Строю платформы для разработчиков. Думаю вслух о дизайне, продукте и вдохновении.</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Сайт</label>
+        <input class="form-input" type="url" placeholder="https://…">
+      </div>
+      <button class="btn-primary" onclick="toast('Профиль сохранён')">Сохранить изменения</button>
+    </div>
+
+    <!-- Уведомления -->
+    <div class="settings-section">
+      <h3>Уведомления</h3>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Новые читатели</div>
+          <div class="settings-row-desc">Уведомлять когда кто-то начинает вас читать</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Резонансы</div>
+          <div class="settings-row-desc">Уведомлять о реакциях на ваши посты</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Ответы</div>
+          <div class="settings-row-desc">Уведомлять о новых ответах на ваши посты</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Email-дайджест</div>
+          <div class="settings-row-desc">Еженедельная сводка активности</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Приватность -->
+    <div class="settings-section">
+      <h3>Приватность</h3>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Закрытый профиль</div>
+          <div class="settings-row-desc">Только ваши читатели видят посты</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-label">Индексация поисковиками</div>
+          <div class="settings-row-desc">Разрешить Google индексировать профиль</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Аккаунт -->
+    <div class="settings-section">
+      <h3>Аккаунт</h3>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" value="alex@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Новый пароль</label>
+        <input class="form-input" type="password" placeholder="••••••••">
+        <div class="form-hint">Оставьте пустым, чтобы не менять</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="btn-primary" onclick="toast('Настройки сохранены')">Сохранить</button>
+        <button class="btn-ghost" style="color:#c0392b;border-color:#c0392b;"
+          onclick="toast('Аккаунт деактивирован')">Удалить аккаунт</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Aside на профиле -->
+  <aside class="aside-col" style="display:block;">
+    <div class="aside-block">
+      <h3>Активность</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);">
+          <span style="font-size:12px;color:var(--ink-70);">Посты на этой неделе</span>
+          <span style="font-family:var(--f-mono);font-size:12px;font-weight:700;">7</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);">
+          <span style="font-size:12px;color:var(--ink-70);">Резонансы получено</span>
+          <span style="font-family:var(--f-mono);font-size:12px;font-weight:700;">142</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule);">
+          <span style="font-size:12px;color:var(--ink-70);">Новых читателей</span>
+          <span style="font-family:var(--f-mono);font-size:12px;font-weight:700;">+23</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;">
+          <span style="font-size:12px;color:var(--ink-70);">Просмотры статей</span>
+          <span style="font-family:var(--f-mono);font-size:12px;font-weight:700;">1.2к</span>
+        </div>
+      </div>
+    </div>
+    <div class="aside-block">
+      <h3>Теги</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span class="tag-chip" style="cursor:default;">#дизайн</span>
+        <span class="tag-chip" style="cursor:default;">#разработка</span>
+        <span class="tag-chip" style="cursor:default;">#продукт</span>
+        <span class="tag-chip" style="cursor:default;">#вдохновение</span>
+        <span class="tag-chip" style="cursor:default;">#gamedev</span>
+      </div>
+    </div>
+  </aside>
+
+</div><!-- /profile-body -->
+
+<script src="js/ui.js"></script>
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const tab = document.getElementById('tab-' + name);
+  const panel = document.getElementById('panel-' + name);
+  if (tab)   tab.classList.add('active');
+  if (panel) panel.classList.add('active');
+}
+
+// Открыть нужную вкладку по хэшу URL
+window.addEventListener('DOMContentLoaded', () => {
+  const hash = window.location.hash.replace('#', '');
+  if (hash && document.getElementById('panel-' + hash)) {
+    switchTab(hash);
+  }
+});
+</script>
 </body>
 </html>
