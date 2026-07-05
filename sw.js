@@ -1,11 +1,14 @@
 /**
- * Dustore Service Worker — v2.0
+ * Dustore Service Worker — v2.1
  *
  * Стратегии по типу ресурса:
  *  PHP/HTML страницы  → Network First (всегда свежие, кеш только как fallback)
  *  CSS / JS           → Stale While Revalidate (отдаём кеш мгновенно + обновляем в фоне)
- *  Картинки / шрифты → Cache First (меняются редко, экономим трафик)
+ *  Картинки / шрифты  → Cache First (меняются редко, экономим трафик)
  *  API / POST / APK   → сеть напрямую, без SW
+ *
+ * v2.1: Web Push — звук в фореграунде (вкладка открыта → кастомный звук вместо
+ *       нотификации), фокус существующей вкладки чата, обход SW для /chat/api.php.
  */
 
 const CACHE_STATIC = 'ds-static-v2';
@@ -44,6 +47,7 @@ self.addEventListener('fetch', evt => {
     if (url.origin !== self.location.origin) return;
     if (url.pathname.endsWith('.apk')) return;
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/swad/controllers/')) return;
+    if (url.pathname === '/chat/api.php') return;   // API мессенджера — всегда живой, мимо SW
 
     const isPage = url.pathname.endsWith('.php') || url.pathname === '/' || !url.pathname.includes('.');
     const isStatic = /\.(css|js|woff2?|ttf|otf|svg)(\?|$)/.test(url.pathname);
@@ -96,19 +100,35 @@ self.addEventListener('fetch', evt => {
 // ─── PUSH ─────────────────────────────────────────────────────────────────────
 self.addEventListener('push', e => {
     if (!e.data) return;
-    try {
-        const d = e.data.json();
-        self.registration.showNotification(d.title, {
-            body: d.body,
+    let d = {};
+    try { d = e.data.json(); } catch { return; }
+    e.waitUntil((async () => {
+        const clientsArr = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const focused = clientsArr.find(c => c.focused);
+        if (focused) {
+            // вкладка в фокусе → кастомный WebAudio-звук в приложении, без системной нотификации
+            focused.postMessage({ type: 'chat-sound' });
+            return;
+        }
+        await self.registration.showNotification(d.title || 'Dustore', {
+            body: d.body || '',
             icon: '/swad/static/img/logo_new.png',
-            data: { url: d.url }
+            tag: 'dustore-chat',
+            renotify: true,
+            data: { url: d.url || '/chat/' }
         });
-    } catch { }
+    })());
 });
 
 self.addEventListener('notificationclick', e => {
     e.notification.close();
-    e.waitUntil(self.clients.openWindow(e.notification.data?.url || '/'));
+    const target = e.notification.data?.url || '/';
+    e.waitUntil((async () => {
+        const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        // если уже открыта вкладка чата — фокусируем её, а не плодим новую
+        for (const c of all) { if (c.url.includes('/chat') && 'focus' in c) return c.focus(); }
+        if (self.clients.openWindow) return self.clients.openWindow(target);
+    })());
 });
 
 // ─── MESSAGE ──────────────────────────────────────────────────────────────────

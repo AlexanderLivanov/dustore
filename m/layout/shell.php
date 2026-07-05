@@ -12,6 +12,7 @@ $page_titles = [
     'profile'   => 'Профиль — Dustore',
     'search'    => 'Поиск — Dustore',
     'developer' => ($dev_title ?? 'Студия') . ' — Dustore',
+    'login'     => 'Вход',
 ];
 $meta_title = $page_titles[$page] ?? 'Dustore';
 

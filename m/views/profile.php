@@ -1,9 +1,5 @@
 <?php
-
-/**
- * m/views/profile.php
- * ИСПРАВЛЕНО: таблица wishlists (не wishlist)
- */
+session_start();
 // print_r($_SESSION);
 if (!$user):
 ?>
@@ -11,7 +7,7 @@ if (!$user):
         <div class="empty-icon"><i class="ti ti-user" style="font-size:44px"></i></div>
         <div class="empty-title">Войди в аккаунт</div>
         <div class="empty-sub">Чтобы видеть свой профиль,<br>библиотеку и историю покупок</div>
-        <a href="/login?backUrl=/m/profile" class="btn" style="margin-top:20px">Войти</a>
+        <a href="/login" class="btn" style="margin-top:20px">Войти</a>
     </div>
 <?php return;
 endif; ?>
