@@ -1,0 +1,57 @@
+/* ============================================================
+   editor-theme.css — тёмная тема SunEditor + комменты + тост.
+   Отдельный файл, чтобы не перезаливать media.css.
+   ============================================================ */
+:where(body) {
+    background: linear-gradient(180deg, #0f0a20, #240038, #780066);
+    min-height: 100vh;
+}
+/* ── SunEditor в тёмную тему Dustore ── */
+.dm-composer .sun-editor {
+    border: 1px solid var(--dm-border, #2c2140);
+    background: transparent;
+    margin-bottom: 10px;
+    font-family: var(--dm-f-body, 'Inter', sans-serif);
+}
+.dm-composer .sun-editor .se-toolbar {
+    background: var(--dm-surf-2, #1f1530);
+    outline: none;
+    border-bottom: 1px solid var(--dm-border, #2c2140);
+}
+.dm-composer .sun-editor .se-btn {
+    color: var(--dm-muted, #9b8fae);
+}
+.dm-composer .sun-editor .se-btn:enabled:hover,
+.dm-composer .sun-editor .se-btn.active {
+    background: rgba(195, 33, 120, .18);
+    color: var(--dm-p, #c32178);
+}
+.dm-composer .sun-editor .se-wrapper .se-wrapper-inner {
+    background: var(--dm-bg, #0d0813);
+    color: var(--dm-ink, #ece7f4);
+    min-height: 130px;
+}
+.dm-composer .sun-editor .se-wrapper .se-placeholder {
+    color: var(--dm-muted, #9b8fae);
+    font-style: normal;
+}
+.dm-composer .sun-editor .se-resizing-bar {
+    background: var(--dm-surf-2, #1f1530);
+    border-top: 1px solid var(--dm-border, #2c2140);
+}
+.dm-composer .sun-editor .se-dialog .se-dialog-inner .se-dialog-content {
+    background: var(--dm-surf, #171020);
+    color: var(--dm-ink, #ece7f4);
+    border: 1px solid var(--dm-border, #2c2140);
+}
+.dm-composer .sun-editor .se-dialog input,
+.dm-composer .sun-editor .se-dialog label {
+    color: var(--dm-ink, #ece7f4);
+    background: var(--dm-bg, #0d0813);
+}
+.dm-composer .sun-editor .se-list-layer {
+    background: var(--dm-surf, #171020);
+    border: 1px solid var(--dm-border, #2c2140);
+}
+.dm-composer .sun-editor .se-list-layer .se-btn-list { color: var(--dm-ink, #ece7f4); }
+.dm-composer .sun-editor .se-list-layer .se-btn-list:hover { background: rgba(195,33,120,.15); }

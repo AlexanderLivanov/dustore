@@ -605,7 +605,6 @@ session_start();
             transition: all 0.1s;
             font-size: 13px;
             color: var(--text2);
-            user-select: none;
         }
 
         .filter-item:hover {

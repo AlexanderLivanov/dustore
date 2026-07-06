@@ -1,8 +1,8 @@
 <?php
 /**
- * media/post.php — страница поста
- * Доступ: /media/p/{short_code}  (rewrite → post.php?c={code})
- * Здесь же: серверный учёт просмотра + OG-теги для превью в Telegram/VK.
+ * media/post.php — страница поста (v2)
+ * Доступ: /p/{short_code}  (rewrite → post.php?c={code}) — это канонический URL.
+ * v2: комментарии (плоские, tombstone), тост вместо alert.
  */
 require_once __DIR__ . '/_bootstrap.php';
 
@@ -28,21 +28,37 @@ $stmt->execute([$code]);
 $p = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$p) { http_response_code(404); exit('Пост не найден'); }
 
-/* ── Учёт просмотра: INSERT IGNORE в дедуп-таблицу, инкремент только при новой строке ── */
+/* ── Просмотр: дедуп через INSERT IGNORE ── */
 $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
 $isBot = (bool)preg_match('~bot|crawl|spider|preview|telegram|vkshare|facebookexternalhit|whatsapp~i', $ua);
 if (!$isBot) {
     $viewerKey = $uid > 0
         ? 'u:' . $uid
         : 'a:' . ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . $ua . '|' . MEDIA_VIEW_PEPPER;
-    $hash = md5($viewerKey, true); // BINARY(16)
     $ins = $pdo->prepare("INSERT IGNORE INTO media_views (post_id, viewer_hash, view_date) VALUES (?, ?, CURDATE())");
-    $ins->execute([(int)$p['id'], $hash]);
+    $ins->execute([(int)$p['id'], md5($viewerKey, true)]);
     if ($ins->rowCount() > 0) {
         $pdo->prepare("UPDATE media_posts SET views_count = views_count + 1 WHERE id = ?")->execute([(int)$p['id']]);
         $p['views_count']++;
     }
 }
+
+/* ── Комментарии ── */
+$cStmt = $pdo->prepare("
+    SELECT c.id, c.user_id, c.body, c.created_at, u.username, u.profile_picture
+    FROM media_comments c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.post_id = ? AND c.status = 'published'
+    ORDER BY c.id ASC
+    LIMIT 300
+");
+$cStmt->execute([(int)$p['id']]);
+$comments = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+
+/* право удалять чужие комменты: автор поста или член студии-автора */
+$isPostOwner = $uid > 0 && ((int)$p['author_user_id'] === $uid
+    || ($p['studio_id'] && in_array((int)$p['studio_id'],
+         array_map('intval', array_column(media_user_studios($pdo, $uid), 'id')), true)));
 
 $isStudio   = !empty($p['studio_id']);
 $authorName = $isStudio ? $p['studio_name'] : $p['username'];
@@ -53,11 +69,10 @@ $videos     = array_values(array_filter($att, fn($a) => ($a['kind'] ?? '') === '
 
 function med_e(?string $s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-/* OG-данные для превью в мессенджерах */
 $ogTitle = $p['title'] ?: ($authorName . ' — Dustore.Media');
 $ogDesc  = mb_substr(trim(strip_tags($p['body'])), 0, 180);
 $ogImage = $imgs[0]['path'] ?? MEDIA_CANON_HOST . '/swad/static/img/logo_new.png';
-$ogUrl   = MEDIA_CANON_HOST . '/media/p/' . $p['short_code'];
+$ogUrl   = media_post_url($p['short_code']);
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -73,63 +88,37 @@ $ogUrl   = MEDIA_CANON_HOST . '/media/p/' . $p['short_code'];
     <meta property="og:url"         content="<?= med_e($ogUrl) ?>">
     <meta property="og:site_name"   content="Dustore.Media">
     <meta name="twitter:card"       content="summary_large_image">
-    <?php
-    // Если DustoreSEO подключён глобально — можно заменить блок выше на него:
-    // (new DustoreSEO())->render([...]) — CONFIRM API класса
-    require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: шапка выводит свой <head>? Тогда убери дубли.
-    ?>
-    <style>
-        :where(body) {
-    background: linear-gradient(180deg, #0f0a20, #240038, #780066);
-    min-height: 100vh;
-}
-    .dm-wrap { max-width: 680px; margin: 0 auto; padding: 30px 16px 120px; }
-    .dm-card { background:var(--surf); border:1px solid var(--border); padding:24px;
-               clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,
-                                 100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,
-                                 6px 100%,6px calc(100% - 6px),0 calc(100% - 6px)); }
-    .dm-post-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-    .dm-post-head img.av { width:44px; height:44px; object-fit:cover; border:1px solid var(--border); }
-    .dm-badge { font-size:10px; text-transform:uppercase; letter-spacing:.08em; padding:2px 7px;
-                border:1px solid var(--p); color:var(--p); margin-left:6px; }
-    h1.dm-title { font-family:'Syne',sans-serif; font-size:26px; margin:6px 0 16px; }
-    .dm-body { font-size:15px; line-height:1.7; overflow-wrap:break-word; }
-    .dm-body img { max-width:100%; margin:10px 0; }
-    .dm-body a { color:var(--p); }
-    .dm-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin-top:16px; }
-    .dm-gallery img { width:100%; aspect-ratio:16/9; object-fit:cover; cursor:pointer; border:1px solid var(--border); }
-    .dm-video iframe { width:100%; aspect-ratio:16/9; border:1px solid var(--border); margin-top:16px; }
-    .dm-foot { display:flex; align-items:center; gap:18px; margin-top:20px; padding-top:14px;
-               border-top:1px solid var(--border); font-size:14px; color:var(--tm,#888); }
-    .dm-like { display:flex; align-items:center; gap:6px; background:none; border:none; color:inherit;
-               cursor:pointer; font-size:14px; }
-    .dm-like.liked { color:var(--p); }
-    .dm-share { margin-left:auto; background:none; border:none; color:var(--tm,#888); cursor:pointer; font-size:13px;
-                display:flex; align-items:center; gap:4px; }
-    </style>
+    <?php require_once __DIR__ . '/../swad/static/elements/header.php'; ?>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="<?= function_exists('asset_url') ? asset_url('/media/media.css') : '/media/media.css?v=3' ?>">
 </head>
 <body>
-<div class="dm-wrap">
-    <a href="/media/" style="color:var(--tm,#888);font-size:13px;text-decoration:none;">← Dustore.Media</a>
-    <article class="dm-card" style="margin-top:14px;">
+<div class="dm-scope">
+    <a href="/media/" style="color:var(--dm-muted,#888);font-size:13px;text-decoration:none;">← Dustore.Media</a>
+
+    <article class="dm-card <?= $isStudio ? 'is-studio' : '' ?>" style="margin-top:14px;">
         <div class="dm-post-head">
             <img class="av" src="<?= med_e($authorAv ?: '/swad/static/img/logo_new.png') ?>" alt="">
-            <div>
+            <div class="who">
                 <b><?= med_e($authorName) ?></b>
                 <?php if ($isStudio): ?><span class="dm-badge">студия</span><?php endif; ?>
-                <div style="font-size:12px;color:var(--tm,#888);">
+                <div class="sub">
                     <?= date('d.m.Y H:i', strtotime($p['published_at'])) ?>
-                    <?php if ($p['game_name']): ?> · девлог: <a href="/g/<?= (int)$p['game_id'] ?>" style="color:var(--p);"><?= med_e($p['game_name']) ?></a><?php endif; ?>
+                    <?php if ($p['game_name']): ?> · девлог: <a href="/g/<?= (int)$p['game_id'] ?>"><?= med_e($p['game_name']) ?></a><?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <?php if ($p['title']): ?><h1 class="dm-title"><?= med_e($p['title']) ?></h1><?php endif; ?>
+        <?php if ($p['title']): ?><h1 class="dm-title" style="font-size:26px;"><?= med_e($p['title']) ?></h1><?php endif; ?>
 
-        <div class="dm-body"><?= $p['body'] ?></div>
+        <div class="dm-body" style="font-size:15px;"><?= $p['body'] ?></div>
 
         <?php if ($imgs): ?>
-        <div class="dm-gallery">
+        <div class="dm-gallery" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));">
+            <?php
+            print_r(med_e($im['path']));
+            ?>
             <?php foreach ($imgs as $im): ?>
             <img src="<?= med_e($im['path']) ?>" loading="lazy" onclick="window.open(this.src,'_blank')">
             <?php endforeach; ?>
@@ -147,18 +136,81 @@ $ogUrl   = MEDIA_CANON_HOST . '/media/p/' . $p['short_code'];
                 <span class="material-icons"><?= $p['my_like'] ? 'favorite' : 'favorite_border' ?></span>
                 <span class="cnt"><?= (int)$p['likes_count'] ?></span>
             </button>
-            <span><span class="material-icons" style="font-size:17px;vertical-align:-3px;">visibility</span>
-                  <?= (int)$p['views_count'] ?></span>
+            <span class="dm-views">
+                <span class="material-icons">visibility</span> <?= (int)$p['views_count'] ?>
+            </span>
             <button class="dm-share" onclick="dmShare()">
-                <span class="material-icons" style="font-size:16px;">link</span> dustore.gg/<?= med_e($p['short_code']) ?>
+                <span class="material-icons">link</span> dustore.ru/p/<?= med_e($p['short_code']) ?>
             </button>
         </div>
     </article>
+
+    <!-- ═════════ КОММЕНТАРИИ ═════════ -->
+    <div class="dm-card" id="comments" style="margin-top:16px;">
+        <div style="font-family:var(--dm-f-head,'Syne');font-size:16px;margin-bottom:14px;">
+            Комментарии <span id="cm-count" style="color:var(--dm-muted,#888);">(<?= count($comments) ?>)</span>
+        </div>
+
+        <div id="cm-list">
+            <?php foreach ($comments as $c): ?>
+            <div class="dm-comment" data-cid="<?= (int)$c['id'] ?>">
+                <img class="cm-av" src="<?= med_e($c['profile_picture'] ?: '/swad/static/img/logo_new.png') ?>" alt="">
+                <div class="cm-main">
+                    <div class="cm-head">
+                        <b><?= med_e($c['username']) ?></b>
+                        <span class="cm-date"><?= date('d.m.Y H:i', strtotime($c['created_at'])) ?></span>
+                        <?php if ($uid && ((int)$c['user_id'] === $uid || $isPostOwner)): ?>
+                        <button class="cm-del" title="Удалить" onclick="dmDelComment(<?= (int)$c['id'] ?>)">
+                            <span class="material-icons" style="font-size:15px;">close</span>
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                    <div class="cm-body"><?= nl2br(med_e($c['body'])) ?></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            <?php if (!$comments): ?>
+            <div id="cm-empty" style="color:var(--dm-muted,#888);font-size:13px;padding:8px 0;">
+                Комментариев пока нет — будьте первым.
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($uid): ?>
+        <div class="cm-form">
+            <textarea id="cm-input" maxlength="2000" rows="2" placeholder="Написать комментарий…"></textarea>
+            <button class="dm-btn" id="cm-send">Отправить</button>
+        </div>
+        <?php else: ?>
+        <div style="margin-top:12px;font-size:13px;color:var(--dm-muted,#888);">
+            <a href="/login?backUrl=<?= urlencode('/p/' . $p['short_code']) ?>" style="color:var(--dm-p,#c32178);">Войдите</a>, чтобы комментировать.
+        </div>
+        <?php endif; ?>
+    </div>
 </div>
 
+<div id="dm-toast" class="dm-toast"></div>
+
 <script>
+const POST_ID = <?= (int)$p['id'] ?>;
+
+function dmToast(msg) {
+    const t = document.getElementById('dm-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function dmShare() {
+    const url = 'https://dustore.ru/p/<?= med_e($p['short_code']) ?>';
+    navigator.clipboard.writeText(url)
+        .then(() => dmToast('Ссылка скопирована'))
+        .catch(() => dmToast(url));
+}
+
 async function dmLike(btn, id) {
-    <?php if (!$uid): ?> location.href = '/login?backUrl=<?= urlencode('/media/p/' . $p['short_code']) ?>'; return; <?php endif; ?>
+    <?php if (!$uid): ?> location.href = '/login?backUrl=<?= urlencode('/p/' . $p['short_code']) ?>'; return; <?php endif; ?>
     const fd = new FormData();
     fd.append('action', 'toggle_like');
     fd.append('post_id', id);
@@ -168,11 +220,64 @@ async function dmLike(btn, id) {
     btn.querySelector('.material-icons').textContent = r.liked ? 'favorite' : 'favorite_border';
     btn.querySelector('.cnt').textContent = r.likes;
 }
-function dmShare() {
-    navigator.clipboard.writeText('https://dustore.gg/<?= med_e($p['short_code']) ?>')
-        .then(() => alert('Короткая ссылка скопирована'));
+
+function cmEsc(s) {
+    return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+}
+
+<?php if ($uid): ?>
+document.getElementById('cm-send').addEventListener('click', async function () {
+    const input = document.getElementById('cm-input');
+    const body = input.value.trim();
+    if (!body) return;
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('action', 'add_comment');
+    fd.append('post_id', POST_ID);
+    fd.append('body', body);
+    const r = await fetch('/media/api.php', { method:'POST', body: fd }).then(r => r.json());
+    this.disabled = false;
+    if (!r.success) { dmToast(r.error || 'Ошибка'); return; }
+
+    document.getElementById('cm-empty')?.remove();
+    const c = r.comment;
+    document.getElementById('cm-list').insertAdjacentHTML('beforeend', `
+        <div class="dm-comment" data-cid="${c.id}">
+            <img class="cm-av" src="${cmEsc(c.avatar || '/swad/static/img/logo_new.png')}" alt="">
+            <div class="cm-main">
+                <div class="cm-head">
+                    <b>${cmEsc(c.username)}</b>
+                    <span class="cm-date">только что</span>
+                    <button class="cm-del" title="Удалить" onclick="dmDelComment(${c.id})">
+                        <span class="material-icons" style="font-size:15px;">close</span>
+                    </button>
+                </div>
+                <div class="cm-body">${cmEsc(c.body).replace(/\n/g, '<br>')}</div>
+            </div>
+        </div>`);
+    input.value = '';
+    const cnt = document.getElementById('cm-count');
+    cnt.textContent = '(' + (document.querySelectorAll('.dm-comment').length) + ')';
+});
+
+// Ctrl+Enter — отправить
+document.getElementById('cm-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) document.getElementById('cm-send').click();
+});
+<?php endif; ?>
+
+async function dmDelComment(cid) {
+    if (!confirm('Удалить комментарий?')) return;
+    const fd = new FormData();
+    fd.append('action', 'delete_comment');
+    fd.append('comment_id', cid);
+    const r = await fetch('/media/api.php', { method:'POST', body: fd }).then(r => r.json());
+    if (!r.success) { dmToast(r.error || 'Ошибка'); return; }
+    document.querySelector(`.dm-comment[data-cid="${cid}"]`)?.remove();
+    const cnt = document.getElementById('cm-count');
+    cnt.textContent = '(' + document.querySelectorAll('.dm-comment').length + ')';
 }
 </script>
-<?php require_once __DIR__ . '/../swad/static/elements/footer.php'; // CONFIRM ?>
+<?php require_once __DIR__ . '/../swad/static/elements/footer.php'; ?>
 </body>
 </html>

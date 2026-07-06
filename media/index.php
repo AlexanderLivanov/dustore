@@ -1,7 +1,8 @@
 <?php
 /**
- * media/index.php — лента Dustore.Media + композер (v2)
- * Самодостаточная тема: media.css с fallback-токенами, явная загрузка шрифтов и Material Icons.
+ * media/index.php — лента Dustore.Media + композер (v3)
+ * v3: SunEditor (paste из буфера, ресайз картинок), тосты вместо alert,
+ *     короткие ссылки dustore.ru/p/{code}, счётчик комментариев.
  */
 require_once __DIR__ . '/_bootstrap.php';
 
@@ -10,7 +11,7 @@ $uid = media_user_id();
 
 $myStudios = $uid ? media_user_studios($pdo, $uid) : [];
 
-/* Игры моих студий — для привязки девлога. Некритичный запрос: при ошибке лента живёт дальше */
+/* Игры моих студий — некритичный запрос: при ошибке лента живёт дальше */
 $myGames = [];
 if ($myStudios) {
     try {
@@ -66,13 +67,13 @@ function med_num(int $n): string {
 
 $isAjax = isset($_GET['ajax']);
 if (!$isAjax):
-require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: путь к общей шапке
+require_once __DIR__ . '/../swad/static/elements/header.php';
 ?>
-<!-- Самодостаточность: если шапка сайта это уже грузит — браузер дедуплицирует, вреда нет -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
-<link rel="stylesheet" href="<?= asset_url('/media/media.css') ?>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/suneditor@2.47.5/dist/css/suneditor.min.css">
+<link rel="stylesheet" href="<?= function_exists('asset_url') ? asset_url('/media/media.css') : '/media/media.css?v=3' ?>">
+<link rel="stylesheet" href="<?= function_exists('asset_url') ? asset_url('/media/editor-theme.css') : '/media/editor-theme.css?v=1' ?>">
 
 <div class="dm-scope">
     <div class="dm-head">
@@ -87,7 +88,6 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
     </div>
 
     <?php if ($uid): ?>
-    <!-- ═════════ КОМПОЗЕР ═════════ -->
     <div class="dm-card dm-composer" id="dm-composer">
         <div class="dm-row" style="margin-bottom:10px;">
             <select id="c-type" style="margin-bottom:0;">
@@ -111,13 +111,15 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
         </div>
 
         <input type="text" id="c-title" placeholder="Заголовок статьи" style="display:none;">
-        <div id="c-editor"></div>
+
+        <!-- SunEditor: вставка картинок из буфера в любое место + ресайз за уголки -->
+        <textarea id="c-editor" style="display:none;"></textarea>
 
         <div class="dm-imgstrip" id="c-imgs"></div>
 
         <div class="dm-row">
             <label class="dm-btn dm-btn-ghost" style="flex:0 0 auto; text-align:center;">
-                <span class="material-icons" style="font-size:16px;vertical-align:-3px;">image</span> Фото
+                <span class="material-icons" style="font-size:16px;vertical-align:-3px;">image</span> Обложки
                 <input type="file" id="c-file" accept="image/*" multiple hidden>
             </label>
             <input type="url" id="c-video" placeholder="Ссылка на видео (YouTube / RuTube / VK)" style="margin-bottom:0;">
@@ -131,7 +133,6 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
         </div>
     </div>
     <?php else: ?>
-    <!-- Не авторизован: явное состояние вместо молча исчезнувшего композера -->
     <div class="dm-card dm-login-cta">
         <div class="txt">
             <b>Хотите рассказать о своей разработке?</b>
@@ -141,7 +142,6 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
     </div>
     <?php endif; ?>
 
-    <!-- ═════════ ЛЕНТА ═════════ -->
     <div id="dm-feed">
 <?php endif; /* !$isAjax */ ?>
 
@@ -160,6 +160,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
     $att = json_decode($p['attachments'] ?? '[]', true) ?: [];
     $imgs   = array_filter($att, fn($a) => ($a['kind'] ?? '') === 'image');
     $videos = array_filter($att, fn($a) => ($a['kind'] ?? '') === 'video');
+    $purl = '/p/' . $p['short_code'];
 ?>
     <article class="dm-card <?= $isStudio ? 'is-studio' : '' ?>" data-id="<?= (int)$p['id'] ?>">
         <div class="dm-post-head">
@@ -176,7 +177,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
         </div>
 
         <?php if ($p['title']): ?>
-        <a class="dm-title-link" href="/media/p/<?= med_e($p['short_code']) ?>">
+        <a class="dm-title-link" href="<?= med_e($purl) ?>">
             <div class="dm-title"><?= med_e($p['title']) ?></div>
         </a>
         <?php endif; ?>
@@ -203,11 +204,14 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
                 <span class="material-icons"><?= $p['my_like'] ? 'favorite' : 'favorite_border' ?></span>
                 <span class="cnt"><?= med_num((int)$p['likes_count']) ?></span>
             </button>
+            <a class="dm-views" href="<?= med_e($purl) ?>#comments" style="color:inherit;text-decoration:none;">
+                <span class="material-icons">chat_bubble_outline</span> <?= med_num((int)($p['comments_count'] ?? 0)) ?>
+            </a>
             <span class="dm-views">
                 <span class="material-icons">visibility</span> <?= med_num((int)$p['views_count']) ?>
             </span>
             <button class="dm-share" onclick="dmShare('<?= med_e($p['short_code']) ?>')">
-                <span class="material-icons">link</span> dustore.gg/<?= med_e($p['short_code']) ?>
+                <span class="material-icons">link</span> Ссылка
             </button>
         </div>
     </article>
@@ -222,17 +226,50 @@ require_once __DIR__ . '/../swad/static/elements/header.php'; // CONFIRM: пут
     <?php endif; ?>
 </div><!-- /dm-scope -->
 
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-<script>
-const dmImages = [];
+<div id="dm-toast" class="dm-toast"></div>
 
 <?php if ($uid): ?>
-const quill = new Quill('#c-editor', {
-    theme: 'snow',
-    placeholder: 'Что нового в разработке?',
-    modules: { toolbar: [['bold','italic','underline','strike'],
-                         [{header:2},{header:3}], ['blockquote','code-block'],
-                         [{list:'ordered'},{list:'bullet'}], ['link','clean']] }
+<script src="https://cdn.jsdelivr.net/npm/suneditor@2.47.5/dist/suneditor.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/suneditor@2.47.5/src/lang/ru.js"></script>
+<?php endif; ?>
+<script>
+function dmToast(msg) {
+    const t = document.getElementById('dm-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function dmShare(code) {
+    const url = 'https://dustore.ru/p/' + code;
+    navigator.clipboard.writeText(url)
+        .then(() => dmToast('Ссылка скопирована: dustore.ru/p/' + code))
+        .catch(() => dmToast(url)); // не-secure context: хотя бы покажем
+}
+
+<?php if ($uid): ?>
+const dmImages = [];
+
+const editor = SUNEDITOR.create('c-editor', {
+    lang: SUNEDITOR_LANG['ru'],
+    width: '100%',
+    minHeight: '130px',
+    placeholder: 'Что нового в разработке? Картинку можно вставить прямо из буфера (Ctrl+V)',
+    buttonList: [
+        ['bold', 'italic', 'strike'],
+        ['formatBlock'],
+        ['blockquote', 'list'],
+        ['link', 'image'],
+        ['codeView']
+    ],
+    formats: ['p', 'h2', 'h3', 'pre'],
+    // paste из буфера и drag-drop идут сюда автоматически; ресайз за уголки включён по умолчанию
+    imageUploadUrl: '/media/api.php?action=sun_upload',
+    imageUploadSizeLimit: 8 * 1024 * 1024,
+    imageAccept: '.jpg,.jpeg,.png,.webp,.gif',
+    defaultTag: 'p',
+    attributesWhitelist: { img: 'style|width|height|alt' }
 });
 
 document.getElementById('c-type').addEventListener('change', e => {
@@ -252,7 +289,7 @@ document.getElementById('c-file').addEventListener('change', async e => {
         fd.append('image', file);
         const r = await fetch('/media/api.php', { method:'POST', body: fd }).then(r => r.json());
         if (r.success) { dmImages.push(r.path); dmRenderImgs(); }
-        else alert(r.error || 'Ошибка загрузки');
+        else dmToast(r.error || 'Ошибка загрузки');
     }
     e.target.value = '';
 });
@@ -269,7 +306,7 @@ document.getElementById('c-publish').addEventListener('click', async function ()
     fd.append('action', 'create_post');
     fd.append('type',   document.getElementById('c-type').value);
     fd.append('title',  document.getElementById('c-title').value);
-    fd.append('body',   quill.root.innerHTML);
+    fd.append('body',   editor.getContents(true));
     fd.append('images', JSON.stringify(dmImages));
     fd.append('video_url', document.getElementById('c-video').value);
     fd.append('studio_id', document.getElementById('c-studio')?.value || '');
@@ -280,7 +317,7 @@ document.getElementById('c-publish').addEventListener('click', async function ()
     const r = await fetch('/media/api.php', { method:'POST', body: fd }).then(r => r.json());
     this.disabled = false;
     if (r.success) location.href = r.url;
-    else alert(r.error || 'Ошибка');
+    else dmToast(r.error || 'Ошибка');
 });
 <?php endif; ?>
 
@@ -296,11 +333,6 @@ async function dmLike(btn, id) {
     btn.querySelector('.cnt').textContent = r.likes;
 }
 
-function dmShare(code) {
-    navigator.clipboard.writeText('https://dustore.gg/' + code)
-        .then(() => alert('Короткая ссылка скопирована: dustore.gg/' + code));
-}
-
 document.getElementById('dm-more')?.addEventListener('click', async function () {
     const before = this.dataset.before;
     const html = await fetch(`/media/?ajax=1&before=${before}&tab=<?= med_e($filter) ?>`).then(r => r.text());
@@ -311,4 +343,4 @@ document.getElementById('dm-more')?.addEventListener('click', async function () 
 });
 </script>
 
-<?php require_once __DIR__ . '/../swad/static/elements/footer.php'; // CONFIRM: путь ?>
+<?php require_once __DIR__ . '/../swad/static/elements/footer.php'; ?>

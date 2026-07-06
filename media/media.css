@@ -4,12 +4,10 @@
    (--p, --surf, --border), но НЕ зависит от них — у каждой
    переменной есть fallback. Модуль не может «слиться».
    ============================================================ */
-
-   :where(body) {
+:where(body) {
     background: linear-gradient(180deg, #0f0a20, #240038, #780066);
     min-height: 100vh;
 }
-
 
 .dm-scope {
     /* локальные токены: var(глобальный, запасной) */
@@ -319,4 +317,98 @@ a.dm-title-link:hover .dm-title { color: var(--dm-p); }
     .dm-scope { padding: 22px 12px 90px; }
     .dm-head h1 { font-size: 24px; }
     .dm-gallery { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+
+/* ============================================================
+   Комментарии и тост — общая механика раздела, живёт в media.css,
+   потому что грузится и лентой, и страницей поста.
+   (editor-theme.css — ТОЛЬКО тема SunEditor, только там, где редактор.)
+   ============================================================ */
+
+.dm-comment {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--dm-border);
+}
+.dm-comment:last-of-type { border-bottom: none; }
+
+.dm-comment .cm-av {
+    width: 30px; height: 30px;
+    border-radius: 50%;                    /* кружок */
+    object-fit: cover;
+    background: var(--dm-surf-2);
+    border: 1px solid var(--dm-border);
+    flex-shrink: 0;
+}
+.dm-comment .cm-main { flex: 1; min-width: 0; }
+.dm-comment .cm-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 3px;
+}
+.dm-comment .cm-head b { font-size: 13px; font-weight: 600; }
+.dm-comment .cm-date {
+    font-family: var(--dm-f-mono);
+    font-size: 10.5px;
+    color: var(--dm-muted);
+}
+.dm-comment .cm-del {
+    margin-left: auto;
+    background: none; border: none;
+    color: var(--dm-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s, color .12s;
+    padding: 0;
+    line-height: 1;
+}
+.dm-comment:hover .cm-del { opacity: 1; }
+.dm-comment .cm-del:hover { color: #ff5b6e; }
+.dm-comment .cm-body {
+    font-size: 13.5px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+    color: var(--dm-ink);
+}
+
+/* форма нового комментария */
+.cm-form { display: flex; gap: 10px; margin-top: 14px; align-items: flex-end; }
+.cm-form textarea {
+    flex: 1;
+    background: var(--dm-bg);
+    border: 1px solid var(--dm-border);
+    color: var(--dm-ink);
+    padding: 10px 12px;
+    font-family: var(--dm-f-body);
+    font-size: 13.5px;
+    resize: vertical;
+    min-height: 42px;
+    outline: none;
+    clip-path: var(--px4);
+}
+.cm-form textarea:focus { border-color: var(--dm-p); }
+.cm-form textarea::placeholder { color: var(--dm-muted); }
+
+/* ── Тост (вместо alert) ── */
+.dm-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--dm-surf);
+    border: 1px solid var(--dm-p);
+    color: var(--dm-ink);
+    padding: 10px 18px;
+    font-family: var(--dm-f-mono);
+    font-size: 12.5px;
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s, transform .18s;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    max-width: 90vw;
+}
+.dm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }

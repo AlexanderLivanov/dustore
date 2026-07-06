@@ -6,9 +6,6 @@
         }
 } */
 
-body {
-    user-select: none;
-}
 
 ::selection {
     background: #c32178;

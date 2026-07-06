@@ -79,7 +79,7 @@ function xp_render_text(array $row, int $limit): string {
     $parts[] = $body;
     if ($row['game_name']) $parts[] = '🎮 ' . $row['game_name'];
     $parts[] = '✍️ ' . $author . ' · Dustore.Media';
-    $parts[] = 'https://dustore.gg/' . $row['short_code'];  // короткая ссылка = трекинг источника
+    $parts[] = media_post_url($row['short_code']);
     return implode("\n\n", array_filter($parts));
 }
 

@@ -420,7 +420,6 @@ if (!empty($_FILES['asset_file']['tmp_name'])) {
             align-items: center;
             gap: 10px;
             text-align: center;
-            user-select: none;
         }
 
         .cat-card:hover {
@@ -546,7 +545,6 @@ if (!empty($_FILES['asset_file']['tmp_name'])) {
             font-size: .78rem;
             color: var(--muted);
             transition: all .15s;
-            user-select: none;
         }
 
         .check-pill:hover {

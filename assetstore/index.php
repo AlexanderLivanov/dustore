@@ -474,7 +474,6 @@ function buildUrl($mergeParams)
             text-transform: uppercase;
             color: var(--muted);
             cursor: pointer;
-            user-select: none;
             transition: color .15s
         }
 
