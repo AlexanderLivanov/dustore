@@ -572,7 +572,6 @@ $election = $conn->query("
             font-size: .92rem;
             background: var(--surf);
             transition: background .15s;
-            user-select: none;
         }
 
         .faq-q:hover {

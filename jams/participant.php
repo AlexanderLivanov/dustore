@@ -1,5 +1,6 @@
 <?php
 require_once('../swad/config.php');
+require_once __DIR__ . '/../swad/controllers/jams/phase_lib.php';
 session_start();
 
 $dbInst = new Database();
@@ -33,15 +34,18 @@ $sprintStmt->execute([$sprintId]);
 $sprint = $sprintStmt->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) die('Спринт не найден');
 
-// experts
-$expStmt = $conn->prepare("
-    SELECT u.id, u.username, u.role, u.profile_picture
+$juryStmt = $conn->prepare("
+    SELECT COALESCE(se.external_name, u.username)          AS name,
+           COALESCE(se.external_role, 'Эксперт')           AS role,
+           se.external_company                              AS company,
+           COALESCE(se.external_avatar, u.profile_picture) AS avatar,
+           se.external_contact                              AS contact
     FROM sprint_experts se
-    JOIN users u ON se.user_id = u.id
+    LEFT JOIN users u ON u.id = se.user_id
     WHERE se.sprint_id = ?
 ");
-$expStmt->execute([$sprintId]);
-$sprintExperts = $expStmt->fetchAll(PDO::FETCH_ASSOC);
+$juryStmt->execute([$sprintId]);
+$jury = $juryStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ---------- Функции ----------
 function markdownToHtml($text) {
@@ -66,25 +70,10 @@ function markdownToHtml($text) {
     return $html;
 }
 
-function getSprintPhase($sprint) {
-    $now = new DateTime('now', new DateTimeZone('Europe/Moscow'));
-    $regStart = isset($sprint['registration_start']) ? new DateTime($sprint['registration_start'], new DateTimeZone('Europe/Moscow')) : null;
-    $regEnd   = isset($sprint['registration_end']) ? new DateTime($sprint['registration_end'], new DateTimeZone('Europe/Moscow')) : null;
-    $jamStart = isset($sprint['jam_start']) ? new DateTime($sprint['jam_start'], new DateTimeZone('Europe/Moscow')) : null;
-    $jamEnd   = isset($sprint['jam_end']) ? new DateTime($sprint['jam_end'], new DateTimeZone('Europe/Moscow')) : null;
-    $voteStart = isset($sprint['voting_start']) ? new DateTime($sprint['voting_start'], new DateTimeZone('Europe/Moscow')) : null;
-    $voteEnd   = isset($sprint['voting_end']) ? new DateTime($sprint['voting_end'], new DateTimeZone('Europe/Moscow')) : null;
+$px = jam_phase_ex($sprint);
+// $phase   = $px['phase'];
+// $phaseRu = implode(' · ', $px['badges']);
 
-    if ($regStart && $now < $regStart) return 'upcoming';
-    if ($regStart && $regEnd && $now >= $regStart && $now < $regEnd) return 'registration';
-    if ($regEnd && $jamStart && $now >= $regEnd && $now < $jamStart) return 'pre_jam';
-    if ($jamStart && $jamEnd && $now >= $jamStart && $now < $jamEnd) return 'jam';
-    if ($jamEnd && $voteStart && $now >= $jamEnd && $now < $voteStart) return 'post_jam';
-    if ($voteStart && $voteEnd && $now >= $voteStart && $now < $voteEnd) return 'voting';
-    return 'finished';
-}
-
-$phase = getSprintPhase($sprint);
 
 // Карта фаз на русский
 $phaseMap = [
@@ -113,18 +102,9 @@ function getNextEvent($sprint) {
     }
     return null;
 }
-$nextEvent = getNextEvent($sprint);
-if ($nextEvent) {
-    $diff = $nextEvent['datetime']->getTimestamp() - (new DateTime('now', new DateTimeZone('Europe/Moscow')))->getTimestamp();
-    $days = floor($diff / 86400);
-    $hours = floor(($diff % 86400) / 3600);
-    $minutes = floor(($diff % 3600) / 60);
-    $countdownStr = ($days > 0 ? $days . 'д ' : '') . $hours . 'ч ' . $minutes . 'м';
-    $countdownLabel = 'до ' . str_replace('_', ' ', $nextEvent['key']);
-} else {
-    $countdownStr = 'Завершён';
-    $countdownLabel = '';
-}
+$cd = jam_countdown($sprint);
+$countdownStr = $cd['str'];
+$countdownLabel = $cd['label'];
 
 // Загружаем участников (всех)
 $teamStmt = $conn->prepare("
@@ -157,6 +137,13 @@ if ($myTeam) {
     $myTeamMembers = $mmStmt->fetchAll(PDO::FETCH_ASSOC);
 }
 $isCaptain = $myTeam && (int)$myTeam['captain_id'] === (int)$userId;
+
+$canEditProgress = !$myTeam || $isCaptain;   // соло — свой; в команде — только капитан
+$pStmt = $conn->prepare($myTeam
+    ? "SELECT * FROM sprint_progress WHERE sprint_id=? AND team_id=?"
+    : "SELECT * FROM sprint_progress WHERE sprint_id=? AND user_id=?");
+$pStmt->execute([$sprintId, $myTeam ? (int)$myTeam['id'] : $userId]);
+$myProgress = $pStmt->fetch(PDO::FETCH_ASSOC) ?: ['percent'=>0,'stage'=>'idea','engine'=>''];
 
 // Входящие приглашения (если ещё не в команде)
 $myInvites = [];
@@ -335,7 +322,7 @@ require_once('../swad/static/elements/header.php');
         <div class="sidebar-item" onclick="showView('submit',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-7.07 17.07L12 22l7.07-2.93A10 10 0 0 0 12 2zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg></span>Сдать работу</div>
         <div class="sidebar-section">Спринт</div>
         <div class="sidebar-item" onclick="showView('scoreboard',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg></span>Рейтинг</div>
-        <div class="sidebar-item" onclick="showView('experts')" id="nav-experts">
+        <div class="sidebar-item" onclick="showView('experts', this)" id="nav-experts">
             <span>🏅</span> Эксперты
         </div>
         <div class="sidebar-item" onclick="showView('criteria',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm4 12h-4v-2h4v2zm0-4h-4v-2h4v2zm-8 4H8v-2h2v2zm0-4H8v-2h2v2z"/></svg></span>Критерии</div>
@@ -362,6 +349,38 @@ require_once('../swad/static/elements/header.php');
                 <div class="stat-card"><div class="sc-val"><?= $submission ? '1' : '0' ?></div><div class="sc-lbl">Работ сдано</div></div>
                 <div class="stat-card"><div class="sc-val"><?= $phaseRu ?></div><div class="sc-lbl">Текущий этап</div></div>
             </div>
+            <div class="card">
+    <div class="card-title"><span>📈 Прогресс проекта<?= $myTeam ? ' команды' : '' ?></span></div>
+    <?php if ($canEditProgress): ?>
+    <div style="display:grid;gap:12px;">
+        <div>
+            <label style="font-size:12px;color:rgba(255,255,255,.5);">Готовность: <b id="pg-val"><?= (int)$myProgress['percent'] ?>%</b></label>
+            <input type="range" id="pg-percent" min="0" max="100" step="5"
+                   value="<?= (int)$myProgress['percent'] ?>"
+                   style="width:100%;accent-color:#c32178;"
+                   oninput="document.getElementById('pg-val').textContent = this.value + '%'">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <select id="pg-stage" class="form-input" style="flex:1;min-width:150px;">
+                <?php foreach (jam_dev_stages() as $k => $v): ?>
+                <option value="<?= $k ?>" <?= ($myProgress['stage'] ?? '') === $k ? 'selected' : '' ?>><?= $v ?></option>
+                <?php endforeach; ?>
+            </select>
+            <input id="pg-engine" class="form-input" list="engines" placeholder="Движок"
+                   value="<?= htmlspecialchars($myProgress['engine'] ?? '') ?>" style="flex:1;min-width:150px;">
+            <datalist id="engines">
+                <option>Unity</option><option>Unreal Engine</option><option>Godot</option>
+                <option>GameMaker</option><option>Construct</option><option>Defold</option>
+                <option>RPG Maker</option><option>Свой движок</option>
+            </datalist>
+            <button class="btn-team" style="cursor:pointer;" onclick="saveProgress()">Сохранить</button>
+        </div>
+        <div id="pg-msg" style="font-size:12px;"></div>
+    </div>
+    <?php else: ?>
+    <div class="alert">Прогресс команды заполняет капитан.</div>
+    <?php endif; ?>
+</div>
             <!-- ── Моя команда ── -->
             <div class="card" id="my-team">
                 <div class="card-title">
@@ -587,6 +606,22 @@ require_once('../swad/static/elements/header.php');
 </div>
 
 <script>
+
+    async function saveProgress() {
+    const r = await fetch('/swad/controllers/jams/save_progress.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            sprint_id: <?= (int)$sprintId ?>,
+            percent:   document.getElementById('pg-percent').value,
+            stage:     document.getElementById('pg-stage').value,
+            engine:    document.getElementById('pg-engine').value,
+        })
+    }).then(r => r.json());
+    const m = document.getElementById('pg-msg');
+    m.textContent = r.message || (r.success ? 'Сохранено' : 'Ошибка');
+    m.style.color = r.success ? '#5b8def' : '#f88';
+}
 (function () {
     const SPRINT_ID = window.DECK_SPRINT_ID || 0;
     const stage   = document.getElementById('deck-stage');
@@ -893,6 +928,29 @@ require_once('../swad/static/elements/header.php');
         <!-- Criteria -->
         <div class="view" id="view-criteria">
             <div class="page-title">Критерии оценки</div>
+            <?php if ($jury): ?>
+<div class="card">
+    <div class="card-title"><span>⭐ Жюри</span></div>
+    <?php foreach ($jury as $j): ?>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <?php if (!empty($j['avatar'])): ?>
+            <img src="<?= htmlspecialchars($j['avatar']) ?>" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+        <?php else: ?><span style="font-size:20px;">👤</span><?php endif; ?>
+        <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">
+                <?php if (!empty($j['contact'])): ?>
+                    <a href="<?= htmlspecialchars($j['contact']) ?>" target="_blank" rel="noopener" style="color:#e8ddf0;">
+                        <?= htmlspecialchars($j['name']) ?></a>
+                <?php else: ?><?= htmlspecialchars($j['name']) ?><?php endif; ?>
+            </div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);">
+                <?= htmlspecialchars(implode(' · ', array_filter([$j['role'], $j['company']]))) ?>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
             <div class="card">
                 <div class="card-title"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Критерии жюри</span></div>
                 <?php foreach ($criteria as $c): ?>
@@ -921,32 +979,32 @@ require_once('../swad/static/elements/header.php');
 <div class="view" id="view-experts">
     <div class="page-title">Эксперты джема</div>
     <div class="page-sub">Специалисты, которые оценивают работы участников</div>
-    <?php if (empty($sprintExperts)): ?>
+    <?php if (empty($jury)): ?>
         <div class="card" style="text-align:center; padding:40px; color:rgba(255,255,255,.3);">
             Эксперты ещё не назначены
         </div>
     <?php else: ?>
         <div class="card">
             <div class="team-grid">
-                <?php foreach ($sprintExperts as $exp): ?>
+                <?php foreach ($jury as $exp): ?>
                 <div class="team-card">
                     <div class="tc-av">
-                        <?php if (!empty($exp['profile_picture'])): ?>
-                            <img src="<?= htmlspecialchars($exp['profile_picture']) ?>" 
+                        <?php if (!empty($exp['avatar'])): ?>
+                            <img src="<?= htmlspecialchars($exp['avatar']) ?>"
                                  style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
-                        <?php else: ?>
-                            🏅
-                        <?php endif; ?>
+                        <?php else: ?>🏅<?php endif; ?>
                     </div>
                     <div class="tc-name">
-                        <a href="/player/<?= urlencode($exp['username']) ?>">
-                            <?= htmlspecialchars($exp['username']) ?>
-                        </a>
-                        <?php if (!empty($exp['role'])): ?>
-                            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;">
-                                <?= htmlspecialchars($exp['role']) ?>
-                            </div>
+                        <?php if (!empty($exp['uid'])): ?>
+                            <a href="/player/<?= urlencode($exp['username']) ?>"><?= htmlspecialchars($exp['name']) ?></a>
+                        <?php elseif (!empty($exp['contact'])): ?>
+                            <a href="<?= htmlspecialchars($exp['contact']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($exp['name']) ?></a>
+                        <?php else: ?>
+                            <?= htmlspecialchars($exp['name']) ?>
                         <?php endif; ?>
+                        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;">
+                            <?= htmlspecialchars(implode(' · ', array_filter([$exp['role'], $exp['company']]))) ?>
+                        </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -958,12 +1016,12 @@ require_once('../swad/static/elements/header.php');
 </div>
 
 <script>
-    function showView(name) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('view-' + name).classList.add('active');
-        document.getElementById('nav-' + name).classList.add('active');
-    }
+    function showView(name, el) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    (el || document.getElementById('nav-' + name))?.classList.add('active');
+}
 </script>
 <script>
     const SPRINT_ID_T = <?= (int)$sprintId ?>;

@@ -177,7 +177,6 @@ $sprintData = [
             font-family: var(--font);
             font-size: var(--font-size);
             color: var(--c-text);
-            user-select: none;
             background: #008080;
         }
 
@@ -405,7 +404,6 @@ $sprintData = [
             font-size: 12px;
             flex-shrink: 0;
             cursor: default;
-            user-select: none;
         }
         .win-titlebar.dragging {
             cursor: grabbing;

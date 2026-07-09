@@ -1,0 +1,24 @@
+{
+    "name": "MINI",
+    "identifier": "ru.dustore.mini.source",
+    "apps": [
+        {
+            "name": "MINI",
+            "bundleIdentifier": "com.example.miniMessenger",
+            "developerName": "Crazy Projects Lab",
+            "iconURL": "https://dustore.ru/swad/static/img/mini.png",
+            "tintColor": "1A1A1A",
+            "localizedDescription": "Мессенджер mini позволяет вам общаться всегда, даже в условиях ограничений. Надёжный, безопасный и не завален бесполезными функциями. Просто общайтесь. Общайтесь просто.",
+            "versions": [
+                {
+                    "version": "1.0.0+3",
+                    "buildVersion": "3",
+                    "date": "2026-07-04",
+                    "downloadURL": "https://dustore.ru/MINI-unsigned.ipa",
+                    "size": 7601227,
+                    "minOSVersion": "13.0"
+                }
+            ]
+        }
+    ]
+}

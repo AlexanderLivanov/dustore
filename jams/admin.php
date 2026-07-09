@@ -436,17 +436,19 @@ require_once('../swad/static/elements/header.php');
             <div class="page-title">Жюри</div>
             <div class="settings-section"><div class="settings-section-title">➕ Добавить судью</div><div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end"><select class="form-input-s" id="newJudgeId"><option value="">-- Выберите пользователя --</option></select><button class="btn-save" onclick="addJudge()">+ Добавить</button></div></div>
             <div class="list-card"><div class="list-card-title">⭐ Текущее жюри</div><div id="judges-list"></div></div>
-            <div class="settings-section">
-                <div class="settings-section-title">🌐 Внешний судья (без аккаунта Dustore)</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                    <input class="form-input-s" id="ext-name" placeholder="Имя *">
-                    <input class="form-input-s" id="ext-company" placeholder="Компания / студия">
-                    <input class="form-input-s" id="ext-role" placeholder="Роль (напр. Game Designer)">
-                    <input class="form-input-s" id="ext-avatar" placeholder="URL аватарки">
-                    <input class="form-input-s" id="ext-contact" placeholder="Контакт (tg / email)" style="grid-column:1/3;">
-                </div>
-                <button class="btn-save" style="margin-top:12px;" onclick="addExternalJudge()">+ Добавить внешнего</button>
-            </div>
+
+            <div class="card" style="margin-top:14px;">
+    <div class="card-title"><span>➕ Внешний член жюри (без аккаунта)</span></div>
+    <div style="display:grid;gap:10px;">
+        <input class="form-input" id="ej-name"    placeholder="Имя и фамилия *">
+        <input class="form-input" id="ej-role"    placeholder="Роль (напр. геймдизайнер)">
+        <input class="form-input" id="ej-company" placeholder="Компания">
+        <input class="form-input" id="ej-contact" placeholder="Ссылка на соцсеть (https://…)">
+        <input class="form-input" id="ej-photo" type="file" accept="image/*">
+        <button class="btn-team" style="cursor:pointer;" onclick="addExternalJudge()">Добавить</button>
+        <div id="ej-msg" style="font-size:12px;"></div>
+    </div>
+</div>
         </div>
 
         <!-- PRIZES -->
@@ -539,23 +541,21 @@ require_once('../swad/static/elements/header.php');
     }
 
     async function addExternalJudge() {
-        const name = document.getElementById('ext-name').value.trim();
-        if (!name) { alert('Имя обязательно'); return; }
-        const payload = {
-            sprint_id: sprintId,
-            name,
-            company: document.getElementById('ext-company').value.trim(),
-            role:    document.getElementById('ext-role').value.trim(),
-            avatar:  document.getElementById('ext-avatar').value.trim(),
-            contact: document.getElementById('ext-contact').value.trim(),
-        };
-        const r = await fetch('/swad/controllers/jams/add_external_judge.php', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
-        const d = await r.json();
-        if (d.success) location.reload();
-        else alert(d.message || 'Ошибка');
-    }
+    const fd = new FormData();
+    fd.append('sprint_id', JAM_ID);
+    fd.append('name',    document.getElementById('ej-name').value.trim());
+    fd.append('role',    document.getElementById('ej-role').value.trim());
+    fd.append('company', document.getElementById('ej-company').value.trim());
+    fd.append('contact', document.getElementById('ej-contact').value.trim());
+    const photo = document.getElementById('ej-photo').files[0];
+    if (photo) fd.append('photo', photo);
+
+    const r = await fetch('/swad/controllers/jams/add_external_judge.php', { method: 'POST', body: fd }).then(r => r.json());
+    const m = document.getElementById('ej-msg');
+    m.textContent = r.message || (r.success ? 'Добавлен' : 'Ошибка');
+    m.style.color = r.success ? '#5b8def' : '#f88';
+    if (r.success) loadJudges(JAM_ID);
+}
 
     async function removeJudge(userIdOrJudge) {
         if (!confirm('Убрать эксперта?')) return;

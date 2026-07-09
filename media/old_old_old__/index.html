@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayInspired — Войти</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+<div id="toasts"></div>
+
+<div class="login-page">
+
+  <!-- ── Левая брендовая колонка ── -->
+  <div class="login-brand">
+    <div class="login-logo">StayInspired</div>
+
+    <blockquote class="login-quote">
+      Вдохновение — не то, что приходит.<br>
+      <em>Это то, что ты замечаешь.</em>
+    </blockquote>
+
+    <div class="login-brand-foot">© 2026 StayInspired</div>
+  </div>
+
+  <!-- ── Правая колонка с формой ── -->
+  <div class="login-form-col">
+    <div class="login-form-wrap">
+
+      <!-- Заголовок — меняется между режимами -->
+      <h1 id="form-title">С возвращением</h1>
+      <p class="sub" id="form-sub">Войдите, чтобы продолжить</p>
+
+      <!-- Форма -->
+      <div id="form-login">
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-input" type="email" id="email"
+            placeholder="you@example.com" autocomplete="email">
+          <div class="form-error" id="err-email">Введите корректный email</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Пароль</label>
+          <input class="form-input" type="password" id="password"
+            placeholder="••••••••" autocomplete="current-password">
+          <div class="form-hint">Забыли пароль?
+            <a href="#" onclick="toast('Письмо со сбросом отправлено');return false;"
+               style="color:var(--ink);text-decoration:underline;text-underline-offset:3px;">
+              Восстановить
+            </a>
+          </div>
+          <div class="form-error" id="err-pass">Неверный пароль</div>
+        </div>
+
+        <button class="btn-submit" onclick="doLogin()">Войти</button>
+
+        <div class="login-divider"><span>или</span></div>
+
+        <button class="btn-ghost" style="width:100%;padding:12px;font-size:12px;"
+          onclick="toast('OAuth в разработке')">
+          Войти через Google
+        </button>
+
+        <div class="login-switch">
+          Нет аккаунта?
+          <a href="#" onclick="switchMode('register');return false;">Создать</a>
+        </div>
+      </div>
+
+      <!-- Форма регистрации (скрыта по умолчанию) -->
+      <div id="form-register" style="display:none;">
+        <div class="form-group">
+          <label class="form-label" for="reg-name">Имя</label>
+          <input class="form-input" type="text" id="reg-name" placeholder="Как вас зовут?">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-handle">Никнейм</label>
+          <input class="form-input" type="text" id="reg-handle" placeholder="@yourhandle">
+          <div class="form-hint">Будет отображаться в вашем профиле</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-email">Email</label>
+          <input class="form-input" type="email" id="reg-email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-pass">Пароль</label>
+          <input class="form-input" type="password" id="reg-pass" placeholder="Минимум 8 символов">
+          <div class="form-hint">Строчные, прописные, цифры</div>
+        </div>
+        <button class="btn-submit" onclick="doRegister()">Создать аккаунт</button>
+        <div class="login-switch">
+          Уже есть аккаунт?
+          <a href="#" onclick="switchMode('login');return false;">Войти</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/ui.js"></script>
+<script>
+function switchMode(mode) {
+  const isReg = mode === 'register';
+  document.getElementById('form-login').style.display    = isReg ? 'none' : '';
+  document.getElementById('form-register').style.display = isReg ? ''     : 'none';
+  document.getElementById('form-title').textContent = isReg ? 'Создать аккаунт' : 'С возвращением';
+  document.getElementById('form-sub').textContent   = isReg ? 'Уже есть аккаунт? Войдите' : 'Войдите, чтобы продолжить';
+}
+
+function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('password').value;
+  // простая клиентская валидация
+  let ok = true;
+  document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
+  if (!email.includes('@')) {
+    document.getElementById('err-email').classList.add('show'); ok = false;
+  }
+  if (pass.length < 6) {
+    document.getElementById('err-pass').classList.add('show'); ok = false;
+  }
+  if (!ok) return;
+  toast('Входим…');
+  setTimeout(() => { window.location.href = 'feed.html'; }, 800);
+}
+
+function doRegister() {
+  const name   = document.getElementById('reg-name').value.trim();
+  const handle = document.getElementById('reg-handle').value.trim();
+  const email  = document.getElementById('reg-email').value.trim();
+  const pass   = document.getElementById('reg-pass').value;
+  if (!name || !handle || !email.includes('@') || pass.length < 8) {
+    toast('Заполните все поля корректно'); return;
+  }
+  toast('Аккаунт создан! Добро пожаловать ✦');
+  setTimeout(() => { window.location.href = 'feed.html'; }, 900);
+}
+</script>
+</body>
+</html>

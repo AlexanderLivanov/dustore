@@ -517,7 +517,7 @@ $stmt->execute([
                             <path d="M4.217 7c-.274 0 -.544 .054 -.797 .161c-1.426 .615 -1.767 2.562 -1.078 4.335c.563 1.451 1.71 2.504 2.941 2.504c.274 0 .544 -.054 .797 -.161c1.426 -.615 1.767 -2.562 1.078 -4.335c-.563 -1.451 -1.71 -2.504 -2.941 -2.504z" />
                         </svg>
                     </button>
-                    <button class="button" style="padding: 6px; position: relative;" onclick="location.href='/notifications'">
+                    <button class="button" style="padding: 6px; position: relative;" onclick="location.href='/chat'">
                         <?php if (!empty($unread_notif_count)): ?>
                             <span style="position:absolute; top:5px; right:5px; width:9px; height:9px;
                                         border-radius:50%; background:#ff3b3b;

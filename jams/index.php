@@ -1,6 +1,7 @@
 <?php
 require_once('../swad/static/elements/header.php');
 require_once('../swad/config.php');
+require_once __DIR__ . '/../swad/controllers/jams/phase_lib.php';
 
 $dbInst = new Database();
 $conn = $dbInst->connect();
@@ -24,9 +25,14 @@ foreach ($sprints as &$sprint) {
     $sprint['prizes'] = $prizeStmt->fetchAll(PDO::FETCH_ASSOC);
 
     $expStmt = $conn->prepare("
-        SELECT u.id, u.username, u.role
+        SELECT se.id,
+            COALESCE(se.external_name, u.username)              AS username,
+            COALESCE(se.external_role, 'Эксперт')               AS role,
+            se.external_company                                  AS company,
+            COALESCE(se.external_avatar, u.profile_picture)     AS avatar,
+            se.external_contact                                  AS contact
         FROM sprint_experts se
-        JOIN users u ON se.user_id = u.id
+        LEFT JOIN users u ON u.id = se.user_id
         WHERE se.sprint_id = ?
     ");
     $expStmt->execute([$sprint['id']]);
@@ -46,25 +52,14 @@ if (!empty($_SESSION['USERDATA']['id'])) {
     $userSprintIds = $partStmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-function getPhase($s) {
-    $now = new DateTime('now', new DateTimeZone('Europe/Moscow'));
-    $regStart  = isset($s['registration_start']) ? new DateTime($s['registration_start'], new DateTimeZone('Europe/Moscow')) : null;
-    $regEnd    = isset($s['registration_end'])   ? new DateTime($s['registration_end'],   new DateTimeZone('Europe/Moscow')) : null;
-    $jamStart  = isset($s['jam_start'])          ? new DateTime($s['jam_start'],          new DateTimeZone('Europe/Moscow')) : null;
-    $jamEnd    = isset($s['jam_end'])            ? new DateTime($s['jam_end'],            new DateTimeZone('Europe/Moscow')) : null;
-    $voteStart = isset($s['voting_start'])       ? new DateTime($s['voting_start'],       new DateTimeZone('Europe/Moscow')) : null;
-    $voteEnd   = isset($s['voting_end'])         ? new DateTime($s['voting_end'],         new DateTimeZone('Europe/Moscow')) : null;
-
-    if ($regStart && $now < $regStart) return 'upcoming';
-    if ($regStart && $regEnd && $now >= $regStart && $now < $regEnd) return 'registration';
-    if ($regEnd && $jamStart && $now >= $regEnd && $now < $jamStart) return 'pre_jam';
-    if ($jamStart && $jamEnd && $now >= $jamStart && $now < $jamEnd) return 'jam';
-    if ($jamEnd && $voteStart && $now >= $jamEnd && $now < $voteStart) return 'post_jam';
-    if ($voteStart && $voteEnd && $now >= $voteStart && $now < $voteEnd) return 'voting';
-    return 'finished';
+foreach ($sprints as &$s) {
+    $px = jam_phase_ex($s);
+    $s['phase']    = $px['phase'];
+    $s['badges']   = $px['badges'];    // может быть 2: ['Уже идёт', 'Регистрация открыта']
+    $s['reg_open'] = $px['reg_open'];
+    $s['dates_reg'] = jam_date_range($s['registration_start'] ?? null, $s['registration_end'] ?? null);
+    $s['dates_jam'] = jam_date_range($s['jam_start'] ?? null, $s['jam_end'] ?? null);
 }
-
-foreach ($sprints as &$s) { $s['phase'] = getPhase($s); }
 unset($s);
 
 $canRateMap = [];
@@ -664,8 +659,9 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
     function renderGrid() {
         const q = document.getElementById('search')?.value.toLowerCase() || '';
         const filtered = sprints.filter(s => {
-            const phase = s.phase || 'finished';
-            return (curFilter === 'all' || phase === curFilter) &&
+                const matchesFilter = curFilter === 'all' || phase === curFilter
+                   || (curFilter === 'registration' && s.reg_open);
+                return matchesFilter &&
                    (s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
         });
         const grid  = document.getElementById('grid');
@@ -692,8 +688,9 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                 <div class="card-desc">${escapeHtml(s.title)}</div>
                 <div class="tags">${tags}</div>
                 <div class="card-stats">
-                    <div class="stat-box"><div class="s-lbl">Статус</div><div class="s-val">${phaseText}</div></div>
-                    <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${formatDateRange(s.registration_start, s.registration_end)}</div></div>
+                  <div class="stat-box"><div class="s-lbl">Статус</div><div class="s-val">${(s.badges || [phaseText]).join(' · ')}</div></div>
+                    <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${s.dates_reg || '—'}</div></div>
+                    <div class="stat-box"><div class="s-lbl">Джем</div><div class="s-val">${s.dates_jam || '—'}</div></div>
                 </div>
                ${(() => {
                     const total   = s.current_participants || 0;
@@ -740,9 +737,16 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
             return `<div class="prize-item"><span style="font-size:20px">${medal}</span><div><div class="pi-place">${p.place_num} место</div><div class="pi-reward">${escapeHtml(p.reward)}</div></div></div>`;
         }).join('') || '<p style="color:rgba(255,255,255,.3);">Нет призов</p>';
 
-        const expertsHtml = (sprint.experts || []).map(e =>
-            `<div class="expert-item"><span>👤</span><div><div class="ex-name">${escapeHtml(e.username)}</div><div class="ex-role">${escapeHtml(e.role || 'Эксперт')}</div></div></div>`
-        ).join('') || '<p style="color:rgba(255,255,255,.3);">Нет экспертов</p>';
+        const expertsHtml = (sprint.experts || []).map(e => {
+    const av   = e.avatar
+        ? `<img src="${escapeHtml(e.avatar)}" style="width:38px;height:38px;border-radius:8px;object-fit:cover;">`
+        : '<span style="font-size:22px">👤</span>';
+    const sub  = [e.role, e.company].filter(Boolean).map(escapeHtml).join(' · ');
+    const name = e.contact
+        ? `<a href="${escapeHtml(e.contact)}" target="_blank" rel="noopener" style="color:#e8ddf0;text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.3);">${escapeHtml(e.username)}</a>`
+        : escapeHtml(e.username);
+    return `<div class="expert-item">${av}<div><div class="ex-name">${name}</div><div class="ex-role">${sub || 'Эксперт'}</div></div></div>`;
+}).join('') || '<p style="color:rgba(255,255,255,.3);">Жюри пока не назначено</p>';
 
         const logoHtml  = sprint.logo_url ? `<img src="${escapeHtml(sprint.logo_url)}" alt="logo">` : '🎮';
         const themeHtml = sprint.theme ? `<p><strong>Тема:</strong> ${escapeHtml(sprint.theme)}</p>` : '';
@@ -751,7 +755,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
         if (isJoined) {
             actionButton = `<a href="participant.php?sprint_id=${sprint.id}" class="btn-join">Панель участника</a>`;
         } else {
-            const canJoin = ['registration','upcoming','pre_jam'].includes(phase);
+            const canJoin = sprint.reg_open || ['registration','upcoming','pre_jam'].includes(phase);
             actionButton = canJoin
                 ? `<button class="btn-join" onclick="startJoin(${sprint.id})">Участвовать</button>`
                 : `<button class="btn-join" disabled>Регистрация закрыта</button>`;
@@ -763,7 +767,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                     <span class="modal-banner">${logoHtml}</span>
                     <div>
                         <div style="display:flex;gap:8px;align-items:center;">
-                            ${badgeHtml(phase)}
+                            ${(sprint.badges || []).map(b => `<span class="badge">${escapeHtml(b)}</span>`).join(' ')}
                             <span style="font-size:12px;color:rgba(255,255,255,.4);">${sprint.current_participants || 0} участников</span>
                         </div>
                         <div class="modal-h2">${escapeHtml(sprint.title)}</div>
@@ -776,6 +780,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                 <button class="tab-btn active" data-tab="overview">Обзор</button>
                 <button class="tab-btn" data-tab="dates">Даты</button>
                 <button class="tab-btn" data-tab="prizes">Призы и эксперты</button>
+                <button class="tab-btn" data-tab="progress">Прогресс</button>
                 ${sprint.rules       ? `<button class="tab-btn" data-tab="rules">Регламент</button>` : ''}
                 ${sprint.useful_links ? `<button class="tab-btn" data-tab="links">Ссылки</button>` : ''}
                 ${sprint.faq ? `<button class="tab-btn" data-tab="faq">FAQ</button>` : ''}
@@ -786,6 +791,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                 <div class="desc-content" id="desc-content"><div class="desc-text">${descHtml}</div></div>
                 ${themeHtml}
             </div>
+            <div class="tab-panel" data-panel="progress"><div id="progress-table">Загрузка…</div></div>
             <div class="tab-panel" id="tab-dates">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;color:rgba(255,255,255,.7);">
                     <div><strong>Регистрация:</strong> ${formatDateRange(sprint.registration_start, sprint.registration_end)}</div>
@@ -823,6 +829,41 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                 if (panel) panel.classList.add('active');
             });
         });
+
+        async function loadProgress(sprintId) {
+    const box = document.getElementById('progress-table');
+    if (!box) return;
+    const r = await fetch(`/swad/controllers/jams/get_progress.php?sprint_id=${sprintId}`).then(r => r.json());
+    if (!r.success) { box.innerHTML = `<p style="color:rgba(255,255,255,.35)">${r.message || 'Ошибка'}</p>`; return; }
+    if (!r.rows.length) { box.innerHTML = '<p style="color:rgba(255,255,255,.35)">Участников пока нет</p>'; return; }
+    box.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="color:rgba(255,255,255,.4);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">
+          <th style="text-align:left;padding:6px 8px;">Участник</th>
+          <th style="text-align:left;padding:6px 8px;width:34%;">Готовность</th>
+          <th style="text-align:left;padding:6px 8px;">Стадия</th>
+          <th style="text-align:left;padding:6px 8px;">Движок</th>
+        </tr></thead>
+        <tbody>${r.rows.map(row => `
+          <tr style="border-top:1px solid rgba(255,255,255,.07);">
+            <td style="padding:8px;">
+              ${row.type === 'team' ? '🛡️' : '👤'} ${escapeHtml(row.name)}
+              ${row.type === 'team' ? `<span style="color:rgba(255,255,255,.3);font-size:11px;"> · ${row.members} чел.</span>` : ''}
+            </td>
+            <td style="padding:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;">
+                  <div style="height:100%;width:${row.percent}%;background:#c32178;"></div>
+                </div>
+                <span style="font-size:12px;min-width:34px;text-align:right;">${row.percent}%</span>
+              </div>
+            </td>
+            <td style="padding:8px;">${escapeHtml(row.stage_label)}</td>
+            <td style="padding:8px;color:rgba(255,255,255,.55);">${row.engine ? escapeHtml(row.engine) : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+}
 
         viewOverlay.style.display = 'flex';
         if (history.pushState) history.pushState({sprint: sprint.id}, '', window.location.pathname + '?sprint=' + sprint.id);

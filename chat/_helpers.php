@@ -77,17 +77,20 @@ function get_users_meta(PDO $db, array $ids): array {
                            FROM users WHERE id IN ($in)");
     $st->execute($ids);
     $out = [];
-    foreach ($st as $r) {
-        $name = trim((string)($r['username'] ?? ''));
-        if ($name === '') $name = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
-        if ($name === '') $name = 'user#' . $r['id'];
-        $out[(int)$r['id']] = [
-            'id'       => (int)$r['id'],
-            'username' => $name,
-            'avatar'   => avatar_url($r['profile_picture']),
-        ];
-    }
+    foreach ($st as $r) { $out[(int)$r['id']] = user_card_from_row($r); }
     return $out;
+}
+
+/** Сборка карточки юзера из строки таблицы users: [id, username(display), avatar]. */
+function user_card_from_row(array $r): array {
+    $name = trim((string)($r['username'] ?? ''));
+    if ($name === '') $name = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
+    if ($name === '') $name = 'user#' . $r['id'];
+    return [
+        'id'       => (int)$r['id'],
+        'username' => $name,
+        'avatar'   => avatar_url($r['profile_picture'] ?? ''),
+    ];
 }
 
 /** Канонические ключи дедупликации бесед. */

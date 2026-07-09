@@ -1,0 +1,414 @@
+/* ============================================================
+   Dustore.Media — media.css
+   Самодостаточная тема: подхватывает глобальные токены сайта
+   (--p, --surf, --border), но НЕ зависит от них — у каждой
+   переменной есть fallback. Модуль не может «слиться».
+   ============================================================ */
+:where(body) {
+    background: linear-gradient(180deg, #0f0a20, #240038, #780066);
+    min-height: 100vh;
+}
+
+.dm-scope {
+    /* локальные токены: var(глобальный, запасной) */
+    --dm-p:       var(--p, #c32178);
+    --dm-p-soft:  color-mix(in srgb, var(--dm-p) 16%, transparent);
+    --dm-bg:      var(--bg, #0d0813);
+    --dm-surf:    var(--surf, #171020);
+    --dm-surf-2:  var(--elev, #1f1530);
+    --dm-border:  var(--border, #2c2140);
+    --dm-ink:     var(--t, #ece7f4);
+    --dm-muted:   var(--tm, #9b8fae);
+
+    --dm-f-head:  'Syne', system-ui, sans-serif;
+    --dm-f-body:  'Inter', system-ui, sans-serif;
+    --dm-f-mono:  'JetBrains Mono', ui-monospace, monospace;
+
+    /* пиксельные углы: 2 точки на угол = ступенька, не фаска */
+    --px6: polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,
+                   100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,
+                   6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));
+    --px4: polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,
+                   100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,
+                   4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));
+
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 34px 16px 120px;
+    font-family: var(--dm-f-body);
+    color: var(--dm-ink);
+}
+
+/* ── Шапка раздела ── */
+.dm-head { margin-bottom: 20px; }
+.dm-head h1 {
+    font-family: var(--dm-f-head);
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+.dm-head h1 em { color: var(--dm-p); font-style: normal; }
+.dm-head .dm-sub {
+    font-family: var(--dm-f-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--dm-muted);
+    margin-top: 4px;
+}
+
+/* ── Табы ── */
+.dm-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.dm-tab {
+    padding: 8px 16px;
+    font-family: var(--dm-f-mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    background: var(--dm-surf);
+    border: 1px solid var(--dm-border);
+    color: var(--dm-muted);
+    text-decoration: none;
+    clip-path: var(--px4);
+    transition: color .12s, border-color .12s;
+}
+.dm-tab:hover  { color: var(--dm-ink); border-color: var(--dm-p); }
+.dm-tab.active { background: var(--dm-p); border-color: var(--dm-p); color: #fff; }
+
+/* ── Карточка ── */
+.dm-card {
+    position: relative;
+    background: var(--dm-surf);
+    border: 1px solid var(--dm-border);
+    padding: 20px;
+    margin-bottom: 16px;
+    clip-path: var(--px6);
+    transition: border-color .12s;
+}
+.dm-card:hover { border-color: color-mix(in srgb, var(--dm-p) 45%, var(--dm-border)); }
+
+/* пост от студии — акцентная полоса слева */
+.dm-card.is-studio { box-shadow: inset 3px 0 0 var(--dm-p); }
+
+/* ── Шапка поста ── */
+.dm-post-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.dm-post-head img.av {
+    width: 42px; height: 42px; object-fit: cover;
+    background: var(--dm-surf-2);
+    border: 1px solid var(--dm-border);
+    clip-path: var(--px4);
+}
+.dm-post-head .who b { font-size: 14px; font-weight: 600; }
+.dm-post-head .who .sub {
+    font-family: var(--dm-f-mono);
+    font-size: 11px;
+    color: var(--dm-muted);
+    margin-top: 2px;
+}
+.dm-post-head .who .sub a { color: var(--dm-p); text-decoration: none; }
+
+.dm-badge {
+    display: inline-block;
+    font-family: var(--dm-f-mono);
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    margin-left: 8px;
+    vertical-align: 2px;
+    background: var(--dm-p-soft);
+    border: 1px solid var(--dm-p);
+    color: var(--dm-p);
+}
+
+/* ── Контент поста ── */
+.dm-title {
+    font-family: var(--dm-f-head);
+    font-size: 19px;
+    line-height: 1.3;
+    margin: 6px 0 10px;
+    color: var(--dm-ink);
+}
+a.dm-title-link { text-decoration: none; }
+a.dm-title-link:hover .dm-title { color: var(--dm-p); }
+
+.dm-body { font-size: 14px; line-height: 1.65; overflow-wrap: break-word; color: var(--dm-ink); }
+.dm-body p { margin: 0 0 10px; }
+.dm-body p:last-child { margin-bottom: 0; }
+.dm-body a { color: var(--dm-p); }
+.dm-body img { max-width: 100%; margin: 8px 0; clip-path: var(--px4); }
+.dm-body blockquote {
+    margin: 10px 0; padding: 8px 14px;
+    border-left: 3px solid var(--dm-p);
+    background: var(--dm-surf-2);
+    color: var(--dm-muted);
+}
+.dm-body pre, .dm-body code {
+    font-family: var(--dm-f-mono);
+    font-size: 12.5px;
+    background: var(--dm-bg);
+    border: 1px solid var(--dm-border);
+}
+.dm-body pre { padding: 10px 12px; overflow-x: auto; }
+.dm-body code { padding: 1px 5px; }
+
+.dm-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+.dm-gallery img {
+    width: 100%; aspect-ratio: 16/9; object-fit: cover;
+    cursor: pointer;
+    border: 1px solid var(--dm-border);
+    clip-path: var(--px4);
+    transition: border-color .12s;
+}
+.dm-gallery img:hover { border-color: var(--dm-p); }
+
+.dm-video { margin-top: 14px; }
+.dm-video iframe {
+    width: 100%; aspect-ratio: 16/9;
+    border: 1px solid var(--dm-border);
+    display: block;
+}
+
+/* ── Футер поста: лайки / просмотры / шаринг ── */
+.dm-foot {
+    display: flex; align-items: center; gap: 20px;
+    margin-top: 16px; padding-top: 12px;
+    border-top: 1px solid var(--dm-border);
+    font-family: var(--dm-f-mono);
+    font-size: 12px;
+    color: var(--dm-muted);
+}
+.dm-like {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none;
+    color: var(--dm-muted);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    transition: color .12s;
+}
+.dm-like:hover, .dm-like.liked { color: var(--dm-p); }
+.dm-like .material-icons { font-size: 18px; }
+.dm-views { display: flex; align-items: center; gap: 6px; }
+.dm-views .material-icons { font-size: 17px; }
+.dm-share {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 5px;
+    background: none; border: none;
+    color: var(--dm-muted);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    transition: color .12s;
+}
+.dm-share:hover { color: var(--dm-ink); }
+.dm-share .material-icons { font-size: 15px; }
+
+/* ── Композер ── */
+.dm-composer textarea,
+.dm-composer input[type=text],
+.dm-composer input[type=url],
+.dm-composer select {
+    width: 100%;
+    background: var(--dm-bg);
+    border: 1px solid var(--dm-border);
+    color: var(--dm-ink);
+    padding: 10px 12px;
+    font-family: var(--dm-f-body);
+    font-size: 14px;
+    margin-bottom: 10px;
+    outline: none;
+}
+.dm-composer input:focus, .dm-composer select:focus { border-color: var(--dm-p); }
+.dm-composer select option { background: var(--dm-surf); }
+
+.dm-composer .ql-toolbar {
+    border: 1px solid var(--dm-border) !important;
+    border-bottom: none !important;
+    background: var(--dm-surf-2);
+}
+.dm-composer .ql-container {
+    border: 1px solid var(--dm-border) !important;
+    background: var(--dm-bg);
+    min-height: 110px;
+    font-family: var(--dm-f-body);
+    font-size: 14px;
+    color: var(--dm-ink);
+    margin-bottom: 10px;
+}
+.dm-composer .ql-editor.ql-blank::before { color: var(--dm-muted); font-style: normal; }
+.dm-composer .ql-toolbar .ql-stroke { stroke: var(--dm-muted); }
+.dm-composer .ql-toolbar .ql-fill   { fill:   var(--dm-muted); }
+.dm-composer .ql-toolbar button:hover .ql-stroke,
+.dm-composer .ql-toolbar button.ql-active .ql-stroke { stroke: var(--dm-p); }
+.dm-composer .ql-toolbar button:hover .ql-fill,
+.dm-composer .ql-toolbar button.ql-active .ql-fill   { fill:   var(--dm-p); }
+
+.dm-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.dm-row > * { flex: 1; min-width: 150px; }
+.dm-check {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--dm-f-mono);
+    font-size: 11.5px;
+    color: var(--dm-muted);
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+.dm-check input { accent-color: var(--dm-p); }
+
+.dm-btn {
+    background: var(--dm-p);
+    color: #fff;
+    border: none;
+    padding: 11px 24px;
+    font-family: var(--dm-f-head);
+    font-size: 14px;
+    cursor: pointer;
+    clip-path: var(--px4);
+    transition: filter .12s;
+}
+.dm-btn:hover:not(:disabled) { filter: brightness(1.15); }
+.dm-btn:disabled { opacity: .5; cursor: default; }
+.dm-btn-ghost {
+    background: var(--dm-surf-2);
+    border: 1px solid var(--dm-border);
+    color: var(--dm-ink);
+}
+
+.dm-imgstrip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.dm-imgstrip .thumb {
+    position: relative; width: 92px; height: 56px; overflow: hidden;
+    border: 1px solid var(--dm-border);
+    clip-path: var(--px4);
+}
+.dm-imgstrip .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.dm-imgstrip .thumb button {
+    position: absolute; top: 2px; right: 2px;
+    background: rgba(0,0,0,.75); color: #fff;
+    border: none; width: 18px; height: 18px;
+    font-size: 11px; line-height: 1; cursor: pointer;
+}
+
+/* ── Пустые состояния ── */
+.dm-empty {
+    border: 1px dashed var(--dm-border);
+    padding: 48px 20px;
+    text-align: center;
+    color: var(--dm-muted);
+}
+.dm-empty .material-icons { font-size: 40px; color: var(--dm-p); display: block; margin-bottom: 10px; }
+.dm-empty b { display: block; font-family: var(--dm-f-head); font-size: 16px; color: var(--dm-ink); margin-bottom: 4px; }
+.dm-empty span { font-size: 13px; }
+
+.dm-login-cta {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    flex-wrap: wrap;
+}
+.dm-login-cta .txt b { font-family: var(--dm-f-head); font-size: 15px; display: block; }
+.dm-login-cta .txt span { font-size: 13px; color: var(--dm-muted); }
+.dm-login-cta a.dm-btn { text-decoration: none; flex: 0 0 auto; }
+
+@media (max-width: 560px) {
+    .dm-scope { padding: 22px 12px 90px; }
+    .dm-head h1 { font-size: 24px; }
+    .dm-gallery { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+
+/* ============================================================
+   Комментарии и тост — общая механика раздела, живёт в media.css,
+   потому что грузится и лентой, и страницей поста.
+   (editor-theme.css — ТОЛЬКО тема SunEditor, только там, где редактор.)
+   ============================================================ */
+
+.dm-comment {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--dm-border);
+}
+.dm-comment:last-of-type { border-bottom: none; }
+
+.dm-comment .cm-av {
+    width: 30px; height: 30px;
+    border-radius: 50%;                    /* кружок */
+    object-fit: cover;
+    background: var(--dm-surf-2);
+    border: 1px solid var(--dm-border);
+    flex-shrink: 0;
+}
+.dm-comment .cm-main { flex: 1; min-width: 0; }
+.dm-comment .cm-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 3px;
+}
+.dm-comment .cm-head b { font-size: 13px; font-weight: 600; }
+.dm-comment .cm-date {
+    font-family: var(--dm-f-mono);
+    font-size: 10.5px;
+    color: var(--dm-muted);
+}
+.dm-comment .cm-del {
+    margin-left: auto;
+    background: none; border: none;
+    color: var(--dm-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s, color .12s;
+    padding: 0;
+    line-height: 1;
+}
+.dm-comment:hover .cm-del { opacity: 1; }
+.dm-comment .cm-del:hover { color: #ff5b6e; }
+.dm-comment .cm-body {
+    font-size: 13.5px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+    color: var(--dm-ink);
+}
+
+/* форма нового комментария */
+.cm-form { display: flex; gap: 10px; margin-top: 14px; align-items: flex-end; }
+.cm-form textarea {
+    flex: 1;
+    background: var(--dm-bg);
+    border: 1px solid var(--dm-border);
+    color: var(--dm-ink);
+    padding: 10px 12px;
+    font-family: var(--dm-f-body);
+    font-size: 13.5px;
+    resize: vertical;
+    min-height: 42px;
+    outline: none;
+    clip-path: var(--px4);
+}
+.cm-form textarea:focus { border-color: var(--dm-p); }
+.cm-form textarea::placeholder { color: var(--dm-muted); }
+
+/* ── Тост (вместо alert) ── */
+.dm-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--dm-surf);
+    border: 1px solid var(--dm-p);
+    color: var(--dm-ink);
+    padding: 10px 18px;
+    font-family: var(--dm-f-mono);
+    font-size: 12.5px;
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s, transform .18s;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    max-width: 90vw;
+}
+.dm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
