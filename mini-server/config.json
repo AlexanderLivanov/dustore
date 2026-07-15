@@ -1,0 +1,7 @@
+{
+  "CLIENT_ID": "024ac7495e9248229a8bef626288d883",
+  "CLIENT_SECRET": "50358c0d3bc54320a8571e6fdf5de43f",
+  "BASE_URL": "http://localhost:3000",
+  "PORT": 3000,
+  "RELAY_INTERVAL_MS": 20000
+}

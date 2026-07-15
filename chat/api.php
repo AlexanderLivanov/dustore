@@ -148,6 +148,20 @@ function build_card(PDO $db, array $r, array $peer, int $myId, int $unread): arr
     return ['id'=>(int)$r['id'],'type'=>$r['type'],'peer'=>$peer,'last'=>$last,'unread'=>$unread,'ts'=>$r['last_message_at']];
 }
 
+/* ── Уведомления как виртуальная беседа ──────────────────────────── */
+
+/** Anti-corruption layer: сырая строка БД → фиксированный контракт для фронта */
+function notif_dto(array $n): array {
+    return [
+        'id'     => (int)$n['id'],
+        'title'  => $n['title'] ?? 'Уведомление',
+        'body'   => $n['text']  ?? $n['message'] ?? '',
+        'link'   => $n['link']  ?? null,
+        'ts'     => $n['created_at'] ?? $n['date'] ?? null,
+        'unread' => (($n['status'] ?? '') === 'unread'),
+    ];
+}
+
 /* =================== ACTION: unread_total =================== */
 if ($action === 'unread_total') {
     $rows=$db->prepare("SELECT c.id,(SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=c.id AND user_id=?) AS my_read

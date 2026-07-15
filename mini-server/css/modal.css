@@ -1,0 +1,157 @@
+/* ============================================================
+   MINI · modal.css — модальное окно (файлы Яндекс.Диска и др.)
+   ============================================================ */
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(26,26,26,.4);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.16);
+  width: min(520px, 100%);
+  max-height: min(70vh, 640px);
+  display: flex; flex-direction: column;
+  animation: miniPop .14s ease;
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line-8);
+  flex: none;
+}
+.modal-title { font-size: 16px; font-weight: 700; }
+
+.modal-body {
+  flex: 1; min-height: 0;
+  overflow: auto;
+  padding: 8px 10px 12px;
+}
+
+.file-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  transition: background .12s;
+}
+.file-row:hover { background: var(--wash-40); }
+
+.file-icon {
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: var(--mini-p);
+  display: flex; align-items: center; justify-content: center;
+  flex: none;
+  color: var(--mini-c);
+}
+
+.file-meta { flex: 1; min-width: 0; }
+.file-name {
+  font-size: 13.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.file-path {
+  font-size: 11.5px; color: var(--ink-52);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.file-size { font-size: 11px; color: var(--ink-45); flex: none; }
+
+.modal-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--ink-52);
+  line-height: 1.5;
+}
+.modal-empty .brand-mark {
+  font-family: var(--mini-hand);
+  font-size: 34px;
+  color: color-mix(in oklab, var(--mini-c) 30%, #fff);
+  margin-bottom: 8px;
+}
+
+.modal-loading {
+  padding: 32px 16px;
+  display: flex; justify-content: center;
+}
+.modal-loading .typing-bubble { align-self: center; }
+
+/* --- Форма создания чата --- */
+.create-chat-form {
+  padding: 10px 8px 8px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.create-chat-form .field input.invalid {
+  border-color: #EF4444;
+  animation: miniShake .35s ease;
+}
+.type-pills { display: flex; gap: 8px; }
+.type-pill {
+  flex: 1;
+  border: 1px solid var(--line-12);
+  border-radius: 999px;
+  padding: 10px 0;
+  font-size: 13px; font-weight: 600;
+  color: var(--ink-52);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.type-pill.active {
+  background: var(--mini-c);
+  border-color: var(--mini-c);
+  color: #fff;
+}
+.create-chat-hint {
+  font-size: 11.5px; line-height: 1.5;
+  color: var(--ink-52);
+}
+
+/* --- Поле ника: @ + input + «Найти» --- */
+.nick-row {
+  display: flex; align-items: center;
+  border: 1px solid color-mix(in oklab, var(--mini-c) 14%, #fff);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.nick-row:focus-within { border-color: color-mix(in oklab, var(--mini-c) 35%, #fff); }
+.nick-at {
+  padding: 0 4px 0 14px;
+  font-size: 15px; color: var(--ink-52);
+  user-select: none;
+}
+.nick-row input {
+  flex: 1; min-width: 0;
+  border: none; outline: none;
+  padding: 12px 8px 12px 0;
+  font-size: 15px;
+}
+.nick-row input.invalid { animation: miniShake .35s ease; }
+.find-btn {
+  flex: none;
+  align-self: stretch;
+  padding: 0 16px;
+  background: var(--mini-c); color: #fff;
+  font-size: 13px; font-weight: 600;
+  transition: opacity .15s;
+}
+.find-btn:hover { opacity: .88; }
+.find-btn:disabled { opacity: .5; cursor: default; }
+
+/* --- Статус резолва --- */
+.nick-status {
+  font-size: 12.5px; font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+.nick-status.loading { background: var(--wash-45); color: var(--ink-52); }
+.nick-status.ok      { background: #E9F9EF; color: #188038; }
+.nick-status.warn    { background: #FFF7E6; color: #D97706; }
+.nick-status.err     { background: #FFECEC; color: #DC2626; }
