@@ -145,6 +145,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /devs/edit?id=' . $project_id . '&announced=1');
         exit();
 
+    } elseif ($action === 'save_jam') {
+        // ── Привязка проекта к джему ──
+        // Менять привязку нельзя, если текущий джем ушёл в голосование / завершён.
+        $locked = false;
+        if (!empty($game['sprint_id'])) {
+            $lc = $conn->prepare("SELECT status, voting_start FROM sprints WHERE id = ?");
+            $lc->execute([(int)$game['sprint_id']]);
+            if ($ls = $lc->fetch(PDO::FETCH_ASSOC)) {
+                $locked = ($ls['status'] === 'finished')
+                    || (!empty($ls['voting_start']) && strtotime($ls['voting_start']) <= time());
+            }
+        }
+        if ($locked) {
+            $error_msg = 'Джем в стадии голосования или завершён — привязку менять нельзя.';
+        } elseif (isset($_POST['jam_enabled']) && $_POST['jam_enabled'] && (int)($_POST['sprint_id'] ?? 0) > 0) {
+            $sid = (int)$_POST['sprint_id'];
+            $jc  = $conn->prepare("SELECT title FROM sprints WHERE id = ? AND status IN ('registration','ongoing') AND (voting_start IS NULL OR voting_start > NOW()) LIMIT 1");
+            $jc->execute([$sid]);
+            if ($jc->fetchColumn() !== false) {
+                $conn->prepare("UPDATE games SET sprint_id = ?, updated_at = NOW() WHERE id = ? AND developer = ?")
+                     ->execute([$sid, $project_id, $studio_id]);
+                header('Location: /devs/edit?id=' . $project_id . '&jam=1'); exit();
+            }
+            $error_msg = 'Этот джем сейчас не принимает работы.';
+        } else {
+            $conn->prepare("UPDATE games SET sprint_id = NULL, updated_at = NOW() WHERE id = ? AND developer = ?")
+                 ->execute([$project_id, $studio_id]);
+            header('Location: /devs/edit?id=' . $project_id . '&jam=1'); exit();
+        }
+
     } elseif ($action === 'delete') {
         if ($is_owner) {
             $conn->prepare("DELETE FROM games WHERE id = ? AND developer = ?")->execute([$project_id, $studio_id]);
@@ -160,12 +190,28 @@ $stmt->execute([$project_id]);
 $game        = $stmt->fetch(PDO::FETCH_ASSOC);
 $screenshots = json_decode($game['screenshots'] ?? '[]', true) ?: [];
 
+// ── Джем: текущая привязка + список открытых джемов ──
+$current_sprint = null;
+if (!empty($game['sprint_id'])) {
+    $cs = $conn->prepare("SELECT id, title, status, voting_start FROM sprints WHERE id = ?");
+    $cs->execute([(int)$game['sprint_id']]);
+    $current_sprint = $cs->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+$jam_locked = $current_sprint && (($current_sprint['status'] === 'finished')
+    || (!empty($current_sprint['voting_start']) && strtotime($current_sprint['voting_start']) <= time()));
+$open_jams = $conn->query("
+    SELECT id, title FROM sprints
+    WHERE status IN ('registration','ongoing') AND (voting_start IS NULL OR voting_start > NOW())
+    ORDER BY jam_start DESC, id DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $success_msg = '';
 if (isset($_GET['saved']))     $success_msg = 'Изменения сохранены!';
 if (isset($_GET['created']))   $success_msg = 'Проект создан! Теперь загрузите файл игры.';
 if (isset($_GET['moderated'])) $success_msg = 'Проект отправлен на модерацию!';
 if (isset($_GET['published'])) $success_msg = 'Игра опубликована! Теперь она видна всем игрокам.';
 if (isset($_GET['announced'])) $success_msg = 'Настройки анонса сохранены!';
+if (isset($_GET['jam']))       $success_msg = 'Настройки участия в джеме сохранены!';
 
 $page_title = 'Редактирование: ' . ($game['name'] ?? '');
 $active_nav = 'projects';
@@ -504,7 +550,7 @@ if (in_array($mod_status, ['pending','rejected'])):
                         <?= $has_zip ? ($only_android ? 'Заменить APK' : 'Заменить файл игры') : ($only_android ? 'Загрузить APK' : 'Загрузить ZIP') ?>
                     </span>
                     <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
-                        <?= $only_android ? 'Android APK · до 4 ГБ' : 'До 500 МБ — прямая загрузка · Больше — чанки' ?>
+                        <?= $only_android ? 'Android APK · до 4 ГБ' : 'Любой размер — прямая загрузка в S3 одним файлом' ?>
                     </span>
                 </div>
                 <input type="file" id="zip-input" accept="<?= $only_android ? '.apk' : '.zip' ?>" style="display:none;" data-android="<?= $only_android ? '1' : '0' ?>">
@@ -675,6 +721,49 @@ if (in_array($mod_status, ['pending','rejected'])):
             </div>
         </form>
 
+        <!-- ═══ УЧАСТИЕ В ДЖЕМЕ ═══ -->
+        <form method="POST" id="jam-form">
+            <input type="hidden" name="action" value="save_jam">
+            <div class="card" style="border-color:rgba(195,33,120,.25);">
+                <div class="card-title">
+                    <span class="material-icons" style="color:var(--p);">sports_esports</span>Участие в джеме
+                </div>
+                <?php if ($jam_locked && $current_sprint): ?>
+                    <div style="font-size:12px;color:var(--ts);margin-bottom:6px;">
+                        Проект участвует в джеме <strong><?= htmlspecialchars($current_sprint['title']) ?></strong>.
+                    </div>
+                    <div style="font-size:11px;color:var(--tm);">Идёт голосование или джем завершён — привязку менять нельзя.</div>
+                <?php else: ?>
+                    <p style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
+                        Прикрепите проект к джему — после модерации он появится на странице голосования.
+                    </p>
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+                        <input type="checkbox" name="jam_enabled" id="jam-enabled" value="1"
+                               onchange="document.getElementById('jam-select-wrap').style.display=this.checked?'':'none';"
+                               style="accent-color:var(--p);width:16px;height:16px;"
+                               <?= $current_sprint ? 'checked' : '' ?>>
+                        <span style="font-size:13px;font-weight:600;">Участвует в джеме</span>
+                    </label>
+                    <div class="field" id="jam-select-wrap" style="<?= $current_sprint ? '' : 'display:none;' ?>">
+                        <label>Джем</label>
+                        <select name="sprint_id" style="width:100%;">
+                            <?php $listed = false; foreach ($open_jams as $j):
+                                $sel = $current_sprint && (int)$current_sprint['id'] === (int)$j['id'];
+                                if ($sel) $listed = true; ?>
+                            <option value="<?= (int)$j['id'] ?>"<?= $sel ? ' selected' : '' ?>><?= htmlspecialchars($j['title']) ?></option>
+                            <?php endforeach; ?>
+                            <?php if ($current_sprint && !$listed): ?>
+                            <option value="<?= (int)$current_sprint['id'] ?>" selected><?= htmlspecialchars($current_sprint['title']) ?> (текущий)</option>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
+                        <span class="material-icons" style="font-size:15px;">save</span>Сохранить участие
+                    </button>
+                <?php endif; ?>
+            </div>
+        </form>
+
     </div>
 </div>
 
@@ -697,13 +786,9 @@ if (in_array($mod_status, ['pending','rejected'])):
 <?php endif; ?>
 
 <?php
-// send_group_message(-1002916906978, '🆕 <b>Бот снова работает</b>', true, 'https://dustore.ru/');
-
 $extra_js = <<<JS
+<script src="/devs/build_uploader.js"></script>
 <script>
-const LARGE       = 500 * 1024 * 1024;
-const SMALL_CHUNK = 5   * 1024 * 1024;
-const LARGE_CHUNK = 50  * 1024 * 1024;
 const PID = {$project_id};
 
 // ── Модалка модерации ─────────────────────────────────────────────────────
@@ -749,7 +834,6 @@ function syncUploadZone() {
     var checkboxes  = document.querySelectorAll('input[name="platform[]"]');
     var selected    = Array.from(checkboxes).filter(function(c){return c.checked;}).map(function(c){return c.value;});
     var onlyAndroid = selected.length === 1 && selected[0] === 'Android';
-    var hasAndroid  = selected.includes('Android');
     var input = document.getElementById('zip-input');
     var icon  = document.getElementById('drop-icon');
     var label = document.getElementById('drop-label');
@@ -758,24 +842,19 @@ function syncUploadZone() {
         input.accept = '.apk'; input.dataset.android = '1';
         icon.textContent = 'android'; icon.style.color = '#a4c639';
         label.textContent = 'Загрузить APK-файл';
-        hint.textContent  = 'Android APK · до 4 ГБ';
-    } else if (hasAndroid) {
-        input.accept = '.zip,.apk'; input.dataset.android = '0';
-        icon.textContent = 'upload_file'; icon.style.color = 'var(--p)';
-        label.textContent = 'Загрузить ZIP или APK';
-        hint.textContent  = 'ZIP или APK · до 500 МБ прямая загрузка';
+        hint.textContent  = 'Android APK · любой размер';
     } else {
         input.accept = '.zip'; input.dataset.android = '0';
         icon.textContent = 'upload_file'; icon.style.color = 'var(--p)';
         label.textContent = 'Загрузить ZIP-архив';
-        hint.textContent  = 'До 500 МБ — прямая загрузка · Больше — чанки';
+        hint.textContent  = 'Любой размер — прямая загрузка в S3 одним файлом';
     }
 }
 document.querySelectorAll('input[name="platform[]"]').forEach(function(cb){
     cb.addEventListener('change', syncUploadZone);
 });
 
-// ── ZIP / APK upload ──────────────────────────────────────────────────────
+// ── Загрузка билда (multipart напрямую в S3) ──────────────────────────────
 document.getElementById('zip-drop').addEventListener('click', function(){
     document.getElementById('zip-input').click();
 });
@@ -784,74 +863,35 @@ document.getElementById('zip-input').addEventListener('change', function () {
     var file  = this.files[0];
     if (!file) return;
     var isApk = file.name.toLowerCase().endsWith('.apk');
-    var big   = !isApk && file.size >= LARGE;
     var hint  = document.getElementById('upload-mode-hint');
     hint.style.display = 'block';
-    if (isApk) {
-        hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(164,198,57,.08);border:1px solid rgba(164,198,57,.2);color:#a4c639;';
-        hint.textContent = '🤖 APK · ' + (file.size/1048576).toFixed(1) + ' МБ';
-    } else if (big) {
-        hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(195,33,120,.08);border:1px solid rgba(195,33,120,.2);color:var(--pl);';
-        hint.textContent = '📦 ' + (file.size/1048576).toFixed(1) + ' МБ — чанки';
-    } else {
-        hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.15);color:var(--ok);';
-        hint.textContent = '⚡ ZIP · ' + (file.size/1048576).toFixed(1) + ' МБ';
-    }
+    hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(195,33,120,.08);border:1px solid rgba(195,33,120,.2);color:var(--pl);';
+    hint.textContent = (isApk ? '🤖 APK · ' : '📦 ') + (file.size/1048576).toFixed(1) + ' МБ';
     uploadFile(file, isApk);
 });
 
 async function uploadFile(file, isApk) {
-    isApk = isApk || false;
-    var big    = !isApk && file.size >= LARGE;
-    var chunk  = big ? LARGE_CHUNK : SMALL_CHUNK;
-    var total  = Math.ceil(file.size / chunk);
-    var prog   = document.getElementById('zip-progress');
-    var bar    = document.getElementById('zip-bar');
-    var status = document.getElementById('zip-status');
-    var pct    = document.getElementById('zip-pct');
-    var detail = document.getElementById('zip-detail');
+    var prog = document.getElementById('zip-progress');
+    var bar  = document.getElementById('zip-bar');
+    var pct  = document.getElementById('zip-pct');
+    var stat = document.getElementById('zip-status');
     prog.style.display   = 'block';
     bar.style.background = isApk ? '#a4c639' : 'var(--p)';
-    for (var i = 0; i < total; i++) {
-        var last = i === total - 1;
-        if (last && total > 1) {
-            status.textContent = big ? '⏳ Последний чанк + manifest...' : (isApk ? '⏳ Завершаем APK...' : '⏳ Финализируем...');
-        } else {
-            bar.style.width    = Math.round(i / total * 100) + '%';
-            pct.textContent    = Math.round(i / total * 100) + '%';
-            status.textContent = (isApk ? '🤖 APK · часть ' : 'Чанк ') + (i+1) + ' из ' + total;
-        }
-        var fd = new FormData();
-        fd.append('chunk',        file.slice(i * chunk, (i+1) * chunk));
-        fd.append('chunk_index',  i);
-        fd.append('total_chunks', total);
-        fd.append('file_name',    file.name);
-        fd.append('file_size',    file.size);
-        fd.append('project_id',   PID);
-        if (isApk) fd.append('file_type', 'apk');
-        var data;
-        try {
-            var res  = await fetch('/devs/upload_chunk.php', {method:'POST', body:fd, credentials:'include'});
-            var text = await res.text();
-            data = JSON.parse(text);
-        } catch (e) {
-            setErr('Сервер вернул не-JSON: ' + String(e).substring(0, 200));
-            return;
-        }
-        if (!data.success) { setErr(data.message || 'Ошибка сервера'); return; }
-        if (data.done) {
+    stat.style.color     = '';
+    DustoreBuildUpload(file, {
+        projectId: PID,
+        endpoint:  '/devs/build_upload.php',
+        onProgress: function (p, label) {
+            bar.style.width = p + '%'; pct.textContent = p + '%'; stat.textContent = label;
+        },
+        onDone: function (data) {
             bar.style.width = '100%'; pct.textContent = '100%';
-            bar.style.background = 'var(--ok)'; status.style.color = 'var(--ok)';
-            status.textContent = isApk ? '✓ APK загружен · ' + data.size_mb + ' МБ'
-                : (data.mode === 'chunked' ? '✓ ' + data.chunk_count + ' чанков · ' + data.size_mb + ' МБ' : '✓ ZIP загружен · ' + data.size_mb + ' МБ');
-            if (data.mode === 'chunked') detail.textContent = 'manifest.json создан на S3';
-            setTimeout(function(){ location.reload(); }, 1500);
-            return;
-        }
-        bar.style.width = Math.round((i+1) / total * 100) + '%';
-        pct.textContent = Math.round((i+1) / total * 100) + '%';
-        if (data.sha256) detail.textContent = 'SHA256: ' + data.sha256.slice(0,16) + '...';
-    }
+            bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
+            stat.textContent = '✓ Билд загружен · ' + (data.size / 1048576).toFixed(1) + ' МБ';
+            setTimeout(function () { location.reload(); }, 1500);
+        },
+        onError: function (msg) { setErr(msg); }
+    });
 }
 
 function setErr(msg) {

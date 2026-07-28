@@ -7,7 +7,6 @@ $pdo = $db->connect();
 
 $userId   = $_SESSION['USERDATA']['id'] ?? null;
 $isAuthed = (bool)$userId;
-
 // ── Активные выборы ───────────────────────────────────────────────────────
 $election = $pdo->query("
     SELECT * FROM expert_elections
