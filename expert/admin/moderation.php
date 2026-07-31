@@ -16,31 +16,31 @@ if (!$isExpert) {
 // получаем общее количество модеров
 $totalExperts = $pdo->query("SELECT COUNT(*) FROM experts WHERE status='approved'")->fetchColumn();
 
-// игры
-$stmt = $pdo->query("
-        SELECT 
-        g.id,
-        g.name,
-        g.developer,
-        g.created_at,
-        g.genre,
-        g.platforms,
-        g.status,
-        g.moderation_status,
-        g.GQI,
+// Фильтр по джему
+$jamFilter = isset($_GET['jam']) ? (int)$_GET['jam'] : 0; // 0 = все, -1 = только джемы, >0 = конкретный
+$jamsList = $pdo->query("
+    SELECT DISTINCT s.id, s.title
+    FROM sprints s JOIN games g ON g.sprint_id = s.id
+    WHERE g.moderation_status = 'pending'
+    ORDER BY s.id DESC
+")->fetchAll(PDO::FETCH_ASSOC);
 
-        COUNT(mr.id) as votes,
-        SUM(CASE WHEN mr.score > 51 THEN 1 ELSE 0 END) as positive_votes
-
+$sql = "
+    SELECT g.id, g.name, g.developer, g.created_at, g.genre, g.platforms,
+           g.status, g.moderation_status, g.GQI, g.sprint_id, g.vt_status,
+           sp.title AS sprint_title,
+           COUNT(mr.id) AS votes,
+           SUM(CASE WHEN mr.score > 51 THEN 1 ELSE 0 END) AS positive_votes
     FROM games g
     LEFT JOIN moderation_reviews mr ON mr.game_id = g.id
-
-    WHERE g.moderation_status = 'pending'
-
-    GROUP BY g.id
-    ORDER BY g.created_at DESC
-");
-
+    LEFT JOIN sprints sp ON sp.id = g.sprint_id
+    WHERE g.moderation_status = 'pending'";
+$params = [];
+if ($jamFilter === -1)      { $sql .= " AND g.sprint_id IS NOT NULL"; }
+elseif ($jamFilter > 0)     { $sql .= " AND g.sprint_id = ?"; $params[] = $jamFilter; }
+$sql .= " GROUP BY g.id ORDER BY g.created_at DESC";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
@@ -456,6 +456,14 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
                 <input class="search-box" type="text" placeholder="🔍  Поиск по названию или студии..." oninput="filterGames(this.value)">
             </div>
 
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <a href="?" class="tag" style="text-decoration:none;<?= $jamFilter===0?'border-color:var(--accent);color:var(--accent);':'' ?>">Все</a>
+                <a href="?jam=-1" class="tag" style="text-decoration:none;<?= $jamFilter===-1?'border-color:var(--accent);color:var(--accent);':'' ?>">🏆 Только джемы</a>
+                <?php foreach ($jamsList as $jl): ?>
+                    <a href="?jam=<?= (int)$jl['id'] ?>" class="tag" style="text-decoration:none;<?= $jamFilter===(int)$jl['id']?'border-color:var(--accent);color:var(--accent);':'' ?>"><?= htmlspecialchars($jl['title']) ?></a>
+                <?php endforeach; ?>
+            </div>
+
             <div class="games-grid" id="games-grid">
                 <?php if (empty($games)): ?>
                     <div class="empty-state">
@@ -471,6 +479,9 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
                             <div class="game-name"><?= htmlspecialchars($g['name']) ?></div>
                             <div class="game-dev"><?= htmlspecialchars($g['developer']) ?></div>
                             <div class="game-tags">
+                                <?php if (!empty($g['sprint_title'])): ?>
+                                    <span class="tag" style="border-color:rgba(251,191,36,.3);color:#fbbf24;">🏆 <?= htmlspecialchars($g['sprint_title']) ?></span>
+                                <?php endif; ?>
                                 <?php if ($g['genre']): ?><span class="tag"><?= htmlspecialchars($g['genre']) ?></span><?php endif; ?>
                                 <?php if ($g['platforms']): ?><span class="tag"><?= htmlspecialchars($g['platforms']) ?></span><?php endif; ?>
                             </div>

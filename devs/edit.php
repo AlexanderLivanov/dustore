@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/s3.php');
 require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
+require_once(__DIR__ . '/../swad/controllers/deplex_web.php');
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: /devs/projects'); exit(); }
@@ -182,6 +183,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         $error_msg = 'Недостаточно прав для удаления проекта.';
+    } elseif ($action === 'create_deplex_token') {
+        $raw = 'dplx_live_' . bin2hex(random_bytes(12));
+        $conn->prepare("INSERT INTO deplex_tokens (token_hash, token_prefix, studio_id, user_id) VALUES (?, ?, ?, ?)")
+             ->execute([hash('sha256', $raw), substr($raw, 0, 14), $studio_id, (int)($_SESSION['USERDATA']['id'] ?? 0)]);
+        $_SESSION['new_deplex_token'] = $raw;
+        header('Location: /devs/edit?id=' . $project_id . '&dpxtoken=1');
+        exit();
     }
 }
 
@@ -528,6 +536,11 @@ if (in_array($mod_status, ['pending','rejected'])):
 
             <div class="card">
                 <div class="card-title"><span class="material-icons">folder_zip</span>Файл игры</div>
+                <div style="display:flex;gap:6px;margin-bottom:14px;">
+                    <button type="button" class="btn btn-p dpx-tab" data-tab="web" style="padding:6px 14px;font-size:12px;">Загрузить архив</button>
+                    <button type="button" class="btn btn-g dpx-tab" data-tab="deplex" style="padding:6px 14px;font-size:12px;">Через deplex (CLI)</button>
+                </div>
+                <div class="dpx-pane" data-pane="web">
                 <?php if ($has_zip): ?>
                 <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
                     <span class="material-icons" style="font-size:18px;">check_circle</span>
@@ -563,6 +576,11 @@ if (in_array($mod_status, ['pending','rejected'])):
                         <div id="zip-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
                     </div>
                     <div id="zip-detail" style="font-size:11px;color:var(--tm);margin-top:6px;"></div>
+                </div>
+                </div><!-- /pane web -->
+
+                <div class="dpx-pane" data-pane="deplex" hidden>
+                    <?php include(__DIR__ . '/../swad/controllers/devs_edit_deplex_tab.php'); ?>
                 </div>
             </div>
 
@@ -1028,6 +1046,14 @@ function syncLangLabel() {
     document.getElementById('lang-label').textContent = checked.length ? checked.join(', ') : 'Выберите языки...';
     document.getElementById('languages-hidden').value = checked.join(', ');
 }
+
+document.querySelectorAll('.dpx-tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.dpx-tab').forEach(function(x){ x.classList.remove('btn-p'); x.classList.add('btn-g'); });
+    t.classList.remove('btn-g'); t.classList.add('btn-p');
+    document.querySelectorAll('.dpx-pane').forEach(function(p){ p.hidden = (p.dataset.pane !== t.dataset.tab); });
+  });
+});
 </script>
 JS;
 

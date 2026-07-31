@@ -2,6 +2,7 @@
 session_start();
 require_once('swad/config.php');
 require_once('swad/controllers/game.php');
+require_once __DIR__ . '/swad/controllers/deplex_web.php';
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -62,6 +63,24 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 }
 
 $ratingData = $gameController->getAverageRating($game_id);
+
+/* Джем-участие + пики экспертов */
+$jamInfo = null; $expertPicks = [];
+$spq = $pdo->prepare("SELECT s.id, s.title FROM games g JOIN sprints s ON s.id = g.sprint_id WHERE g.id = ?");
+$spq->execute([$game_id]);
+$jamInfo = $spq->fetch(PDO::FETCH_ASSOC) ?: null;
+if ($jamInfo) {
+    try {
+        $ep = $pdo->prepare("
+            SELECT COALESCE(se.external_name, u.username, 'Эксперт') AS name
+            FROM sprint_expert_picks p
+            JOIN sprint_experts se ON se.id = p.expert_id
+            LEFT JOIN users u ON u.id = se.user_id
+            WHERE p.game_id = ?");
+        $ep->execute([$game_id]);
+        $expertPicks = $ep->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
+}
 
 $platformsNorm = array_map(fn($p) => strtolower(trim($p)), $platforms);
 $isWeb      = in_array('web', $platformsNorm) && count(array_filter($platformsNorm, fn($p) => $p !== 'web')) === 0;
@@ -344,6 +363,19 @@ $isPaid = ($game['price'] ?? 0) > 0;
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
+                    <?php if ($jamInfo): ?>
+                        <div class="gp-badges" style="margin-top:4px;">
+                            <a class="gp-badge" href="/jams/vote.php?id=<?= (int)$jamInfo['id'] ?>"
+                            style="text-decoration:none;background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.35);color:#fbbf24;">
+                                🏆 Участник джема: <?= htmlspecialchars($jamInfo['title']) ?>
+                            </a>
+                            <?php foreach ($expertPicks as $p): ?>
+                                <span class="gp-badge" style="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#fbbf24;">
+                                    🏅 Выбор эксперта: <?= htmlspecialchars($p['name']) ?>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                     <div class="gp-stats">
                         <div class="gp-stat">
                             <div class="gp-stat-val"><?= htmlspecialchars($game['GQI']) ?>/100</div>
@@ -387,7 +419,11 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 <div class="gp-price-tag gp-price-free">Бесплатно</div>
                             <?php endif; ?>
 
-                            <?php if (!empty($game['game_zip_url'])): ?>
+                            <?php $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game); ?>
+                            <?php if ($distMode === 'deplex'): ?>
+                                <a class="gp-btn gp-btn-primary"
+                                   href="https://api.dustore.ru/v1/games/<?= (int)$game_id ?>/installer?os=windows">⬇ Скачать (установщик)</a>
+                            <?php elseif (!empty($game['game_zip_url'])): ?>
                                 <?php if ($isWeb): ?>
                                     <button class="gp-btn gp-btn-primary" onclick="location.href='/webplayer?id=<?= $game_id ?>'">▶ Запустить в браузере</button>
                                 <?php elseif ($onlyAndroid): ?>
@@ -462,7 +498,9 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 </div>
                             <?php endif; ?>
                         <?php endif; ?>
+                        <p style="font-size: 11px"><i>Платформа проверяет файлы на вирусы, но не несёт ответственность за поведение программы на устройствах пользователей</i></p>
                     </div>
+                    
 
                     <!-- Wishlist (анонс) -->
                     <?php if ($showWishlist): ?>
@@ -667,6 +705,15 @@ $isPaid = ($game['price'] ?? 0) > 0;
     <?php if ($isPaid && !$isOwned): ?>
         <?php require_once('finv2/payment_modal.php'); ?>
     <?php endif; ?>
+
+    <?php if (!empty($jamInfo) && !empty($_SESSION['USERDATA']['id'])): ?>
+<script>
+fetch('/swad/controllers/jams/jam_play.php', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ sprint_id: <?= (int)$jamInfo['id'] ?>, game_id: <?= (int)$game_id ?> })
+}).catch(()=>{});
+</script>
+<?php endif; ?>
 
     <script>
     // ── Screenshots data ──

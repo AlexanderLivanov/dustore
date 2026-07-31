@@ -283,6 +283,7 @@ require_once('../swad/static/elements/header.php');
         <a class="nav-btn" href="admin">↺ Выбрать спринт</a>
         <a class="nav-btn" href="/jams">← К спринтам</a>
         <a class="nav-btn" href="participant?sprint_id=<?= $sprint_id ?>">Панель участника</a>
+        <a class="nav-btn" href="admin_votes.php?id=<?= $sprint_id ?>">📊 Голоса</a>
     </div>
 </header>
 

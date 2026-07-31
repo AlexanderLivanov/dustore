@@ -29,6 +29,25 @@ $stmt->execute([$gameId]);
 $game = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$game) die('Игра не найдена');
 
+/* Эксперты джема + текущие пики этой игры */
+$jamExperts = []; $gamePicks = [];
+if (!empty($game['sprint_id'])) {
+    $je = $pdo->prepare("
+        SELECT se.id,
+               COALESCE(se.external_name, u.username, 'Эксперт') AS name,
+               se.external_role AS role
+        FROM sprint_experts se
+        LEFT JOIN users u ON u.id = se.user_id
+        WHERE se.sprint_id = ?");
+    $je->execute([$game['sprint_id']]);
+    $jamExperts = $je->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $gp = $pdo->prepare("SELECT expert_id FROM sprint_expert_picks WHERE sprint_id = ? AND game_id = ?");
+        $gp->execute([$game['sprint_id'], $gameId]);
+        $gamePicks = array_flip(array_map('intval', $gp->fetchAll(PDO::FETCH_COLUMN)));
+    } catch (Exception $e) {}
+}
+
 $features     = json_decode($game['features']     ?? '[]', true) ?: [];
 $screenshots  = json_decode($game['screenshots']  ?? '[]', true) ?: [];
 $requirements = json_decode($game['requirements'] ?? '[]', true) ?: [];
@@ -783,6 +802,33 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                 </div>
             <?php endif; ?>
 
+            <!-- ВИРУС-ПРОВЕРКА (заглушка, воркер позже) -->
+            <?php
+            $vtStatus = $game['vt_status'] ?? null;
+            $vtMap = [
+                'clean'=>['✓ Чисто','#4ade80'], 'flagged'=>['⚠ Детекты','#f87171'],
+                'queued'=>['⏳ В очереди','#fbbf24'], 'scanning'=>['⏳ Сканируется','#fbbf24'],
+                'error'=>['⚠ Ошибка скана','#fbbf24'], 'skipped_oversize'=>['↷ Пропущено (размер)','#6b7a99'],
+            ];
+            [$vtLbl,$vtCol] = $vtMap[$vtStatus] ?? ['— ещё не проверялось','#6b7a99'];
+            ?>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:4px;">🛡 Проверка на вирусы</div>
+                        <div style="font-size:.85rem;color:<?= $vtCol ?>;font-weight:600;"><?= $vtLbl ?></div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <?php if (!empty($game['vt_report_url'])): ?>
+                            <a href="<?= htmlspecialchars($game['vt_report_url']) ?>" target="_blank"
+                            style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--accent2);text-decoration:none;font-size:.85rem;font-weight:600;">Отчёт VirusTotal ↗</a>
+                        <?php endif; ?>
+                        <button type="button" onclick="alert('VirusTotal-воркер будет подключён на следующем шаге')"
+                                style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--muted);cursor:pointer;font-size:.85rem;">Перепроверить (скоро)</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ПРОГРЕСС -->
             <div class="progress-section">
                 <div class="progress-header">
@@ -815,6 +861,43 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                     </div>
                 <?php endif; ?>
             </div>
+
+            <?php if (!empty($game['sprint_id']) && $jamExperts): ?>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px;" id="picks-box" data-sprint="<?= (int)$game['sprint_id'] ?>" data-game="<?= (int)$gameId ?>">
+    <div class="section-title" style="margin-bottom:12px;">🏅 Выбор экспертов джема</div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">Отметьте, кого из экспертов джема эта игра стала выбором. Плашка появится на странице игры и в голосовании.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+        <?php foreach ($jamExperts as $ex): $picked = isset($gamePicks[(int)$ex['id']]); ?>
+            <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" class="pick-inp" value="<?= (int)$ex['id'] ?>" <?= $picked ? 'checked' : '' ?>>
+                <div>
+                    <div style="font-size:.9rem;font-weight:600;"><?= htmlspecialchars($ex['name']) ?></div>
+                    <?php if (!empty($ex['role'])): ?><div style="font-size:.75rem;color:var(--muted);"><?= htmlspecialchars($ex['role']) ?></div><?php endif; ?>
+                </div>
+            </label>
+        <?php endforeach; ?>
+    </div>
+    <div id="picks-msg" style="font-size:.8rem;margin-top:10px;color:var(--muted);"></div>
+</div>
+<script>
+(function () {
+    var box = document.getElementById('picks-box');
+    if (!box) return;
+    var sprintId = box.dataset.sprint, gameId = box.dataset.game;
+    var msg = document.getElementById('picks-msg');
+    box.querySelectorAll('.pick-inp').forEach(function (inp) {
+        inp.addEventListener('change', function () {
+            fetch('/swad/controllers/jams/set_expert_pick.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sprint_id: sprintId, game_id: gameId, expert_id: inp.value, action: inp.checked ? 'add' : 'remove' })
+            }).then(function (r) { return r.json(); })
+              .then(function (d) { msg.textContent = d.message || (d.success ? 'Сохранено' : 'Ошибка'); msg.style.color = d.success ? 'var(--accent)' : 'var(--danger)'; if (!d.success) inp.checked = !inp.checked; })
+              .catch(function () { msg.textContent = 'Сетевая ошибка'; msg.style.color = 'var(--danger)'; inp.checked = !inp.checked; });
+        });
+    });
+})();
+</script>
+<?php endif; ?>
 
             <!-- ФОРМА ОЦЕНКИ -->
             <?php if ($expertId && $game['moderation_status'] === 'pending'): ?>

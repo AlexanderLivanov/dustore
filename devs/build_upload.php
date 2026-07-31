@@ -16,6 +16,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/s3_multipart.php');
+require_once(__DIR__ . '/../swad/controllers/s3.php'); // S3Uploader::deleteFile для чистки старого билда
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -37,7 +38,7 @@ if (!$project_id)  bu_out(['success' => false, 'message' => 'Не указан �
 $conn = (new Database())->connect();
 
 // Проект + студия-владелец.
-$g = $conn->prepare("SELECT id, developer FROM games WHERE id = ? LIMIT 1");
+$g = $conn->prepare("SELECT id, developer, sprint_id, revision_until FROM games WHERE id = ? LIMIT 1");
 $g->execute([$project_id]);
 $game = $g->fetch(PDO::FETCH_ASSOC);
 if (!$game) bu_out(['success' => false, 'message' => 'Проект не найден'], 404);
@@ -46,6 +47,19 @@ if (!$game) bu_out(['success' => false, 'message' => 'Проект не найд
 $auth = $conn->prepare("SELECT 1 FROM staff WHERE telegram_id = ? AND org_id = ? LIMIT 1");
 $auth->execute([(int)$tgid, (int)$game['developer']]);
 if (!$auth->fetchColumn()) bu_out(['success' => false, 'message' => 'Нет доступа к этому проекту'], 403);
+
+// Дедлайн приёма (jam_end) + право на ошибку: если проект в джеме и приём закрыт,
+// заливать новый билд можно только в активном окне права на ошибку (revision_until).
+if (!empty($game['sprint_id'])) {
+    $js = $conn->prepare("SELECT jam_end FROM sprints WHERE id = ? LIMIT 1");
+    $js->execute([(int)$game['sprint_id']]);
+    $jamEnd = $js->fetchColumn();
+    $submissionsClosed = $jamEnd && strtotime($jamEnd) <= time();
+    $revisionOpen = !empty($game['revision_until']) && strtotime($game['revision_until']) > time();
+    if ($submissionsClosed && !$revisionOpen) {
+        bu_out(['success' => false, 'message' => 'Приём билдов для этого джема закрыт. Обновить билд можно только в окне права на ошибку (после «на доработку»).'], 409);
+    }
+}
 
 // Детерминированный префикс ключа — не зависит от имени студии, легко проверяется.
 $prefix = 'builds/studio-' . (int)$game['developer'] . '/game-' . (int)$game['id'] . '/';
@@ -108,6 +122,11 @@ try {
             }
             if (!$norm) bu_out(['success' => false, 'message' => 'Части без ETag'], 400);
 
+            // Старый билд — удалим с S3 после успешной замены.
+            $oldStmt = $conn->prepare("SELECT game_zip_url FROM games WHERE id = ?");
+            $oldStmt->execute([$project_id]);
+            $oldUrl = $oldStmt->fetchColumn();
+
             $url = $mp->complete($key, $uploadId, $norm);
 
             // Обновляем проект + ставим VT-скан в очередь (сбрасываем прежний вердикт).
@@ -118,6 +137,12 @@ try {
                     updated_at = NOW()
                 WHERE id = :id
             ")->execute(['url' => $url, 'sz' => $size, 'id' => $project_id]);
+
+            // Чистим предыдущий объект (одиночный .zip). Для старых chunked-билдов
+            // manifest удалится, но осколки chunk_*.bin нужно вычистить разово скриптом.
+            if ($oldUrl && $oldUrl !== $url) {
+                try { (new S3Uploader())->deleteFile($oldUrl); } catch (\Throwable $e) { error_log('old build delete: ' . $e->getMessage()); }
+            }
 
             bu_out(['success' => true, 'url' => $url, 'size' => $size]);
         }
