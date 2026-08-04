@@ -30,7 +30,7 @@ $dpx_pct   = $dpx_quota['quota'] > 0 ? min(100, round($dpx_quota['used'] * 100 /
 <?php if ($dpx_info === null): ?>
     <!-- Файлов ещё нет: краткая инструкция -->
     <ol style="font-size:13px;color:var(--ts);line-height:1.9;padding-left:18px;margin:0 0 12px;">
-        <li>Скачай <a href="/download/deplex" style="color:var(--pl);">deplex</a> и добавь в PATH.</li>
+        <li>Скачай <a href="/deplex/deplex.exe" style="color:var(--pl);">deplex</a> и добавь в PATH.</li>
         <li>Создай deploy-токен:
             <form method="POST" style="display:inline;">
                 <input type="hidden" name="action" value="create_deplex_token">

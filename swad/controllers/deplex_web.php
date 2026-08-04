@@ -227,3 +227,119 @@ function deplex_render_tree(array $node): void
            . '</div>';
     }
 }
+
+/**
+ * Сводка антивирус-скана последнего deplex-билда игры. null — если deplex-билда нет.
+ * @return array{build_id:int,ulid:string,status:string,signature:?string,started_at:?string,finished_at:?string,duration_sec:?int}|null
+ */
+function deplex_scan_summary(PDO $pdo, int $gameId): ?array
+{
+    $st = $pdo->prepare(
+        "SELECT b.id, b.build_ulid, b.scan_status, b.scan_signature, b.scan_started_at, b.scan_finished_at
+         FROM deplex_builds b
+         JOIN deplex_projects p ON p.id = b.project_id
+         WHERE p.game_id = :g AND b.status IN ('committed','published','failed')
+         ORDER BY b.committed_at DESC LIMIT 1"
+    );
+    $st->execute([':g' => $gameId]);
+    $b = $st->fetch(PDO::FETCH_ASSOC);
+    if ($b) {
+        return [
+            'build_id'     => (int) $b['id'],
+            'ulid'         => (string) $b['build_ulid'],
+            'status'       => (string) $b['scan_status'],
+            'signature'    => $b['scan_signature'],
+            'started_at'   => $b['scan_started_at'],
+            'finished_at'  => $b['scan_finished_at'],
+            'duration_sec' => deplex_scan_dur($b['scan_started_at'], $b['scan_finished_at']),
+            'source'       => 'deplex',
+        ];
+    }
+
+    // Фолбэк: веб-загруженная игра (game_zip_url). Статус в games.vt_* (ClamAV, не VirusTotal).
+    $g = $pdo->prepare(
+        "SELECT game_zip_url, vt_status, vt_report_url, scan_started_at, scan_finished_at
+         FROM games WHERE id = :g LIMIT 1"
+    );
+    $g->execute([':g' => $gameId]);
+    $row = $g->fetch(PDO::FETCH_ASSOC);
+    if ($row && !empty($row['game_zip_url']) && $row['vt_status'] !== null) {
+        // Приводим vt_status к нашим именам: flagged→infected, skipped_oversize→skipped.
+        $map = ['flagged' => 'infected', 'skipped_oversize' => 'skipped'];
+        $status = $map[$row['vt_status']] ?? (string) $row['vt_status'];
+        return [
+            'build_id'     => 0,                // веб-игра — билда нет
+            'ulid'         => 'web',
+            'status'       => $status,
+            'signature'    => $status === 'infected' ? $row['vt_report_url'] : null,
+            'started_at'   => $row['scan_started_at'],
+            'finished_at'  => $row['scan_finished_at'],
+            'duration_sec' => deplex_scan_dur($row['scan_started_at'], $row['scan_finished_at']),
+            'source'       => 'web',
+        ];
+    }
+    return null;
+}
+
+/** Длительность скана в секундах (или null). */
+function deplex_scan_dur(?string $start, ?string $end): ?int
+{
+    if (empty($start) || empty($end)) {
+        return null;
+    }
+    $d = strtotime($end) - strtotime($start);
+    return $d >= 0 ? $d : null;
+}
+
+/** Пофайловые результаты скана билда (для модалки с деталями). */
+function deplex_scan_details(PDO $pdo, int $buildId): array
+{
+    $st = $pdo->prepare(
+        "SELECT engine, file_path, status, signature, created_at
+         FROM deplex_scan_jobs WHERE build_id = :b ORDER BY id ASC"
+    );
+    $st->execute([':b' => $buildId]);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** Ставит последний билд игры обратно в очередь на скан (кнопка «Перепроверить»). */
+function deplex_requeue_scan(PDO $pdo, int $gameId): bool
+{
+    // MySQL не даёт ORDER BY/LIMIT в multi-table UPDATE — сначала находим id.
+    $sel = $pdo->prepare(
+        "SELECT b.id FROM deplex_builds b
+         JOIN deplex_projects p ON p.id = b.project_id
+         WHERE p.game_id = :g AND b.status IN ('committed','published','failed')
+         ORDER BY b.committed_at DESC LIMIT 1"
+    );
+    $sel->execute([':g' => $gameId]);
+    $id = $sel->fetchColumn();
+    if ($id) {
+        // deplex-билд: failed -> committed, чтобы воркер снова его взял.
+        $pdo->prepare(
+            "UPDATE deplex_builds
+             SET scan_status='queued', scan_signature=NULL, scan_started_at=NULL, scan_finished_at=NULL,
+                 status = IF(status='failed','committed',status)
+             WHERE id = :id"
+        )->execute([':id' => (int) $id]);
+        return true;
+    }
+
+    // Веб-загрузка: ставим games.vt_status в очередь — воркер подхватит.
+    $u = $pdo->prepare(
+        "UPDATE games
+         SET vt_status='queued', vt_report_url=NULL, scan_started_at=NULL, scan_finished_at=NULL
+         WHERE id = :g AND game_zip_url IS NOT NULL AND game_zip_url <> ''"
+    );
+    $u->execute([':g' => $gameId]);
+    return $u->rowCount() > 0;
+}
+
+/** Формат длительности: «3 с» / «1 мин 5 с». */
+function deplex_duration(int $sec): string
+{
+    if ($sec < 60) {
+        return $sec . ' с';
+    }
+    return intdiv($sec, 60) . ' мин ' . ($sec % 60) . ' с';
+}

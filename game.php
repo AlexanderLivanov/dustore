@@ -3,6 +3,7 @@ session_start();
 require_once('swad/config.php');
 require_once('swad/controllers/game.php');
 require_once __DIR__ . '/swad/controllers/deplex_web.php';
+require_once __DIR__ . '/swad/controllers/trailer_embed.php';
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -165,7 +166,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
         @media(max-width:540px){.gp-header{flex-direction:column;align-items:flex-start;padding-top:16px;}
             .gp-cover{width:90px;height:90px;}}
         /* ── MAIN ── */
-        .gp-main{grid-area:main;min-width:0;}
+        .gp-main{grid-area:main;min-width:0; z-index:-1;}
         .gp-section{margin-bottom:36px;}
         .gp-section-title{font-size:1.1rem;font-weight:700;color:#fff;margin:0 0 16px;
             padding-bottom:10px;border-bottom:1px solid var(--border);}
@@ -178,7 +179,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .gp-feature-desc{font-size:.82rem;color:var(--muted);line-height:1.5;}
         .gp-trailer{position:relative;padding-bottom:56.25%;height:0;border-radius:var(--radius);
             overflow:hidden;border:1px solid var(--border);}
-        .gp-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+        .gp-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:none; z-index: -1;}
         /* ── SCREENSHOTS ── */
         .gp-screenshots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
         .gp-screenshot{aspect-ratio:16/9;border-radius:10px;background-size:cover;
@@ -421,8 +422,10 @@ $isPaid = ($game['price'] ?? 0) > 0;
 
                             <?php $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game); ?>
                             <?php if ($distMode === 'deplex'): ?>
-                                <a class="gp-btn gp-btn-primary"
-                                   href="https://api.dustore.ru/v1/games/<?= (int)$game_id ?>/installer?os=windows">⬇ Скачать (установщик)</a>
+                                <a class="gp-btn gp-btn-primary" href="#"
+                                    onclick="dpxDownload('https://api.dustore.ru/v1/games/<?= (int)$game_id ?>/installer?os=windows');return false;">⬇ Скачать (установщик)</a>
+                            <?php elseif (($game['vt_status'] ?? '') === 'flagged'): ?>
+                                <div class="gp-no-file" style="color:#ff5f57;">⚠ Скачивание заблокировано антивирусом</div>
                             <?php elseif (!empty($game['game_zip_url'])): ?>
                                 <?php if ($isWeb): ?>
                                     <button class="gp-btn gp-btn-primary" onclick="location.href='/webplayer?id=<?= $game_id ?>'">▶ Запустить в браузере</button>
@@ -473,7 +476,8 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                    <button class="gp-btn gp-btn-primary" onclick="location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">⬇ Скачать игру</button>
+                                    <button class="gp-btn gp-btn-primary"
+    onclick="dpxDownload('/swad/controllers/download_game.php?game_id=<?= $game_id ?>')">⬇ Скачать игру</button>
                                     <!-- <a href="hidl://install?game_id=123&game_name=TestGame&game_url=https://example.com/game.zip&exe=game.exe">Install</a> -->
                                     <!-- <?php
                                     $hidl_url = "hidl://install?game_id=" . urlencode($game_id)
@@ -498,7 +502,8 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 </div>
                             <?php endif; ?>
                         <?php endif; ?>
-                        <p style="font-size: 11px"><i>Платформа проверяет файлы на вирусы, но не несёт ответственность за поведение программы на устройствах пользователей</i></p>
+                    <?php include($_SERVER['DOCUMENT_ROOT'] . '/swad/controllers/deplex_scan_widget.php'); ?>
+                    <?php include($_SERVER['DOCUMENT_ROOT'] . '/swad/controllers/deplex_download_gate.php'); ?>
                     </div>
                     
 
@@ -619,13 +624,13 @@ $isPaid = ($game['price'] ?? 0) > 0;
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($game['trailer_url'])): ?>
+                <?php if (!empty($game['trailer_url'])): $trailerHtml = trailer_embed($game['trailer_url']); ?>
+                <?php if ($trailerHtml !== ''): ?>
                 <div class="gp-section">
                     <h2 class="gp-section-title">Трейлер</h2>
-                    <div class="gp-trailer">
-                        <iframe src="<?= htmlspecialchars($game['trailer_url']) ?>" allowfullscreen allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
-                    </div>
+                    <div class="gp-trailer"><?= $trailerHtml ?></div>
                 </div>
+                <?php endif; ?>
                 <?php endif; ?>
 
 

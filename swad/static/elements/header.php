@@ -394,6 +394,7 @@ $stmt->execute([
                         <ul class="nav-dropdown__menu" role="menu">
                             <li><a class="nav-dropdown__item" href="/assetstore" role="menuitem">Ассеты</a></li>
                             <li><a class="nav-dropdown__item" href="/l4t" role="menuitem">L4T</a></li>
+                            <li><a class="nav-dropdown__item" href="/dplx" role="menuitem">DeplexSDK</a></li>
                             <li><a class="nav-dropdown__item" href="#" role="menuitem">GDDB</a></li>
                             <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>
 

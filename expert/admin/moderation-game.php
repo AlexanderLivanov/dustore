@@ -823,9 +823,10 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                             <a href="<?= htmlspecialchars($game['vt_report_url']) ?>" target="_blank"
                             style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--accent2);text-decoration:none;font-size:.85rem;font-weight:600;">Отчёт VirusTotal ↗</a>
                         <?php endif; ?>
-                        <button type="button" onclick="alert('VirusTotal-воркер будет подключён на следующем шаге')"
-                                style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--muted);cursor:pointer;font-size:.85rem;">Перепроверить (скоро)</button>
-                    </div>
+                        
+                        <button type="button" onclick="rescanGame(<?= (int)$game['id'] ?>, this)"
+    style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--muted);cursor:pointer;font-size:.85rem;">Перепроверить</button>
+</div>
                 </div>
             </div>
 
@@ -1349,6 +1350,17 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
         });
         checkReady();
     </script>
+    <script>
+function rescanGame(id, btn){
+  var t = btn.textContent; btn.disabled = true; btn.textContent = 'Отправляю…';
+  fetch('/devs/deplex_rescan.php', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        credentials:'same-origin', body:'game_id='+encodeURIComponent(id)})
+   .then(r=>r.json()).then(d=>{
+     if(d.ok){ btn.textContent='Отправлено на проверку'; setTimeout(()=>location.reload(),1400); }
+     else { btn.disabled=false; btn.textContent=t; alert(d.error||'Ошибка'); }
+   }).catch(()=>{ btn.disabled=false; btn.textContent=t; alert('Сетевая ошибка'); });
+}
+</script>
 </body>
 
 </html>

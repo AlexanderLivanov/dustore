@@ -440,6 +440,8 @@ if (in_array($mod_status, ['pending','rejected'])):
 
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
+  <div style="display:flex;flex-direction:column;gap:14px;" id="left-col">
+
     <form method="POST" enctype="multipart/form-data" id="save-form">
         <input type="hidden" name="action" value="save">
         <div style="display:flex;flex-direction:column;gap:14px;">
@@ -534,55 +536,7 @@ if (in_array($mod_status, ['pending','rejected'])):
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-title"><span class="material-icons">folder_zip</span>Файл игры</div>
-                <div style="display:flex;gap:6px;margin-bottom:14px;">
-                    <button type="button" class="btn btn-p dpx-tab" data-tab="web" style="padding:6px 14px;font-size:12px;">Загрузить архив</button>
-                    <button type="button" class="btn btn-g dpx-tab" data-tab="deplex" style="padding:6px 14px;font-size:12px;">Через deplex (CLI)</button>
-                </div>
-                <div class="dpx-pane" data-pane="web">
-                <?php if ($has_zip): ?>
-                <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-                    <span class="material-icons" style="font-size:18px;">check_circle</span>
-                    <div>
-                        <?php if ($is_chunked): ?>
-                            Загружен чанками <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
-                            <span style="font-size:10px;background:rgba(0,214,143,.15);padding:1px 8px;border-radius:4px;margin-left:6px;">manifest.json</span>
-                        <?php else: ?>
-                            ZIP загружен <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                <div id="upload-mode-hint" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;"></div>
-                <div id="zip-drop"
-                     style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
-                     onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                    <span id="drop-icon" class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;"><?= $only_android ? 'android' : 'upload_file' ?></span>
-                    <span id="drop-label" style="font-size:13px;color:var(--ts);display:block;">
-                        <?= $has_zip ? ($only_android ? 'Заменить APK' : 'Заменить файл игры') : ($only_android ? 'Загрузить APK' : 'Загрузить ZIP') ?>
-                    </span>
-                    <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
-                        <?= $only_android ? 'Android APK · до 4 ГБ' : 'Любой размер — прямая загрузка в S3 одним файлом' ?>
-                    </span>
-                </div>
-                <input type="file" id="zip-input" accept="<?= $only_android ? '.apk' : '.zip' ?>" style="display:none;" data-android="<?= $only_android ? '1' : '0' ?>">
-                <div id="zip-progress" style="display:none;margin-top:14px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                        <span id="zip-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
-                        <span id="zip-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
-                    </div>
-                    <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
-                        <div id="zip-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
-                    </div>
-                    <div id="zip-detail" style="font-size:11px;color:var(--tm);margin-top:6px;"></div>
-                </div>
-                </div><!-- /pane web -->
-
-                <div class="dpx-pane" data-pane="deplex" hidden>
-                    <?php include(__DIR__ . '/../swad/controllers/devs_edit_deplex_tab.php'); ?>
-                </div>
-            </div>
+            <!-- Файл игры вынесён из формы save (ниже, вне <form>) — иначе вложенный <form> Deplex ломал сохранение -->
 
             <div class="card">
                 <div class="card-title"><span class="material-icons">movie</span>Трейлер</div>
@@ -649,6 +603,59 @@ if (in_array($mod_status, ['pending','rejected'])):
 
         </div>
     </form>
+
+    <!-- ═══ ФАЙЛ ИГРЫ (вне формы save: в Deplex-табе свой <form>, вкладывать нельзя) ═══ -->
+    <div class="card">
+        <div class="card-title"><span class="material-icons">folder_zip</span>Файл игры</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <button type="button" class="btn btn-p dpx-tab" data-tab="web" style="padding:6px 14px;font-size:12px;">Загрузить архив</button>
+            <button type="button" class="btn btn-g dpx-tab" data-tab="deplex" style="padding:6px 14px;font-size:12px;">Через deplex (CLI)</button>
+        </div>
+        <div class="dpx-pane" data-pane="web">
+        <?php if ($has_zip): ?>
+        <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+            <span class="material-icons" style="font-size:18px;">check_circle</span>
+            <div>
+                <?php if ($is_chunked): ?>
+                    Загружен чанками <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
+                    <span style="font-size:10px;background:rgba(0,214,143,.15);padding:1px 8px;border-radius:4px;margin-left:6px;">manifest.json</span>
+                <?php else: ?>
+                    ZIP загружен <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div id="upload-mode-hint" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;"></div>
+        <div id="zip-drop"
+             style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
+             onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
+            <span id="drop-icon" class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;"><?= $only_android ? 'android' : 'upload_file' ?></span>
+            <span id="drop-label" style="font-size:13px;color:var(--ts);display:block;">
+                <?= $has_zip ? ($only_android ? 'Заменить APK' : 'Заменить файл игры') : ($only_android ? 'Загрузить APK' : 'Загрузить ZIP') ?>
+            </span>
+            <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
+                <?= $only_android ? 'Android APK · до 4 ГБ' : 'Любой размер — собираем в один файл на S3' ?>
+            </span>
+        </div>
+        <input type="file" id="zip-input" accept="<?= $only_android ? '.apk' : '.zip' ?>" style="display:none;" data-android="<?= $only_android ? '1' : '0' ?>">
+        <div id="zip-progress" style="display:none;margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span id="zip-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
+                <span id="zip-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
+            </div>
+            <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
+                <div id="zip-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
+            </div>
+            <div id="zip-detail" style="font-size:11px;color:var(--tm);margin-top:6px;"></div>
+        </div>
+        </div><!-- /pane web -->
+
+        <div class="dpx-pane" data-pane="deplex" hidden>
+            <?php include(__DIR__ . '/../swad/controllers/devs_edit_deplex_tab.php'); ?>
+        </div>
+    </div>
+
+  </div><!-- /left-col -->
 
     <div style="display:flex;flex-direction:column;gap:14px;">
 
@@ -805,7 +812,6 @@ if (in_array($mod_status, ['pending','rejected'])):
 
 <?php
 $extra_js = <<<JS
-<script src="/devs/build_uploader.js"></script>
 <script>
 const PID = {$project_id};
 
@@ -865,14 +871,14 @@ function syncUploadZone() {
         input.accept = '.zip'; input.dataset.android = '0';
         icon.textContent = 'upload_file'; icon.style.color = 'var(--p)';
         label.textContent = 'Загрузить ZIP-архив';
-        hint.textContent  = 'Любой размер — прямая загрузка в S3 одним файлом';
+        hint.textContent  = 'Любой размер — собираем в один файл на S3';
     }
 }
 document.querySelectorAll('input[name="platform[]"]').forEach(function(cb){
     cb.addEventListener('change', syncUploadZone);
 });
 
-// ── Загрузка билда (multipart напрямую в S3) ──────────────────────────────
+// ── Загрузка билда (чанки → PHP → один объект в S3, без CORS) ──────────────
 document.getElementById('zip-drop').addEventListener('click', function(){
     document.getElementById('zip-input').click();
 });
@@ -889,27 +895,45 @@ document.getElementById('zip-input').addEventListener('change', function () {
 });
 
 async function uploadFile(file, isApk) {
-    var prog = document.getElementById('zip-progress');
-    var bar  = document.getElementById('zip-bar');
-    var pct  = document.getElementById('zip-pct');
-    var stat = document.getElementById('zip-status');
+    var CHUNK = 5 * 1024 * 1024;               // 5 МБ на чанк
+    var total = Math.ceil(file.size / CHUNK) || 1;
+    var prog  = document.getElementById('zip-progress');
+    var bar   = document.getElementById('zip-bar');
+    var pct   = document.getElementById('zip-pct');
+    var stat  = document.getElementById('zip-status');
     prog.style.display   = 'block';
     bar.style.background = isApk ? '#a4c639' : 'var(--p)';
     stat.style.color     = '';
-    DustoreBuildUpload(file, {
-        projectId: PID,
-        endpoint:  '/devs/build_upload.php',
-        onProgress: function (p, label) {
-            bar.style.width = p + '%'; pct.textContent = p + '%'; stat.textContent = label;
-        },
-        onDone: function (data) {
+
+    for (var i = 0; i < total; i++) {
+        var fd = new FormData();
+        fd.append('chunk',        file.slice(i * CHUNK, (i + 1) * CHUNK));
+        fd.append('chunk_index',  i);
+        fd.append('total_chunks', total);
+        fd.append('file_name',    file.name);
+        fd.append('file_size',    file.size);
+        fd.append('project_id',   PID);
+        var data;
+        try {
+            var res  = await fetch('/devs/build_upload.php', { method: 'POST', body: fd, credentials: 'include' });
+            var text = await res.text();
+            data = JSON.parse(text);
+        } catch (e) {
+            setErr('Сервер вернул не-JSON: ' + String(e).substring(0, 160));
+            return;
+        }
+        if (!data.success) { setErr(data.message || 'Ошибка сервера'); return; }
+        if (data.done) {
             bar.style.width = '100%'; pct.textContent = '100%';
             bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
-            stat.textContent = '✓ Билд загружен · ' + (data.size / 1048576).toFixed(1) + ' МБ';
+            stat.textContent = '✓ Билд загружен · ' + data.size_mb + ' МБ';
             setTimeout(function () { location.reload(); }, 1500);
-        },
-        onError: function (msg) { setErr(msg); }
-    });
+            return;
+        }
+        var p = Math.round((i + 1) / total * 100);
+        bar.style.width = p + '%'; pct.textContent = p + '%';
+        stat.textContent = 'Загрузка ' + (i + 1) + ' из ' + total;
+    }
 }
 
 function setErr(msg) {
