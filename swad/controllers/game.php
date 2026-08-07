@@ -40,7 +40,10 @@ class Game
                 g.age_rating,
                 g.release_date,
                 g.created_at,
-                g.genre,                     
+                g.genre,
+                g.updated_at,
+                g.hidden,
+                (SELECT COUNT(*) FROM library l WHERE l.game_id = g.id) AS downloads,
                 s.name AS studio_name
             FROM games g
             JOIN studios s ON g.developer = s.id

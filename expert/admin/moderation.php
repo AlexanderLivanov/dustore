@@ -7,7 +7,9 @@ $pdo = $db->connect();
 
 $stmt = $pdo->prepare("SELECT id FROM experts WHERE user_id = ? AND status = 'approved'");
 $stmt->execute([$_SESSION['USERDATA']['id']]);
-$isExpert = (bool) $stmt->fetch();
+$myExpert   = $stmt->fetch(PDO::FETCH_ASSOC);
+$isExpert   = (bool) $myExpert;
+$myExpertId = $isExpert ? (int) $myExpert['id'] : 0;
 
 if (!$isExpert) {
     die('Доступ запрещён');
@@ -25,20 +27,35 @@ $jamsList = $pdo->query("
     ORDER BY s.id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
+$sortMap = [
+    'new'     => 'g.created_at DESC',   // дата добавления игры
+    'updated' => 'g.updated_at DESC',   // последнее обновление
+    'name'    => 'g.name ASC',          // по алфавиту
+    'scan'    => 'scan_date DESC',      // дата антивирус-проверки
+];
+$sort    = $_GET['sort'] ?? 'new';
+$orderBy = $sortMap[$sort] ?? $sortMap['new'];
+
 $sql = "
-    SELECT g.id, g.name, g.developer, g.created_at, g.genre, g.platforms,
+    SELECT g.id, g.name, g.developer, g.created_at, g.updated_at, g.genre, g.platforms, g.path_to_cover,
            g.status, g.moderation_status, g.GQI, g.sprint_id, g.vt_status,
+           COALESCE(g.scan_finished_at,
+                    (SELECT MAX(b.scan_finished_at) FROM deplex_builds b
+                     JOIN deplex_projects p ON p.id = b.project_id
+                     WHERE p.game_id = g.id)) AS scan_date,
            sp.title AS sprint_title,
-           COUNT(mr.id) AS votes,
-           SUM(CASE WHEN mr.score > 51 THEN 1 ELSE 0 END) AS positive_votes
+           (SELECT COUNT(*) FROM moderation_reviews mr WHERE mr.game_id = g.id) AS votes,
+           (SELECT COUNT(*) FROM moderation_reviews mr WHERE mr.game_id = g.id AND mr.score > 51) AS positive_votes
     FROM games g
-    LEFT JOIN moderation_reviews mr ON mr.game_id = g.id
     LEFT JOIN sprints sp ON sp.id = g.sprint_id
-    WHERE g.moderation_status = 'pending'";
-$params = [];
-if ($jamFilter === -1)      { $sql .= " AND g.sprint_id IS NOT NULL"; }
-elseif ($jamFilter > 0)     { $sql .= " AND g.sprint_id = ?"; $params[] = $jamFilter; }
-$sql .= " GROUP BY g.id ORDER BY g.created_at DESC";
+    WHERE g.moderation_status = 'pending'
+      AND NOT EXISTS (SELECT 1 FROM moderation_reviews mr2
+                      WHERE mr2.game_id = g.id AND mr2.expert_id = ?)";
+$params = [$myExpertId];
+if ($jamFilter === -1)  { $sql .= " AND g.sprint_id IS NOT NULL"; }
+elseif ($jamFilter > 0) { $sql .= " AND g.sprint_id = ?"; $params[] = $jamFilter; }
+$sql .= " ORDER BY $orderBy";
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -454,6 +471,17 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
 
             <div class="toolbar">
                 <input class="search-box" type="text" placeholder="🔍  Поиск по названию или студии..." oninput="filterGames(this.value)">
+                <select class="search-box" style="max-width:260px;flex:0 0 auto;cursor:pointer;"
+                    onchange="location.href='?sort='+this.value+'<?= $jamFilter ? '&jam='.$jamFilter : '' ?>'">
+                    <?php foreach ([
+                        'new'       => 'Дата добавления игры',
+                        'updated'   => 'Последнее обновление',
+                        'name'      => 'По алфавиту (А–Я)',
+                        'scan'      => 'Дата антивирус-проверки',
+                    ] as $k => $lbl): ?>
+                        <option value="<?= $k ?>" <?= $sort === $k ? 'selected' : '' ?>><?= $lbl ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -473,8 +501,9 @@ $pendingGames = $pdo->query("SELECT COUNT(*) FROM games WHERE status='pending'")
                     </div>
                 <?php endif; ?>
                 <?php foreach ($games as $i => $g): ?>
+                    <!-- <?php print_r($g); ?> -->
                     <div class="game-card" data-search="<?= strtolower(htmlspecialchars($g['name'] . ' ' . $g['developer'])) ?>" style="animation-delay:<?= $i * 0.04 ?>s">
-                        <div class="game-cover">🎮</div>
+                        <div class="game-cover" style='background-image: url("<?= $g['path_to_cover'] ?>"); background-size: cover; background-repeat: no-repeat; background-position: center;'></div>
                         <div class="game-body">
                             <div class="game-name"><?= htmlspecialchars($g['name']) ?></div>
                             <div class="game-dev"><?= htmlspecialchars($g['developer']) ?></div>

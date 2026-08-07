@@ -263,7 +263,15 @@ function deplex_scan_summary(PDO $pdo, int $gameId): ?array
     );
     $g->execute([':g' => $gameId]);
     $row = $g->fetch(PDO::FETCH_ASSOC);
-    if ($row && !empty($row['game_zip_url']) && $row['vt_status'] !== null) {
+    if ($row && !empty($row['game_zip_url'])) {
+        // vt_status = NULL → игра ещё ни разу не ставилась в очередь на скан.
+        if ($row['vt_status'] === null) {
+            return [
+                'build_id' => 0, 'ulid' => 'web', 'status' => 'notscanned',
+                'signature' => null, 'started_at' => null, 'finished_at' => null,
+                'duration_sec' => null, 'source' => 'web',
+            ];
+        }
         // Приводим vt_status к нашим именам: flagged→infected, skipped_oversize→skipped.
         $map = ['flagged' => 'infected', 'skipped_oversize' => 'skipped'];
         $status = $map[$row['vt_status']] ?? (string) $row['vt_status'];

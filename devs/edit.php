@@ -31,6 +31,11 @@ $error_msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (($game['moderation_status'] ?? '') === 'pending'
+        && in_array($action, ['save', 'save_announce', 'save_jam'], true)) {
+        header('Location: /devs/edit?id=' . $project_id . '&locked=1'); exit();
+    }
+
     if ($action === 'save') {
         $name         = trim($_POST['name']         ?? '');
         $genre        = trim($_POST['genre']        ?? '');
@@ -86,6 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     game_exec         = :exec,
                     languages         = :languages,
                     age_rating        = :age,
+                    moderation_status = 'draft',
+                    status            = IF(status='published','draft',status),
                     updated_at        = NOW()
                 WHERE id = :id AND developer = :dev
             ")->execute([
@@ -98,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'age'       => $age_rating,'id'       => $project_id,
                 'dev'       => $studio_id,
             ]);
+            $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
             header('Location: /devs/edit?id=' . $project_id . '&saved=1');
             exit();
         } catch (PDOException $e) {
@@ -105,18 +113,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } elseif ($action === 'moderation') {
-        $conn->prepare("UPDATE games SET moderation_status = 'pending', updated_at = NOW() WHERE id = ? AND developer = ?")
+        $conn->prepare("UPDATE games SET moderation_status='pending', updated_at=NOW() WHERE id=? AND developer=?")
              ->execute([$project_id, $studio_id]);
-        send_group_message(-1002916906978, '🆕 <b>Для экспертов: Новый проект требует прохождения модерации</b>', true, 'https://dustore.ru/devs/experts');
+        $pendingTotal = (int)$conn->query("SELECT COUNT(*) FROM games WHERE moderation_status='pending'")->fetchColumn();
+        send_group_message(-1002916906978,
+            "🆕 <b>Новый проект на модерации</b>\n" .
+            "ℹ️ Разработчик может отменить отправку до конца голосования.\n\n" .
+            "📊 Всего проектов на модерации: {$pendingTotal}",
+            true, 'https://dustore.ru/devs/experts');
         header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
+        exit();
+
+    } elseif ($action === 'cancel_moderation') {
+        $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
+        $conn->prepare("UPDATE games SET moderation_status='draft', updated_at=NOW() WHERE id=? AND developer=?")
+             ->execute([$project_id, $studio_id]);
+        header('Location: /devs/edit?id=' . $project_id . '&cancelled=1');
         exit();
 
     } elseif ($action === 'resubmit_moderation') {
         if ($is_owner) {
             $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
-            $conn->prepare("UPDATE games SET moderation_status = 'pending', updated_at = NOW() WHERE id = ? AND developer = ?")
+            $conn->prepare("UPDATE games SET moderation_status='pending', moderation_submitted_at=NOW(), updated_at=NOW() WHERE id=? AND developer=?")
                  ->execute([$project_id, $studio_id]);
-            send_group_message(-1002916906978, '🔄 <b>Проект отправлен на повторную модерацию</b>', true, 'https://dustore.ru/devs/experts');
+            $pendingTotal = (int)$conn->query("SELECT COUNT(*) FROM games WHERE moderation_status='pending'")->fetchColumn();
+            send_group_message(-1002916906978,
+                "🔄 <b>Проект отправлен на повторную модерацию</b>\n" .
+                "ℹ️ Разработчик может отменить отправку.\n\n" .
+                "📊 Всего проектов на модерации: {$pendingTotal}",
+                true, 'https://dustore.ru/devs/experts');
             header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
             exit();
         }
@@ -175,7 +200,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  ->execute([$project_id, $studio_id]);
             header('Location: /devs/edit?id=' . $project_id . '&jam=1'); exit();
         }
+    } elseif ($action === 'toggle_hidden') {
+        $conn->prepare("UPDATE games SET hidden = IF(hidden=1,0,1), updated_at=NOW() WHERE id=? AND developer=?")
+             ->execute([$project_id, $studio_id]);
+        header('Location: /devs/edit?id=' . $project_id . '&visibility=1'); exit();
 
+    } elseif ($action === 'make_preview_link') {
+        $token = bin2hex(random_bytes(16));
+        $conn->prepare("UPDATE games SET preview_token=?, preview_expires=DATE_ADD(NOW(), INTERVAL 7 DAY), updated_at=NOW() WHERE id=? AND developer=?")
+             ->execute([$token, $project_id, $studio_id]);
+        header('Location: /devs/edit?id=' . $project_id . '&pvlink=1'); exit();
     } elseif ($action === 'delete') {
         if ($is_owner) {
             $conn->prepare("DELETE FROM games WHERE id = ? AND developer = ?")->execute([$project_id, $studio_id]);
@@ -220,6 +254,10 @@ if (isset($_GET['moderated'])) $success_msg = 'Проект отправлен �
 if (isset($_GET['published'])) $success_msg = 'Игра опубликована! Теперь она видна всем игрокам.';
 if (isset($_GET['announced'])) $success_msg = 'Настройки анонса сохранены!';
 if (isset($_GET['jam']))       $success_msg = 'Настройки участия в джеме сохранены!';
+if (isset($_GET['cancelled'])) $success_msg = 'Отправка на модерацию отменена — можно редактировать.';
+if (isset($_GET['locked']))    $error_msg   = 'Игра на модерации — редактирование заблокировано. Отмените отправку, чтобы вносить правки.';
+if (isset($_GET['visibility'])) $success_msg = 'Видимость игры изменена.';
+if (isset($_GET['pvlink']))     $success_msg = 'Ссылка для просмотра создана — действует 7 дней.';
 
 $page_title = 'Редактирование: ' . ($game['name'] ?? '');
 $active_nav = 'projects';
@@ -402,6 +440,7 @@ if (in_array($mod_status, ['pending','rejected'])):
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
     <div style="font-size:20px;font-weight:700;"><?= ev($game,'name') ?></div>
     <span class="badge <?= $status_cls ?>"><?= $status_lbl ?></span>
+<?php if (!empty($game['hidden'])): ?><span class="badge badge-draft">Скрыта</span><?php endif; ?>
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
         <a href="/g/<?= $project_id ?>" target="_blank" class="btn btn-g" style="padding:6px 14px;font-size:12px;">
             <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть
@@ -410,6 +449,12 @@ if (in_array($mod_status, ['pending','rejected'])):
         <span class="btn btn-g" style="padding:6px 14px;font-size:12px;opacity:.6;cursor:default;">
             <span class="material-icons" style="font-size:15px;">hourglass_top</span>На модерации
         </span>
+        <form method="POST" style="display:inline;" onsubmit="return confirm('Отменить отправку на модерацию? Голоса экспертов сбросятся, зато можно будет редактировать.')">
+            <input type="hidden" name="action" value="cancel_moderation">
+            <button type="submit" class="btn btn-g" style="padding:6px 14px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">undo</span>Отменить отправку
+            </button>
+        </form>
         <?php elseif ($game['status'] === 'draft' && $game['moderation_status'] === 'approved'): ?>
         <form method="POST" style="display:inline;">
             <input type="hidden" name="action" value="publish">
@@ -426,6 +471,18 @@ if (in_array($mod_status, ['pending','rejected'])):
         <span class="btn btn-g" style="padding:6px 14px;font-size:12px;opacity:.6;cursor:default;">
             <span class="material-icons" style="font-size:15px;">check_circle</span>Опубликована
         </span>
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="toggle_hidden">
+            <?php if (!empty($game['hidden'])): ?>
+            <button type="submit" class="btn btn-p" style="padding:6px 14px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">visibility</span>Показать в магазине
+            </button>
+            <?php else: ?>
+            <button type="submit" class="btn btn-g" style="padding:6px 14px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">visibility_off</span>Скрыть из магазина
+            </button>
+            <?php endif; ?>
+        </form>
         <?php endif; ?>
     </div>
 </div>
@@ -437,7 +494,32 @@ if (in_array($mod_status, ['pending','rejected'])):
 <form method="POST" id="form-resubmit" style="display:none;">
     <input type="hidden" name="action" value="resubmit_moderation">
 </form>
-
+<div class="card" style="margin-bottom:16px;">
+    <div class="card-title"><span class="material-icons">visibility</span>Просмотр страницы</div>
+    <p style="font-size:12px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
+        Открой публичную страницу как её видят игроки. Неопубликованная/скрытая игра доступна тебе всегда,
+        а другим — по временной ссылке (7 дней).
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <a href="/g/<?= $project_id ?>" target="_blank" class="btn btn-g" style="font-size:12px;">
+            <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть страницу
+        </a>
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="make_preview_link">
+            <button type="submit" class="btn btn-g" style="font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">link</span><?= !empty($game['preview_token']) ? 'Обновить ссылку' : 'Ссылка для просмотра' ?>
+            </button>
+        </form>
+    </div>
+    <?php if (!empty($game['preview_token']) && !empty($game['preview_expires']) && strtotime($game['preview_expires']) > time()): ?>
+    <div style="margin-top:12px;padding:10px 12px;background:rgba(195,33,120,.06);border:1px solid rgba(195,33,120,.2);border-radius:8px;">
+        <div style="font-size:11px;color:var(--tm);margin-bottom:6px;">Временная ссылка (до <?= date('d.m.Y H:i', strtotime($game['preview_expires'])) ?>):</div>
+        <input type="text" readonly onclick="this.select()"
+               value="https://dustore.ru/g/<?= $project_id ?>?preview=<?= htmlspecialchars($game['preview_token']) ?>"
+               style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 10px;color:var(--ts);font-size:12px;">
+    </div>
+    <?php endif; ?>
+</div>
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
   <div style="display:flex;flex-direction:column;gap:14px;" id="left-col">
@@ -811,9 +893,11 @@ if (in_array($mod_status, ['pending','rejected'])):
 <?php endif; ?>
 
 <?php
+$is_locked = (($game['moderation_status'] ?? '') === 'pending') ? 'true' : 'false';
 $extra_js = <<<JS
 <script>
 const PID = {$project_id};
+const IS_LOCKED = {$is_locked};
 
 // ── Модалка модерации ─────────────────────────────────────────────────────
 var _modalAction = 'first';
@@ -1078,6 +1162,19 @@ document.querySelectorAll('.dpx-tab').forEach(function(t){
     document.querySelectorAll('.dpx-pane').forEach(function(p){ p.hidden = (p.dataset.pane !== t.dataset.tab); });
   });
 });
+
+if (IS_LOCKED) {
+    document.querySelectorAll('input, textarea, select, button, .dpx-tab').forEach(function (el) {
+        if (el.closest('#moderation-modal')) return;                     // модалку не трогаем
+        var f = el.closest('form');
+        if (f && f.querySelector('input[name="action"][value="cancel_moderation"]')) return; // кнопку отмены оставляем
+        el.disabled = true; el.style.pointerEvents = 'none';
+    });
+    ['zip-drop', 'scr-drop'].forEach(function (id) {
+        var e = document.getElementById(id);
+        if (e) { e.style.pointerEvents = 'none'; e.style.opacity = '.5'; }
+    });
+}
 </script>
 JS;
 

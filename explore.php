@@ -8,7 +8,8 @@ $games = $gameController->getLatestGames();
 
 // Оставляем серверную фильтрацию только для начального отображения (SEO)
 $games = array_filter($games, function ($game) {
-    return isset($game['status']) && strtolower($game['status']) === 'published';
+    return isset($game['status']) && strtolower($game['status']) === 'published'
+        && empty($game['hidden']);
 });
 
 $adultSection = isset($_GET['adult']) && $_GET['adult'] == 1;
@@ -84,6 +85,10 @@ if ($selectedGenre) {
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                             Новые
                         </button>
+                        <button class="sort-btn" data-sort="updated" data-dir="desc">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Обновлённые
+                        </button>
                     </div>
                         <div class="price-switch" id="priceSwitch">
                             <button class="price-btn active" data-price-type="all">Все</button>
@@ -137,7 +142,7 @@ if ($selectedGenre) {
                                 ?>
                                 <div class="game-card"
                                      data-price="<?= (float)$game['price'] ?>"
-                                     data-popularity="<?= (float)($game['rating'] ?? 0) ?>"
+                                     data-popularity="<?= (int)($game['downloads'] ?? 0) ?>"
                                      data-date="<?= strtotime($game['release_date'] ?? '2000-01-01') ?>"
                                      data-id="<?= $game['id'] ?>"
                                      onclick="window.location.href='/g/<?= $game['id'] ?>';">
@@ -145,12 +150,13 @@ if ($selectedGenre) {
                                         <img src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image' ?>"
                                              alt="<?= htmlspecialchars($game['name']) ?>"
                                              style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);">
-                                        <?php if ($game['price'] == 0): ?>
+                                        <?php $rel = strtotime($game['release_date'] ?? ''); ?>
+                                        <?php if ($rel && $rel > time()): ?>
+                                            <div class="game-badge soon">Скоро выйдет</div>
+                                        <?php elseif ($game['price'] == 0): ?>
                                             <div class="game-badge free">Бесплатно</div>
-                                        <?php elseif ((time() - strtotime($game['release_date'])) < 30*24*60*60): ?>
+                                        <?php elseif ($rel && (time() - $rel) < 30*24*60*60): ?>
                                             <div class="game-badge">Новинка</div>
-                                        <?php elseif ((time() - strtotime($game['release_date'])) > 1): ?>
-                                            <div class="game-badge">Скоро выйдет</div>
                                         <?php endif; ?>
                                     </div>
                                     <div class="game-info">
@@ -205,7 +211,7 @@ if ($selectedGenre) {
         const searchInput = document.getElementById('searchInput');
 
         let state = {
-            adult: <?= $adultSection ? 1 : 0 ?>,
+            adult: 0,
             genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
             sort: 'popularity',
             dir: 'desc',
@@ -252,12 +258,14 @@ if ($selectedGenre) {
             grid.innerHTML = games.map(game => {
                 const now = new Date();
                 const releaseDate = new Date(game.release_date);
-                const isNew = (now - releaseDate) < 30 * 24 * 60 * 60 * 1000;
+                const rel = releaseDate.getTime();
+                const isSoon = rel > now.getTime();
+                const isNew = !isSoon && (now.getTime() - rel) < 30 * 24 * 60 * 60 * 1000;
                 const priceStr = game.price == 0 ? 'Бесплатно' : Math.round(game.price).toLocaleString('ru-RU') + ' ₽';
                 return `
                 <div class="game-card hidden-card"
                      data-price="${game.price}"
-                     data-popularity="${game.rating}"
+                     data-popularity="${game.downloads}"
                      data-date="${Math.floor(releaseDate.getTime() / 1000)}"
                      data-id="${game.id}"
                      onclick="window.location.href='/g/${game.id}'">
@@ -265,8 +273,9 @@ if ($selectedGenre) {
                         <img src="${game.path_to_cover || 'https://via.placeholder.com/400x225/74155d/ffffff?text=No+Image'}"
                              alt="${game.name.replace(/"/g, '&quot;')}"
                              style="mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);">
-                        ${game.price == 0 ? '<div class="game-badge free">Бесплатно</div>' : ''}
-                        ${isNew && game.price > 0 ? '<div class="game-badge">Новинка</div>' : ''}
+                        ${isSoon ? '<div class="game-badge soon">Скоро выйдет</div>'
+                          : (game.price == 0 ? '<div class="game-badge free">Бесплатно</div>'
+                          : (isNew ? '<div class="game-badge">Новинка</div>' : ''))}
                     </div>
                     <div class="game-info">
                         <h3 class="game-title">${game.name}</h3>
@@ -353,7 +362,6 @@ if ($selectedGenre) {
 
         function updateURL() {
             const url = new URL(window.location);
-            url.searchParams.set('adult', state.adult);
             if (state.genre) {
                 url.searchParams.set('genre', state.genre);
             } else {
@@ -441,7 +449,6 @@ if ($selectedGenre) {
 
         window.addEventListener('popstate', async () => {
             const params = new URLSearchParams(window.location.search);
-            state.adult = params.get('adult') == 1 ? 1 : 0;
             state.genre = params.get('genre') || null;
             await updateUI();
             updateSortButtonsUI();

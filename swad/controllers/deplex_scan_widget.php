@@ -25,12 +25,13 @@ $__canRescan = !empty($deplex_can_rescan);
 $__terminal  = in_array($__scan['status'], ['clean', 'infected', 'skipped', 'error'], true);
 
 $__map = [
-    'clean'    => ['#00d68f', 'Проверено антивирусом', '🛡'],
-    'infected' => ['#ff5f57', 'Обнаружена угроза',      '⚠'],
-    'queued'   => ['#febc2e', 'В очереди на проверку',  '⏳'],
-    'scanning' => ['#febc2e', 'Идёт проверка…',          '⏳'],
-    'error'    => ['#ffa04d', 'Ошибка проверки',         '❗'],
-    'skipped'  => ['#9aa0b0', 'Проверка пропущена',      '—'],
+    'clean'      => ['#00d68f', 'Проверено антивирусом', '🛡'],
+    'infected'   => ['#ff5f57', 'Обнаружена угроза',      '⚠'],
+    'queued'     => ['#febc2e', 'В очереди на проверку',  '⏳'],
+    'scanning'   => ['#febc2e', 'Идёт проверка…',          '⏳'],
+    'error'      => ['#ffa04d', 'Ошибка проверки',         '❗'],
+    'skipped'    => ['#9aa0b0', 'Проверка пропущена',      '—'],
+    'notscanned' => ['#9aa0b0', 'Ещё не проверялось',      '•'],
 ];
 [$__c, $__label, $__icon] = $__map[$__scan['status']] ?? ['#9aa0b0', $__scan['status'], '•'];
 ?>

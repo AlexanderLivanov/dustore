@@ -436,7 +436,7 @@ $stmt->execute([
             <div class="section center-section">
                 <div class="image">
                     <!-- <img src="/swad/static/img/logo_.png" alt="" onclick="location.href='/'"> -->
-                    <img src="/swad/static/img/future.png" alt="" onclick="location.href='/'">
+                    <img src="/swad/static/img/LogoV3-Appolo_mini.png" alt="" onclick="location.href='/'">
                     <!-- <img id="dancingCow" style="height: 80px;"
                     src="https://media.tenor.com/yNy3XaDrdjgAAAAj/polish-dancing-cow-dancing.gif"
                     alt=""
@@ -1670,8 +1670,8 @@ const pagesTopics = {
                 if (!themeBtn) return;
 
                 // Пути к логотипам
-                const logoAppollo = '/swad/static/img/future.png';
-                const logoMoonlight = '/swad/static/img/future.png';
+                const logoAppollo = '/swad/static/img/LogoV3-Appolo_mini.png';
+                const logoMoonlight = '/swad/static/img/LogoV3-Moonlight_mini.png';
 
                 // Установить иконку и логотип в зависимости от темы
                 function setThemeUI(theme) {

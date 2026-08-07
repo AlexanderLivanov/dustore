@@ -148,6 +148,7 @@ if ($is_moder) {
     $nav_items[] = ['divider' => true, 'label' => 'Администрирование'];
     $nav_items[] = ['id' => 'recentorgs', 'href' => '/devs/recentorgs', 'icon' => 'domain_add',   'label' => 'Новые организации', 'badge' => $sb['orgs']];
     $nav_items[] = ['id' => 'experts',    'href' => '/devs/experts',    'icon' => 'verified_user', 'label' => 'Эксперты',          'badge' => $sb['experts']];
+    $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => $sb['security']];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
     }

@@ -14,8 +14,25 @@ if ($game_id <= 0) { header('Location: /explore'); exit(); }
 $gameController = new Game();
 $game = $gameController->getGameById($game_id);
 
-if (!$game)                                                           { header('Location: /explore'); exit(); }
-if (empty($game['status']) || strtolower($game['status']) !== 'published') { header('Location: /explore'); exit(); }
+if (!$game) { header('Location: /explore'); exit(); }
+
+$viewerStudio = (int)($_SESSION['studio_id'] ?? 0);
+$isAdminView  = ((int)($_SESSION['USERDATA']['global_role'] ?? 0)) === -1;
+$isOwnerView  = $isAdminView || ($viewerStudio > 0 && (int)($game['developer'] ?? 0) === $viewerStudio);
+
+$isPublished  = strtolower($game['status'] ?? '') === 'published';
+$isHidden     = !empty($game['hidden']);
+
+$previewToken = (string)($_GET['preview'] ?? '');
+$isPreview    = $previewToken !== '' && !empty($game['preview_token'])
+             && hash_equals((string)$game['preview_token'], $previewToken)
+             && !empty($game['preview_expires']) && strtotime($game['preview_expires']) > time();
+
+$publiclyVisible = $isPublished && !$isHidden;
+
+// Не публична → пускаем только владельца/админа или по валидной превью-ссылке.
+if (!$publiclyVisible && !$isOwnerView && !$isPreview) { header('Location: /explore'); exit(); }
+$isPreviewMode = !$publiclyVisible;   // показать плашку «предпросмотр»
 
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM library WHERE game_id = ?");
 $stmt->execute([$game_id]);
@@ -340,6 +357,11 @@ $isPaid = ($game['price'] ?? 0) > 0;
 </head>
 <body>
     <?php require_once('swad/static/elements/header.php'); ?>
+    <?php if (!empty($isPreviewMode)): ?>
+    <div style="background:#c32178;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;">
+        👁 Предпросмотр — игра <?= $isHidden ? 'скрыта из магазина' : 'ещё не опубликована' ?>. Видна только вам и по временной ссылке.
+    </div>
+    <?php endif; ?>
     <main>
         <?php if (!empty($game['banner_url'])): ?>
             <div class="gp-banner" style="background-image:url('<?= htmlspecialchars($game['banner_url']) ?>')"></div>

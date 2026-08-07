@@ -29,24 +29,7 @@ $stmt->execute([$gameId]);
 $game = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$game) die('Игра не найдена');
 
-/* Эксперты джема + текущие пики этой игры */
-$jamExperts = []; $gamePicks = [];
-if (!empty($game['sprint_id'])) {
-    $je = $pdo->prepare("
-        SELECT se.id,
-               COALESCE(se.external_name, u.username, 'Эксперт') AS name,
-               se.external_role AS role
-        FROM sprint_experts se
-        LEFT JOIN users u ON u.id = se.user_id
-        WHERE se.sprint_id = ?");
-    $je->execute([$game['sprint_id']]);
-    $jamExperts = $je->fetchAll(PDO::FETCH_ASSOC);
-    try {
-        $gp = $pdo->prepare("SELECT expert_id FROM sprint_expert_picks WHERE sprint_id = ? AND game_id = ?");
-        $gp->execute([$game['sprint_id'], $gameId]);
-        $gamePicks = array_flip(array_map('intval', $gp->fetchAll(PDO::FETCH_COLUMN)));
-    } catch (Exception $e) {}
-}
+
 
 $features     = json_decode($game['features']     ?? '[]', true) ?: [];
 $screenshots  = json_decode($game['screenshots']  ?? '[]', true) ?: [];
@@ -300,7 +283,8 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
             cursor: pointer;
             overflow: hidden;
             background: #0d1117;
-            min-height: 180px;
+            align-self: start;          /* не растягивать под высоту инфо-колонки */
+            aspect-ratio: 460 / 215;    /* формат обложки Dustore, без кривого кропа */
         }
 
         .game-cover-col img {
@@ -660,7 +644,13 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                         <?php else: ?>🎮<?php endif; ?>
                 </div>
                 <div class="game-info-col">
-                    <div class="game-title"><?= htmlspecialchars($game['name']) ?></div>
+                    <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
+                        <?php if (!empty($game['icon_url'])): ?>
+                            <img src="<?= htmlspecialchars($game['icon_url']) ?>" alt="icon"
+                                 style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;">
+                        <?php endif; ?>
+                        <div class="game-title" style="margin-bottom:0;"><?= htmlspecialchars($game['name']) ?></div>
+                    </div>
                     <div class="game-studio">
                         <?= htmlspecialchars($game['studio_name'] ?? 'Студия не указана') ?>
                         <?php if (!empty($game['tiker'])): ?> · <?= htmlspecialchars($game['tiker']) ?><?php endif; ?>
@@ -699,13 +689,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                                 GQI <?= $game['GQI'] ?>
                             </span>
                         <?php endif; ?>
-                        <?php if (!empty($game['trailer_url'])): ?>
-                            <a href="<?= htmlspecialchars($game['trailer_url']) ?>" target="_blank"
-                                style="background:rgba(34,211,238,.1);color:var(--accent2);border:1px solid rgba(34,211,238,.2);
-                          padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:600;text-decoration:none;">
-                                ▶ Трейлер
-                            </a>
-                        <?php endif; ?>
+
                     </div>
                     <?php if (!empty($game['short_description'])): ?>
                         <div style="margin-top:14px;font-size:.85rem;color:var(--muted);line-height:1.6;
@@ -729,6 +713,16 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                                 <img src="<?= htmlspecialchars($s['path'] ?? '') ?>" alt="screenshot <?= $i + 1 ?>">
                             </div>
                         <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($game['trailer_url'])): ?>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:24px;overflow:hidden;">
+                    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;">Трейлер</div>
+                    <div style="position:relative;padding-bottom:56.25%;height:0;">
+                        <iframe src="<?= htmlspecialchars($game['trailer_url']) ?>"
+                            style="position:absolute;inset:0;width:100%;height:100%;border:0;"
+                            allowfullscreen allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
                     </div>
                 </div>
             <?php endif; ?>
@@ -784,6 +778,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                         <div>
                             <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:4px;">📦 Файл игры</div>
+                            
                             <div style="font-size:.82rem;color:var(--muted);">
                                 <?= $isChunked ? "Chunked upload · $sizeMb" : "ZIP · $sizeMb" ?>
                             </div>
@@ -802,7 +797,6 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                 </div>
             <?php endif; ?>
 
-            <!-- ВИРУС-ПРОВЕРКА (заглушка, воркер позже) -->
             <?php
             $vtStatus = $game['vt_status'] ?? null;
             $vtMap = [
@@ -820,13 +814,13 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                     </div>
                     <div style="display:flex;gap:8px;">
                         <?php if (!empty($game['vt_report_url'])): ?>
-                            <a href="<?= htmlspecialchars($game['vt_report_url']) ?>" target="_blank"
-                            style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--accent2);text-decoration:none;font-size:.85rem;font-weight:600;">Отчёт VirusTotal ↗</a>
+                            Антивирус: <code><?= htmlspecialchars($game['vt_report_url']) ?></code>
+                            <a href="https://www.google.com/search?q=ClamAV+<?= urlencode($game['vt_report_url']) ?>" target="_blank" rel="noopener">что это?</a>
                         <?php endif; ?>
                         
                         <button type="button" onclick="rescanGame(<?= (int)$game['id'] ?>, this)"
     style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 16px;color:var(--muted);cursor:pointer;font-size:.85rem;">Перепроверить</button>
-</div>
+</div><?php $deplex_can_rescan = true; include($_SERVER['DOCUMENT_ROOT'] . '/swad/controllers/deplex_scan_widget.php'); ?>
                 </div>
             </div>
 
@@ -863,42 +857,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                 <?php endif; ?>
             </div>
 
-            <?php if (!empty($game['sprint_id']) && $jamExperts): ?>
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px;" id="picks-box" data-sprint="<?= (int)$game['sprint_id'] ?>" data-game="<?= (int)$gameId ?>">
-    <div class="section-title" style="margin-bottom:12px;">🏅 Выбор экспертов джема</div>
-    <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">Отметьте, кого из экспертов джема эта игра стала выбором. Плашка появится на странице игры и в голосовании.</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-        <?php foreach ($jamExperts as $ex): $picked = isset($gamePicks[(int)$ex['id']]); ?>
-            <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;cursor:pointer;">
-                <input type="checkbox" class="pick-inp" value="<?= (int)$ex['id'] ?>" <?= $picked ? 'checked' : '' ?>>
-                <div>
-                    <div style="font-size:.9rem;font-weight:600;"><?= htmlspecialchars($ex['name']) ?></div>
-                    <?php if (!empty($ex['role'])): ?><div style="font-size:.75rem;color:var(--muted);"><?= htmlspecialchars($ex['role']) ?></div><?php endif; ?>
-                </div>
-            </label>
-        <?php endforeach; ?>
-    </div>
-    <div id="picks-msg" style="font-size:.8rem;margin-top:10px;color:var(--muted);"></div>
-</div>
-<script>
-(function () {
-    var box = document.getElementById('picks-box');
-    if (!box) return;
-    var sprintId = box.dataset.sprint, gameId = box.dataset.game;
-    var msg = document.getElementById('picks-msg');
-    box.querySelectorAll('.pick-inp').forEach(function (inp) {
-        inp.addEventListener('change', function () {
-            fetch('/swad/controllers/jams/set_expert_pick.php', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sprint_id: sprintId, game_id: gameId, expert_id: inp.value, action: inp.checked ? 'add' : 'remove' })
-            }).then(function (r) { return r.json(); })
-              .then(function (d) { msg.textContent = d.message || (d.success ? 'Сохранено' : 'Ошибка'); msg.style.color = d.success ? 'var(--accent)' : 'var(--danger)'; if (!d.success) inp.checked = !inp.checked; })
-              .catch(function () { msg.textContent = 'Сетевая ошибка'; msg.style.color = 'var(--danger)'; inp.checked = !inp.checked; });
-        });
-    });
-})();
-</script>
-<?php endif; ?>
+            
 
             <!-- ФОРМА ОЦЕНКИ -->
             <?php if ($expertId && $game['moderation_status'] === 'pending'): ?>
@@ -935,7 +894,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                                     <?php
                                     $checklist = [
                                         'Игра запускается и проходима хотя бы в основном контенте',
-                                        'Название и описание заполнены, нет спама или плейсхолдеров',
+                                        'Название и описание заполнены, спама или плейсхолдеров',
                                         'Загружена обложка корректного качества',
                                         'Присутствует минимум 3 скриншота из реального геймплея',
                                         'Возрастной рейтинг соответствует содержанию игры',
@@ -1004,7 +963,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
                                 Рецензия <span style="color:var(--danger);">*</span>
                                 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#4a5568;margin-left:6px;">· анонимна до завершения голосования</span>
                             </label>
-                            <textarea name="review" id="review-text" rows="5" required minlength="40"
+                            <textarea name="review" id="review-text" rows="5" required 
                                 placeholder="Опишите впечатления развёрнуто. Что сделано хорошо? Что критично улучшить? Есть ли аудитория у этой игры?"
                                 style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;
                                  padding:12px 16px;color:var(--text);font-family:'DM Sans',sans-serif;
@@ -1319,7 +1278,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
         function checkReady() {
             const s = scoreSet && hidden.value !== '';
             const v = document.getElementById('verdict-value').value !== '';
-            const t = (document.getElementById('review-text')?.value.length ?? 0) >= 40;
+            const t = (document.getElementById('review-text')?.value.length ?? 0) >= 0;
             document.getElementById('char-count').textContent = (document.getElementById('review-text')?.value.length ?? 0) + ' симв.';
             const ok = s && v && t;
             const btn = document.getElementById('submit-btn');
