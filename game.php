@@ -183,7 +183,19 @@ $isPaid = ($game['price'] ?? 0) > 0;
         @media(max-width:540px){.gp-header{flex-direction:column;align-items:flex-start;padding-top:16px;}
             .gp-cover{width:90px;height:90px;}}
         /* ── MAIN ── */
-        .gp-main{grid-area:main;min-width:0; z-index:-1;}
+        .gp-main{grid-area:main;min-width:0;}
+        .review-foot{display:flex;gap:8px;margin-top:12px;}
+.rv-btn{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);border-radius:10px;
+    padding:5px 12px;font-size:.82rem;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .15s;}
+.rv-btn:hover{color:#fff;border-color:rgba(255,255,255,.25);}
+.rv-up-active{background:rgba(0,255,153,.12);border-color:rgba(0,255,153,.35);color:var(--success);}
+.rv-down-active{background:rgba(255,80,80,.12);border-color:rgba(255,80,80,.35);color:#ff7070;}
+.review-edit-btn{background:transparent;border:none;cursor:pointer;font-size:1rem;opacity:.6;transition:opacity .15s;}
+.review-edit-btn:hover{opacity:1;}
+.review-you{font-size:.68rem;background:rgba(195,33,120,.18);color:#e88fc0;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700;}
+.rev-stars span{font-size:20px;color:rgba(255,255,255,.2);cursor:pointer;transition:color .15s;}
+.rev-stars span.highlighted{color:#fbbf24;}
+.rev-edit-actions{display:flex;gap:8px;margin-top:10px;}
         .gp-section{margin-bottom:36px;}
         .gp-section-title{font-size:1.1rem;font-weight:700;color:#fff;margin:0 0 16px;
             padding-bottom:10px;border-bottom:1px solid var(--border);}
@@ -196,7 +208,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .gp-feature-desc{font-size:.82rem;color:var(--muted);line-height:1.5;}
         .gp-trailer{position:relative;padding-bottom:56.25%;height:0;border-radius:var(--radius);
             overflow:hidden;border:1px solid var(--border);}
-        .gp-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:none; z-index: -1;}
+        .gp-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
         /* ── SCREENSHOTS ── */
         .gp-screenshots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
         .gp-screenshot{aspect-ratio:16/9;border-radius:10px;background-size:cover;
@@ -214,6 +226,9 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .review-author{display:flex;gap:10px;align-items:center;}
         .review-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;}
         .review-name{font-weight:600;font-size:.9rem;color:#fff;}
+        a.review-name{text-decoration:none;transition:color .15s;}
+        a.review-name:hover{color:#e88fc0;text-decoration:underline;}
+        .review-author a{line-height:0;}
         .review-rating{font-size:.8rem;color:#fbbf24;margin-top:2px;}
         .review-date{font-size:.75rem;color:var(--muted);flex-shrink:0;}
         .review-text{font-size:.88rem;color:rgba(255,255,255,.7);line-height:1.6;}
@@ -527,7 +542,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
                     <?php include($_SERVER['DOCUMENT_ROOT'] . '/swad/controllers/deplex_scan_widget.php'); ?>
                     <?php include($_SERVER['DOCUMENT_ROOT'] . '/swad/controllers/deplex_download_gate.php'); ?>
                     </div>
-                    
+
 
                     <!-- Wishlist (анонс) -->
                     <?php if ($showWishlist): ?>
@@ -678,12 +693,12 @@ $isPaid = ($game['price'] ?? 0) > 0;
                     </div>
 
                     <?php if ($userCanReview): ?>
-                        <div class="review-form">
+                        <div class="review-form" id="review-form-wrap">
                             <h3>Оставить отзыв</h3>
                             <textarea id="review-text" placeholder="Напишите ваш отзыв…"></textarea>
                             <div style="margin:10px 0 14px;display:flex;align-items:center;gap:8px;">
                                 <span style="font-size:.85rem;color:var(--muted);">Оценка:</span>
-                                <div id="review-stars"></div>
+                                <div id="review-stars" class="rev-stars"></div>
                             </div>
                             <button class="gp-btn gp-btn-primary" id="submit-review" style="width:auto;padding:10px 24px;">Отправить</button>
                         </div>
@@ -786,89 +801,172 @@ fetch('/swad/controllers/jams/jam_play.php', {
         if (e.key === 'Escape')     closeLb();
     });
 
-    // ── Reviews ──
-    (function() {
+    // ── Reviews (state-driven, без reload) ──
+    (function () {
         const gameId = <?= (int)$game_id ?>;
-        const userId = <?= (int)($_SESSION['USERDATA']['id'] ?? 0) ?>;
+        const ME = {
+            id: <?= (int)($_SESSION['USERDATA']['id'] ?? 0) ?>,
+            username: <?= json_encode($_SESSION['USERDATA']['username'] ?? 'Вы', JSON_UNESCAPED_UNICODE) ?>,
+            avatar: <?= json_encode($_SESSION['USERDATA']['profile_picture'] ?? '/swad/static/img/logo.svg', JSON_UNESCAPED_UNICODE) ?>
+        };
+        const FALLBACK = '/swad/static/img/logo.svg';
         const container = document.getElementById('reviews-container');
         if (!container) return;
 
-        function esc(str) {
-            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        let REVIEWS = [];
+        let editingId = null, editRating = 10, newRating = 10;
+
+        const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const fmtDate = d => { try { return new Date(d).toLocaleDateString('ru-RU'); } catch (e) { return ''; } };
+        const starStr = r => '★'.repeat(Math.max(0, Math.round(r / 2)));
+
+        // хендлеры для inline-onclick
+        window.startEditReview = startEdit;
+        window.cancelEditReview = cancelEdit;
+        window.saveEditReview = saveEdit;
+        window.setEditRating = setEditRating;
+        window.voteReview = voteReview;
+
+        load();
+
+        function load() {
+            fetch(`/swad/controllers/get_reviews.php?game_id=${gameId}`, { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(d => {
+                    if (!d.success) { container.innerHTML = '<p style="color:var(--muted)">Не удалось загрузить отзывы.</p>'; return; }
+                    REVIEWS = Array.isArray(d.reviews) ? d.reviews : [];
+                    render();
+                })
+                .catch(() => { container.innerHTML = '<p style="color:var(--muted)">Ошибка загрузки отзывов.</p>'; });
         }
 
-        fetch(`/swad/controllers/get_reviews.php?game_id=${gameId}`,{credentials:'same-origin'})
-            .then(r=>r.json())
-            .then(data=>{
-                if(!data.success){container.innerHTML='<p style="color:var(--muted)">Не удалось загрузить отзывы.</p>';return;}
-                const reviews=Array.isArray(data.reviews)?data.reviews:[];
-                if(!reviews.length){
-                    container.innerHTML='<p style="color:var(--muted);font-size:.9rem;">Отзывов пока нет. Будьте первым!</p>';
-                }else{
-                    container.innerHTML='';
-                    reviews.forEach(r=>{
-                        const div=document.createElement('div');
-                        div.className='review-card';
-                        div.innerHTML=`
-                            <div class="review-header">
-                                <div class="review-author">
-                                    <img class="review-avatar" src="${esc(r.profile_picture)||'/swad/static/img/logo.svg'}" alt="">
-                                    <div>
-                                        <div class="review-name">${esc(r.username||'Аноним')}</div>
-                                        <div class="review-rating">${'★'.repeat(Math.round(r.rating/2))} ${r.rating}/10</div>
-                                    </div>
-                                </div>
-                                <div class="review-date">${new Date(r.created_at).toLocaleDateString('ru-RU')}</div>
-                            </div>
-                            <div class="review-text">${esc(r.text)}</div>
-                            ${r.developer_reply?`<div class="review-dev-reply"><div class="review-dev-badge">✔ Ответ разработчика</div>${esc(r.developer_reply)}</div>`:''}
-                        `;
-                        container.appendChild(div);
-                    });
-                }
-                const myReview=reviews.find(r=>r.user_id==userId);
-                if(myReview){
-                    const ta=document.getElementById('review-text');
-                    if(ta)ta.value=myReview.text;
-                    const form=document.querySelector('.review-form');
-                    if(form&&!document.getElementById('review-id')){
-                        const inp=document.createElement('input');inp.type='hidden';inp.id='review-id';inp.value=myReview.id;form.appendChild(inp);
-                    }
-                    initStars(myReview.rating);
-                }else{initStars(10);}
-            })
-            .catch(()=>{container.innerHTML='<p style="color:var(--muted)">Ошибка загрузки отзывов.</p>';});
-
-        let selectedRating=10;
-        function initStars(initial){
-            selectedRating=initial;
-            const wrap=document.getElementById('review-stars');
-            if(!wrap)return;
-            wrap.innerHTML='';
-            for(let i=1;i<=10;i++){
-                const s=document.createElement('span');s.textContent='★';
-                s.addEventListener('mouseover',()=>highlight(i));
-                s.addEventListener('mouseout',()=>highlight(selectedRating));
-                s.addEventListener('click',()=>{selectedRating=i;highlight(i);});
-                wrap.appendChild(s);
+        function render() {
+            if (!REVIEWS.length) {
+                container.innerHTML = '<p style="color:var(--muted);font-size:.9rem;">Отзывов пока нет. Будьте первым!</p>';
+            } else {
+                container.innerHTML = REVIEWS.map(cardHTML).join('');
+                if (editingId != null) initEditStars();
             }
-            highlight(selectedRating);
+            syncForm();
         }
-        function highlight(n){document.querySelectorAll('#review-stars span').forEach((s,i)=>s.classList.toggle('highlighted',i<n));}
 
-        document.addEventListener('click',e=>{
-            if(e.target.id!=='submit-review')return;
-            const text=document.getElementById('review-text')?.value.trim();
-            if(!text){alert('Введите текст отзыва');return;}
-            const rid=document.getElementById('review-id');
-            const url=rid?.value?'/swad/controllers/update_review.php':'/swad/controllers/submit_review.php';
-            const body=rid?.value?
-                `review_id=${encodeURIComponent(rid.value)}&rating=${selectedRating}&text=${encodeURIComponent(text)}`:
-                `game_id=${gameId}&rating=${selectedRating}&text=${encodeURIComponent(text)}`;
-            fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body})
-                .then(r=>r.json()).then(d=>{if(d.success)location.reload();else alert('Ошибка: '+(d.error||d.message));})
-                .catch(console.error);
-        });
+        function cardHTML(r) {
+            const mine = Number(r.user_id) === ME.id;
+            if (editingId === r.id) return editorHTML(r);
+            const votes = mine ? '' :
+                `<div class="review-foot">
+                    <button class="rv-btn ${Number(r.my_vote) === 1 ? 'rv-up-active' : ''}" onclick="voteReview(${r.id},1)">👍 ${r.likes || 0}</button>
+                    <button class="rv-btn ${Number(r.my_vote) === -1 ? 'rv-down-active' : ''}" onclick="voteReview(${r.id},-1)">👎 ${r.dislikes || 0}</button>
+                 </div>`;
+            const uname = esc(r.username || 'Аноним');
+            const uhref = r.username ? `/player/${encodeURIComponent(r.username)}` : null;
+            const avaImg = `<img class="review-avatar" src="${esc(r.profile_picture) || FALLBACK}" alt="">`;
+            const avaHTML = uhref ? `<a href="${uhref}">${avaImg}</a>` : avaImg;
+            const nameHTML = uhref ? `<a class="review-name" href="${uhref}">${uname}</a>` : `<span class="review-name">${uname}</span>`;
+            return `
+                <div class="review-card" data-id="${r.id}">
+                    <div class="review-header">
+                        <div class="review-author">
+                            ${avaHTML}
+                            <div>
+                                <div>${nameHTML}${mine ? '<span class="review-you">вы</span>' : ''}</div>
+                                <div class="review-rating">${starStr(r.rating)} ${esc(r.rating)}/10</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="review-date">${fmtDate(r.created_at)}</div>
+                            ${mine ? `<button class="review-edit-btn" title="Редактировать" onclick="startEditReview(${r.id})">✏️</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="review-text">${esc(r.text)}</div>
+                    ${r.developer_reply ? `<div class="review-dev-reply"><div class="review-dev-badge">✔ Ответ разработчика</div>${esc(r.developer_reply)}</div>` : ''}
+                    ${votes}
+                </div>`;
+        }
+
+        function editorHTML(r) {
+            let stars = '';
+            for (let i = 1; i <= 10; i++) stars += `<span onclick="setEditRating(${i})">★</span>`;
+            return `
+                <div class="review-card review-editor" data-id="${r.id}">
+                    <h3 style="margin:0 0 10px;font-size:.95rem;color:#fff;">Редактировать отзыв</h3>
+                    <textarea id="edit-text-${r.id}" style="width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;color:#fff;padding:10px 12px;font-size:.9rem;resize:vertical;min-height:80px;font-family:inherit;">${esc(r.text)}</textarea>
+                    <div style="margin:10px 0;display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:.85rem;color:var(--muted);">Оценка:</span>
+                        <div class="rev-stars" id="edit-stars-${r.id}">${stars}</div>
+                    </div>
+                    <div class="rev-edit-actions">
+                        <button class="gp-btn gp-btn-primary" style="width:auto;padding:8px 20px;" onclick="saveEditReview(${r.id})">Сохранить</button>
+                        <button class="gp-btn gp-btn-secondary" style="width:auto;padding:8px 20px;" onclick="cancelEditReview()">Отмена</button>
+                    </div>
+                </div>`;
+        }
+
+        function initEditStars() {
+            const wrap = document.getElementById('edit-stars-' + editingId);
+            if (!wrap) return;
+            wrap.querySelectorAll('span').forEach((s, i) => s.classList.toggle('highlighted', i < editRating));
+        }
+        function setEditRating(n) { editRating = n; initEditStars(); }
+
+        function startEdit(id) { const r = REVIEWS.find(x => x.id == id); if (!r) return; editingId = r.id; editRating = r.rating; render(); }
+        function cancelEdit() { editingId = null; render(); }
+
+        async function saveEdit(id) {
+            const text = (document.getElementById('edit-text-' + id)?.value || '').trim();
+            if (!text) { alert('Введите текст отзыва'); return; }
+            try {
+                const res = await fetch('/swad/controllers/update_review.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin', body: `review_id=${id}&rating=${editRating}&text=${encodeURIComponent(text)}` });
+                const d = await res.json();
+                if (!d.success) { alert('Ошибка: ' + (d.error || d.message || '')); return; }
+                const r = REVIEWS.find(x => x.id == id); if (r) { r.text = text; r.rating = editRating; }
+                editingId = null; render();
+            } catch (e) { alert('Сетевая ошибка'); }
+        }
+
+        async function voteReview(id, val) {
+            if (!ME.id) { location.href = '/login'; return; }
+            try {
+                const res = await fetch('/swad/controllers/vote_review.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin', body: `review_id=${id}&value=${val}` });
+                const d = await res.json();
+                if (!d.ok) { alert(d.message || 'Ошибка'); return; }
+                const r = REVIEWS.find(x => x.id == id); if (r) { r.likes = d.likes; r.dislikes = d.dislikes; r.my_vote = d.my_vote; }
+                render();
+            } catch (e) { alert('Сетевая ошибка'); }
+        }
+
+        // ── нижняя форма нового отзыва ──
+        const formWrap = document.getElementById('review-form-wrap');
+        function syncForm() {
+            if (!formWrap) return;
+            formWrap.style.display = REVIEWS.some(r => Number(r.user_id) === ME.id) ? 'none' : '';
+        }
+        if (formWrap) {
+            const sw = document.getElementById('review-stars');
+            const hl = n => sw.querySelectorAll('span').forEach((s, i) => s.classList.toggle('highlighted', i < n));
+            for (let i = 1; i <= 10; i++) {
+                const s = document.createElement('span'); s.textContent = '★';
+                s.addEventListener('mouseover', () => hl(i));
+                s.addEventListener('mouseout', () => hl(newRating));
+                s.addEventListener('click', () => { newRating = i; hl(i); });
+                sw.appendChild(s);
+            }
+            hl(newRating);
+
+            document.getElementById('submit-review').addEventListener('click', async () => {
+                const text = (document.getElementById('review-text')?.value || '').trim();
+                if (!text) { alert('Введите текст отзыва'); return; }
+                try {
+                    const res = await fetch('/swad/controllers/submit_review.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin', body: `game_id=${gameId}&rating=${newRating}&text=${encodeURIComponent(text)}` });
+                    const d = await res.json();
+                    if (!d.success) { alert('Ошибка: ' + (d.error || d.message || '')); return; }
+                    const newId = d.review_id ?? d.id;
+                    if (!newId) { location.reload(); return; }
+                    REVIEWS.unshift({ id: newId, user_id: ME.id, username: ME.username, profile_picture: ME.avatar, rating: newRating, text, created_at: new Date().toISOString(), developer_reply: null, likes: 0, dislikes: 0, my_vote: 0 });
+                    editingId = null; render();
+                } catch (e) { alert('Сетевая ошибка'); }
+            });
+        }
     })();
 
     // ── Wishlist ──

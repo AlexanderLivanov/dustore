@@ -5,6 +5,7 @@ require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/s3.php');
 require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
 require_once(__DIR__ . '/../swad/controllers/deplex_web.php');
+require_once(__DIR__ . '/../swad/controllers/game_changelog.php');
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: /devs/projects'); exit(); }
@@ -105,6 +106,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'age'       => $age_rating,'id'       => $project_id,
                 'dev'       => $studio_id,
             ]);
+            $logUser = (int)($_SESSION['USERDATA']['id'] ?? 0);
+log_game_diff($conn, $project_id, $studio_id, $logUser, [
+    'name'              => [$game['name']              ?? '', $name],
+    'genre'             => [$game['genre']             ?? '', $genre],
+    'short_description' => [$game['short_description'] ?? '', $short_desc],
+    'description'       => [$game['description']       ?? '', $description],
+    'platforms'         => [$game['platforms']         ?? '', $platforms],
+    'release_date'      => [$game['release_date']      ?? '', $release_date],
+    'game_website'      => [$game['game_website']      ?? '', $game_website],
+    'trailer_url'       => [$game['trailer_url']       ?? '', $trailer_url],
+    'game_exec'         => [$game['game_exec']         ?? '', $game_exec],
+    'languages'         => [$game['languages']         ?? '', $languages],
+    'age_rating'        => [$game['age_rating']        ?? '', $age_rating],
+    'cover'             => [$game['path_to_cover']     ?? '', $cover_path],
+    'icon'              => [$game['icon_url']          ?? '', $icon_path],
+]);
             $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
             header('Location: /devs/edit?id=' . $project_id . '&saved=1');
             exit();
@@ -121,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "ℹ️ Разработчик может отменить отправку до конца голосования.\n\n" .
             "📊 Всего проектов на модерации: {$pendingTotal}",
             true, 'https://dustore.ru/devs/experts');
+            log_game_change($conn, $project_id, $studio_id, (int)($_SESSION['USERDATA']['id'] ?? 0), 'moderation', null, null, 'submitted');
         header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
         exit();
 
@@ -142,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "ℹ️ Разработчик может отменить отправку.\n\n" .
                 "📊 Всего проектов на модерации: {$pendingTotal}",
                 true, 'https://dustore.ru/devs/experts');
+                log_game_change($conn, $project_id, $studio_id, (int)($_SESSION['USERDATA']['id'] ?? 0), 'moderation', null, null, 'resubmitted');
             header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
             exit();
         }

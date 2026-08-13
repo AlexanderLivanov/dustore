@@ -609,35 +609,7 @@ if ($filterGame > 0) {
 
 <body>
 
-    <aside>
-        <div class="logo">
-            Dustore
-            <span><?= $isAdmin ? 'Admin Panel' : 'Expert Panel' ?></span>
-        </div>
-        <div class="nav-section">Меню</div>
-        <a href="index">🏠 Главная</a>
-        <?php if ($isAdmin): ?>
-            <a href="expert-requests">
-                👤 Заявки экспертов
-                <?php if ($pendingExperts > 0): ?><span class="badge"><?= $pendingExperts ?></span><?php endif; ?>
-            </a>
-        <?php endif; ?>
-        <a href="moderation">
-            🎮 Модерация игр
-            <?php if ($pendingGames > 0): ?><span class="badge"><?= $pendingGames ?></span><?php endif; ?>
-        </a>
-        <a href="all-reviews" class="active">📊 Все оценки</a>
-        <div class="sidebar-footer">
-            <div class="user-chip">
-                <div class="avatar"><?= mb_strtoupper(mb_substr($_SESSION['USERDATA']['username'], 0, 1)) ?></div>
-                <div>
-                    <div class="user-name"><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></div>
-                    <div class="user-role"><?= $isAdmin ? 'Администратор' : 'Эксперт' ?></div>
-                </div>
-            </div>
-            <a href="logout" style="color:var(--danger);margin-top:8px;padding:8px 12px;font-size:.85rem;display:block;">Выйти →</a>
-        </div>
-    </aside>
+    <?php $active_page = 'index'; require __DIR__ . '/_sidebar.php'; ?>
 
     <main>
         <div class="main-inner">
@@ -843,6 +815,9 @@ if ($filterGame > 0) {
                             ];
                             [$vlbl, $vcol, $vbg] = $verdictMap[$v] ?? $verdictMap['reject'];
                             $isMyReview = ($expertId && $r['expert_id'] === $expertId);
+                            $revCreated = $r['created_at'] ?? null;
+                            $canEdit1h  = $isMyReview && $revCreated && (time() - strtotime($revCreated) < 3600);
+                            $editLeftMin = $canEdit1h ? max(1, (int)ceil((3600 - (time() - strtotime($revCreated))) / 60)) : 0;
                         ?>
                             <div class="review-card" style="<?= $isMyReview ? 'border-color:rgba(34,211,238,.3);' : '' ?>">
                                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
@@ -902,6 +877,34 @@ if ($filterGame > 0) {
                                         <?= nl2br(htmlspecialchars($r['comment'])) ?>
                                     </div>
                                 <?php endif; ?>
+                                <?php if ($canEdit1h): ?>
+                                <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+                                    <button type="button" class="edit1h-btn" data-rid="<?= (int)$r['id'] ?>"
+                                            style="background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);color:var(--accent2);border-radius:8px;padding:6px 14px;font-size:.8rem;font-weight:600;cursor:pointer;">
+                                        ✎ Изменить (осталось <?= $editLeftMin ?> мин)
+                                    </button>
+                                    <div class="edit1h-form" id="edit1h-<?= (int)$r['id'] ?>" style="display:none;margin-top:10px;">
+                                        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                                            <label style="font-size:.78rem;color:var(--muted);">Оценка (0–100):</label>
+                                            <input type="number" min="0" max="100" value="<?= (int)$r['score'] ?>" id="e1h-score-<?= (int)$r['id'] ?>"
+                                                style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;">
+                                        </div>
+                                        <div style="display:flex;gap:6px;margin-bottom:8px;" data-rid="<?= (int)$r['id'] ?>">
+                                            <?php foreach (['recommend'=>'👍','revision'=>'🔄','reject'=>'👎'] as $vk=>$vi):
+                                                $on = (($r['verdict'] ?? '') === $vk); ?>
+                                            <button type="button" class="e1h-vbtn <?= $on?'on':'' ?>" data-v="<?= $vk ?>"
+                                                    style="flex:1;border:1px solid <?= $on?'var(--accent2)':'var(--border)' ?>;background:<?= $on?'rgba(34,211,238,.12)':'transparent' ?>;color:<?= $on?'var(--accent2)':'var(--muted)' ?>;border-radius:8px;padding:8px;cursor:pointer;font-size:.8rem;"><?= $vi ?></button>
+                                            <?php endforeach; ?>
+                                            <input type="hidden" id="e1h-verdict-<?= (int)$r['id'] ?>" value="<?= htmlspecialchars($r['verdict'] ?? '') ?>">
+                                        </div>
+                                        <textarea id="e1h-comment-<?= (int)$r['id'] ?>" rows="3"
+                                                style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:.85rem;resize:vertical;"><?= htmlspecialchars($r['comment'] ?? '') ?></textarea>
+                                        <button type="button" class="e1h-save" data-rid="<?= (int)$r['id'] ?>"
+                                                style="margin-top:8px;background:var(--accent);border:none;color:#0b0e13;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;">Сохранить</button>
+                                        <span class="e1h-msg" id="e1h-msg-<?= (int)$r['id'] ?>" style="font-size:.78rem;margin-left:10px;"></span>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -910,7 +913,44 @@ if ($filterGame > 0) {
             </div>
         </div>
     </main>
-
+<script>
+document.querySelectorAll('.edit1h-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+        var f = document.getElementById('edit1h-' + b.dataset.rid);
+        f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    });
+});
+document.querySelectorAll('.e1h-vbtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var rid = btn.parentElement.dataset.rid;
+        document.getElementById('e1h-verdict-' + rid).value = btn.dataset.v;
+        btn.parentElement.querySelectorAll('.e1h-vbtn').forEach(function(x){ x.style.borderColor='var(--border)'; x.style.background='transparent'; x.style.color='var(--muted)'; });
+        btn.style.borderColor='var(--accent2)'; btn.style.background='rgba(34,211,238,.12)'; btn.style.color='var(--accent2)';
+    });
+});
+document.querySelectorAll('.e1h-save').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var rid = btn.dataset.rid;
+        var msg = document.getElementById('e1h-msg-' + rid);
+        var body = {
+            review_id: rid,
+            score:   document.getElementById('e1h-score-'   + rid).value,
+            verdict: document.getElementById('e1h-verdict-' + rid).value,
+            comment: document.getElementById('e1h-comment-' + rid).value
+        };
+        btn.disabled = true;
+        fetch('/expert/admin/update-review-1h.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+          .then(function(r){ return r.json(); })
+          .then(function(d){
+              msg.textContent = d.message || (d.success ? 'Готово' : 'Ошибка');
+              msg.style.color = d.success ? 'var(--accent)' : 'var(--danger)';
+              btn.disabled = false;
+              if (d.success) setTimeout(function(){ location.reload(); }, 800);
+          })
+          .catch(function(){ msg.textContent='Сетевая ошибка'; msg.style.color='var(--danger)'; btn.disabled=false; });
+    });
+});
+</script>
 </body>
 
 </html>

@@ -84,21 +84,20 @@ $s->execute([$sprint_id]);
 $sprint = $s->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) die('Джем не найден');
 
-// $isHost = ((int)$sprint['host_user_id'] === $userId);
+date_default_timezone_set('Europe/Moscow');
 $isHost = false;
 $now = time();
 $jamEnd = $sprint['jam_end']      ? strtotime($sprint['jam_end'])      : null;
 $vStart = $sprint['voting_start'] ? strtotime($sprint['voting_start']) : null;
 $vEnd   = $sprint['voting_end']   ? strtotime($sprint['voting_end'])   : null;
 $votingOpen = (!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd);
-// $votingOpen = true;
 $canVote = !$isHost && $votingOpen;
+
+// Работы открываются в момент старта голосования.
+$revealed = !$vStart || $vStart <= $now;
 
 // Роли, видящие все голоса. Пока — все.
 $canSeeAllVotes = true;
-
-// Работы открываются в момент закрытия приёма (jam_end) — вне зависимости от даты модерации.
-$revealed = !$jamEnd || $jamEnd <= $now;
 
 // Эксперт джема? (для бейджа «мой выбор» и расширенного бюджета)
 $es = $pdo->prepare("SELECT id FROM sprint_experts WHERE sprint_id = ? AND user_id = ? LIMIT 1");
@@ -106,18 +105,68 @@ $es->execute([$sprint_id, $userId]);
 $myExpertId = $es->fetchColumn() ?: null;
 $iAmExpert  = (bool)$myExpertId;
 
-// Все игры джема (одобренные + ещё на проверке). Порядок случайный, но стабильный для игрока.
+// У каждого участника свой стабильный порядок игр.
+// Seed хранится в cookie отдельно для каждого джема.
+$cookieName = 'dustore_jam_seed_' . $sprint_id;
+
+if (
+    empty($_COOKIE[$cookieName]) ||
+    !preg_match('/^[a-f0-9]{32}$/', $_COOKIE[$cookieName])
+) {
+    $seed = bin2hex(random_bytes(16));
+
+    setcookie($cookieName, $seed, [
+        'expires' => time() + 60 * 60 * 24 * 365,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+
+    $_COOKIE[$cookieName] = $seed;
+} else {
+    $seed = $_COOKIE[$cookieName];
+}
+
+$orderSeed = hexdec(substr($seed, 0, 8));
+
+// Все игры джема (одобренные + ещё на проверке).
 $games = $pdo->prepare("
     SELECT g.id, g.name, g.short_description, g.icon_url, g.path_to_cover,
            g.vt_status, g.vt_report_url, g.moderation_status, g.status,
-           COALESCE((SELECT SUM(points) FROM jam_votes v WHERE v.game_id = g.id AND v.sprint_id = :sid),0) AS total_points,
-           (SELECT COUNT(*) FROM jam_votes v WHERE v.game_id = g.id AND v.sprint_id = :sid) AS voters,
-           (SELECT points FROM jam_votes v WHERE v.game_id = g.id AND v.user_id = :uid) AS my_points
+           COALESCE(
+               (
+                   SELECT SUM(points)
+                   FROM jam_votes v
+                   WHERE v.game_id = g.id
+                     AND v.sprint_id = :sid
+               ),
+               0
+           ) AS total_points,
+           (
+               SELECT COUNT(*)
+               FROM jam_votes v
+               WHERE v.game_id = g.id
+                 AND v.sprint_id = :sid
+           ) AS voters,
+           (
+               SELECT points
+               FROM jam_votes v
+               WHERE v.game_id = g.id
+                 AND v.user_id = :uid
+                 AND v.sprint_id = :sid
+           ) AS my_points
     FROM games g
     WHERE g.sprint_id = :sid
     ORDER BY RAND(:seed)
 ");
-$games->execute(['sid' => $sprint_id, 'uid' => $userId, 'seed' => $userId]);
+
+$games->execute([
+    'sid' => $sprint_id,
+    'uid' => $userId,
+    'seed' => $orderSeed
+]);
+
 $games = $games->fetchAll(PDO::FETCH_ASSOC);
 
 // Голосуемые = прошли модерацию ИЛИ уже опубликованы. Остальные — «на проверке».
@@ -194,6 +243,13 @@ require_once('../swad/static/elements/header.php');
         .container{max-width:1200px;margin:0 auto;padding:32px 24px;}
         .page-title{font-size:24px;font-weight:800;margin-bottom:8px;}
         .page-sub{color:rgba(255,255,255,.4);margin-bottom:20px;}
+        .voting-info{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px 22px;margin-bottom:20px;}
+        .voting-info-title{font-size:16px;font-weight:800;margin-bottom:12px;}
+        .voting-info-text{font-size:13px;line-height:1.65;color:rgba(255,255,255,.58);max-width:900px;}
+        .voting-info-text p{margin:0 0 10px;}
+        .voting-info-text p:last-child{margin-bottom:0;}
+        .voting-info-text strong{color:rgba(255,255,255,.9);}
+        .voting-info-note{padding-top:10px;border-top:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.4);}
         .budget-box{position:sticky;top:12px;z-index:50;background:rgba(195,33,120,.15);border:1px solid rgba(195,33,120,.3);
             border-radius:16px;padding:12px 20px;display:inline-block;margin-bottom:24px;}
         .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px;}
@@ -230,23 +286,85 @@ require_once('../swad/static/elements/header.php');
 <div class="container">
     <a href="/jams/participant.php?sprint_id=<?= (int)$sprint_id ?>" style="display:inline-block;margin-bottom:16px;color:#c32178;text-decoration:none;">← К странице джема</a>
     <div class="page-title">Оцените игры</div>
-    <div class="page-sub"><?= htmlspecialchars($sprint['title']) ?> — <?= $iAmExpert ? 'вы эксперт: до 10 баллов каждой игре' : 'распределите до 10 голосов между играми (0–10 на игру)' ?>. Голос можно менять и отменять до конца голосования.</div>
+
+    <div class="voting-info">
+        <div class="voting-info-title">Как устроено голосование</div>
+        <div class="voting-info-text">
+            <p>
+                После открытия голосования вам будет доступен список всех одобренных игр.
+                Игры расположены в случайном порядке, который индивидуально формируется для каждого участника.
+            </p>
+            <p>
+                <strong>Обычные участники</strong> получают <strong>10 баллов на все игры</strong>.
+                Эти 10 баллов можно распределить между любым количеством игр:
+                например, отдать одной игре 10 баллов, двум играм 6 и 4 или нескольким играм по своему усмотрению.
+            </p>
+            <p>
+                Баллы от <strong>1 до 10</strong> не являются оценкой качества игры по шкале
+                «плохая → хорошая». Это количество вашего внимания и поддержки,
+                которое вы хотите направить конкретной игре.
+            </p>
+            <p>
+                Перед голосованием рекомендуется <strong>сыграть в интересующие вас проекты</strong>.
+                После открытия игры возможность проголосовать за неё становится доступной.
+            </p>
+            <?php if ($iAmExpert): ?>
+                <p>
+                    <strong>Эксперты</strong> голосуют по другой системе:
+                    у эксперта есть <strong>10 баллов на каждую игру</strong>.
+                    Поэтому эксперт может оценить каждую представленную работу независимо от остальных.
+                </p>
+                <p>
+                    Кроме баллов, эксперт может отдельно отметить свою
+                    <strong>самую понравившуюся игру</strong> специальной отметкой
+                    «Выбор эксперта».
+                </p>
+            <?php endif; ?>
+            <p class="voting-info-note">
+                Голос можно изменить или отменить в любой момент до окончания голосования.
+            </p>
+        </div>
+    </div>
+
+    <div class="page-sub">
+        <?= htmlspecialchars($sprint['title']) ?> —
+        <?php if ($iAmExpert): ?>
+            экспертный режим: 10 баллов на каждую игру
+        <?php else: ?>
+            10 баллов на все игры
+        <?php endif; ?>
+        Голос можно менять и отменять до конца голосования.
+    </div>
 
     <?php if ($isHost): ?>
-        <div class="budget-box" style="background:rgba(107,122,153,.12);border-color:rgba(107,122,153,.3);">Вы организатор джема — голосовать нельзя, но видны результаты.</div>
-    <?php elseif (!$votingOpen): ?>
-        <div class="budget-box" style="background:rgba(107,122,153,.12);border-color:rgba(107,122,153,.3);">Голосование закрыто. Результаты ниже.</div>
-    <?php elseif ($revealed): ?>
-        <div class="budget-box">Осталось баллов: <strong id="remaining"><?= $remaining ?></strong> / <?= $budget ?><?= $iAmExpert ? ' · режим эксперта' : '' ?></div>
-    <?php endif; ?>
+    <div class="budget-box" style="background:rgba(107,122,153,.12);border-color:rgba(107,122,153,.3);">
+        Вы организатор джема — голосовать нельзя, но видны результаты.
+    </div>
+<?php elseif (!$votingOpen): ?>
+    <div class="budget-box" style="background:rgba(107,122,153,.12);border-color:rgba(107,122,153,.3);">
+        Голосование закрыто. Результаты ниже.
+    </div>
+<?php elseif ($revealed): ?>
+    <div class="budget-box">
+        Осталось баллов: <strong id="remaining"><?= $remaining ?></strong> / <?= $budget ?><?= $iAmExpert ? ' · режим эксперта' : '' ?>
+    </div>
+<?php endif; ?>
 
-    <?php if ($revealed): ?>
-        <div style="text-align:center;padding:80px 20px;color:rgba(255,255,255,.55);">
-            <div style="font-size:44px;margin-bottom:10px;">🔒</div>
-            <div style="font-size:18px;font-weight:800;margin-bottom:6px;">Работы откроются <?= date('d.m.Y H:i', $jamEnd) ?></div>
-            <div style="font-size:13px;">Список игр и голосование станут доступны в момент старта.</div>
+<?php if (!$revealed): ?>
+
+    <div style="text-align:center;padding:80px 20px;color:rgba(255,255,255,.55);">
+        <div style="font-size:44px;margin-bottom:10px;">🔒</div>
+
+        <div style="font-size:18px;font-weight:800;margin-bottom:6px;">
+            Работы откроются <?= date('d.m.Y H:i', $vStart) ?>
         </div>
-    <?php else: ?>
+
+        <div style="font-size:13px;">
+            Список игр и голосование станут доступны в момент старта.
+        </div>
+    </div>
+
+<?php else: ?>
 
     <div class="games-grid">
         <?php if (empty($gamesLive)): ?>
@@ -265,7 +383,9 @@ require_once('../swad/static/elements/header.php');
             </a>
             <div class="info">
                 <div class="title-row">
-                    <a class="g-title" href="/g/<?= $gid ?>" target="_blank" rel="noopener" onclick="markPlayed(<?= $gid ?>)"><?= htmlspecialchars($g['name']) ?></a>
+                    <a class="g-title" href="/g/<?= $gid ?>" target="_blank" rel="noopener" onclick="markPlayed(<?= $gid ?>)">
+                        <?= htmlspecialchars($g['name']) ?>
+                    </a>
                     <a class="open-link" href="/g/<?= $gid ?>" target="_blank" rel="noopener" onclick="markPlayed(<?= $gid ?>)">открыть ↗</a>
                 </div>
                 <?php if (!empty($g['short_description'])): ?><div class="g-desc"><?= htmlspecialchars($g['short_description']) ?></div><?php endif; ?>
@@ -286,6 +406,7 @@ require_once('../swad/static/elements/header.php');
 
                 <div class="agg">
                     <span><strong id="pts-<?= $gid ?>"><?= (int)$g['total_points'] ?></strong> очков · <span id="vtr-<?= $gid ?>"><?= (int)$g['voters'] ?></span> голос.</span>
+                    [ID #<?= $gid ?>] 
                     <?php if ($canSeeAllVotes && !empty($allVotes[$gid])): ?>
                         <button class="link-all" onclick="toggleVotes(<?= $gid ?>)">показать голоса</button>
                     <?php endif; ?>
@@ -339,6 +460,7 @@ require_once('../swad/static/elements/header.php');
                 <div class="info">
                     <div class="g-title" style="color:#fff;"><?= htmlspecialchars($g['name']) ?></div>
                     <?php if (!empty($g['short_description'])): ?><div class="g-desc"><?= htmlspecialchars($g['short_description']) ?></div><?php endif; ?>
+                        [ID #<?= $gid ?>] 
                     <div class="agg"><span style="color:#fbbf24;">⏳ Ожидает одобрения экспертов</span></div>
                 </div>
             </div>

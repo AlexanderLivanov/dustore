@@ -430,30 +430,7 @@ $pendingGames   = (int)$pdo->query("SELECT COUNT(*) FROM games WHERE moderation_
 
 <body>
 
-    <aside>
-        <div class="logo">Dustore <span>Admin Panel</span></div>
-        <div class="nav-section">Меню</div>
-        <a href="index">🏠 Главная</a>
-        <a href="expert-requests" class="active">
-            👤 Заявки экспертов
-            <?php if ($pendingExperts > 0): ?><span class="badge"><?= $pendingExperts ?></span><?php endif; ?>
-        </a>
-        <a href="moderation">
-            🎮 Модерация игр
-            <?php if ($pendingGames > 0): ?><span class="badge"><?= $pendingGames ?></span><?php endif; ?>
-        </a>
-        <a href="all-reviews">📊 Все оценки</a>
-        <div class="sidebar-footer">
-            <div class="user-chip">
-                <div class="avatar"><?= mb_strtoupper(mb_substr($_SESSION['USERDATA']['username'], 0, 1)) ?></div>
-                <div>
-                    <div class="user-name"><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></div>
-                    <div class="user-role">Администратор</div>
-                </div>
-            </div>
-            <a href="logout" style="color:var(--danger);margin-top:8px;padding:8px 12px;font-size:.85rem;display:block;">Выйти →</a>
-        </div>
-    </aside>
+    <?php $active_page = 'index'; require __DIR__ . '/_sidebar.php'; ?>
 
     <main>
         <div class="main-inner">
