@@ -1770,9 +1770,68 @@ document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         updateUnreadCount();
     }
-})
+});
 </script>
 
+<script>
+// Легкая инерция для колесика мыши (с защитой от внутренних скроллов)
+(function() {
+    let targetScrollY = window.scrollY;
+    let currentScrollY = window.scrollY;
+    let isScrolling = false;
+    const easing = 0.12; // Оставляем твоё значение
+
+    // Функция проверки: есть ли у этого элемента или его родителей своя зона скролла
+    function hasOwnScrollableArea(element) {
+        while (element && element !== document.body) {
+            const style = window.getComputedStyle(element);
+            const overflowY = style.overflowY;
+            if (overflowY === 'auto' || overflowY === 'scroll') {
+                // Если элемент физически имеет контент для прокрутки
+                if (element.scrollHeight > element.clientHeight) {
+                    return true; // Да, тут своя прокрутка, не трогаем
+                }
+            }
+            element = element.parentElement;
+        }
+        return false;
+    }
+
+    document.addEventListener('wheel', function(e) {
+        // 1. Проверяем, не происходит ли скролл внутри элемента, у которого есть свой скроллбар
+        if (hasOwnScrollableArea(e.target)) {
+            return; // Пропускаем, работает нативная прокрутка внутри окошек!
+        }
+
+        // 2. Если нет — включаем нашу плавную инерцию для основной страницы
+        e.preventDefault();
+        targetScrollY += e.deltaY;
+
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        targetScrollY = Math.max(0, Math.min(targetScrollY, maxScroll));
+
+        if (!isScrolling) {
+            isScrolling = true;
+            requestAnimationFrame(smoothScroll);
+        }
+    }, { passive: false });
+
+    function smoothScroll() {
+        const diff = targetScrollY - currentScrollY;
+
+        if (Math.abs(diff) < 0.5) {
+            currentScrollY = targetScrollY;
+            window.scrollTo(0, currentScrollY);
+            isScrolling = false;
+            return;
+        }
+
+        currentScrollY += diff * easing;
+        window.scrollTo(0, currentScrollY);
+        requestAnimationFrame(smoothScroll);
+    }
+})();
+</script>
 
 </body>
 
