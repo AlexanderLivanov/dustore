@@ -29,8 +29,10 @@ mobile_redirect_if_needed();
             </div>
             <div class="container">
                 <div class="hero-content">
-                    <h1 class="pixel-title">DUSTORE — открытое пространство для инди-разработчиков</h1>
-                    <p>Делаем платформу, где разработчики смогут свободно выложить проекты, а игроки - открыть новые игровые миры. Присоединяйтесь к сообществу!</p>
+                    <h1 class="pixel-title">DUSTORE — открытая open-source платформа для игр и джемов</h1>
+                    <p style="font-weight: 300; opacity: 0.8;">
+    Мы верим, что творчество не зависит от того, где вы находитесь и кто вы есть. Здесь можно создавать, делиться и находить единомышленников.
+</p>
                     <div class="hero-buttons">
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
                         <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
@@ -65,8 +67,8 @@ mobile_redirect_if_needed();
                     <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
                         <div class="slide-overlay"></div>
                         <div class="slide-content">
-                            <h2>Совместный аномальный джем с К.О.Н.Т.У.Р</h2>
-                            <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 5 по 13 августа.</p>
+                            <h2>Джем DUSTORE X К.О.Н.Т.У.Р</h2>
+                            <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 15 августа по 15 сентября.</p>
                             <a href="https://t.me/+T5CajyXvgvpmMjRi" target="_blank" class="btn">Группа для участников джема</a>
                             <a href="https://dustore.ru/jams" target="_blank" class="btn">Страница джема</a>
                         </div>
@@ -143,74 +145,101 @@ mobile_redirect_if_needed();
         </section>
 
 
-        <!-- Что это? -->
-        <section class="stats">
-            <div class="container">
-                <h2>Что входит в экосистему Dustore?</h2>
-                <div class="platform-grid">
-                    <div class="platform-card">
-                        <div class="platform-icon">💼</div>
-                        <h3>Платформа DUSTORE.ru</h3>
-                        <p>Главный узел в экосистеме. Это центр, где связываются все части Платформы. Преимущественно здесь находится каталог игр.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🚀</div>
-                        <h3>HidL</h3>
-                        <p>(в разработке) Собственный лаунчер, который вы даже не увидите. Можно будет связать со Steam, чтобы игры добавлялись в библиотеку Steam.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">💵</div>
-                        <h3>FinV2</h3>
-                        <p>Площадка для приёма платежей. Через неё разработчики монетизируют свои проекты, можно продавать свои ассеты, а также оплатить услуги исполнителя на L4T.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🍀</div>
-                        <h3>Dustore.L4T</h3>
-                        <p>Looking For a Team — наше решение для поиска команд на джемы, партнёров в проекты и исполнителей для решения своих задач.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">👨‍🎓</div>
-                        <h3>GDDB</h3>
-                        <p>(в разработке) Gamedev Database — единая база данных со всеми ресурсами по геймдеву. Каждый может добавить свою статью или ссылку.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">📸</div>
-                        <h3>Dustore.Media</h3>
-                        <p>(в разработке) Свой информационный ресурс, который управляется пользователями. Здесь можно выложить анонс своей игры или рассказать о новостях в мире геймдева.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🌐</div>
-                        <h3>Dustore.GIB</h3>
-                        <p>(в разработке) Games In Browser — помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать. Что-то общее между WebGL и Instant Play.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">👩‍💻</div>
-                        <h3>Dustore.Devs</h3>
-                        <p>Портал для разработчиков из студий. Публикация проектов, аналитика, монетизация.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">💔</div>
-                        <h3>"Битый Пиксель"</h3>
-                        <p>(В разработке) Наш сервис для отправки отчётов об уязвимостях и багрепортов.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🕹</div>
-                        <h3>Джемы</h3>
-                        <p>Тут можно проводить джемы.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🛠</div>
-                        <h3>DustAsset</h3>
-                        <p>Собственный ассетстор для разработчиков. Думаем, тут скоро каждый найдет что ищет.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">Ⓜ</div>
-                        <h3>Dustore.Mobile</h3>
-                        <p>Здесь можно выложить игру или приложение (в т.ч. платное) для мобильных устройств.</p>
-                    </div>
-                </div>
+<!-- Что это? -->
+<section class="stats">
+    <div class="container">
+        <h2>Что входит в экосистему Dustore?</h2>
+        <div class="platform-grid">
+            <!-- ===== РАБОТАЮЩИЕ СЕРВИСЫ (кликабельны) ===== -->
+
+            <!-- 1. Платформа DUSTORE.ru — ссылка на главную -->
+            <div class="platform-card" onclick="location.href='/'">
+                <div class="platform-icon">💼</div>
+                <h3>Платформа DUSTORE.ru</h3>
+                <p>Главный узел в экосистеме. Это центр, где связываются все части Платформы. Преимущественно здесь находится каталог игр.</p>
             </div>
-        </section>
+
+            <!-- 2. Dustore.L4T — ссылка на /l4t -->
+            <div class="platform-card" onclick="location.href='/l4t'">
+                <div class="platform-icon">🍀</div>
+                <h3>Dustore.L4T</h3>
+                <p>Looking For a Team — наше решение для поиска команд на джемы, партнёров в проекты и исполнителей для решения своих задач.</p>
+            </div>
+
+            <!-- 3. Dustore.Devs — ссылка на /devs -->
+            <div class="platform-card" onclick="location.href='/devs'">
+                <div class="platform-icon">👩‍💻</div>
+                <h3>Dustore.Devs</h3>
+                <p>Портал для разработчиков из студий. Публикация проектов, аналитика, монетизация.</p>
+            </div>
+
+            <!-- 4. Джемы — ссылка на /jams -->
+            <div class="platform-card" onclick="location.href='/jams'">
+                <div class="platform-icon">🕹</div>
+                <h3>Джемы</h3>
+                <p>Тут можно проводить джемы.</p>
+            </div>
+
+            <!-- 5. DustAsset — ссылка на /assetstore -->
+            <div class="platform-card" onclick="location.href='/assetstore'">
+                <div class="platform-icon">🛠</div>
+                <h3>DustAsset</h3>
+                <p>Собственный ассетстор для разработчиков. Думаем, тут скоро каждый найдет что ищет.</p>
+            </div>
+
+            <!-- ===== СЕРВИСЫ В РАЗРАБОТКЕ (неактивны, с меткой) ===== -->
+
+            <!-- 6. HidL — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">🚀</div>
+                <h3>HidL</h3>
+                <p>(в разработке) Собственный лаунчер, который вы даже не увидите. Можно будет связать со Steam, чтобы игры добавлялись в библиотеку Steam.</p>
+            </div>
+
+            <!-- 7. FinV2 — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">💵</div>
+                <h3>FinV2</h3>
+                <p>Площадка для приёма платежей. Через неё разработчики монетизируют свои проекты, можно продавать свои ассеты, а также оплатить услуги исполнителя на L4T.</p>
+            </div>
+
+            <!-- 8. GDDB — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">👨‍🎓</div>
+                <h3>GDDB</h3>
+                <p>(в разработке) Gamedev Database — единая база данных со всеми ресурсами по геймдеву. Каждый может добавить свою статью или ссылку.</p>
+            </div>
+
+            <!-- 9. Dustore.Media — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">📸</div>
+                <h3>Dustore.Media</h3>
+                <p>(в разработке) Свой информационный ресурс, который управляется пользователями. Здесь можно выложить анонс своей игры или рассказать о новостях в мире геймдева.</p>
+            </div>
+
+            <!-- 10. Dustore.GIB — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">🌐</div>
+                <h3>Dustore.GIB</h3>
+                <p>(в разработке) Games In Browser — помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать. Что-то общее между WebGL и Instant Play.</p>
+            </div>
+
+            <!-- 11. "Битый Пиксель" — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">💔</div>
+                <h3>"Битый Пиксель"</h3>
+                <p>(В разработке) Наш сервис для отправки отчётов об уязвимостях и багрепортов.</p>
+            </div>
+
+            <!-- 12. Dustore.Mobile — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">Ⓜ</div>
+                <h3>Dustore.Mobile</h3>
+                <p>Здесь можно выложить игру или приложение (в т.ч. платное) для мобильных устройств.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
         <!-- О платформе -->
         <section class="platform">
@@ -814,6 +843,53 @@ mobile_redirect_if_needed();
         btn.addEventListener('mousemove', handleMouseMove);
         btn.addEventListener('mouseleave', handleMouseLeave);
     });
+})();
+</script>
+
+<div id="vote-banner" data-collapsed="false">
+    <button id="vote-toggle-btn" class="vote-toggle" aria-label="Свернуть">✕</button>
+    <div class="vote-label">Идёт голосование:</div>
+    <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
+    <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
+    <a href="/jams/vote" class="vote-btn pixel-title">Оценить билды</a>
+</div>
+
+<script>
+(function() {
+    const banner = document.getElementById('vote-banner');
+    const toggleBtn = document.getElementById('vote-toggle-btn');
+    if (!banner) return;
+
+    const STORAGE_KEY = 'dustore_vote_banner_collapsed';
+
+    const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+    if (isCollapsed) {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+    }
+
+    toggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        collapseBanner();
+    });
+
+    banner.addEventListener('click', function() {
+        if (banner.dataset.collapsed === 'true') {
+            expandBanner();
+        }
+    });
+
+    function collapseBanner() {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+        localStorage.setItem(STORAGE_KEY, 'true');
+    }
+
+    function expandBanner() {
+        banner.classList.remove('collapsed');
+        banner.dataset.collapsed = 'false';
+        localStorage.setItem(STORAGE_KEY, 'false');
+    }
 })();
 </script>
 

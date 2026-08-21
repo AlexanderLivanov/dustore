@@ -217,7 +217,6 @@ require_once('../swad/static/elements/header.php');
         }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
-        .sprint-header { padding: 13px 26px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 0; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
         .logo .brand { color: #c32178; }
         .nav-btn { padding: 7px 15px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .001s; text-decoration: none; display: inline-block; }
@@ -300,16 +299,6 @@ require_once('../swad/static/elements/header.php');
 </head>
 <body>
 
-<header class="sprint-header">
-    <div class="logo"><span class="brand"></span></div>
-    <div style="display:flex;align-items:center;gap:10px">
-        <div class="timer-badge">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-            <span id="countdown-header"><?= $countdownStr ?></span>
-        </div>
-        <a class="nav-btn" href="/jams">← К спринтам</a>
-    </div>
-</header>
 
 <div class="participant-layout">
     <div class="sidebar">
@@ -339,7 +328,6 @@ require_once('../swad/static/elements/header.php');
             </a>
             <?php endif; ?>
         </div>
-        <div class="sidebar-section">Моё участие</div>
         <div class="sidebar-item active" onclick="showView('overview',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></span>Обзор</div>
         <div class="sidebar-item" onclick="showView('team',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></span>Участники</div>
         <div class="sidebar-item" onclick="showView('submit',this)"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-7.07 17.07L12 22l7.07-2.93A10 10 0 0 0 12 2zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg></span>Сдать работу</div>
