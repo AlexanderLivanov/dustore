@@ -167,6 +167,29 @@ $subStmt = $conn->prepare("SELECT * FROM sprint_submissions WHERE sprint_id = ? 
 $subStmt->execute([$sprintId, $userId]);
 $submission = $subStmt->fetch(PDO::FETCH_ASSOC);
 
+$myStudioIds = [];
+      $tgid = $_SESSION['USERDATA']['telegram_id'] ?? '';
+      if ($tgid !== '') {
+          $stStmt = $conn->prepare("SELECT DISTINCT org_id FROM staff WHERE telegram_id = ?");
+          $stStmt->execute([(int)$tgid]);
+          $myStudioIds = array_map('intval', $stStmt->fetchAll(PDO::FETCH_COLUMN));
+      }
+      $myProjects = [];
+      if ($myStudioIds) {
+          $in = implode(',', array_fill(0, count($myStudioIds), '?'));
+          $prStmt = $conn->prepare("
+              SELECT g.id, g.name, g.icon_url, g.path_to_cover, g.moderation_status,
+                     g.sprint_id, g.game_zip_url, g.developer,
+                     st.name AS studio_name
+              FROM games g
+              LEFT JOIN studios st ON st.id = g.developer
+              WHERE g.developer IN ($in)
+              ORDER BY g.updated_at DESC, g.id DESC
+          ");
+          $prStmt->execute($myStudioIds);
+          $myProjects = $prStmt->fetchAll(PDO::FETCH_ASSOC);
+      }
+
 // Объявления
 $annStmt = $conn->prepare("SELECT * FROM sprint_announcements WHERE sprint_id = ? ORDER BY created_at DESC");
 $annStmt->execute([$sprintId]);
@@ -876,46 +899,142 @@ require_once('../swad/static/elements/header.php');
 </script>
         </div>
 
-        <!-- Submit -->
+  <!-- Submit -->
         <div class="view" id="view-submit">
             <div class="page-title">Сдать работу</div>
-            <?php if ($phase === 'jam'): ?>
-                <?php if ($submission): ?>
-                    <div class="alert success">✅ Вы уже сдали работу. Вы можете её отредактировать.</div>
+            <div class="page-sub">Прикрепите проект вашей студии к джему. Билд загружается в консоли разработчика, здесь — только участие.</div>
+ 
+            <?php if (!in_array($phase, ['jam', 'registration'], true)): ?>
+                <?php if (in_array($phase, ['post_jam', 'voting', 'finished'], true)): ?>
+                    <div class="alert">⛔ Приём работ завершён.</div>
+                <?php else: ?>
+                    <div class="alert">⏳ Приём работ начнётся с началом джема.</div>
                 <?php endif; ?>
-                <form id="submissionForm" method="post" enctype="multipart/form-data" action="/swad/controllers/submit_sprint.php">
-                    <input type="hidden" name="sprint_id" value="<?= $sprintId ?>">
-                    <div class="card">
-                        <div class="card-title"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a1.0 1.0 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Карточка работы</span></div>
-                        <div class="form-row-s"><label class="form-label-s">Название игры *</label><input class="form-input-s" name="game_title" value="<?= htmlspecialchars($submission['title'] ?? '') ?>" required></div>
-                        <div class="form-row-s"><label class="form-label-s">Описание</label><textarea class="form-textarea-s" name="description"><?= htmlspecialchars($submission['description'] ?? '') ?></textarea></div>
-                        <div class="form-row-s"><label class="form-label-s">Движок</label><input class="form-input-s" name="engine" value="<?= htmlspecialchars($submission['engine'] ?? '') ?>"></div>
-                        <div class="form-row-s"><label class="form-label-s">Резервная ссылка (itch.io / Google Drive / Яндекс.Диск)</label><input class="form-input-s" name="external_link" value="<?= htmlspecialchars($submission['external_link'] ?? '') ?>"></div>
-                        <div class="form-row-s">
-                            <label class="form-label-s">Файл игры</label>
-                            <?php if (!empty($submission['build_url'])): ?>
-                                <div class="alert success">✅ Билд загружен <?php if (!empty($submission['build_size'])): ?>(<?= round($submission['build_size'] / 1024 / 1024, 1) ?> МБ)<?php endif; ?></div>
-                            <?php endif; ?>
-                            <div id="jam-drop" class="drop-zone">
-                                <div style="font-size:32px">📦</div>
-                                <div id="jam-label"><?= !empty($submission['build_url']) ? 'Заменить билд' : 'Загрузить билд' ?></div>
-                                <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:6px;">До 500 МБ — обычная загрузка<br>Более 500 МБ — загрузка чанками</div>
+ 
+            <?php elseif (empty($myStudioIds)): ?>
+                <!-- Нет студии -->
+                <div class="card" style="text-align:center;padding:34px 24px;">
+                    <div style="font-size:40px;margin-bottom:8px;">🏢</div>
+                    <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Нужна студия</div>
+                    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:18px;line-height:1.6;">
+                        Игры на Dustore публикуются от лица студии. Создайте студию — это займёт минуту, — а затем добавьте проект и прикрепите его к джему.
+                    </div>
+                    <a class="btn-primary" href="/devs/regorg" style="text-decoration:none;display:inline-block;">Создать студию</a>
+                </div>
+ 
+            <?php elseif (empty($myProjects)): ?>
+                <!-- Студия есть, проектов нет -->
+                <div class="card" style="text-align:center;padding:34px 24px;">
+                    <div style="font-size:40px;margin-bottom:8px;">🎮</div>
+                    <div style="font-size:16px;font-weight:800;margin-bottom:6px;">В студии пока нет проектов</div>
+                    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:18px;line-height:1.6;">
+                        Создайте проект в консоли, загрузите билд — и он появится здесь для привязки к джему.
+                    </div>
+                    <a class="btn-primary" href="/devs/projects" style="text-decoration:none;display:inline-block;">Создать проект</a>
+                </div>
+ 
+            <?php else: ?>
+                <!-- Список проектов студий с привязкой -->
+                <div class="card" data-sprint="<?= (int)$sprintId ?>" id="jam-submit-card">
+                    <div class="card-title">
+                        <span>📦 Проекты ваших студий</span>
+                        <a class="btn-team" href="/devs/projects" style="font-size:12px;padding:6px 12px;">+ Новый проект</a>
+                    </div>
+ 
+                    <div id="jam-submit-msg" class="alert" style="display:none;"></div>
+ 
+                    <?php foreach ($myProjects as $p):
+                        $attached_here  = (int)$p['sprint_id'] === (int)$sprintId && $sprintId > 0;
+                        $attached_other = !empty($p['sprint_id']) && !$attached_here;
+                        $has_build      = !empty($p['game_zip_url']);
+                        $cover          = $p['icon_url'] ?: ($p['path_to_cover'] ?: '');
+                    ?>
+                    <div class="jam-sub-row" data-id="<?= (int)$p['id'] ?>"
+                         style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+                        <div style="width:44px;height:44px;border-radius:9px;flex-shrink:0;background:rgba(255,255,255,.06);overflow:hidden;">
+                            <?php if ($cover): ?><img src="<?= htmlspecialchars($cover) ?>" style="width:100%;height:100%;object-fit:cover;"><?php endif; ?>
+                        </div>
+                        <div style="min-width:0;flex:1;">
+                            <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                <?= htmlspecialchars($p['name']) ?>
                             </div>
-                            <input type="file" id="jam-file" accept=".zip,.rar,.7z" style="display:none;">
-                            <input type="hidden" name="build_url" id="build_url" value="<?= htmlspecialchars($submission['build_url'] ?? '') ?>">
-                            <input type="hidden" name="build_size" id="build_size" value="<?= (int)($submission['build_size'] ?? 0) ?>">
-                            <div id="jam-progress" style="display:none;margin-top:12px;">
-                                <div style="display:flex;justify-content:space-between"><span id="jam-status">Подготовка...</span><span id="jam-percent">0%</span></div>
-                                <div style="height:8px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:6px;"><div id="jam-bar" style="width:0%;height:100%;background:#c32178;"></div></div>
+                            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">
+                                <?= htmlspecialchars($p['studio_name'] ?? ('Студия #' . (int)$p['developer'])) ?> ·
+                                <?php if (!$has_build): ?>
+                                    <span style="color:#f59e0b;">билд не загружен</span>
+                                <?php elseif ($attached_here): ?>
+                                    <span style="color:#22c55e;">✓ в этом джеме</span> · модерация: <?= htmlspecialchars($p['moderation_status']) ?>
+                                <?php elseif ($attached_other): ?>
+                                    в другом джеме
+                                <?php else: ?>
+                                    готов к привязке
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <button type="submit" class="btn-primary"><?= $submission ? '✏ Обновить' : '🚀 Сдать работу' ?></button>
+                        <div style="flex-shrink:0;display:flex;gap:6px;">
+                            <?php if (!$has_build): ?>
+                                <a class="btn-team" href="/devs/edit?id=<?= (int)$p['id'] ?>" style="font-size:12px;padding:7px 14px;">Загрузить билд</a>
+                            <?php elseif ($attached_here): ?>
+                                <button class="btn-team jam-sub-btn" data-act="detach"
+                                        style="cursor:pointer;font-size:12px;padding:7px 14px;background:rgba(244,67,54,.1);border-color:rgba(244,67,54,.3);color:#f88;">Открепить</button>
+                            <?php elseif ($attached_other): ?>
+                                <button class="btn-team jam-sub-btn" data-act="attach"
+                                        style="cursor:pointer;font-size:12px;padding:7px 14px;"
+                                        title="Проект уже в другом джеме — привязка перенесёт его сюда">Перенести сюда</button>
+                            <?php else: ?>
+                                <button class="btn-primary jam-sub-btn" data-act="attach"
+                                        style="cursor:pointer;font-size:12px;padding:8px 16px;">Прикрепить</button>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                </form>
-            <?php elseif ($phase === 'registration' || $phase === 'pre_jam' || $phase === 'upcoming'): ?>
-                <div class="alert">⏳ Приём работ начнётся с началом джема.</div>
-            <?php elseif (in_array($phase, ['post_jam', 'voting', 'finished'])): ?>
-                <div class="alert">⛔ Приём работ завершён.</div>
+                    <?php endforeach; ?>
+ 
+                    <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:14px;line-height:1.5;">
+                        После привязки отправьте проект на модерацию в консоли — эксперты проверят билд, и он появится на странице голосования джема.
+                    </div>
+                </div>
+ 
+                <script>
+                (function () {
+                    var card = document.getElementById('jam-submit-card');
+                    if (!card) return;
+                    var sprintId = card.dataset.sprint;
+                    var msg = document.getElementById('jam-submit-msg');
+ 
+                    function showMsg(text, ok) {
+                        msg.textContent = text;
+                        msg.style.display = 'block';
+                        msg.className = 'alert' + (ok ? ' success' : '');
+                    }
+ 
+                    card.querySelectorAll('.jam-sub-btn').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            var row = btn.closest('.jam-sub-row');
+                            var act = btn.dataset.act;
+                            btn.disabled = true;
+                            var prev = btn.textContent;
+                            btn.textContent = '...';
+ 
+                            var fd = new FormData();
+                            fd.append('project_id', row.dataset.id);
+                            fd.append('action', act);
+                            if (act === 'attach') fd.append('sprint_id', sprintId);
+ 
+                            fetch('/devs/jam_attach.php', { method: 'POST', body: fd, credentials: 'include' })
+                                .then(function (r) { return r.json(); })
+                                .then(function (d) {
+                                    showMsg(d.message || (d.success ? 'Готово' : 'Ошибка'), !!d.success);
+                                    if (d.success) { setTimeout(function () { location.reload(); }, 1000); }
+                                    else { btn.disabled = false; btn.textContent = prev; }
+                                })
+                                .catch(function () {
+                                    showMsg('Сетевая ошибка', false);
+                                    btn.disabled = false; btn.textContent = prev;
+                                });
+                        });
+                    });
+                })();
+                </script>
             <?php endif; ?>
         </div>
 

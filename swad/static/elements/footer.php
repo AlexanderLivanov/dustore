@@ -18,9 +18,9 @@ function getLastCommitInfo()
 
     $commitData = json_decode($response, true);
 
-    $sha = $commitData['sha'];
-    $message = $commitData['commit']['message'];
-    $date = $commitData['commit']['committer']['date'];
+$sha    = $gitInfo['sha'] ?? '';        
+$commit = $gitInfo['commit'] ?? '';
+$short  = $commit !== '' ? substr($commit, 0, 7) : '';
 
     // Парсим версию из сообщения
     preg_match('/v(\d+\.\d+\.\d+)/', $message, $match);

@@ -1,0 +1,92 @@
+{
+    "14:25": {
+        "entity": "team:93",
+        "name": "Sergey Loginov",
+        "project": "К.О.Н.Т.У.Р. game",
+        "engine": "ue5",
+        "readiness": 3,
+        "booked_by": 1128,
+        "booked_at": "2026-07-15T15:24:37+00:00"
+    },
+    "18:30": {
+        "entity": "team:12",
+        "name": "Red Face",
+        "project": "KONTUR the game",
+        "engine": "UE",
+        "readiness": 8,
+        "booked_by": 644,
+        "booked_at": "2026-07-15T15:33:37+00:00"
+    },
+    "14:45": {
+        "entity": "solo:498",
+        "name": "Dymchick1",
+        "project": "6 sotkas",
+        "engine": "Unreal",
+        "readiness": 4,
+        "booked_by": 498,
+        "booked_at": "2026-07-15T15:35:59+00:00"
+    },
+    "20:55": {
+        "entity": "team:31",
+        "name": "Cats & Dogs Entertainment",
+        "project": "Friendslop horror",
+        "engine": "Unity",
+        "readiness": 3,
+        "booked_by": 415,
+        "booked_at": "2026-07-15T16:12:01+00:00"
+    },
+    "18:40": {
+        "entity": "solo:603",
+        "name": "Wiper",
+        "project": "ProjectU DBGames",
+        "engine": "Unity",
+        "readiness": 5,
+        "booked_by": 603,
+        "booked_at": "2026-07-15T16:17:35+00:00"
+    },
+    "20:00": {
+        "entity": "team:70",
+        "name": "warkuda games",
+        "project": "К.О.Н.Т.У.Р.",
+        "engine": "Unity",
+        "readiness": 4,
+        "booked_by": 1023,
+        "booked_at": "2026-07-15T16:22:05+00:00"
+    },
+    "12:00": {
+        "entity": "solo:481",
+        "name": "ArtemAviator",
+        "project": "K.O.N.T.U.R – The Game",
+        "engine": "Godot",
+        "readiness": 3,
+        "booked_by": 481,
+        "booked_at": "2026-07-15T17:49:55+00:00"
+    },
+    "14:50": {
+        "entity": "team:112",
+        "name": "споровый уксус",
+        "project": "КОНТУР",
+        "engine": "Unreal Engine",
+        "readiness": 5,
+        "booked_by": 1206,
+        "booked_at": "2026-07-15T20:37:28+00:00"
+    },
+    "14:00": {
+        "entity": "team:51",
+        "name": "CodeGraft",
+        "project": "Go ahead Comrade",
+        "engine": "Clickteam Fusion 2.5",
+        "readiness": 3,
+        "booked_by": 973,
+        "booked_at": "2026-07-16T03:14:41+00:00"
+    },
+    "18:20": {
+        "entity": "team:45",
+        "name": "BagOMalgama Team",
+        "project": "ConturHospital",
+        "engine": "Godot",
+        "readiness": 2,
+        "booked_by": 568,
+        "booked_at": "2026-07-16T09:06:38+00:00"
+    }
+}

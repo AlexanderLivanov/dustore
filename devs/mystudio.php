@@ -15,6 +15,27 @@ $success_msg = $created ? 'Студия создана! Заполните пр�
 $error_msg   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? 'save_profile';
+
+    if ($action === 'create_deplex_token') {
+        $raw = 'dplx_live_' . bin2hex(random_bytes(12));
+        $conn->prepare("INSERT INTO deplex_tokens (token_hash, token_prefix, studio_id, user_id, label) VALUES (?, ?, ?, ?, ?)")
+             ->execute([
+                 hash('sha256', $raw), substr($raw, 0, 14), $studio_id,
+                 (int)($_SESSION['USERDATA']['id'] ?? 0),
+                 mb_substr(trim($_POST['label'] ?? ''), 0, 120) ?: null,
+             ]);
+        $_SESSION['new_deplex_token'] = $raw;
+        header('Location: ?dpx=created'); exit();
+    }
+
+    if ($action === 'revoke_deplex_token') {
+        $conn->prepare("UPDATE deplex_tokens SET revoked = 1 WHERE id = ? AND studio_id = ?")
+             ->execute([(int)($_POST['token_id'] ?? 0), $studio_id]);
+        header('Location: ?dpx=revoked'); exit();
+    }
+
+    if ($action === 'save_profile') {
     $allowed_tags = '<p><br><b><i><u><strong><em><a><ul><ol><li><h2><h3><h4><blockquote><s>';
     $data = [
         'name'          => mb_substr(preg_replace("/[^A-Za-zА-Яа-яёЁ0-9\-_! ]/u", '', $_POST['studio-name'] ?? ''), 0, 100),
@@ -77,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (PDOException $e) {
             $error_msg = 'Ошибка: ' . $e->getMessage();
         }
+    }
     }
 }
 
@@ -142,6 +164,7 @@ function sv($a, $k)
 <?php if ($error_msg):   ?><div class="alert alert-err"><?= htmlspecialchars($error_msg) ?></div><?php endif; ?>
 
 <form method="POST" id="studio-form">
+        <input type="hidden" name="action" value="save_profile">
     <div class="grid-2" style="gap:16px;align-items:start;">
 
         <div class="card">
@@ -254,7 +277,7 @@ function sv($a, $k)
         </div>
     </div>
 </form>
-
+<?php include(__DIR__ . '/../swad/controllers/devs_studio_deplex_tokens.php'); ?>
 <?php
 $initial_content = addslashes(htmlspecialchars_decode($si['description'] ?? ''));
 $extra_js = <<<JS

@@ -4,6 +4,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/s3.php');
 require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
+require_once(__DIR__ . '/../swad/controllers/deplex_web.php');
+require_once(__DIR__ . '/../swad/controllers/game_changelog.php');
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: /devs/projects'); exit(); }
@@ -29,6 +31,11 @@ $error_msg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    if (($game['moderation_status'] ?? '') === 'pending'
+        && in_array($action, ['save', 'save_announce', 'save_jam'], true)) {
+        header('Location: /devs/edit?id=' . $project_id . '&locked=1'); exit();
+    }
 
     if ($action === 'save') {
         $name         = trim($_POST['name']         ?? '');
@@ -85,6 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     game_exec         = :exec,
                     languages         = :languages,
                     age_rating        = :age,
+                    moderation_status = 'draft',
+                    status            = IF(status='published','draft',status),
                     updated_at        = NOW()
                 WHERE id = :id AND developer = :dev
             ")->execute([
@@ -97,6 +106,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'age'       => $age_rating,'id'       => $project_id,
                 'dev'       => $studio_id,
             ]);
+            $logUser = (int)($_SESSION['USERDATA']['id'] ?? 0);
+log_game_diff($conn, $project_id, $studio_id, $logUser, [
+    'name'              => [$game['name']              ?? '', $name],
+    'genre'             => [$game['genre']             ?? '', $genre],
+    'short_description' => [$game['short_description'] ?? '', $short_desc],
+    'description'       => [$game['description']       ?? '', $description],
+    'platforms'         => [$game['platforms']         ?? '', $platforms],
+    'release_date'      => [$game['release_date']      ?? '', $release_date],
+    'game_website'      => [$game['game_website']      ?? '', $game_website],
+    'trailer_url'       => [$game['trailer_url']       ?? '', $trailer_url],
+    'game_exec'         => [$game['game_exec']         ?? '', $game_exec],
+    'languages'         => [$game['languages']         ?? '', $languages],
+    'age_rating'        => [$game['age_rating']        ?? '', $age_rating],
+    'cover'             => [$game['path_to_cover']     ?? '', $cover_path],
+    'icon'              => [$game['icon_url']          ?? '', $icon_path],
+]);
+            $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
             header('Location: /devs/edit?id=' . $project_id . '&saved=1');
             exit();
         } catch (PDOException $e) {
@@ -104,18 +130,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } elseif ($action === 'moderation') {
-        $conn->prepare("UPDATE games SET moderation_status = 'pending', updated_at = NOW() WHERE id = ? AND developer = ?")
+        $conn->prepare("UPDATE games SET moderation_status='pending', updated_at=NOW() WHERE id=? AND developer=?")
              ->execute([$project_id, $studio_id]);
-        send_group_message(-1002916906978, '🆕 <b>Для экспертов: Новый проект требует прохождения модерации</b>', true, 'https://dustore.ru/devs/experts');
+        $pendingTotal = (int)$conn->query("SELECT COUNT(*) FROM games WHERE moderation_status='pending'")->fetchColumn();
+        send_group_message(-1002916906978,
+            "🆕 <b>Новый проект на модерации</b>\n" .
+            "ℹ️ Разработчик может отменить отправку до конца голосования.\n\n" .
+            "📊 Всего проектов на модерации: {$pendingTotal}",
+            true, 'https://dustore.ru/devs/experts');
+            log_game_change($conn, $project_id, $studio_id, (int)($_SESSION['USERDATA']['id'] ?? 0), 'moderation', null, null, 'submitted');
         header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
+        exit();
+
+    } elseif ($action === 'cancel_moderation') {
+        $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
+        $conn->prepare("UPDATE games SET moderation_status='draft', updated_at=NOW() WHERE id=? AND developer=?")
+             ->execute([$project_id, $studio_id]);
+        header('Location: /devs/edit?id=' . $project_id . '&cancelled=1');
         exit();
 
     } elseif ($action === 'resubmit_moderation') {
         if ($is_owner) {
             $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
-            $conn->prepare("UPDATE games SET moderation_status = 'pending', updated_at = NOW() WHERE id = ? AND developer = ?")
+            $conn->prepare("UPDATE games SET moderation_status='pending', moderation_submitted_at=NOW(), updated_at=NOW() WHERE id=? AND developer=?")
                  ->execute([$project_id, $studio_id]);
-            send_group_message(-1002916906978, '🔄 <b>Проект отправлен на повторную модерацию</b>', true, 'https://dustore.ru/devs/experts');
+            $pendingTotal = (int)$conn->query("SELECT COUNT(*) FROM games WHERE moderation_status='pending'")->fetchColumn();
+            send_group_message(-1002916906978,
+                "🔄 <b>Проект отправлен на повторную модерацию</b>\n" .
+                "ℹ️ Разработчик может отменить отправку.\n\n" .
+                "📊 Всего проектов на модерации: {$pendingTotal}",
+                true, 'https://dustore.ru/devs/experts');
+                log_game_change($conn, $project_id, $studio_id, (int)($_SESSION['USERDATA']['id'] ?? 0), 'moderation', null, null, 'resubmitted');
             header('Location: /devs/edit?id=' . $project_id . '&moderated=1');
             exit();
         }
@@ -145,6 +190,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /devs/edit?id=' . $project_id . '&announced=1');
         exit();
 
+    } elseif ($action === 'save_jam') {
+        // ── Привязка проекта к джему ──
+        // Менять привязку нельзя, если текущий джем ушёл в голосование / завершён.
+        $locked = false;
+        if (!empty($game['sprint_id'])) {
+            $lc = $conn->prepare("SELECT status, voting_start FROM sprints WHERE id = ?");
+            $lc->execute([(int)$game['sprint_id']]);
+            if ($ls = $lc->fetch(PDO::FETCH_ASSOC)) {
+                $locked = ($ls['status'] === 'finished')
+                    || (!empty($ls['voting_start']) && strtotime($ls['voting_start']) <= time());
+            }
+        }
+        if ($locked) {
+            $error_msg = 'Джем в стадии голосования или завершён — привязку менять нельзя.';
+        } elseif (isset($_POST['jam_enabled']) && $_POST['jam_enabled'] && (int)($_POST['sprint_id'] ?? 0) > 0) {
+            $sid = (int)$_POST['sprint_id'];
+            $jc  = $conn->prepare("SELECT title FROM sprints WHERE id = ? AND status IN ('registration','ongoing') AND (voting_start IS NULL OR voting_start > NOW()) LIMIT 1");
+            $jc->execute([$sid]);
+            if ($jc->fetchColumn() !== false) {
+                $conn->prepare("UPDATE games SET sprint_id = ?, updated_at = NOW() WHERE id = ? AND developer = ?")
+                     ->execute([$sid, $project_id, $studio_id]);
+                header('Location: /devs/edit?id=' . $project_id . '&jam=1'); exit();
+            }
+            $error_msg = 'Этот джем сейчас не принимает работы.';
+        } else {
+            $conn->prepare("UPDATE games SET sprint_id = NULL, updated_at = NOW() WHERE id = ? AND developer = ?")
+                 ->execute([$project_id, $studio_id]);
+            header('Location: /devs/edit?id=' . $project_id . '&jam=1'); exit();
+        }
+    } elseif ($action === 'toggle_hidden') {
+        $conn->prepare("UPDATE games SET hidden = IF(hidden=1,0,1), updated_at=NOW() WHERE id=? AND developer=?")
+             ->execute([$project_id, $studio_id]);
+        header('Location: /devs/edit?id=' . $project_id . '&visibility=1'); exit();
+
+    } elseif ($action === 'make_preview_link') {
+        $token = bin2hex(random_bytes(16));
+        $conn->prepare("UPDATE games SET preview_token=?, preview_expires=DATE_ADD(NOW(), INTERVAL 7 DAY), updated_at=NOW() WHERE id=? AND developer=?")
+             ->execute([$token, $project_id, $studio_id]);
+        header('Location: /devs/edit?id=' . $project_id . '&pvlink=1'); exit();
     } elseif ($action === 'delete') {
         if ($is_owner) {
             $conn->prepare("DELETE FROM games WHERE id = ? AND developer = ?")->execute([$project_id, $studio_id]);
@@ -152,6 +236,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         $error_msg = 'Недостаточно прав для удаления проекта.';
+    } elseif ($action === 'create_deplex_token') {
+        $raw = 'dplx_live_' . bin2hex(random_bytes(12));
+        $conn->prepare("INSERT INTO deplex_tokens (token_hash, token_prefix, studio_id, user_id) VALUES (?, ?, ?, ?)")
+             ->execute([hash('sha256', $raw), substr($raw, 0, 14), $studio_id, (int)($_SESSION['USERDATA']['id'] ?? 0)]);
+        $_SESSION['new_deplex_token'] = $raw;
+        header('Location: /devs/edit?id=' . $project_id . '&dpxtoken=1');
+        exit();
     }
 }
 
@@ -160,12 +251,32 @@ $stmt->execute([$project_id]);
 $game        = $stmt->fetch(PDO::FETCH_ASSOC);
 $screenshots = json_decode($game['screenshots'] ?? '[]', true) ?: [];
 
+// ── Джем: текущая привязка + список открытых джемов ──
+$current_sprint = null;
+if (!empty($game['sprint_id'])) {
+    $cs = $conn->prepare("SELECT id, title, status, voting_start FROM sprints WHERE id = ?");
+    $cs->execute([(int)$game['sprint_id']]);
+    $current_sprint = $cs->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+$jam_locked = $current_sprint && (($current_sprint['status'] === 'finished')
+    || (!empty($current_sprint['voting_start']) && strtotime($current_sprint['voting_start']) <= time()));
+$open_jams = $conn->query("
+    SELECT id, title FROM sprints
+    WHERE status IN ('registration','ongoing') AND (voting_start IS NULL OR voting_start > NOW())
+    ORDER BY jam_start DESC, id DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $success_msg = '';
 if (isset($_GET['saved']))     $success_msg = 'Изменения сохранены!';
 if (isset($_GET['created']))   $success_msg = 'Проект создан! Теперь загрузите файл игры.';
 if (isset($_GET['moderated'])) $success_msg = 'Проект отправлен на модерацию!';
 if (isset($_GET['published'])) $success_msg = 'Игра опубликована! Теперь она видна всем игрокам.';
 if (isset($_GET['announced'])) $success_msg = 'Настройки анонса сохранены!';
+if (isset($_GET['jam']))       $success_msg = 'Настройки участия в джеме сохранены!';
+if (isset($_GET['cancelled'])) $success_msg = 'Отправка на модерацию отменена — можно редактировать.';
+if (isset($_GET['locked']))    $error_msg   = 'Игра на модерации — редактирование заблокировано. Отмените отправку, чтобы вносить правки.';
+if (isset($_GET['visibility'])) $success_msg = 'Видимость игры изменена.';
+if (isset($_GET['pvlink']))     $success_msg = 'Ссылка для просмотра создана — действует 7 дней.';
 
 $page_title = 'Редактирование: ' . ($game['name'] ?? '');
 $active_nav = 'projects';
@@ -348,6 +459,7 @@ if (in_array($mod_status, ['pending','rejected'])):
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
     <div style="font-size:20px;font-weight:700;"><?= ev($game,'name') ?></div>
     <span class="badge <?= $status_cls ?>"><?= $status_lbl ?></span>
+<?php if (!empty($game['hidden'])): ?><span class="badge badge-draft">Скрыта</span><?php endif; ?>
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
         <a href="/g/<?= $project_id ?>" target="_blank" class="btn btn-g" style="padding:6px 14px;font-size:12px;">
             <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть
@@ -356,6 +468,12 @@ if (in_array($mod_status, ['pending','rejected'])):
         <span class="btn btn-g" style="padding:6px 14px;font-size:12px;opacity:.6;cursor:default;">
             <span class="material-icons" style="font-size:15px;">hourglass_top</span>На модерации
         </span>
+        <form method="POST" style="display:inline;" onsubmit="return confirm('Отменить отправку на модерацию? Голоса экспертов сбросятся, зато можно будет редактировать.')">
+            <input type="hidden" name="action" value="cancel_moderation">
+            <button type="submit" class="btn btn-g" style="padding:6px 14px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">undo</span>Отменить отправку
+            </button>
+        </form>
         <?php elseif ($game['status'] === 'draft' && $game['moderation_status'] === 'approved'): ?>
         <form method="POST" style="display:inline;">
             <input type="hidden" name="action" value="publish">
@@ -372,6 +490,18 @@ if (in_array($mod_status, ['pending','rejected'])):
         <span class="btn btn-g" style="padding:6px 14px;font-size:12px;opacity:.6;cursor:default;">
             <span class="material-icons" style="font-size:15px;">check_circle</span>Опубликована
         </span>
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="toggle_hidden">
+            <?php if (!empty($game['hidden'])): ?>
+            <button type="submit" class="btn btn-p" style="padding:6px 14px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">visibility</span>Показать в магазине
+            </button>
+            <?php else: ?>
+            <button type="submit" class="btn btn-g" style="padding:6px 14px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">visibility_off</span>Скрыть из магазина
+            </button>
+            <?php endif; ?>
+        </form>
         <?php endif; ?>
     </div>
 </div>
@@ -383,8 +513,35 @@ if (in_array($mod_status, ['pending','rejected'])):
 <form method="POST" id="form-resubmit" style="display:none;">
     <input type="hidden" name="action" value="resubmit_moderation">
 </form>
-
+<div class="card" style="margin-bottom:16px;">
+    <div class="card-title"><span class="material-icons">visibility</span>Просмотр страницы</div>
+    <p style="font-size:12px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
+        Открой публичную страницу как её видят игроки. Неопубликованная/скрытая игра доступна тебе всегда,
+        а другим — по временной ссылке (7 дней).
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <a href="/g/<?= $project_id ?>" target="_blank" class="btn btn-g" style="font-size:12px;">
+            <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть страницу
+        </a>
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="make_preview_link">
+            <button type="submit" class="btn btn-g" style="font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">link</span><?= !empty($game['preview_token']) ? 'Обновить ссылку' : 'Ссылка для просмотра' ?>
+            </button>
+        </form>
+    </div>
+    <?php if (!empty($game['preview_token']) && !empty($game['preview_expires']) && strtotime($game['preview_expires']) > time()): ?>
+    <div style="margin-top:12px;padding:10px 12px;background:rgba(195,33,120,.06);border:1px solid rgba(195,33,120,.2);border-radius:8px;">
+        <div style="font-size:11px;color:var(--tm);margin-bottom:6px;">Временная ссылка (до <?= date('d.m.Y H:i', strtotime($game['preview_expires'])) ?>):</div>
+        <input type="text" readonly onclick="this.select()"
+               value="https://dustore.ru/g/<?= $project_id ?>?preview=<?= htmlspecialchars($game['preview_token']) ?>"
+               style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 10px;color:var(--ts);font-size:12px;">
+    </div>
+    <?php endif; ?>
+</div>
 <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+
+  <div style="display:flex;flex-direction:column;gap:14px;" id="left-col">
 
     <form method="POST" enctype="multipart/form-data" id="save-form">
         <input type="hidden" name="action" value="save">
@@ -480,45 +637,7 @@ if (in_array($mod_status, ['pending','rejected'])):
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-title"><span class="material-icons">folder_zip</span>Файл игры</div>
-                <?php if ($has_zip): ?>
-                <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-                    <span class="material-icons" style="font-size:18px;">check_circle</span>
-                    <div>
-                        <?php if ($is_chunked): ?>
-                            Загружен чанками <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
-                            <span style="font-size:10px;background:rgba(0,214,143,.15);padding:1px 8px;border-radius:4px;margin-left:6px;">manifest.json</span>
-                        <?php else: ?>
-                            ZIP загружен <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                <div id="upload-mode-hint" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;"></div>
-                <div id="zip-drop"
-                     style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
-                     onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                    <span id="drop-icon" class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;"><?= $only_android ? 'android' : 'upload_file' ?></span>
-                    <span id="drop-label" style="font-size:13px;color:var(--ts);display:block;">
-                        <?= $has_zip ? ($only_android ? 'Заменить APK' : 'Заменить файл игры') : ($only_android ? 'Загрузить APK' : 'Загрузить ZIP') ?>
-                    </span>
-                    <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
-                        <?= $only_android ? 'Android APK · до 4 ГБ' : 'До 500 МБ — прямая загрузка · Больше — чанки' ?>
-                    </span>
-                </div>
-                <input type="file" id="zip-input" accept="<?= $only_android ? '.apk' : '.zip' ?>" style="display:none;" data-android="<?= $only_android ? '1' : '0' ?>">
-                <div id="zip-progress" style="display:none;margin-top:14px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                        <span id="zip-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
-                        <span id="zip-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
-                    </div>
-                    <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
-                        <div id="zip-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
-                    </div>
-                    <div id="zip-detail" style="font-size:11px;color:var(--tm);margin-top:6px;"></div>
-                </div>
-            </div>
+            <!-- Файл игры вынесён из формы save (ниже, вне <form>) — иначе вложенный <form> Deplex ломал сохранение -->
 
             <div class="card">
                 <div class="card-title"><span class="material-icons">movie</span>Трейлер</div>
@@ -585,6 +704,59 @@ if (in_array($mod_status, ['pending','rejected'])):
 
         </div>
     </form>
+
+    <!-- ═══ ФАЙЛ ИГРЫ (вне формы save: в Deplex-табе свой <form>, вкладывать нельзя) ═══ -->
+    <div class="card">
+        <div class="card-title"><span class="material-icons">folder_zip</span>Файл игры</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <button type="button" class="btn btn-p dpx-tab" data-tab="web" style="padding:6px 14px;font-size:12px;">Загрузить архив</button>
+            <button type="button" class="btn btn-g dpx-tab" data-tab="deplex" style="padding:6px 14px;font-size:12px;">Через deplex (CLI)</button>
+        </div>
+        <div class="dpx-pane" data-pane="web">
+        <?php if ($has_zip): ?>
+        <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+            <span class="material-icons" style="font-size:18px;">check_circle</span>
+            <div>
+                <?php if ($is_chunked): ?>
+                    Загружен чанками <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
+                    <span style="font-size:10px;background:rgba(0,214,143,.15);padding:1px 8px;border-radius:4px;margin-left:6px;">manifest.json</span>
+                <?php else: ?>
+                    ZIP загружен <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div id="upload-mode-hint" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;"></div>
+        <div id="zip-drop"
+             style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
+             onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
+            <span id="drop-icon" class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;"><?= $only_android ? 'android' : 'upload_file' ?></span>
+            <span id="drop-label" style="font-size:13px;color:var(--ts);display:block;">
+                <?= $has_zip ? ($only_android ? 'Заменить APK' : 'Заменить файл игры') : ($only_android ? 'Загрузить APK' : 'Загрузить ZIP') ?>
+            </span>
+            <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
+                <?= $only_android ? 'Android APK · до 4 ГБ' : 'Любой размер — собираем в один файл на S3' ?>
+            </span>
+        </div>
+        <input type="file" id="zip-input" accept="<?= $only_android ? '.apk' : '.zip' ?>" style="display:none;" data-android="<?= $only_android ? '1' : '0' ?>">
+        <div id="zip-progress" style="display:none;margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span id="zip-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
+                <span id="zip-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
+            </div>
+            <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
+                <div id="zip-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
+            </div>
+            <div id="zip-detail" style="font-size:11px;color:var(--tm);margin-top:6px;"></div>
+        </div>
+        </div><!-- /pane web -->
+
+        <div class="dpx-pane" data-pane="deplex" hidden>
+            <?php include(__DIR__ . '/../swad/controllers/devs_edit_deplex_tab.php'); ?>
+        </div>
+    </div>
+
+  </div><!-- /left-col -->
 
     <div style="display:flex;flex-direction:column;gap:14px;">
 
@@ -675,6 +847,49 @@ if (in_array($mod_status, ['pending','rejected'])):
             </div>
         </form>
 
+        <!-- ═══ УЧАСТИЕ В ДЖЕМЕ ═══ -->
+        <form method="POST" id="jam-form">
+            <input type="hidden" name="action" value="save_jam">
+            <div class="card" style="border-color:rgba(195,33,120,.25);">
+                <div class="card-title">
+                    <span class="material-icons" style="color:var(--p);">sports_esports</span>Участие в джеме
+                </div>
+                <?php if ($jam_locked && $current_sprint): ?>
+                    <div style="font-size:12px;color:var(--ts);margin-bottom:6px;">
+                        Проект участвует в джеме <strong><?= htmlspecialchars($current_sprint['title']) ?></strong>.
+                    </div>
+                    <div style="font-size:11px;color:var(--tm);">Идёт голосование или джем завершён — привязку менять нельзя.</div>
+                <?php else: ?>
+                    <p style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
+                        Прикрепите проект к джему — после модерации он появится на странице голосования.
+                    </p>
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+                        <input type="checkbox" name="jam_enabled" id="jam-enabled" value="1"
+                               onchange="document.getElementById('jam-select-wrap').style.display=this.checked?'':'none';"
+                               style="accent-color:var(--p);width:16px;height:16px;"
+                               <?= $current_sprint ? 'checked' : '' ?>>
+                        <span style="font-size:13px;font-weight:600;">Участвует в джеме</span>
+                    </label>
+                    <div class="field" id="jam-select-wrap" style="<?= $current_sprint ? '' : 'display:none;' ?>">
+                        <label>Джем</label>
+                        <select name="sprint_id" style="width:100%;">
+                            <?php $listed = false; foreach ($open_jams as $j):
+                                $sel = $current_sprint && (int)$current_sprint['id'] === (int)$j['id'];
+                                if ($sel) $listed = true; ?>
+                            <option value="<?= (int)$j['id'] ?>"<?= $sel ? ' selected' : '' ?>><?= htmlspecialchars($j['title']) ?></option>
+                            <?php endforeach; ?>
+                            <?php if ($current_sprint && !$listed): ?>
+                            <option value="<?= (int)$current_sprint['id'] ?>" selected><?= htmlspecialchars($current_sprint['title']) ?> (текущий)</option>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
+                        <span class="material-icons" style="font-size:15px;">save</span>Сохранить участие
+                    </button>
+                <?php endif; ?>
+            </div>
+        </form>
+
     </div>
 </div>
 
@@ -697,14 +912,11 @@ if (in_array($mod_status, ['pending','rejected'])):
 <?php endif; ?>
 
 <?php
-// send_group_message(-1002916906978, '🆕 <b>Бот снова работает</b>', true, 'https://dustore.ru/');
-
+$is_locked = (($game['moderation_status'] ?? '') === 'pending') ? 'true' : 'false';
 $extra_js = <<<JS
 <script>
-const LARGE       = 500 * 1024 * 1024;
-const SMALL_CHUNK = 5   * 1024 * 1024;
-const LARGE_CHUNK = 50  * 1024 * 1024;
 const PID = {$project_id};
+const IS_LOCKED = {$is_locked};
 
 // ── Модалка модерации ─────────────────────────────────────────────────────
 var _modalAction = 'first';
@@ -749,7 +961,6 @@ function syncUploadZone() {
     var checkboxes  = document.querySelectorAll('input[name="platform[]"]');
     var selected    = Array.from(checkboxes).filter(function(c){return c.checked;}).map(function(c){return c.value;});
     var onlyAndroid = selected.length === 1 && selected[0] === 'Android';
-    var hasAndroid  = selected.includes('Android');
     var input = document.getElementById('zip-input');
     var icon  = document.getElementById('drop-icon');
     var label = document.getElementById('drop-label');
@@ -758,24 +969,19 @@ function syncUploadZone() {
         input.accept = '.apk'; input.dataset.android = '1';
         icon.textContent = 'android'; icon.style.color = '#a4c639';
         label.textContent = 'Загрузить APK-файл';
-        hint.textContent  = 'Android APK · до 4 ГБ';
-    } else if (hasAndroid) {
-        input.accept = '.zip,.apk'; input.dataset.android = '0';
-        icon.textContent = 'upload_file'; icon.style.color = 'var(--p)';
-        label.textContent = 'Загрузить ZIP или APK';
-        hint.textContent  = 'ZIP или APK · до 500 МБ прямая загрузка';
+        hint.textContent  = 'Android APK · любой размер';
     } else {
         input.accept = '.zip'; input.dataset.android = '0';
         icon.textContent = 'upload_file'; icon.style.color = 'var(--p)';
         label.textContent = 'Загрузить ZIP-архив';
-        hint.textContent  = 'До 500 МБ — прямая загрузка · Больше — чанки';
+        hint.textContent  = 'Любой размер — собираем в один файл на S3';
     }
 }
 document.querySelectorAll('input[name="platform[]"]').forEach(function(cb){
     cb.addEventListener('change', syncUploadZone);
 });
 
-// ── ZIP / APK upload ──────────────────────────────────────────────────────
+// ── Загрузка билда (чанки → PHP → один объект в S3, без CORS) ──────────────
 document.getElementById('zip-drop').addEventListener('click', function(){
     document.getElementById('zip-input').click();
 });
@@ -784,73 +990,52 @@ document.getElementById('zip-input').addEventListener('change', function () {
     var file  = this.files[0];
     if (!file) return;
     var isApk = file.name.toLowerCase().endsWith('.apk');
-    var big   = !isApk && file.size >= LARGE;
     var hint  = document.getElementById('upload-mode-hint');
     hint.style.display = 'block';
-    if (isApk) {
-        hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(164,198,57,.08);border:1px solid rgba(164,198,57,.2);color:#a4c639;';
-        hint.textContent = '🤖 APK · ' + (file.size/1048576).toFixed(1) + ' МБ';
-    } else if (big) {
-        hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(195,33,120,.08);border:1px solid rgba(195,33,120,.2);color:var(--pl);';
-        hint.textContent = '📦 ' + (file.size/1048576).toFixed(1) + ' МБ — чанки';
-    } else {
-        hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.15);color:var(--ok);';
-        hint.textContent = '⚡ ZIP · ' + (file.size/1048576).toFixed(1) + ' МБ';
-    }
+    hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(195,33,120,.08);border:1px solid rgba(195,33,120,.2);color:var(--pl);';
+    hint.textContent = (isApk ? '🤖 APK · ' : '📦 ') + (file.size/1048576).toFixed(1) + ' МБ';
     uploadFile(file, isApk);
 });
 
 async function uploadFile(file, isApk) {
-    isApk = isApk || false;
-    var big    = !isApk && file.size >= LARGE;
-    var chunk  = big ? LARGE_CHUNK : SMALL_CHUNK;
-    var total  = Math.ceil(file.size / chunk);
-    var prog   = document.getElementById('zip-progress');
-    var bar    = document.getElementById('zip-bar');
-    var status = document.getElementById('zip-status');
-    var pct    = document.getElementById('zip-pct');
-    var detail = document.getElementById('zip-detail');
+    var CHUNK = 5 * 1024 * 1024;               // 5 МБ на чанк
+    var total = Math.ceil(file.size / CHUNK) || 1;
+    var prog  = document.getElementById('zip-progress');
+    var bar   = document.getElementById('zip-bar');
+    var pct   = document.getElementById('zip-pct');
+    var stat  = document.getElementById('zip-status');
     prog.style.display   = 'block';
     bar.style.background = isApk ? '#a4c639' : 'var(--p)';
+    stat.style.color     = '';
+
     for (var i = 0; i < total; i++) {
-        var last = i === total - 1;
-        if (last && total > 1) {
-            status.textContent = big ? '⏳ Последний чанк + manifest...' : (isApk ? '⏳ Завершаем APK...' : '⏳ Финализируем...');
-        } else {
-            bar.style.width    = Math.round(i / total * 100) + '%';
-            pct.textContent    = Math.round(i / total * 100) + '%';
-            status.textContent = (isApk ? '🤖 APK · часть ' : 'Чанк ') + (i+1) + ' из ' + total;
-        }
         var fd = new FormData();
-        fd.append('chunk',        file.slice(i * chunk, (i+1) * chunk));
+        fd.append('chunk',        file.slice(i * CHUNK, (i + 1) * CHUNK));
         fd.append('chunk_index',  i);
         fd.append('total_chunks', total);
         fd.append('file_name',    file.name);
         fd.append('file_size',    file.size);
         fd.append('project_id',   PID);
-        if (isApk) fd.append('file_type', 'apk');
         var data;
         try {
-            var res  = await fetch('/devs/upload_chunk.php', {method:'POST', body:fd, credentials:'include'});
+            var res  = await fetch('/devs/build_upload.php', { method: 'POST', body: fd, credentials: 'include' });
             var text = await res.text();
             data = JSON.parse(text);
         } catch (e) {
-            setErr('Сервер вернул не-JSON: ' + String(e).substring(0, 200));
+            setErr('Сервер вернул не-JSON: ' + String(e).substring(0, 160));
             return;
         }
         if (!data.success) { setErr(data.message || 'Ошибка сервера'); return; }
         if (data.done) {
             bar.style.width = '100%'; pct.textContent = '100%';
-            bar.style.background = 'var(--ok)'; status.style.color = 'var(--ok)';
-            status.textContent = isApk ? '✓ APK загружен · ' + data.size_mb + ' МБ'
-                : (data.mode === 'chunked' ? '✓ ' + data.chunk_count + ' чанков · ' + data.size_mb + ' МБ' : '✓ ZIP загружен · ' + data.size_mb + ' МБ');
-            if (data.mode === 'chunked') detail.textContent = 'manifest.json создан на S3';
-            setTimeout(function(){ location.reload(); }, 1500);
+            bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
+            stat.textContent = '✓ Билд загружен · ' + data.size_mb + ' МБ';
+            setTimeout(function () { location.reload(); }, 1500);
             return;
         }
-        bar.style.width = Math.round((i+1) / total * 100) + '%';
-        pct.textContent = Math.round((i+1) / total * 100) + '%';
-        if (data.sha256) detail.textContent = 'SHA256: ' + data.sha256.slice(0,16) + '...';
+        var p = Math.round((i + 1) / total * 100);
+        bar.style.width = p + '%'; pct.textContent = p + '%';
+        stat.textContent = 'Загрузка ' + (i + 1) + ' из ' + total;
     }
 }
 
@@ -987,6 +1172,27 @@ function syncLangLabel() {
     var checked = Array.from(document.querySelectorAll('input[name="languages_list[]"]:checked')).map(function(c){ return c.value; });
     document.getElementById('lang-label').textContent = checked.length ? checked.join(', ') : 'Выберите языки...';
     document.getElementById('languages-hidden').value = checked.join(', ');
+}
+
+document.querySelectorAll('.dpx-tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.dpx-tab').forEach(function(x){ x.classList.remove('btn-p'); x.classList.add('btn-g'); });
+    t.classList.remove('btn-g'); t.classList.add('btn-p');
+    document.querySelectorAll('.dpx-pane').forEach(function(p){ p.hidden = (p.dataset.pane !== t.dataset.tab); });
+  });
+});
+
+if (IS_LOCKED) {
+    document.querySelectorAll('input, textarea, select, button, .dpx-tab').forEach(function (el) {
+        if (el.closest('#moderation-modal')) return;                     // модалку не трогаем
+        var f = el.closest('form');
+        if (f && f.querySelector('input[name="action"][value="cancel_moderation"]')) return; // кнопку отмены оставляем
+        el.disabled = true; el.style.pointerEvents = 'none';
+    });
+    ['zip-drop', 'scr-drop'].forEach(function (id) {
+        var e = document.getElementById(id);
+        if (e) { e.style.pointerEvents = 'none'; e.style.opacity = '.5'; }
+    });
 }
 </script>
 JS;

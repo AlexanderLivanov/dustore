@@ -3,31 +3,36 @@
 require_once 'user.php';
 require_once '../config.php';
 
+/* Страховка от частичного деплоя. activity.php — хартбит, он дёргается
+   с КАЖДОЙ страницы каждого авторизованного пользователя. Если он падает,
+   падает весь сайт. Поэтому он не имеет права жёстко зависеть от того,
+   что константа доехала: нет — берём разумный дефолт и работаем дальше. */
+if (!defined('ONLINE_WINDOW_MIN')) define('ONLINE_WINDOW_MIN', 15);
+
 $db = new Database();
 $pdo = $db->connect();
 $curr_user = new User();
 
-// Получаем количество онлайн
+// Получаем количество онлайн.
+// Окно вынесено в ONLINE_WINDOW_MIN (config.php), чтобы коллектор и
+// stat.php считали «онлайн» по одному и тому же определению.
 $online_count = (int)$pdo->query("
-    SELECT COUNT(*) 
+    SELECT COUNT(*)
     FROM users
-    WHERE last_activity >= NOW() - INTERVAL 5 MINUTE
+    WHERE last_activity >= NOW() - INTERVAL " . ONLINE_WINDOW_MIN . " MINUTE
 ")->fetchColumn();
 
-// Округляем до часа
-$hour = date('Y-m-d H:00:00');
-
-// Записываем в таблицу
+// Час берём из MySQL, а не из PHP date(): часы должны быть те же,
+// по которым считался $online_count выше.
+// GREATEST, а не перезапись: в часовой ячейке храним ПИК за час,
+// иначе последний сэмпл затирал реальный максимум.
 $stmt = $pdo->prepare("
     INSERT INTO users_online_history (ts, online_count)
-    VALUES (:ts, :count)
-    ON DUPLICATE KEY UPDATE online_count = :count
+    VALUES (DATE_FORMAT(NOW(), '%Y-%m-%d %H:00:00'), :count)
+    ON DUPLICATE KEY UPDATE online_count = GREATEST(online_count, VALUES(online_count))
 ");
 
-$stmt->execute([
-    ':ts' => $hour,
-    ':count' => $online_count
-]);
+$stmt->execute([':count' => $online_count]);
 
 // Проверяем авторизацию
 if ($curr_user->checkAuth() > 0) {
@@ -43,12 +48,13 @@ if (!isset($_SESSION['USERDATA']['id'])) {
 $userID = $_SESSION['USERDATA']['id'];
 
 try {
-    $currentTime = date('Y-m-d H:i:s');
-    $stmt = $pdo->prepare("UPDATE users SET last_activity = :last_activity WHERE id = :user_id");
-    $stmt->bindParam(':last_activity', $currentTime);
+    // NOW() вместо PHP date(): колонку last_activity пишет ещё и
+    // chat/api.php через NOW(). Два клока на одну колонку — это и была
+    // причина расхождения. Теперь пишет только MySQL.
+    $stmt = $pdo->prepare("UPDATE users SET last_activity = NOW() WHERE id = :user_id");
     $stmt->bindParam(':user_id', $userID, PDO::PARAM_INT);
-    $stmt->execute();
     if ($stmt->execute()) {
+        $currentTime = date('Y-m-d H:i:s');   // для ответа/сессии, часы уже общие
         $_SESSION['USERDATA']['last_activity'] = $currentTime;
 
         echo json_encode(['success' => true, 'last_activity' => $currentTime]);

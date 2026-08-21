@@ -51,7 +51,6 @@ case 'create_post': {
     $type    = ($_POST['type'] ?? 'post') === 'article' ? 'article' : 'post';
     $title   = mb_substr(trim($_POST['title'] ?? ''), 0, 200);
     $body    = media_sanitize_html($_POST['body'] ?? '');
-
     if ($type === 'article' && $title === '') media_json(['error' => 'У статьи должен быть заголовок'], 422);
     if ($body === '' && empty($_POST['images']) && empty($_POST['video_url']))
         media_json(['error' => 'Пустой пост'], 422);
@@ -73,7 +72,7 @@ case 'create_post': {
     $images = json_decode($_POST['images'] ?? '[]', true) ?: [];
     foreach (array_slice($images, 0, 10) as $img) {
         $path = is_array($img) ? ($img['path'] ?? '') : (string)$img;
-        if (preg_match('~^https://s3\.regru\.cloud/~', $path)) {
+        if (media_is_our_asset($path)) {                    )
             $attachments[] = ['kind' => 'image', 'path' => $path];
         }
     }

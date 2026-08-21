@@ -1,390 +1,671 @@
-:root {
-    --primary: #c32178;
-    --secondary: #74155d;
-    --dark: #14041d;
-    --light: #f8f9fa;
-    --gradient: linear-gradient(180deg, #14041d, #400c4a, #74155d, #c32178);
-    --gradient2: linear-gradient(180deg, #c32178, #14041d, #400c4a, #c32178);
+/* ============================================================
+   dev.php — страница студии
+   Всё под неймспейсом .dsp. Глобальных селекторов нет:
+   header.php/footer.php живут на своих style.css/header.css.
+   ============================================================ */
+
+html.dsp-dark,
+html.dsp-dark body {
+    background: #14041d;
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+.dsp {
+    --p: #c32178;
+    --p-hi: #e8479b;
+    --p-dk: #74155d;
+    --bg: #14041d;
+    --fg: #f4eef8;
+    --muted: rgba(244, 238, 248, .55);
+    --line: rgba(255, 255, 255, .12);
+    --s: 5px;
+
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    display: block;
+    color: var(--fg);
+    font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    padding-bottom: 90px;
+    min-height: 70vh;
 }
 
-body {
-    background-color: var(--dark);
-    color: var(--light);
-    overflow-x: hidden;
+.dsp::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(900px 520px at 80% -10%, rgba(195, 33, 120, .22), transparent 65%),
+        linear-gradient(180deg, #14041d 0%, #1e0725 55%, #2b0930 100%);
 }
 
-.container {
-    max-width: 1200px;
+.dsp-wrap {
+    max-width: 1240px;
     margin: 0 auto;
     padding: 0 20px;
 }
 
-section {
-    padding: 60px 0;
+/* Пиксельные углы дизайн-системы */
+.dsp .pix,
+.dsp-panel,
+.dsp-card,
+.dsp-stat,
+.dsp-btn,
+.dsp-ticker,
+.dsp-verified,
+.dsp-tag,
+.dsp-gqi {
+    clip-path: polygon(0 var(--s),
+            var(--s) var(--s),
+            var(--s) 0,
+            calc(100% - var(--s)) 0,
+            calc(100% - var(--s)) var(--s),
+            100% var(--s),
+            100% calc(100% - var(--s)),
+            calc(100% - var(--s)) calc(100% - var(--s)),
+            calc(100% - var(--s)) 100%,
+            var(--s) 100%,
+            var(--s) calc(100% - var(--s)),
+            0 calc(100% - var(--s)));
 }
 
-h1,
-h2,
-h3 {
-    font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
-    margin-bottom: 20px;
-    line-height: 1.2;
-}
+/* ─────────────────────── ШАПКА ─────────────────────── */
 
-h1 {
-    font-size: 3rem;
-}
-
-h2 {
-    font-size: 2.2rem;
+.dsp-hero {
     position: relative;
-    margin-bottom: 40px;
-}
-
-h2:after {
-    content: "";
-    position: absolute;
-    bottom: -10px;
-    left: 0;
-    width: 80px;
-    height: 4px;
-    background: var(--primary);
-    border-radius: 2px;
-}
-
-p {
-    font-size: 1.1rem;
-    line-height: 1.6;
-    margin-bottom: 20px;
-}
-
-.btn {
-    display: inline-block;
-    padding: 12px 30px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 30px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    background: #e62e8a;
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(195, 33, 120, 0.3);
-}
-
-.btn-secondary {
-    background: transparent;
-    border: 2px solid var(--primary);
-}
-
-.btn-secondary:hover {
-    background: rgba(195, 33, 120, 0.1);
-}
-
-/* Секция студии */
-.studio-hero {
-    background: var(--gradient);
-    padding: 120px 0 60px;
-    position: static;
+    padding: 74px 0 0;
     overflow: hidden;
 }
 
-.studio-banner {
+/* Раньше .studio-banner был position:absolute внутри position:static
+   родителя — и уезжал по всей странице поверх шапки сайта.
+   Теперь якорится за .dsp-hero. */
+.dsp-hero__bg {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background-size: cover;
     background-position: center;
-    opacity: 0.3;
-    z-index: 1;
+    opacity: .45;
+    filter: saturate(1.05);
+    z-index: -1;
+    transform: scale(1.04);
 }
 
-.studio-content {
-    position: relative;
-    z-index: 2;
+.dsp-hero__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(20, 4, 29, .55) 0%, rgba(20, 4, 29, .82) 55%, #14041d 100%);
+}
+
+.dsp-hero__inner {
     display: flex;
+    align-items: flex-end;
+    gap: 28px;
+    padding-top: 40px;
     flex-wrap: wrap;
-    gap: 40px;
 }
 
-.studio-main {
-    flex: 1;
-    min-width: 300px;
+/* ── Аватар: рабочий фолбэк вместо битой картинки ── */
+.dsp-ava {
+    position: relative;
+    width: 148px;
+    height: 148px;
+    flex-shrink: 0;
+    background: linear-gradient(145deg, var(--p-dk), var(--p));
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .55);
+    --s: 8px;
+    clip-path: polygon(0 var(--s),
+            var(--s) var(--s),
+            var(--s) 0,
+            calc(100% - var(--s)) 0,
+            calc(100% - var(--s)) var(--s),
+            100% var(--s),
+            100% calc(100% - var(--s)),
+            calc(100% - var(--s)) calc(100% - var(--s)),
+            calc(100% - var(--s)) 100%,
+            var(--s) 100%,
+            var(--s) calc(100% - var(--s)),
+            0 calc(100% - var(--s)));
 }
 
-.studio-sidebar {
-    width: 300px;
+.dsp-ava img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
-.studio-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-.studio-logo {
-    margin-top: 50px;
-    width: 180px;
-    height: 180px;
-    border-radius: 25px;
-    border: 5px solid white;
-    background: var(--secondary);
+/* Инициалы рисуются ТОЛЬКО в пустом состоянии.
+   Без z-index-трюков: отрицательный z-index провалился бы под
+   собственный фон .dsp-ava и инициалов не было бы видно вообще.
+   .is-empty ставит PHP (нет avatar_link) или onerror (ссылка битая). */
+.dsp-ava.is-empty::after {
+    content: attr(data-initials);
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4rem;
-    flex-shrink: 0;
-    object-fit: cover;
+    font-family: 'Syne', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: 46px;
+    letter-spacing: .02em;
+    color: rgba(255, 255, 255, .92);
 }
 
-.studio-info-header {
+.dsp-hero__text {
     flex: 1;
+    min-width: 280px;
 }
 
-.studio-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
+.dsp-hero__titleline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.stat-item {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 15px 20px;
-    border-radius: 15px;
+.dsp-hero__name {
+    font-family: 'Syne', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: clamp(30px, 5vw, 52px);
+    letter-spacing: -.025em;
+    line-height: 1.05;
+    margin: 0;
 }
 
-.stat-value {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: var(--primary);
+.dsp-ticker {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, .1);
+    color: var(--muted);
+    --s: 3px;
 }
 
-.stat-label {
-    font-size: 0.9rem;
+.dsp-verified {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    background: rgba(46, 230, 168, .16);
+    color: #2ee6a8;
+    --s: 3px;
+}
+
+.dsp-meta {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 26px;
+    padding: 0;
+    margin: 14px 0 0;
+    font-size: 14px;
+}
+
+.dsp-meta li {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.dsp-meta span {
+    font-size: 11px;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    opacity: 0.8;
+    color: var(--muted);
 }
 
-.studio-badges {
+.dsp-cta {
     display: flex;
     gap: 10px;
-    margin: 15px 0;
     flex-wrap: wrap;
+    margin-top: 20px;
 }
 
-.studio-badge {
-    background: rgba(0, 0, 0, 0.3);
-    color: white;
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 0.9rem;
+.dsp-btn {
+    display: inline-block;
+    padding: 11px 22px;
+    background: var(--p);
+    color: #fff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background .16s ease, transform .16s ease;
 }
 
-.studio-description {
-    line-height: 1.6;
-    margin-bottom: 30px;
+.dsp-btn:hover {
+    background: var(--p-hi);
+    transform: translateY(-2px);
 }
 
-.studio-history {
-    margin: 30px 0;
+.dsp-btn--ghost {
+    background: rgba(255, 255, 255, .09);
 }
 
-.team-members {
+.dsp-btn--ghost:hover {
+    background: rgba(255, 255, 255, .16);
+}
+
+/* ─────────────────────── МЕТРИКИ ─────────────────────── */
+
+.dsp-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-top: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 34px 0 0;
 }
 
-.team-member {
-    text-align: center;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    transition: transform 0.3s;
+.dsp-stat {
+    background: rgba(255, 255, 255, .055);
+    border-top: 2px solid rgba(195, 33, 120, .5);
+    padding: 15px 16px;
 }
 
-.team-member:hover {
-    transform: translateY(-10px);
-    background: rgba(195, 33, 120, 0.1);
+.dsp-stat b small {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0;
 }
 
-.member-avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    margin: 0 auto 15px;
-    background: var(--secondary);
+.dsp-stat b {
+    display: block;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.25;
+}
+
+.dsp-stat span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+}
+
+/* ─────────────────────── СЕТКА ─────────────────────── */
+
+.dsp-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 34px;
+    margin-top: 52px;
+}
+
+@media (max-width: 980px) {
+    .dsp-grid {
+        grid-template-columns: 1fr;
+        gap: 26px;
+    }
+}
+
+.dsp-col {
+    min-width: 0;
+}
+
+.dsp-col--side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.dsp-block {
+    margin-bottom: 46px;
+}
+
+.dsp-h2 {
+    font-family: 'Syne', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 18px;
+}
+
+.dsp-h2 i {
+    font-style: normal;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--p-hi);
+}
+
+.dsp-h2::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+}
+
+.dsp-h3 {
+    font-family: 'Syne', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0 0 14px;
+}
+
+.dsp-prose {
+    color: rgba(244, 238, 248, .78);
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.dsp-prose p {
+    margin: 0 0 12px;
+}
+
+.dsp-prose a {
+    color: var(--p-hi);
+}
+
+/* ─────────────────────── ПРОЕКТЫ ─────────────────────── */
+
+.dsp-projects {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+    gap: 14px;
+}
+
+.dsp-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, .05);
+    text-decoration: none;
+    color: inherit;
+    overflow: hidden;
+    transition: background .18s ease, transform .18s ease;
+}
+
+.dsp-card:hover {
+    background: rgba(195, 33, 120, .14);
+    transform: translateY(-4px);
+}
+
+.dsp-card__cover {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(140deg, #2a0a30, var(--p-dk));
+    background-size: cover;
+    background-position: center;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 34px;
+    opacity: .96;
 }
 
-.projects-section {
-    margin: 40px 0;
+.dsp-gqi {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    background: rgba(20, 4, 29, .82);
+    color: #fff;
+    --s: 3px;
 }
 
-.projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 30px;
-    margin-top: 30px;
+.dsp-card__body {
+    padding: 13px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
 }
 
-.project-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.project-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-}
-
-.project-image {
-    width: 100%;
-    height: 160px;
-    background: var(--secondary);
-    position: relative;
-}
-
-.project-info {
-    padding: 20px;
-}
-
-.project-title {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
+.dsp-card__body h3 {
+    font-family: 'Syne', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.project-rating {
+.dsp-card__body p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dsp-card__foot {
+    margin-top: auto;
+    padding-top: 8px;
     display: flex;
     align-items: center;
-    gap: 5px;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    margin-bottom: 15px;
-    width: fit-content;
-}
-
-footer {
-    background: var(--dark);
-    padding: 40px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.footer-content {
-    display: flex;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 30px;
+    gap: 8px;
+    border-top: 1px solid rgba(255, 255, 255, .07);
 }
 
-.footer-section {
-    flex: 1;
-    min-width: 250px;
+.dsp-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: rgba(255, 255, 255, .08);
+    color: var(--muted);
+    --s: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 55%;
 }
 
-.footer-section h3 {
-    margin-bottom: 20px;
+.dsp-card__num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(244, 238, 248, .8);
+    margin-left: auto;
+    white-space: nowrap;
 }
 
-.footer-links {
+/* ─────────────────────── ПАНЕЛИ СБОКУ ─────────────────────── */
+
+.dsp-panel {
+    background: rgba(255, 255, 255, .05);
+    border: 0;
+    padding: 18px;
+}
+
+.dsp-panel--vk #vk_groups {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.dsp-contacts {
     list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.footer-links li {
-    margin-bottom: 10px;
+.dsp-contacts li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
 }
 
-.footer-links a {
-    color: white;
-    text-decoration: none;
-    transition: color 0.3s;
+.dsp-contacts li:last-child {
+    border-bottom: 0;
 }
 
-.footer-links a:hover {
-    color: var(--primary);
-}
-
-.copyright {
+.dsp-contacts__ico {
+    font-size: 17px;
+    width: 26px;
     text-align: center;
-    padding-top: 20px;
-    margin-top: 40px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
 }
 
-/* Адаптивность */
-@media (max-width: 900px) {
-    .studio-content {
-        flex-direction: column;
-    }
+.dsp-contacts__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
 
-    .studio-sidebar {
-        width: 100%;
-    }
+.dsp-contacts__label {
+    font-size: 10px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
 
-    .studio-stats {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+.dsp-contacts__body a,
+.dsp-contacts__body>span:last-child {
+    font-size: 14px;
+    color: var(--fg);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dsp-contacts__body a:hover {
+    color: var(--p-hi);
+    text-decoration: underline;
+}
+
+.dsp-badges {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dsp-badges li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dsp-badges img,
+.dsp-badges__ph {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(255, 255, 255, .08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+}
+
+.dsp-badges span {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.dsp-badges b {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dsp-badges i {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: normal;
+    line-height: 1.4;
+}
+
+/* ─────────────────────── ПУСТЫЕ СОСТОЯНИЯ ─────────────────────── */
+
+.dsp-empty {
+    background: rgba(255, 255, 255, .035);
+    border: 1px dashed rgba(255, 255, 255, .13);
+    padding: 34px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.dsp-empty--sm {
+    padding: 20px 14px;
+    font-size: 13px;
+}
+
+.dsp-empty__ico {
+    font-size: 27px;
+    opacity: .5;
+    margin-bottom: 7px;
+}
+
+/* ─────────────────────── АНИМАЦИЯ ─────────────────────── */
+
+.dsp-anim {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity .38s ease, transform .38s ease;
+}
+
+.dsp-anim.is-in {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .dsp-anim,
+    .dsp-anim.is-in {
+        opacity: 1;
+        transform: none;
+        transition: none;
     }
 }
 
-@media (max-width: 768px) {
-    h1 {
-        font-size: 2.2rem;
-    }
+/* ─────────────────────── АДАПТИВ ─────────────────────── */
 
-    h2 {
-        font-size: 1.8rem;
-    }
-
-    .studio-logo {
-        margin-top: 50px;
-        width: 140px;
-        height: 140px;
-        font-size: 3rem;
-    }
-
-    .studio-header {
-        flex-direction: column;
+@media (max-width: 720px) {
+    .dsp-hero__inner {
         align-items: center;
         text-align: center;
+        flex-direction: column;
+        gap: 18px;
     }
-}
 
-@media (max-width: 480px) {
-    .studio-stats {
+    .dsp-hero__titleline,
+    .dsp-meta,
+    .dsp-cta {
+        justify-content: center;
+    }
+
+    .dsp-meta li {
+        align-items: center;
+    }
+
+    .dsp-ava {
+        width: 116px;
+        height: 116px;
+    }
+
+    .dsp-ava::after {
+        font-size: 36px;
+    }
+
+    .dsp-stats {
         grid-template-columns: 1fr 1fr;
-    }
-
-    .team-members,
-    .projects-grid {
-        grid-template-columns: 1fr;
     }
 }

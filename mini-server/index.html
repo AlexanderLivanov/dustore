@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>MINI Messenger</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icons/icon.svg">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/messenger.css">
+<link rel="stylesheet" href="css/modal.css">
+<link rel="stylesheet" href="css/network.css">
+</head>
+<body data-screen="chats" data-view="chat">
+
+<div id="app">
+
+  <!-- ===================== САЙДБАР / ЭКРАН «ЧАТЫ» ===================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-head-row">
+        <div class="brand">MINI</div>
+        <div class="head-actions">
+          <button class="icon-btn" id="btnNewChat" title="Создать чат" aria-label="Создать чат">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="btnSettingsTop" title="Настройки" aria-label="Настройки">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <circle cx="9" cy="7" r="2.4" fill="#fff" stroke="currentColor" stroke-width="1.7"/>
+              <circle cx="15" cy="12" r="2.4" fill="#fff" stroke="currentColor" stroke-width="1.7"/>
+              <circle cx="8" cy="17" r="2.4" fill="#fff" stroke="currentColor" stroke-width="1.7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <button type="button" id="networkIndicator" class="network-status offline" aria-describedby="networkTooltip">
+        <div class="dot"></div>
+        <span id="networkText">Проверка сети…</span>
+      </button>
+      <div class="network-tooltip hidden" id="networkTooltip" role="tooltip"></div>
+    </div>
+    <div class="sidebar-search">
+      <input id="searchInput" type="text" placeholder="Поиск" autocomplete="off">
+    </div>
+    <nav class="chat-list" id="chatList" aria-label="Список чатов"></nav>
+    <button class="fab" id="btnNewChatFab" aria-label="Создать чат">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </aside>
+
+  <!-- ===================== ОСНОВНАЯ ПАНЕЛЬ ===================== -->
+  <main class="main">
+
+    <!-- Переписка -->
+    <section class="panel panel-chat" id="panelChat">
+      <header class="chat-head">
+        <button class="icon-btn back-btn" id="btnBack" aria-label="Назад">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="chat-head-peer" id="chatPeer">
+          <div class="avatar" id="chatAvatar">Ю</div>
+          <div class="peer-meta">
+            <div class="peer-name" id="chatName">—</div>
+            <div class="peer-status" id="chatStatus"></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="messages" id="messages"></div>
+
+      <footer class="composer" id="composer">
+        <input id="draftInput" type="text" placeholder="Сообщение" autocomplete="off">
+        <button class="send-btn" id="btnSend" aria-label="Отправить">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </footer>
+      <div class="readonly hidden" id="readonlyBar">Только чтение</div>
+    </section>
+
+    <!-- Настройки -->
+    <section class="panel panel-settings" id="panelSettings">
+      <div class="settings-scroll">
+        <div class="settings-inner">
+          <div class="settings-titlebar">
+            <div class="settings-title">Настройки</div>
+            <button class="pill-btn" id="btnToChats">К чатам</button>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-avatar" id="profileInit">А</div>
+            <div class="profile-meta">
+              <div class="profile-name" id="profileName">Алекс</div>
+              <div class="profile-nick" id="profileNick">@alex · изменить профиль</div>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+
+          <!-- Авторизация Яндекса -->
+          <div class="settings-section">
+            <div class="section-label">Авторизация</div>
+            <label class="field">
+              <div class="field-label">Yandex OAuth Token</div>
+              <input id="tokenInput" type="password" placeholder="Вставьте access token" autocomplete="off" spellcheck="false">
+            </label>
+            <div class="btn-row">
+              <button class="primary-btn" id="btnSaveToken">Сохранить</button>
+              <button class="outline-btn" id="btnDiskFiles">Файлы Яндекс.Диска</button>
+            </div>
+            <div class="hint">
+              Токен выдаётся вручную через
+              <a href="https://oauth.yandex.ru/verification_code" target="_blank" rel="noopener">oauth.yandex.ru/verification_code</a>
+              — callback не используется.
+            </div>
+          </div>
+
+          <!-- Сервер MINI ID -->
+          <div class="settings-section">
+            <div class="section-label">Сервер MINI ID</div>
+            <label class="field">
+              <div class="field-label">Адрес сервера каталога</div>
+              <input id="serverUrlInput" type="url" placeholder="https://mini.dustore.ru" autocomplete="off" spellcheck="false">
+            </label>
+            <div class="btn-row">
+              <button class="primary-btn" id="btnSaveServer">Сохранить адрес</button>
+            </div>
+            <div class="hint">
+              Сервер резолвит глобальные @ники и хранит публичные ключи.
+              В whitelist-режиме поиск идёт через Яндекс.Диск автоматически.
+            </div>
+          </div>
+
+          <!-- Debug -->
+          <div class="settings-section">
+            <div class="section-label">Debug</div>
+            <div class="debug-grid" id="debugGrid">
+              <div class="debug-row"><span>Версия</span><b id="dbgVersion">—</b></div>
+              <div class="debug-row"><span>Token</span><b id="dbgToken">—</b></div>
+              <div class="debug-row"><span>Keys</span><b id="dbgKeys">—</b></div>
+              <div class="debug-row"><span>IndexedDB</span><b id="dbgIdb">—</b></div>
+              <div class="debug-row"><span>Network</span><b id="dbgNet">—</b></div>
+            </div>
+            <div class="section-label" style="margin-top:14px">Последние ошибки</div>
+            <pre class="debug-log" id="debugLog">пусто</pre>
+          </div>
+
+          <div class="settings-footer">MINI · версия 1.0</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== ТАБ-БАР (мобайл) ===================== -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab" id="tabChats" data-tab="chats">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="6" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 18L5.5 21v-3z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span>Чаты</span>
+    </button>
+    <button class="tab" id="tabSettings" data-tab="settings">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="7" r="2.4" fill="#fff" stroke="currentColor" stroke-width="1.7"/><circle cx="15" cy="12" r="2.4" fill="#fff" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="17" r="2.4" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
+      <span>Настройки</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ===================== МОДАЛЬНОЕ ОКНО ===================== -->
+<div class="modal-backdrop hidden" id="modalBackdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">Файлы Яндекс.Диска</div>
+      <button class="icon-btn" id="modalClose" aria-label="Закрыть">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/crypto.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/disk.js"></script>
+<script src="js/directory.js"></script>
+<script src="js/network.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/messenger.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "CLIENT_ID": "ваш client_id из oauth.yandex.ru",
+  "CLIENT_SECRET": "ваш client_secret",
+  "BASE_URL": "https://ваш-домен.example",
+  "PORT": 3000,
+  "RELAY_INTERVAL_MS": 20000
+}

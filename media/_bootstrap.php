@@ -23,6 +23,15 @@ function media_pdo(): PDO {
     return $pdo;
 }
 
+/* Единственный источник правды о «наших» URL картинок.
+   Принимает оба S3-стиля: path-style и virtual-hosted. */
+function media_is_our_asset(string $url): bool {
+    return (bool)preg_match(
+        '~^https://(?:s3\.regru\.cloud/|[a-z0-9][a-z0-9.\-]*\.s3\.regru\.cloud/)~i',
+        $url
+    );
+}
+
 function media_user_id(): int {
     return (int)($_SESSION['USERDATA']['id'] ?? 0);
 }
@@ -118,7 +127,8 @@ function media_sanitize_html(string $html): string {
             if ($an === 'href' && !preg_match('~^https?://~i', $val)) {
                 $node->removeAttribute($attr->nodeName);
             }
-            if ($an === 'src' && !preg_match('~^https://s3\.regru\.cloud/~i', $val)) {
+            if ($an === 'src' && !media_is_our_asset($val)) {
+                error_log('media_sanitize: срезан src ' . mb_substr($val, 0, 120));
                 $node->removeAttribute('src');
             }
             if (in_array($an, ['width','height'], true) && !preg_match('~^\d+(%)?$~', $val)) {

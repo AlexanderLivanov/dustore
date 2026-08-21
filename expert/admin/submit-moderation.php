@@ -266,7 +266,7 @@ $verdict = $_POST['verdict'] ?? '';
 if (!in_array($verdict, ['recommend', 'revision', 'reject'])) die('invalid verdict');
 
 if ($score < 0 || $score > 100)   die('invalid score');
-if (mb_strlen($comment) < 40)     die('review too short');
+if (mb_strlen($comment) < 1)     die('review too short');
 
 // Корректируем score по вердикту
 if (in_array($verdict, ['revision', 'reject']) && $score > 51) $score = 51;
