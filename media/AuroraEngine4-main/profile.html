@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Профиль — MySocial</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="logo">MySocial</div>
+    <input class="search" placeholder="Искать по профилю">
+  </header>
+
+  <main class="page">
+    <section class="profile-header">
+      <img class="profile-avatar" src="https://picsum.photos/seed/pavatar/200" alt="avatar">
+      <div>
+        <div style="font-weight:800; font-size: 20px;">A L</div>
+        <div class="profile-stats">
+          <span>Подписчики: <b>1 204</b></span>
+          <span>Подписки: <b>238</b></span>
+          <span>Посты: <b>56</b></span>
+        </div>
+        <div style="margin-top:8px; color:#b4b8c7;">Описание профиля — пара строк о себе, проекте и ссылках.</div>
+      </div>
+      <div class="profile-actions">
+        <button>Редактировать</button>
+        <button>Поделиться</button>
+      </div>
+    </section>
+
+    <!-- Мини-навигатор профиля -->
+    <section class="post-card" style="display:flex; gap:10px; justify-content:space-between;">
+      <button class="icon-btn" style="flex:1;">Посты</button>
+      <button class="icon-btn" style="flex:1;">Медиа</button>
+      <button class="icon-btn" style="flex:1;">Закладки</button>
+      <button class="icon-btn" style="flex:1;">О себе</button>
+    </section>
+
+    <!-- Лента постов профиля (обычный скролл) -->
+    <article class="post-card">
+      <div class="post-head">
+        <img class="avatar" src="https://picsum.photos/seed/me1/80" alt="avatar">
+        <div class="author-name">A L</div>
+        <span class="badge">Автор</span>
+      </div>
+      <div class="post-body">
+        <div class="post-text" data-full="Подробный текст о разработке мини-соцсети, UI и анимациях...">
+          Недавний пост о разработке фронтенда: fullPage, адаптивные «чёлка/подбородок», и модалки.
+        </div>
+        <button class="read-more" data-read-more>Читать полностью</button>
+      </div>
+      <div class="post-foot">
+        <div class="actions">
+          <button class="icon-btn">👍</button>
+          <button class="icon-btn">👎</button>
+          <button class="icon-btn">💬</button>
+          <button class="icon-btn">↗</button>
+        </div>
+        <div class="meta">18.08.2025 • 310 просмотров</div>
+      </div>
+    </article>
+  </main>
+
+  <nav class="app-footer">
+    <button data-nav="index.html">🏠 Лента</button>
+    <button data-nav="subscriptions.html">⭐ Подписки</button>
+    <button data-nav="news.html">📰 Новости</button>
+    <button class="active" data-nav="profile.html">👤 Профиль</button>
+  </nav>
+
+  <script src="script.js"></script>
+</body>
+</html>

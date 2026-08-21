@@ -1,0 +1,85 @@
+/* ============================================================
+   BASE.CSS — CSS-переменные, reset, типографика
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Win95 palette */
+  --c-bg:        #c0c0c0;
+  --c-bg-dark:   #808080;
+  --c-bg-light:  #dfdfdf;
+  --c-bg-inset:  #ffffff;
+  --c-navy:      #000080;
+  --c-navy-grad: linear-gradient(to right, #000080, #1084d0);
+  --c-red:       #800000;
+  --c-green:     #006400;
+  --c-purple:    #4a0060;
+  --c-orange:    #804000;
+  --c-text:      #000000;
+  --c-text-dim:  #404040;
+  --c-text-mid:  #606060;
+
+  /* Borders */
+  --b-raise: 2px solid;
+  --b-raise-color: #ffffff #404040 #404040 #ffffff;
+  --b-sink:  2px solid;
+  --b-sink-color:  #808080 #ffffff #ffffff #808080;
+
+  /* Font */
+  --font: 'Courier New', Courier, monospace;
+  --font-size: 12px;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--font-size);
+  color: var(--c-text);
+  overflow: hidden;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  transition: background 0.4s;
+}
+
+/* Scrollbar Win95 style */
+::-webkit-scrollbar { width: 16px; }
+::-webkit-scrollbar-track { background: var(--c-bg); border: 1px solid var(--c-bg-dark); }
+::-webkit-scrollbar-thumb {
+  background: var(--c-bg);
+  border: var(--b-raise);
+  border-color: var(--b-raise-color);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--c-bg-light); }
+::-webkit-scrollbar-button {
+  display: block;
+  height: 16px;
+  background: var(--c-bg);
+  border: var(--b-raise);
+  border-color: var(--b-raise-color);
+}
+
+/* Shared raised/sunken border helpers */
+.raised {
+  border: var(--b-raise);
+  border-color: var(--b-raise-color);
+}
+.sunken {
+  border: var(--b-sink);
+  border-color: var(--b-sink-color);
+}
+
+/* Utility */
+.hidden { display: none !important; }
+.flex { display: flex; }
+.col { flex-direction: column; }
+.gap4 { gap: 4px; }
+.gap8 { gap: 8px; }

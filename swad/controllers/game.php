@@ -98,11 +98,25 @@ class Game
         return (bool)$stmt->fetchColumn();
     }
 
+    // Тонкая обёртка над getReviewsArray(): один источник правды по SQL.
+    // 22.01.2026 (c) Alexander Livanov / рефакторинг 14.08.2026
     public function getReviews($game_id)
     {
-        // 22.01.2026 (c) Alexander Livanov
+        echo json_encode(
+            ['success' => true, 'reviews' => $this->getReviewsArray($game_id)],
+            JSON_UNESCAPED_UNICODE
+        );
+    }
+
+    /**
+     * Единственное место, где формируется отзыв для выдачи.
+     * ВАЖНО: ответ студии (developer_reply) обязан приезжать отсюда —
+     * фронт (game.php, assetstore/asset.php) рисует блок по этому полю.
+     */
+    public function getReviewsArray($game_id)
+    {
         $sql = "
-                SELECT
+            SELECT
                 r.id,
                 r.user_id,
                 r.game_id,
@@ -111,41 +125,23 @@ class Game
                 r.created_at,
                 u.username,
                 u.profile_picture,
-
-                rr.text AS developer_reply,
+                rr.text       AS developer_reply,
                 rr.created_at AS developer_reply_created_at
-
-                FROM game_reviews r
-                LEFT JOIN users u ON u.id = r.user_id
-
-                -- подтягиваем игру, чтобы понять студию (developer)
-                JOIN games g ON g.id = r.game_id
-
-                LEFT JOIN review_replies rr 
-                ON rr.review_id = r.id 
-                AND rr.studio_id = g.developer
-
-                WHERE r.game_id = ?
-                ORDER BY r.created_at DESC
-                ";
+            FROM game_reviews r
+            LEFT JOIN users u ON u.id = r.user_id
+            -- LEFT, а не JOIN: битая ссылка на игру не должна прятать отзыв
+            LEFT JOIN games g ON g.id = r.game_id
+            -- на пару (review_id, studio_id) стоит уникальный ключ
+            -- (см. ON DUPLICATE KEY в devs/replies.php), строки не дублируются
+            LEFT JOIN review_replies rr
+                   ON rr.review_id = r.id
+                  AND rr.studio_id = g.developer
+            WHERE r.game_id = ?
+            ORDER BY r.created_at DESC
+        ";
         $stmt = $this->db->connect()->prepare($sql);
         $stmt->execute([$game_id]);
-        $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode(['success' => true, 'reviews' => $reviews]);
-    }
-
-    public function getReviewsArray($game_id)
-    {
-        $db = new Database();
-        $pdo = $db->connect();
-        $stmt = $pdo->prepare("SELECT r.*, u.username, u.profile_picture 
-                           FROM game_reviews r 
-                           LEFT JOIN users u ON r.user_id = u.id 
-                           WHERE r.game_id = ? 
-                           ORDER BY r.created_at DESC");
-        $stmt->execute([$game_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     public function userHasReview($gameId, $userId)

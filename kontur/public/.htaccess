@@ -1,0 +1,40 @@
+# ============================================================
+# .htaccess — правила Apache для К.О.Н.Т.У.Р.
+# ============================================================
+
+# Включаем движок перезаписи URL
+RewriteEngine On
+
+# ── Маршрутизация API ────────────────────────────────────
+# Все запросы к /api/... уходят в единую точку api/index.php.
+# Реальный файл лежит ВЫШЕ docroot, поэтому используем ../
+# ВАЖНО: так работает, только если api/ доступен Apache.
+# Проще: настроить Alias в конфиге Apache (см. README).
+#
+# Если api/ лежит внутри public/ (упрощённый вариант),
+# раскомментируйте строку ниже и закомментируйте Alias-подход:
+# RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# ── SPA-подобный fallback ────────────────────────────────
+# Существующие файлы отдаём как есть
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Всё остальное (не /api) — на index.html
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteRule ^ index.html [L]
+
+# ── Безопасность ─────────────────────────────────────────
+# Запрещаем листинг директорий
+Options -Indexes
+
+# Заголовки безопасности
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# UTF-8 по умолчанию
+AddDefaultCharset UTF-8

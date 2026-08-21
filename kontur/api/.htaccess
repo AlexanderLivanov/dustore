@@ -1,0 +1,8 @@
+RewriteEngine On
+RewriteBase /api
+# index.php отдаём напрямую
+RewriteRule ^index\.php$ - [L]
+# всё остальное — на фронт-контроллер
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]

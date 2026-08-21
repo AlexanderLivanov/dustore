@@ -1,0 +1,320 @@
+/* ============================================================
+   UI.CSS — сайдбар, панели, карточки, формы
+   ============================================================ */
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 190px;
+  min-width: 190px;
+  background: var(--c-bg);
+  border-right: 2px solid #808080;
+  padding: 7px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.sg-hdr {
+  font-size: 10px;
+  font-weight: bold;
+  background: var(--c-navy);
+  color: #fff;
+  padding: 2px 7px;
+  margin-bottom: 2px;
+  letter-spacing: .4px;
+}
+
+.si {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  cursor: pointer;
+  font-size: 11px;
+  border: 1px solid transparent;
+}
+.si:hover { background: var(--c-navy); color: #fff; }
+.si.sel { background: var(--c-navy); color: #fff; border: 1px dotted #aac; }
+.si .bul { font-size: 8px; opacity: .6; }
+.si.sel .bul { opacity: 1; color: #ccc; }
+
+.addbtn {
+  margin: 3px 4px 0;
+  padding: 2px 8px;
+  background: var(--c-bg);
+  border: 1px solid;
+  border-color: #fff #404040 #404040 #fff;
+  font-size: 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: left;
+}
+.addbtn:active { border-color: #404040 #fff #fff #404040; }
+.addbtn:hover { background: var(--c-bg-light); }
+
+/* ── CONTENT AREA ── */
+.wcontent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  background: var(--c-bg);
+}
+
+/* ── PANELS ── */
+.panel { display: none; flex-direction: column; gap: 11px; }
+.panel.active { display: flex; }
+
+/* ── PANEL HEADER ── */
+.chdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 2px solid;
+  border-color: #808080 #fff #fff #808080;
+  padding-bottom: 8px;
+}
+.ctitle { font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+.csub { font-size: 10px; color: var(--c-text-dim); margin-top: 2px; letter-spacing: .4px; }
+.stamp {
+  background: var(--c-red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 3px 7px;
+  border: 2px solid #600000;
+  letter-spacing: 2px;
+  transform: rotate(-4deg);
+  display: inline-block;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* ── ORG INFO BOX ── */
+.orgbox {
+  background: var(--c-bg-light);
+  border: var(--b-sink);
+  border-color: var(--b-sink-color);
+  padding: 11px 13px;
+  line-height: 1.7;
+  font-size: 11px;
+}
+.orgbox p + p { margin-top: 7px; }
+.orgbox b { color: var(--c-navy); }
+
+/* ── INFO GRID ── */
+.igrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.icard {
+  background: var(--c-bg-light);
+  border: var(--b-sink);
+  border-color: var(--b-sink-color);
+  padding: 7px 9px;
+}
+.icard-t {
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--c-navy);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 4px;
+}
+.icard-v { font-size: 11px; line-height: 1.4; }
+
+/* ── SECTION LABEL ── */
+.slabel {
+  font-size: 11px;
+  font-weight: bold;
+  background: #808080;
+  color: #fff;
+  padding: 2px 7px;
+  letter-spacing: .4px;
+  margin-bottom: 2px;
+}
+
+/* ── ARTICLE ROW ── */
+.arow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border-bottom: 1px dotted #808080;
+  font-size: 11px;
+  cursor: pointer;
+}
+.arow:hover { background: var(--c-bg-light); }
+.arow-title {
+  flex: 1;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── TAGS ── */
+.atag {
+  font-size: 9px;
+  padding: 1px 5px;
+  background: var(--c-navy);
+  color: #fff;
+  font-weight: bold;
+  flex-shrink: 0;
+  letter-spacing: .4px;
+}
+.atag.obj { background: var(--c-red); }
+.atag.sus { background: var(--c-purple); }
+.atag.exp { background: var(--c-orange); }
+.atag.fan { background: var(--c-green); }
+.atag.his { background: #404040; }
+
+.adate {
+  font-size: 9px;
+  color: #505050;
+  margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── STAR RATING ── */
+.stars { display: flex; gap: 1px; flex-shrink: 0; }
+.star {
+  color: #808080;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.star.lit { color: var(--c-orange); }
+.star:hover { color: #c06000; }
+.avgr {
+  font-size: 10px;
+  color: var(--c-orange);
+  font-weight: bold;
+  min-width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── ENTITY CARDS ── */
+.ent-card {
+  background: var(--c-bg-light);
+  border: var(--b-sink);
+  border-color: var(--b-sink-color);
+  padding: 8px 11px;
+}
+.ent-name { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+.ent-desc { font-size: 11px; line-height: 1.5; color: #202020; }
+.ent-tag {
+  display: inline-block;
+  font-size: 9px;
+  padding: 1px 5px;
+  background: var(--c-purple);
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+/* ── FAN SECTION ── */
+.fansec {
+  background: var(--c-bg-light);
+  border: var(--b-sink);
+  border-color: var(--b-sink-color);
+  padding: 9px 11px;
+}
+.fan-t { font-size: 11px; font-weight: bold; margin-bottom: 7px; color: #004000; }
+.fan-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.fchip {
+  padding: 3px 11px;
+  border: 1px solid;
+  border-color: #fff #808080 #808080 #fff;
+  background: var(--c-bg);
+  font-size: 11px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.fchip:hover { background: var(--c-green); color: #fff; }
+.fchip:active { border-color: #808080 #fff #fff #808080; }
+
+/* ── SUBMIT CTA ── */
+.submit-cta {
+  background: var(--c-bg-light);
+  border: var(--b-sink);
+  border-color: var(--b-sink-color);
+  padding: 8px 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ── BUTTONS ── */
+.bigbtn {
+  padding: 4px 14px;
+  background: var(--c-bg);
+  border: var(--b-raise);
+  border-color: var(--b-raise-color);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.bigbtn:active { border-color: #808080 #fff #fff #808080; }
+.bigbtn:hover { background: var(--c-bg-light); }
+.bigbtn.blue {
+  background: var(--c-navy);
+  color: #fff;
+  border-color: #4040c0 #000030 #000030 #4040c0;
+}
+.bigbtn.blue:hover { background: #0000a0; }
+
+/* ── MODERATION ── */
+.mod-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border-bottom: 1px dotted #808080;
+  font-size: 11px;
+}
+.mod-btn {
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: var(--font);
+  cursor: pointer;
+  border: 1px solid;
+  border-color: #fff #404040 #404040 #fff;
+  background: var(--c-bg);
+  white-space: nowrap;
+}
+.mod-btn:active { border-color: #404040 #fff #fff #808080; }
+.mod-btn.ap { background: var(--c-green); color: #fff; border-color: #008000 #004000 #004000 #008000; }
+.mod-btn.rj { background: var(--c-red); color: #fff; border-color: #c00000 #400000 #400000 #c00000; }
+.mod-btn.ar { background: var(--c-orange); color: #fff; }
+
+/* ── BG SETTINGS ── */
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.bgswatch {
+  height: 36px;
+  border: 2px solid;
+  border-color: #fff #808080 #808080 #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #fff;
+  text-shadow: 0 0 3px #000;
+  font-weight: bold;
+  letter-spacing: .3px;
+}
+.bgswatch.sel { border-color: #ffff00 #808000 #808000 #ffff00; outline: 1px solid #ffff00; }
+.bgswatch:hover { filter: brightness(1.2); }
