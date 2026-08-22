@@ -450,21 +450,16 @@ mobile_redirect_if_needed();
             let slideCount = slides.length;
             let autoSlideInterval;
 
-            // Функция для переключения слайдов
             function goToSlide(index) {
                 if (index < 0) index = slideCount - 1;
                 if (index >= slideCount) index = 0;
-
                 sliderTrack.style.transform = `translateX(-${index * 100}%)`;
                 currentIndex = index;
-
-                // Обновление активной точки
                 dots.forEach((dot, i) => {
                     dot.classList.toggle('active', i === index);
                 });
             }
 
-            // Переключение по точкам
             dots.forEach((dot, index) => {
                 dot.addEventListener('click', () => {
                     goToSlide(index);
@@ -472,7 +467,6 @@ mobile_redirect_if_needed();
                 });
             });
 
-            // Кнопки навигации
             prevBtn.addEventListener('click', () => {
                 goToSlide(currentIndex - 1);
                 resetAutoSlide();
@@ -483,11 +477,10 @@ mobile_redirect_if_needed();
                 resetAutoSlide();
             });
 
-            // Автоматическое переключение слайдов
             function startAutoSlide() {
                 autoSlideInterval = setInterval(() => {
                     goToSlide(currentIndex + 1);
-                }, 5000); // Меняем слайд каждые 5 секунд
+                }, 5000);
             }
 
             function resetAutoSlide() {
@@ -495,10 +488,8 @@ mobile_redirect_if_needed();
                 startAutoSlide();
             }
 
-            // Запуск автоматического слайдера
             startAutoSlide();
 
-            // Остановка автоматического переключения при наведении
             sliderTrack.addEventListener('mouseenter', () => {
                 clearInterval(autoSlideInterval);
             });
@@ -510,23 +501,18 @@ mobile_redirect_if_needed();
 
         // Анимация для карточек платформы
         document.addEventListener('DOMContentLoaded', function() {
-            // Анимация при прокрутке
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('animate');
                     }
                 });
-            }, {
-                threshold: 0.1
-            });
+            }, { threshold: 0.1 });
 
-            // Наблюдаем за карточками платформы
             document.querySelectorAll('.platform-card').forEach(card => {
                 observer.observe(card);
             });
 
-            // Наблюдаем за шагами
             document.querySelectorAll('.step').forEach(step => {
                 observer.observe(step);
             });
@@ -534,19 +520,13 @@ mobile_redirect_if_needed();
     </script>
     <script>
         if ('serviceWorker' in navigator) {
-            // регистрация сервис-воркера 
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
                     reg.onupdatefound = () => {
                         const installingWorker = reg.installing;
-
                         installingWorker.onstatechange = () => {
                             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // Новая версия сервис-воркера доступна
                                 console.log('New service worker version available.');
-
-                                // Опционально: показать уведомление пользователю
-                                showUpdateNotification();
                             }
                         };
                     };
@@ -557,21 +537,13 @@ mobile_redirect_if_needed();
         (function() {
             const hero = document.querySelector('.hero');
             if (!hero) return;
-
-            // Максимальное смещение в пикселях (вправо)
             const MAX_OFFSET = 300;
-
             function updateHeroBgOffset() {
                 const scrollY = window.scrollY;
-                // Рассчитываем смещение: чем больше скролл, тем больше offset (но не больше MAX_OFFSET)
                 let offset = Math.min(scrollY * 0.5, MAX_OFFSET);
                 hero.style.setProperty('--hero-bg-offset', offset + 'px');
             }
-
-            // Запускаем при загрузке
             updateHeroBgOffset();
-
-            // Оптимизированный обработчик скролла с requestAnimationFrame
             let ticking = false;
             window.addEventListener('scroll', () => {
                 if (!ticking) {
@@ -598,25 +570,20 @@ mobile_redirect_if_needed();
 
         function updateBackgroundPosition() {
             if (!isMoonlight) return;
-
             currentX += (targetX - currentX) * 0.1;
             currentY += (targetY - currentY) * 0.1;
-
             const posX = 50 + currentX;
-            const posY = 35 + currentY;   // 35% — твой сдвиг вверх
+            const posY = 35 + currentY;
             document.body.style.backgroundPosition = `${posX}% ${posY}%`;
-
             animationFrame = requestAnimationFrame(updateBackgroundPosition);
         }
 
         function onMouseMove(e) {
             if (!isMoonlight) return;
-
             const wx = window.innerWidth;
             const wy = window.innerHeight;
             const nx = (e.clientX / wx - 0.5) * 2;
             const ny = (e.clientY / wy - 0.5) * 2;
-
             targetX = nx * MAX_OFFSET_X;
             targetY = ny * MAX_OFFSET_Y;
         }
@@ -651,17 +618,13 @@ mobile_redirect_if_needed();
         const rect = btn.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
         const nx = (x / rect.width) * 2 - 1;
         const ny = (y / rect.height) * 2 - 1;
-
-        const maxAngle = 15;          // максимальный угол наклона
+        const maxAngle = 15;
         const rotateY = maxAngle * nx;
         const rotateX = -maxAngle * ny;
-
-        const translateY = -3;        // подъём вверх при наведении
-        const scale = 1.1;           // небольшое увеличение
-
+        const translateY = -3;
+        const scale = 1.1;
         btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
     }
 
@@ -728,28 +691,22 @@ mobile_redirect_if_needed();
     const banner = document.getElementById('vote-banner');
     if (!banner) return;
 
-    // ── состояние ──
     let isDragging = false;
     let startX = 0, startY = 0;
     let startLeft = 0, startTop = 0;
     let currentLeft = 0, currentTop = 0;
     let hasSavedPosition = false;
-    let isCollapsed = false;
 
     const STORAGE_KEY = 'dustore_vote_banner_position';
     const EDGE_OFFSET = 20;
     const DRAG_THRESHOLD = 5;
 
-    // ── определяем высоту хедера ──
     function getHeaderHeight() {
         const header = document.querySelector('.header');
-        if (header) {
-            return header.offsetHeight + 10; // +10px дополнительный отступ
-        }
-        return 80; // запасное значение
+        if (header) return header.offsetHeight + 10;
+        return 80;
     }
 
-    // ── загружаем сохранённую позицию ──
     function loadPosition() {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -766,7 +723,6 @@ mobile_redirect_if_needed();
         return false;
     }
 
-    // ── применяем позицию к баннеру ──
     function applyPosition(left, top, animate = true) {
         if (!animate) banner.style.transition = 'none';
         else banner.style.transition = 'left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
@@ -782,11 +738,9 @@ mobile_redirect_if_needed();
         currentTop = top;
     }
 
-    // ── инициализация позиции ──
     function initPosition() {
         const headerHeight = getHeaderHeight();
         if (loadPosition()) {
-            // Проверяем, не перекрывает ли баннер хедер (особенно если верхняя позиция)
             if (currentTop < headerHeight + EDGE_OFFSET) {
                 currentTop = headerHeight + EDGE_OFFSET;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: currentLeft, top: currentTop }));
@@ -794,8 +748,6 @@ mobile_redirect_if_needed();
             applyPosition(currentLeft, currentTop, false);
             return;
         }
-
-        // Позиция по умолчанию: правый верхний угол с учётом хедера
         const rect = banner.getBoundingClientRect();
         const defaultLeft = window.innerWidth - rect.width - EDGE_OFFSET;
         const defaultTop = headerHeight + EDGE_OFFSET;
@@ -805,7 +757,6 @@ mobile_redirect_if_needed();
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: currentLeft, top: currentTop }));
     }
 
-    // ── прилипание к ближайшему углу (с учётом хедера) ──
     function snapToEdge() {
         const rect = banner.getBoundingClientRect();
         const winW = window.innerWidth;
@@ -814,31 +765,18 @@ mobile_redirect_if_needed();
         const bh = rect.height;
         const headerHeight = getHeaderHeight();
 
-        // Центр баннера
         const cx = rect.left + bw / 2;
         const cy = rect.top + bh / 2;
 
         let targetLeft, targetTop;
+        if (cx < winW / 2) targetLeft = EDGE_OFFSET;
+        else targetLeft = winW - bw - EDGE_OFFSET;
 
-        // По горизонтали
-        const leftDist = cx;
-        const rightDist = winW - cx;
-        if (leftDist < rightDist) {
-            targetLeft = EDGE_OFFSET;
-        } else {
-            targetLeft = winW - bw - EDGE_OFFSET;
-        }
-
-        // По вертикали (с учётом хедера сверху)
         const topDist = cy - headerHeight;
         const bottomDist = winH - cy;
-        if (topDist < bottomDist) {
-            targetTop = headerHeight + EDGE_OFFSET;
-        } else {
-            targetTop = winH - bh - EDGE_OFFSET;
-        }
+        if (topDist < bottomDist) targetTop = headerHeight + EDGE_OFFSET;
+        else targetTop = winH - bh - EDGE_OFFSET;
 
-        // Гарантируем, что баннер не вылезет за пределы
         targetLeft = Math.max(EDGE_OFFSET, Math.min(targetLeft, winW - bw - EDGE_OFFSET));
         targetTop = Math.max(headerHeight + EDGE_OFFSET, Math.min(targetTop, winH - bh - EDGE_OFFSET));
 
@@ -846,24 +784,19 @@ mobile_redirect_if_needed();
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: targetLeft, top: targetTop }));
     }
 
-    // ── обработчики перетаскивания ──
     function onPointerDown(e) {
-        // Проверяем, что клик не по кнопке и не по крестику
         const target = e.target.closest('.vote-toggle, .vote-btn, a, button');
         if (target) return;
-
         e.preventDefault();
 
         const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
         const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
-
         const rect = banner.getBoundingClientRect();
         startX = clientX;
         startY = clientY;
         startLeft = rect.left;
         startTop = rect.top;
 
-        let hasMoved = false;
         let isDraggingNow = false;
 
         function onPointerMove(ev) {
@@ -871,50 +804,37 @@ mobile_redirect_if_needed();
             const cy = ev.clientY || ev.touches?.[0]?.clientY || 0;
             const dx = cx - startX;
             const dy = cy - startY;
-
             if (!isDraggingNow && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
                 isDraggingNow = true;
                 banner.style.cursor = 'grabbing';
-                // Если баннер был свёрнут, он остаётся свёрнутым, но мы начинаем перетаскивание
             }
-
             if (isDraggingNow) {
                 ev.preventDefault();
                 let newLeft = startLeft + dx;
                 let newTop = startTop + dy;
                 const headerHeight = getHeaderHeight();
-
-                // Ограничиваем, чтобы не вылезал за экран
                 const maxL = window.innerWidth - banner.offsetWidth - EDGE_OFFSET;
                 const maxT = window.innerHeight - banner.offsetHeight - EDGE_OFFSET;
                 newLeft = Math.max(EDGE_OFFSET, Math.min(newLeft, maxL));
                 newTop = Math.max(headerHeight + EDGE_OFFSET, Math.min(newTop, maxT));
-
                 applyPosition(newLeft, newTop, false);
-                hasMoved = true;
             }
         }
 
-        function onPointerUp(ev) {
+        function onPointerUp() {
             document.removeEventListener('mousemove', onPointerMove);
             document.removeEventListener('mouseup', onPointerUp);
             document.removeEventListener('touchmove', onPointerMove);
             document.removeEventListener('touchend', onPointerUp);
-
             if (isDraggingNow) {
                 banner.style.cursor = '';
-                // Если было перетаскивание – прилипаем
                 snapToEdge();
-                // Не разворачиваем, даже если был свёрнут
             } else {
-                // Это был клик без перетаскивания – обрабатываем разворачивание/сворачивание
                 const isCollapsed = banner.dataset.collapsed === 'true';
                 if (isCollapsed) {
-                    // Разворачиваем
                     banner.classList.remove('collapsed');
                     banner.dataset.collapsed = 'false';
                     localStorage.setItem('dustore_vote_banner_collapsed', 'false');
-                    // После разворачивания позиция не меняется
                 }
             }
             isDraggingNow = false;
@@ -926,20 +846,14 @@ mobile_redirect_if_needed();
         document.addEventListener('touchend', onPointerUp);
     }
 
-    // ── установка курсора при наведении ──
     function updateCursor() {
         const isCollapsed = banner.dataset.collapsed === 'true';
         banner.style.cursor = isCollapsed ? 'pointer' : 'grab';
     }
 
-    // ── наблюдаем за изменением состояния свёрнутости ──
-    const observer = new MutationObserver(() => {
-        updateCursor();
-    });
+    const observer = new MutationObserver(() => { updateCursor(); });
     observer.observe(banner, { attributes: true, attributeFilter: ['data-collapsed'] });
 
-    // ── инициализация ──
-    // Загружаем состояние свёрнутости (если было сохранено)
     const collapsedState = localStorage.getItem('dustore_vote_banner_collapsed') === 'true';
     if (collapsedState) {
         banner.classList.add('collapsed');
@@ -951,11 +865,9 @@ mobile_redirect_if_needed();
     initPosition();
     updateCursor();
 
-    // Обработчик начала перетаскивания
     banner.addEventListener('mousedown', onPointerDown);
     banner.addEventListener('touchstart', onPointerDown, { passive: false });
 
-    // При изменении размера окна — проверяем, не вышел ли баннер за границы
     let resizeTimer;
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
@@ -963,18 +875,11 @@ mobile_redirect_if_needed();
             const rect = banner.getBoundingClientRect();
             const winW = window.innerWidth;
             const winH = window.innerHeight;
-            let needSnap = false;
             if (rect.left < 0 || rect.top < 0 || rect.right > winW || rect.bottom > winH) {
-                needSnap = true;
-            }
-            if (needSnap) {
                 setTimeout(snapToEdge, 100);
             }
         }, 300);
     });
-
-    // ── также обновляем при скролле, если хедер меняет высоту ──
-    // Но обычно хедер фиксированной высоты, поэтому не обязательно.
 })();
 </script>
 
@@ -990,14 +895,24 @@ mobile_redirect_if_needed();
     </div>
 </div>
 
+<div id="telegram-banner" class="telegram-banner" data-collapsed="false">
+    <div class="tg-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-telegram"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" /></svg></div>
+    <div class="tg-content">
+        <div class="tg-text">
+            Наш <a href="https://t.me/dustore_official" target="_blank">Telegram</a>
+        </div>
+        <button class="tg-toggle" aria-label="Свернуть">✕</button>
+    </div>
+</div>
+
 <script>
-/// Приветственное окошко Дасти на главной + сдвиг vote-banner через top
+/// Приветственное окошко Дасти на главной + сдвиг vote-banner
 (function() {
     if (window.location.pathname !== '/') return;
 
     const popup = document.getElementById('dusty-greeting');
-    const banner = document.getElementById('vote-banner');
-    if (!popup || !banner) {
+    const voteBanner = document.getElementById('vote-banner');
+    if (!popup || !voteBanner) {
         console.warn('Окошко или баннер не найдены');
         return;
     }
@@ -1008,59 +923,39 @@ mobile_redirect_if_needed();
         return;
     }
 
-    // Получаем текущее значение top (число в пикселях)
-    function getCurrentTop() {
-        const styleTop = banner.style.top;
+    function getCurrentTop(el) {
+        const styleTop = el.style.top;
         if (styleTop && styleTop !== 'auto' && styleTop !== '') {
             return parseFloat(styleTop);
         }
-        return banner.getBoundingClientRect().top;
+        return el.getBoundingClientRect().top;
     }
 
-    // Проверяем, находится ли баннер в правом верхнем углу
-    // (более мягкое условие: он должен быть в правой половине и верхней половине экрана)
-    function isBannerInTopRight() {
-        const rect = banner.getBoundingClientRect();
+    function isInTopRight(el) {
+        const rect = el.getBoundingClientRect();
         const winW = window.innerWidth;
-        const winH = window.innerHeight;
-        // Баннер должен находиться в правой половине (центр правее 60% ширины)
         const isRight = rect.left + rect.width/2 > winW * 0.55;
-        // Баннер должен находиться в верхней половине (центр выше 40% высоты)
-        const isTop = rect.top + rect.height/2 < winH * 0.4;
-        console.log('Проверка позиции баннера:', { isRight, isTop, rectTop: rect.top });
+        const isTop = rect.top + rect.height/2 < window.innerHeight * 0.4;
         return isRight && isTop;
     }
 
-    let originalTop = null;
+    let originalTopVote = null;
 
-    // Сдвиг баннера вниз на 200px
-    function shiftBannerDown() {
-        if (!isBannerInTopRight()) {
-            console.log('Баннер не в правом верхнем углу, сдвиг не выполняется');
-            return;
-        }
-
-        originalTop = getCurrentTop();
-        if (originalTop === null || isNaN(originalTop)) {
-            console.warn('Не удалось определить текущий top баннера');
-            return;
-        }
-
-        banner.style.transition = 'top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        banner.style.top = (originalTop + 170) + 'px';
-        console.log(`Баннер сдвинут вниз на 200px (top: ${originalTop} → ${originalTop + 200}px)`);
+    function shiftVoteDown() {
+        if (!isInTopRight(voteBanner)) return;
+        const currentTop = getCurrentTop(voteBanner);
+        if (currentTop === null || isNaN(currentTop)) return;
+        originalTopVote = currentTop;
+        voteBanner.style.transition = 'top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        voteBanner.style.top = (currentTop + 170) + 'px';
     }
 
-    // Возврат баннера на место
-    function shiftBannerUp() {
-        if (originalTop === null) return;
-        banner.style.transition = 'top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        banner.style.top = originalTop + 'px';
-        console.log(`Баннер возвращён (top: ${originalTop}px)`);
-        setTimeout(() => {
-            banner.style.transition = '';
-        }, 450);
-        originalTop = null;
+    function shiftVoteUp() {
+        if (originalTopVote === null) return;
+        voteBanner.style.transition = 'top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        voteBanner.style.top = originalTopVote + 'px';
+        setTimeout(() => { voteBanner.style.transition = ''; }, 450);
+        originalTopVote = null;
     }
 
     function showPopup() {
@@ -1068,7 +963,7 @@ mobile_redirect_if_needed();
         void popup.offsetWidth;
         popup.classList.add('show');
 
-        shiftBannerDown();
+        shiftVoteDown();
 
         const autoCloseTimer = setTimeout(() => {
             closePopup();
@@ -1085,7 +980,7 @@ mobile_redirect_if_needed();
 
         function closePopup() {
             popup.classList.remove('show');
-            shiftBannerUp();
+            shiftVoteUp();
             setTimeout(() => {
                 popup.style.display = 'none';
             }, 450);
@@ -1098,6 +993,61 @@ mobile_redirect_if_needed();
     setTimeout(showPopup, 500);
 })();
 </script>
+
+// Telegram-баннер (простой, в правом нижнем углу, сворачивание)
+<script>
+(function() {
+    const banner = document.getElementById('telegram-banner');
+    if (!banner) return;
+
+    const STORAGE_KEY_COLL = 'dustore_tg_banner_collapsed';
+    const toggleBtn = banner.querySelector('.tg-toggle');
+
+    // Восстановление состояния свёрнутости
+    const savedCollapsed = localStorage.getItem(STORAGE_KEY_COLL) === 'true';
+    if (savedCollapsed) {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+    } else {
+        banner.classList.remove('collapsed');
+        banner.dataset.collapsed = 'false';
+    }
+
+    // Обработчик сворачивания/разворачивания
+    function toggleBanner(e) {
+        e.stopPropagation();
+        const isCollapsed = banner.dataset.collapsed === 'true';
+        if (isCollapsed) {
+            banner.classList.remove('collapsed');
+            banner.dataset.collapsed = 'false';
+            localStorage.setItem(STORAGE_KEY_COLL, 'false');
+        } else {
+            banner.classList.add('collapsed');
+            banner.dataset.collapsed = 'true';
+            localStorage.setItem(STORAGE_KEY_COLL, 'true');
+        }
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleBanner);
+    }
+
+    // Клик по самому баннеру (кроме крестика) — если свёрнут, разворачиваем
+    banner.addEventListener('click', function(e) {
+        if (e.target.closest('.tg-toggle')) return;
+        const isCollapsed = banner.dataset.collapsed === 'true';
+        if (isCollapsed) {
+            banner.classList.remove('collapsed');
+            banner.dataset.collapsed = 'false';
+            localStorage.setItem(STORAGE_KEY_COLL, 'false');
+        }
+    });
+
+    // Анимация разворачивания справа налево: задаём transform-origin
+    banner.style.transformOrigin = 'right center';
+})();
+</script>
+
 </body>
 
 </html>

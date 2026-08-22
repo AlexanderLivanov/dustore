@@ -925,6 +925,115 @@ body.moonlight-theme .dusty-greeting .greeting-close:hover {
     }
 }
 
+/* ── Telegram-баннер (всегда в правом нижнем углу) ── */
+.telegram-banner {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-radius 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                padding 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.3s ease,
+                border-color 0.3s ease;
+    transform-origin: right center;
+    min-width: 48px;
+    min-height: 48px;
+    max-width: 240px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.telegram-banner .tg-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.telegram-banner .tg-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 1;
+    transition: opacity 0.2s ease, width 0.3s ease;
+    overflow: hidden;
+    width: auto;
+}
+.telegram-banner .tg-text {
+    font-size: 14px;
+    color: #fff;
+    line-height: 1.4;
+}
+.telegram-banner .tg-text a {
+    color: #2aabee;
+    text-decoration: none;
+    font-weight: 600;
+}
+.telegram-banner .tg-text a:hover {
+    text-decoration: underline;
+}
+.telegram-banner .tg-toggle {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.2s;
+    flex-shrink: 0;
+}
+.telegram-banner .tg-toggle:hover {
+    color: #fff;
+}
+
+/* Свёрнутое состояние */
+.telegram-banner.collapsed {
+    width: 48px !important;
+    height: 48px !important;
+    padding: 8px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.65);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+.telegram-banner.collapsed .tg-content {
+    width: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none;
+    margin: 0;
+}
+.telegram-banner.collapsed .tg-icon {
+    margin: 0 auto;
+}
+.telegram-banner.collapsed .tg-toggle {
+    display: none;
+}
+
+/* Moonlight-тема */
+body.moonlight-theme .telegram-banner {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(16px);
+}
+body.moonlight-theme .telegram-banner .tg-text a {
+    color: #6ab0f7;
+}
+body.moonlight-theme .telegram-banner.collapsed {
+    background: rgba(0, 0, 0, 0.7);
+}
+
 /* ══════════════════════════════════════
    АДАПТИВНОСТЬ
    ══════════════════════════════════════ */
