@@ -121,6 +121,11 @@ p {
     border: 2px solid var(--primary);
 }
 
+.btn-tg {
+    background: #0088CC;
+    /* border: 2px solid var(--primary); */
+}
+
 /* Тёмная тема — когда класс на body */
 body.moonlight-theme .btn,
 body.moonlight-theme .btn-secondary {
@@ -139,6 +144,10 @@ body.moonlight-theme .btn-secondary {
 
 .btn-secondary:hover {
     background: rgba(195, 33, 120, 0.1);
+}
+
+.btn-tg:hover {
+    background: rgba(2, 75, 104, 0.9);
 }
 
 /* Если хочешь другой ховер для тёмной темы — добавь: */

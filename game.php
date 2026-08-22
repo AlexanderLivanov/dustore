@@ -28,11 +28,38 @@ $isPreview    = $previewToken !== '' && !empty($game['preview_token'])
              && hash_equals((string)$game['preview_token'], $previewToken)
              && !empty($game['preview_expires']) && strtotime($game['preview_expires']) > time();
 
-$publiclyVisible = $isPublished && !$isHidden;
+date_default_timezone_set('Europe/Moscow');
+
+/* Джем: игра прикреплена к спринту → открыта на время голосования, даже если status='draft'. */
+$jamInfo = null;
+$isJamVisible = false;
+
+$jq = $pdo->prepare("
+    SELECT s.id, s.title, s.voting_start, s.voting_end, s.status AS sprint_status
+    FROM games g
+    JOIN sprints s ON s.id = g.sprint_id
+    WHERE g.id = ?
+    LIMIT 1");
+$jq->execute([$game_id]);
+$jamInfo = $jq->fetch(PDO::FETCH_ASSOC) ?: null;
+
+if ($jamInfo) {
+    $modOk = strtolower((string)($game['moderation_status'] ?? '')) === 'approved';
+    $vs    = $jamInfo['voting_start'] ? strtotime($jamInfo['voting_start']) : null;
+    $ve    = $jamInfo['voting_end']   ? strtotime($jamInfo['voting_end'])   : null;
+    $nowTs = time();
+    $windowOpen = (!$vs || $vs <= $nowTs) && (!$ve || $nowTs <= $ve);
+    $isJamVisible = $modOk && $windowOpen;
+}
+
+$storeVisible    = $isPublished && !$isHidden;
+$publiclyVisible = $storeVisible || $isJamVisible;
 
 // Не публична → пускаем только владельца/админа или по валидной превью-ссылке.
 if (!$publiclyVisible && !$isOwnerView && !$isPreview) { header('Location: /explore'); exit(); }
-$isPreviewMode = !$publiclyVisible;   // показать плашку «предпросмотр»
+
+// Плашку «предпросмотр» показываем только если игра открыта не по джем-правилу.
+$isPreviewMode = !$storeVisible && !$isJamVisible;
 
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM library WHERE game_id = ?");
 $stmt->execute([$game_id]);
@@ -82,11 +109,7 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 
 $ratingData = $gameController->getAverageRating($game_id);
 
-/* Джем-участие + пики экспертов */
-$jamInfo = null; $expertPicks = [];
-$spq = $pdo->prepare("SELECT s.id, s.title FROM games g JOIN sprints s ON s.id = g.sprint_id WHERE g.id = ?");
-$spq->execute([$game_id]);
-$jamInfo = $spq->fetch(PDO::FETCH_ASSOC) ?: null;
+$expertPicks = [];
 if ($jamInfo) {
     try {
         $ep = $pdo->prepare("
@@ -183,8 +206,8 @@ $isPaid = ($game['price'] ?? 0) > 0;
         @media(max-width:540px){.gp-header{flex-direction:column;align-items:flex-start;padding-top:16px;}
             .gp-cover{width:90px;height:90px;}}
         /* ── MAIN ── */
-        .gp-main{grid-area:main;min-width:0;}
-        .review-foot{display:flex;gap:8px;margin-top:12px;}
+        .gp-main{grid-area:main;min-width:0;position:relative;z-index:0;isolation:isolate;}
+                .review-foot{display:flex;gap:8px;margin-top:12px;}
 .rv-btn{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);border-radius:10px;
     padding:5px 12px;font-size:.82rem;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .15s;}
 .rv-btn:hover{color:#fff;border-color:rgba(255,255,255,.25);}
@@ -231,12 +254,13 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .review-author a{line-height:0;}
         .review-rating{font-size:.8rem;color:#fbbf24;margin-top:2px;}
         .review-date{font-size:.75rem;color:var(--muted);flex-shrink:0;}
-        .review-text{font-size:.88rem;color:rgba(255,255,255,.7);line-height:1.6;}
+        .review-text{font-size:.88rem;color:rgba(255,255,255,.7);line-height:1.6;white-space:pre-line;}
         .review-dev-reply{margin-top:10px;padding:10px 14px;background:rgba(116,21,93,.12);
             border-left:3px solid var(--primary-d);border-radius:0 8px 8px 0;
-            font-size:.84rem;color:rgba(255,255,255,.65);line-height:1.55;}
+            font-size:.84rem;color:rgba(255,255,255,.65);line-height:1.55;white-space:pre-line;}
         .review-dev-badge{font-size:.75rem;font-weight:700;color:#e88fc0;
-            display:flex;align-items:center;gap:4px;margin-bottom:5px;}
+            display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;}
+        .review-dev-meta{font-weight:500;color:var(--muted);}
         .review-form{background:var(--surface);border:1px solid var(--border);
             border-radius:var(--radius);padding:20px;margin-top:20px;}
         .review-form h3{margin:0 0 14px;font-size:1rem;color:#fff;}
@@ -246,9 +270,17 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .review-form textarea:focus{outline:none;border-color:var(--primary);}
         #review-stars span{font-size:22px;color:rgba(255,255,255,.2);cursor:pointer;transition:color .15s;}
         #review-stars span.highlighted,#review-stars span:hover{color:#fbbf24;}
-        /* ── SIDEBAR ── */
-        .gp-side{grid-area:side;}
-        .gp-side-inner{position:sticky;top:20px;display:flex;flex-direction:column;gap:14px;}
+        /* ── JAM NOTE (отзывы ≠ оценка джема) ── */
+        .gp-jam-note{display:flex;gap:12px;align-items:flex-start;background:rgba(251,191,36,.06);
+            border:1px solid rgba(251,191,36,.22);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;}
+        .gp-jam-note-icon{font-size:1.2rem;line-height:1.35;flex-shrink:0;}
+        .gp-jam-note-title{font-size:.88rem;font-weight:700;color:#fbbf24;margin-bottom:4px;}
+        .gp-jam-note-text{font-size:.82rem;color:rgba(255,255,255,.62);line-height:1.6;}
+        .gp-jam-note-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:.82rem;
+            font-weight:700;color:#fbbf24;text-decoration:none;border-bottom:1px solid rgba(251,191,36,.35);}
+        .gp-jam-note-link:hover{color:#fff;border-color:#fff;}
+        /* ── SIDEBAR ── */.gp-side{grid-area:side;position:relative;z-index:5;}
+        .gp-side-inner{position:sticky;top:20px;z-index:5;display:flex;flex-direction:column;gap:14px;}
         @media(max-width:900px){.gp-side-inner{position:static;}}
         .gp-buy-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;}
         .gp-price-tag{font-size:2rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:14px;}
@@ -386,9 +418,11 @@ $isPaid = ($game['price'] ?? 0) > 0;
 
             <!-- ══ HEADER ══ -->
             <div class="gp-header">
-                <img class="gp-cover"
-                    src="<?= !empty($game['path_to_cover']) ? htmlspecialchars($game['path_to_cover']) : '/swad/static/img/hg-icon.jpg' ?>"
-                    alt="<?= htmlspecialchars($game['name']) ?>">
+                <?php
+                $headerArt = $game['icon_url'] ?: ($game['path_to_cover'] ?: '/swad/static/img/hg-icon.jpg');
+                ?>
+                <img class="gp-cover" src="<?= htmlspecialchars($headerArt) ?>"
+                     alt="<?= htmlspecialchars($game['name']) ?>">
                 <div class="gp-title-block">
                     <h1><?= htmlspecialchars($game['name']) ?></h1>
                     <?php if (!empty($stpd['donate_link'])): ?>
@@ -688,6 +722,41 @@ $isPaid = ($game['price'] ?? 0) > 0;
                 <!-- Reviews -->
                 <div class="gp-section">
                     <h2 class="gp-section-title">Отзывы игроков</h2>
+
+                    <?php if ($jamInfo):
+                        $vS      = !empty($jamInfo['voting_start']) ? strtotime($jamInfo['voting_start']) : null;
+                        $vE      = !empty($jamInfo['voting_end'])   ? strtotime($jamInfo['voting_end'])   : null;
+                        $nowTs2  = time();
+                        $vSoon   = $vS && $vS > $nowTs2;
+                        $vClosed = $vE && $nowTs2 > $vE;
+                        $vOpen   = !$vSoon && !$vClosed;
+                    ?>
+                    <div class="gp-jam-note">
+                        <div class="gp-jam-note-icon">🏆</div>
+                        <div>
+                            <div class="gp-jam-note-title">Это отзывы каталога, а не оценка джема</div>
+                            <div class="gp-jam-note-text">
+                                Игра участвует в джеме «<?= htmlspecialchars($jamInfo['title']) ?>».
+                                Отзывы и звёзды ниже — обычная оценка игры в Dustore, на итоги джема они не влияют
+                                и жюри их не учитывает. Работы джема оцениваются баллами на отдельной странице голосования.
+                            </div>
+                            <?php if ($vOpen): ?>
+                                <a class="gp-jam-note-link" href="/jams/vote.php?id=<?= (int)$jamInfo['id'] ?>">
+                                    Оценить игру в рамках джема →
+                                </a>
+                            <?php elseif ($vSoon): ?>
+                                <div class="gp-jam-note-text" style="margin-top:8px;">
+                                    Голосование откроется <?= date('d.m.Y', $vS) ?> в <?= date('H:i', $vS) ?> по МСК.
+                                </div>
+                            <?php else: ?>
+                                <a class="gp-jam-note-link" href="/jams/vote.php?id=<?= (int)$jamInfo['id'] ?>">
+                                    Результаты голосования →
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <div id="reviews-container">
                         <p style="color:var(--muted);font-size:.9rem;">Загрузка отзывов…</p>
                     </div>
@@ -695,6 +764,11 @@ $isPaid = ($game['price'] ?? 0) > 0;
                     <?php if ($userCanReview): ?>
                         <div class="review-form" id="review-form-wrap">
                             <h3>Оставить отзыв</h3>
+                            <?php if ($jamInfo): ?>
+                                <p style="font-size:.78rem;color:var(--muted);margin:-8px 0 12px;">
+                                    Отзыв в каталоге. Баллы джема ставятся на странице голосования.
+                                </p>
+                            <?php endif; ?>
                             <textarea id="review-text" placeholder="Напишите ваш отзыв…"></textarea>
                             <div style="margin:10px 0 14px;display:flex;align-items:center;gap:8px;">
                                 <span style="font-size:.85rem;color:var(--muted);">Оценка:</span>
@@ -748,6 +822,13 @@ $isPaid = ($game['price'] ?? 0) > 0;
         <?php require_once('finv2/payment_modal.php'); ?>
     <?php endif; ?>
 
+    <?php /*
+       ВНИМАНИЕ: этот блок писал jam_plays по факту открытия страницы —
+       из-за него право голоса получали, не скачав билд (601 запись из 743).
+       Удалять его нужно ОДНОВРЕМЕННО с патчем download_game.php,
+       который пишет jam_plays на сервере при выдаче файла.
+       Пока патч не выкачен — блок оставлен как есть.
+    */ ?>
     <?php if (!empty($jamInfo) && !empty($_SESSION['USERDATA']['id'])): ?>
 <script>
 fetch('/swad/controllers/jams/jam_play.php', {
@@ -850,6 +931,15 @@ fetch('/swad/controllers/jams/jam_play.php', {
             syncForm();
         }
 
+        // Ответ студии: приходит из get_reviews.php (таблица review_replies).
+        function replyHTML(r) {
+            if (!r.developer_reply) return '';
+            const by   = r.developer_reply_by ? ' · ' + esc(r.developer_reply_by) : '';
+            const when = r.developer_reply_at ? ' · ' + fmtDate(r.developer_reply_at) : '';
+            return `<div class="review-dev-reply">
+                        <div class="review-dev-badge">✔ Ответ разработчика<span class="review-dev-meta">${by}${when}</span></div>${esc(r.developer_reply)}</div>`;
+        }
+
         function cardHTML(r) {
             const mine = Number(r.user_id) === ME.id;
             if (editingId === r.id) return editorHTML(r);
@@ -879,7 +969,7 @@ fetch('/swad/controllers/jams/jam_play.php', {
                         </div>
                     </div>
                     <div class="review-text">${esc(r.text)}</div>
-                    ${r.developer_reply ? `<div class="review-dev-reply"><div class="review-dev-badge">✔ Ответ разработчика</div>${esc(r.developer_reply)}</div>` : ''}
+                    ${replyHTML(r)}
                     ${votes}
                 </div>`;
         }
@@ -962,7 +1052,7 @@ fetch('/swad/controllers/jams/jam_play.php', {
                     if (!d.success) { alert('Ошибка: ' + (d.error || d.message || '')); return; }
                     const newId = d.review_id ?? d.id;
                     if (!newId) { location.reload(); return; }
-                    REVIEWS.unshift({ id: newId, user_id: ME.id, username: ME.username, profile_picture: ME.avatar, rating: newRating, text, created_at: new Date().toISOString(), developer_reply: null, likes: 0, dislikes: 0, my_vote: 0 });
+                    REVIEWS.unshift({ id: newId, user_id: ME.id, username: ME.username, profile_picture: ME.avatar, rating: newRating, text, created_at: new Date().toISOString(), developer_reply: null, developer_reply_at: null, developer_reply_by: null, likes: 0, dislikes: 0, my_vote: 0 });
                     editingId = null; render();
                 } catch (e) { alert('Сетевая ошибка'); }
             });
