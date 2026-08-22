@@ -813,7 +813,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
             </div><!-- /view-body -->
             <div class="modal-actions">
                 ${actionButton}
-                ${canRate ? `<a href="/jams/rate.php?id=${sprint.id}" class="btn-rate">Оценить</a>` : ''}
+                ${canRate ? `<a href="/jams/vote?id=${sprint.id}" class="btn-rate">Оценить</a>` : ''}
                 <button class="btn-team" onclick="event.stopPropagation();window.location.href='/l4t?jam_id=${sprint.id}&action=create_team';">Команда</button>
                 <button class="btn-team" onclick="event.stopPropagation();window.location.href='/jams/jam1';">Страница джема</button>
                 <button class="btn-share" onclick="event.stopPropagation();shareSprint(${sprint.id})">Поделиться</button>

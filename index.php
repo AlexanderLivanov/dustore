@@ -35,6 +35,9 @@ mobile_redirect_if_needed();
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
                         <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
                         <a href="https://t.me/dustore_devs" target="_blank" class="btn btn-secondary">Чатик для разработчиков</a>
+                        <a href="https://t.me/dustore_official" target="_blank" class="btn btn-tg">
+                            <svg style="vertical-align: middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-telegram"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" /></svg>
+                            Telegram-канал Платформы</a>
                     </div>
                 </div>
             </div>
@@ -68,7 +71,7 @@ mobile_redirect_if_needed();
                             <h2>Совместный аномальный джем с К.О.Н.Т.У.Р</h2>
                             <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 5 по 13 августа.</p>
                             <a href="https://t.me/+T5CajyXvgvpmMjRi" target="_blank" class="btn">Группа для участников джема</a>
-                            <a href="https://dustore.ru/jams" target="_blank" class="btn">Страница джема</a>
+                            <a href="https://dustore.ru/jams/vote" target="_blank" class="btn">Оценить игры</a>
                         </div>
                     </div>
 

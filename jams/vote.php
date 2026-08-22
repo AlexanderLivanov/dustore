@@ -5,7 +5,7 @@
 require_once('../swad/config.php');
 session_start();
 
-if (empty($_SESSION['USERDATA']['id'])) { header('Location: /login'); exit; }
+if (empty($_SESSION['USERDATA']['id'])) { header('Location: /login?backUrl=/jams/vote?id=12'); exit; }
 $userId    = (int)$_SESSION['USERDATA']['id'];
 $sprint_id = (int)($_GET['id'] ?? $_GET['sprint_id'] ?? 0);
 
@@ -90,7 +90,8 @@ $now = time();
 $jamEnd = $sprint['jam_end']      ? strtotime($sprint['jam_end'])      : null;
 $vStart = $sprint['voting_start'] ? strtotime($sprint['voting_start']) : null;
 $vEnd   = $sprint['voting_end']   ? strtotime($sprint['voting_end'])   : null;
-$votingOpen = (!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd);
+// $votingOpen = (!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd);
+$votingOpen = true;
 $canVote = !$isHost && $votingOpen;
 
 // Работы открываются в момент старта голосования.
@@ -280,6 +281,20 @@ require_once('../swad/static/elements/header.php');
         .open-link:hover{color:#fff;}
         .toast{position:fixed;bottom:24px;right:24px;background:#160822;border:1px solid #c32178;border-radius:12px;padding:12px 18px;opacity:0;transition:.2s;z-index:1100;}
         .toast.show{opacity:1;}
+        .search-wrap{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
+        .search-box{position:relative;flex:1;min-width:260px;max-width:520px;}
+        .search-box input{width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);
+            border-radius:12px;color:#e8ddf0;font-family:inherit;font-size:14px;
+            padding:11px 38px 11px 40px;transition:border-color .2s;}
+        .search-box input:focus{outline:none;border-color:rgba(195,33,120,.6);}
+        .search-box input::placeholder{color:rgba(255,255,255,.3);}
+        .search-box input::-webkit-search-cancel-button{display:none;}
+        .search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.5;pointer-events:none;}
+        .search-clear{position:absolute;right:9px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.08);
+            border:none;color:rgba(255,255,255,.6);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;}
+        .search-clear:hover{background:rgba(255,255,255,.16);color:#fff;}
+        .search-count{font-size:12px;color:rgba(255,255,255,.4);white-space:nowrap;}
+        .search-empty{grid-column:1/-1;text-align:center;padding:50px 20px;color:rgba(255,255,255,.4);font-size:14px;}
     </style>
 </head><body>
 
@@ -365,13 +380,20 @@ require_once('../swad/static/elements/header.php');
     </div>
 
 <?php else: ?>
-
+<div class="search-wrap">
+        <div class="search-box">
+            <span class="search-ico">🔍</span>
+            <input type="search" id="game-search" placeholder="Поиск по названию или #ID · нажмите /" autocomplete="off" spellcheck="false">
+            <button type="button" class="search-clear" id="search-clear" style="display:none;" aria-label="Очистить">✕</button>
+        </div>
+        <span class="search-count" id="search-count"></span>
+    </div>
     <div class="games-grid">
         <?php if (empty($gamesLive)): ?>
             <div style="grid-column:1/-1;text-align:center;padding:60px;color:rgba(255,255,255,.4);">Проверенных работ пока нет<?= $gamesPending ? ' — см. раздел «на проверке» ниже' : '' ?></div>
         <?php else: foreach ($gamesLive as $g):
             $gid = (int)$g['id'];
-            $cover = $g['icon_url'] ?: ($g['path_to_cover'] ?: '');
+            $cover = $g['path_to_cover'] ?: ($g['icon_url'] ?: '');
             $my = $g['my_points'] !== null ? (int)$g['my_points'] : null;
         ?>
         <div class="game-card" id="card-<?= $gid ?>" data-points="<?= $my ?? 0 ?>">
@@ -444,15 +466,15 @@ require_once('../swad/static/elements/header.php');
     </div>
 
     <?php if (!empty($gamesPending)): ?>
-    <div style="margin-top:36px;">
+    <div style="margin-top:36px;" id="pending-section">
         <div style="font-size:16px;font-weight:800;margin-bottom:4px;">⏳ На проверке экспертами</div>
         <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:16px;">Эти работы прикреплены к джему, но ещё не прошли модерацию. Голосование за них откроется после одобрения.</div>
         <div class="games-grid">
             <?php foreach ($gamesPending as $g):
                 $gid = (int)$g['id'];
-                $cover = $g['icon_url'] ?: ($g['path_to_cover'] ?: '');
+                $cover = $g['path_to_cover'] ?: ($g['icon_url'] ?: '');
             ?>
-            <div class="game-card" style="opacity:.7;">
+            <div class="game-card" id="pcard-<?= $gid ?>" style="opacity:.7;">
                 <div class="cover">
                     <?php if ($cover): ?><img src="<?= htmlspecialchars($cover) ?>" alt="" style="filter:grayscale(.4);"><?php else: ?><span style="font-size:48px;">🎮</span><?php endif; ?>
                     <span class="vt-badge" style="background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.4);color:#fbbf24;">на проверке</span>
@@ -552,5 +574,72 @@ function unlockVote(gid) {
     const btn = document.getElementById('btn-save-' + gid); if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
     const hint = document.getElementById('hint-' + gid); if (hint) hint.style.display = 'none';
 }
+
+// ── Поиск по играм ────────────────────────────────────────────────────────
+(function () {
+    const input = document.getElementById('game-search');
+    if (!input) return;
+    const clearBtn = document.getElementById('search-clear');
+    const counter  = document.getElementById('search-count');
+
+    // Латиница-двойники → кириллица, чтобы KONTUR и К.О.Н.Т.У.Р были одним словом.
+    const HOMO = {a:'а',b:'в',c:'с',e:'е',h:'н',k:'к',m:'м',o:'о',p:'р',t:'т',x:'х',y:'у'};
+    const norm = s => (s || '').toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/[abcehkmoptxy]/g, ch => HOMO[ch])
+        .replace(/[^0-9a-zа-яё]+/g, '');
+
+    const items = Array.from(document.querySelectorAll('.game-card')).map(card => {
+        const t = card.querySelector('.g-title');
+        const d = card.querySelector('.g-desc');
+        return {
+            card,
+            live: card.id.indexOf('card-') === 0,
+            gid:  (card.id.match(/\d+/) || [''])[0],
+            hay:  norm((t ? t.textContent : '') + ' ' + (d ? d.textContent : ''))
+        };
+    });
+    const liveTotal = items.filter(i => i.live).length;
+
+    const empty = document.createElement('div');
+    empty.className = 'search-empty';
+    empty.innerHTML = 'Ничего не найдено.<br><span style="font-size:12px;opacity:.7;">Точки, пробелы и раскладка не важны — попробуйте часть названия.</span>';
+    empty.style.display = 'none';
+    const firstGrid = document.querySelector('.games-grid');
+    if (firstGrid) firstGrid.appendChild(empty);
+
+    function apply() {
+        const raw  = input.value.trim();
+        const q    = norm(raw);
+        const byId = /^#?\d+$/.test(raw) ? raw.replace('#', '') : null;
+        let shown = 0;
+
+        items.forEach(it => {
+            const hit = !q || (byId ? (it.gid === byId || it.hay.indexOf(q) !== -1) : it.hay.indexOf(q) !== -1);
+            it.card.style.display = hit ? '' : 'none';
+            if (hit && it.live) shown++;
+        });
+
+        empty.style.display    = (q && shown === 0) ? '' : 'none';
+        clearBtn.style.display = raw ? '' : 'none';
+        counter.textContent    = q ? ('найдено: ' + shown + ' из ' + liveTotal)
+                                   : ('работ в голосовании: ' + liveTotal);
+
+        const pending = document.getElementById('pending-section');
+        if (pending) {
+            const any = items.some(i => !i.live && i.card.style.display !== 'none');
+            pending.style.display = any ? '' : 'none';
+        }
+    }
+
+    input.addEventListener('input', apply);
+    clearBtn.addEventListener('click', function () { input.value = ''; apply(); input.focus(); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === '/' && document.activeElement !== input) { e.preventDefault(); input.focus(); }
+        if (e.key === 'Escape' && document.activeElement === input) { input.value = ''; apply(); input.blur(); }
+    });
+
+    apply();
+})();
 </script>
 </body></html>

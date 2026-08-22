@@ -7,6 +7,32 @@ require_once('pass.php');
 
 define('REGISTRATION_ENABLED', true);
 
+/* ─────────────────────── ВРЕМЯ ───────────────────────
+ * Единственный источник правды по часовому поясу.
+ * PHP и MySQL обязаны идти по одним часам: до этого PHP жил на
+ * дефолте из php.ini (UTC), а MySQL — на системном времени сервера,
+ * и колонка users.last_activity писалась то одним, то другим клоком
+ * (activity.php через PHP date(), chat/api.php через SQL NOW()).
+ * Отсюда «онлайн» расходился с «пиком онлайна» на 3 часа.
+ */
+if (!defined('APP_TZ'))            define('APP_TZ', 'Europe/Moscow');
+if (!defined('ONLINE_WINDOW_MIN')) define('ONLINE_WINDOW_MIN', 15);  // что считаем «сейчас онлайн», в минутах
+
+date_default_timezone_set(APP_TZ);
+
+/** Смещение вида +03:00 — для MySQL. Именованные зоны требуют
+ *  загруженных tz-таблиц (на XAMPP их обычно нет), офсет работает всегда. */
+if (!function_exists('app_tz_offset')) {
+    function app_tz_offset(): string
+    {
+        static $o = null;
+        if ($o === null) {
+            $o = (new DateTime('now', new DateTimeZone(APP_TZ)))->format('P');
+        }
+        return $o;
+    }
+}
+
 class Database {
 
     // Important Note: function use_pack() находится в файле secrets.php. Будущие программисты, извините
@@ -63,7 +89,9 @@ class Database {
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+                    // time_zone здесь, а не отдельным exec(): INIT_COMMAND
+                    // выполняется и при переподключении, забыть его нельзя.
+                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4, time_zone = '" . app_tz_offset() . "'"
                 ]
             );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

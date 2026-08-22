@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../swad/config.php';
+require_once(__DIR__ . '/../../swad/controllers/dev_contacts.php');
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -231,6 +232,7 @@ $active_page = 'moderation';
             <div class="mg-hero-info">
                 <div class="mg-title"><?= h($game['name']) ?></div>
                 <div class="mg-studio"><?= h($game['studio_name'] ?? 'Студия не указана') ?><?= !empty($game['tiker']) ? ' · ' . h($game['tiker']) : '' ?></div>
+                
                 <div class="mg-meta">
                     <div><div class="lbl">Жанр</div><div class="val"><?= h($game['genre'] ?? '—') ?></div></div>
                     <div><div class="lbl">Платформы</div><div class="val"><?= h($game['platforms'] ?? '—') ?></div></div>
@@ -239,6 +241,7 @@ $active_page = 'moderation';
                     <div><div class="lbl">Языки</div><div class="val"><?= h($game['languages'] ?? '—') ?></div></div>
                     <div><div class="lbl">Цена</div><div class="val"><?= !empty($game['price']) ? h($game['price']) . ' ₽' : 'Бесплатно' ?></div></div>
                 </div>
+                
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <?php if (($game['moderation_status'] ?? '') === 'pending'): ?><span class="chip chip-pending">⏳ На модерации</span><?php endif; ?>
                     <?php if (!empty($game['trailer_url'])): ?><a class="chip chip-link" href="<?= h($game['trailer_url']) ?>" target="_blank">▶ Трейлер</a><?php endif; ?>
@@ -246,12 +249,13 @@ $active_page = 'moderation';
                 </div>
                 <?php if (!empty($game['short_description'])): ?><div class="mg-short"><?= h($game['short_description']) ?></div><?php endif; ?>
             </div>
+
         </div>
 
         <div class="mg-grid">
             <!-- LEFT -->
             <div class="mg-main">
-
+<?php   echo dev_contacts_block($pdo, (int)$game['id']); ?>
                 <?php if (!empty($screenshots)): ?>
                 <div class="card">
                     <div class="card-h">🖼 Скриншоты <span class="muted" style="font-weight:400;font-size:.78rem;">· <?= count($screenshots) ?> шт</span></div>
