@@ -85,7 +85,6 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.35); border-radius: 4px; }
 
-        .sprint-header { padding: 13px 26px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 0; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: #e8ddf0; letter-spacing: -.3px; }
         .logo .brand { color: #c32178; }
         .header-nav { display: flex; gap: 6px; }
@@ -96,7 +95,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
         .btn-primary:hover { background: #9e1a66; transform: translateY(-1px); }
 
         .container { max-width: 980px; margin: 0 auto; padding: 28px 18px; }
-        .hero { background: rgba(0,0,0,.3); border: 1px solid rgba(195,33,120,.2); border-radius: 14px; padding: 26px 30px; margin-bottom: 24px; position: relative; overflow: hidden; }
+        .hero { background: rgba(0,0,0,.3); border: 1px solid rgba(195,33,120,.2); border-radius: 14px; padding: 15px 20px; margin-bottom: 15px; position: relative; overflow: hidden; }
         body.moonlight-theme .hero { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
         .hero h1 { font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.4px; }
         .hero h1 span { color: #c32178; }
@@ -342,7 +341,6 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
         body.moonlight-theme { background: #05020a; background-image: url("/swad/static/img/Moonlight_pict.jpeg"); background-size: cover; background-attachment: fixed; background-position: center 35%; }
         body.moonlight-theme .btn-primary, body.moonlight-theme .btn-next, body.moonlight-theme .btn-submit, body.moonlight-theme .btn-join { background: #285682 !important; }
         body.moonlight-theme .btn-primary:hover, body.moonlight-theme .btn-next:hover, body.moonlight-theme .btn-submit:hover, body.moonlight-theme .btn-join:hover { background: #193753 !important; }
-        body.moonlight-theme .sprint-header, body.moonlight-theme .hero, body.moonlight-theme .card, body.moonlight-theme .modal { border-color: rgba(255,255,255,.08); }
         body.moonlight-theme .filter-btn, body.moonlight-theme .nav-btn { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
         body.moonlight-theme .filter-btn.active { background: rgb(24 105 147 / 22%); border-color: rgb(25 105 151 / 40%); }
         body.moonlight-theme .form-input, body.moonlight-theme .form-textarea, body.moonlight-theme .dynamic-row input, body.moonlight-theme .dynamic-row select { background: rgba(0,0,0,.5); border-color: rgba(255,255,255,.12); }
@@ -401,19 +399,11 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
 </head>
 <body>
 
-<header class="sprint-header">
-    <div class="logo"><span class="brand"></span></div>
-    <div style="display:flex;align-items:center;gap:10px">
-        <div class="header-nav">
-            <a class="nav-btn" href="participant.php">Моё участие</a>
-        </div>
-    </div>
-</header>
 
 <div class="container">
     <div class="hero">
         <h1><span>Спринты</span></h1>
-        <p>Создавай игры в сжатые сроки · Соревнуйся с командами · Получай признание</p>
+        <p>Создавай игры по известным вселенным в сжатые сроки   ·   Соревнуйся с командами   ·   Получай признание</p>
         <div class="hero-stats">
             <div class="hero-stat"><div class="val" id="stat-total">0</div><div class="lbl">Спринтов</div></div>
             <div class="hero-stat"><div class="val" id="stat-members">0</div><div class="lbl">Участников</div></div>
@@ -691,6 +681,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                   <div class="stat-box"><div class="s-lbl">Статус</div><div class="s-val">${(s.badges || [phaseText]).join(' · ')}</div></div>
                     <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${s.dates_reg || '—'}</div></div>
                     <div class="stat-box"><div class="s-lbl">Джем</div><div class="s-val">${s.dates_jam || '—'}</div></div>
+                    <a href="/jams/vote" class="btn-vote">Оценить билды</a>
                 </div>
                ${(() => {
                     const total   = s.current_participants || 0;
@@ -1297,6 +1288,29 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
 </script>
 
 <style>
+
+.btn-vote {
+    display: inline-block;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24); /* Яркий градиент */
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-vote:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(238, 90, 36, 0.6);
+    background: linear-gradient(135deg, #ff4757, #c0392b);
+}
+
 @keyframes shakeSearch {
     0%,100% { transform:translateX(0) rotateX(0) rotateY(0); }
     20% { transform:translateX(-3px) rotate(-1deg); }

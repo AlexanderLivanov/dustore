@@ -106,8 +106,12 @@ foreach ($projects as $p) {
 }
 $gqi_avg = $gqi_cnt ? round($gqi_sum / $gqi_cnt, 1) : null;
 
+/* Шкала оценок на Dustore — 1..10 (game.php показывает «X/10»),
+   поэтому порог «рекомендую» — 7, а не 4. */
+const RECOMMEND_FROM = 7;
+
 $rt = dq($pdo, "
-    SELECT COUNT(*) total, AVG(r.rating) avg_rating, SUM(r.rating >= 4) good
+    SELECT COUNT(*) total, AVG(r.rating) avg_rating, SUM(r.rating >= " . RECOMMEND_FROM . ") good
     FROM ratings r JOIN games g ON g.id = r.game_id
     WHERE g.developer = ?
 ", [$sid])[0] ?? ['total' => 0, 'avg_rating' => null, 'good' => 0];
@@ -221,7 +225,7 @@ $is_active  = (($studio['status'] ?? '') === 'active');
         <div class="dsp-wrap">
             <div class="dsp-stats">
                 <div class="dsp-stat">
-                    <b><?= $rating_avg !== null ? str_replace('.', ',', (string)$rating_avg) : '—' ?></b>
+                    <b><?= $rating_avg !== null ? str_replace('.', ',', (string)$rating_avg) . '<small>/10</small>' : '—' ?></b>
                     <span><?= $rating_total ? 'Рейтинг · ' . nfmt($rating_total) . ' ' . plural($rating_total, 'оценка', 'оценки', 'оценок') : 'Рейтинг' ?></span>
                 </div>
                 <div class="dsp-stat">

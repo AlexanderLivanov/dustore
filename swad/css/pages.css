@@ -520,13 +520,15 @@ body.moonlight-theme .btn-secondary:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-
+    border-radius: 25px;
+    filter: brightness(0.7);
 }
 
 .slide-overlay {
     position: absolute;
     inset: 0;
     background: linear-gradient(90deg, rgba(20, 4, 29, 0.8) 0%, rgba(20, 4, 29, 0.6) 100%);
+    border-radius: 20px;
 }
 
 .slide-content {
@@ -602,9 +604,341 @@ body.moonlight-theme .btn-secondary:hover {
     transform: scale(1.1);
 }
 
+/* ── Баннер голосования ── */
+#vote-banner {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 1000;
+    text-align: -webkit-center;
+    max-width: 260px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    transition: opacity 0.2s;
+    transition: left 0.2s ease, top 0.2s ease;
+    transition: left 0.2s ease, top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+.vote-label {
+    font-size: 10px;
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #fff;
+    margin-bottom: 2px;
+    font-family: 'Segoe UI', sans-serif;
+    margin-bottom: 10px;
+}
+
+.vote-title {
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 5px;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
+}
+
+.vote-btn {
+    display: inline-block;
+    padding: 6px 18px;
+    background: #c32178;
+    color: #fff;
+    border-radius: 30px;
+    font-size: 13px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+    font-family: 'PixelizerBold', sans-serif;
+}
+
+.vote-btn:hover {
+    background: #a01b62;
+    transform: scale(1.03);
+}
+
+/* ── Баннер голосования — Moonlight Theme ── */
+body.moonlight-theme #vote-banner {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+body.moonlight-theme .vote-label {
+    opacity: 0.6;
+    color: #b8c8ff;
+}
+
+body.moonlight-theme .vote-title {
+    color: #f0f4ff;
+}
+
+body.moonlight-theme .vote-btn {
+    background: #3e7ad9;
+    transition: background 0.2s, transform 0.1s;
+}
+
+body.moonlight-theme .vote-btn:hover {
+    background: #5690f0;
+    transform: scale(1.03);
+}
+
+/* ── Крестик ── */
+.vote-toggle {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.vote-toggle:hover {
+    color: #fff;
+}
+
+/* ── Картинка в баннере ── */
+.vote-image {
+    display: block;
+    width: 100%;
+    max-width: 180px;
+    height: auto;
+    margin: 6px auto 10px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+/* ── Свёрнутое состояние ── */
+#vote-banner.collapsed {
+    max-width: 200px;
+    padding: 10px 16px;
+    cursor: pointer;
+}
+
+#vote-banner.collapsed .vote-label,
+#vote-banner.collapsed .vote-image,
+#vote-banner.collapsed .vote-btn {
+    display: none;
+}
+
+#vote-banner.collapsed .vote-title {
+    font-size: 12px;
+    margin-bottom: 0;
+}
+
+#vote-banner.collapsed .vote-toggle {
+    display: none; /* в свёрнутом состоянии крестик не нужен */
+}
+
+/* ── Заголовок: скрыт в развёрнутом состоянии ── */
+.vote-title {
+    display: none;
+}
+
+/* ── В свёрнутом состоянии показываем только заголовок ── */
+#vote-banner.collapsed .vote-title {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 0;
+}
+
+/* ── Карточки сервисов: активные и в разработке ── */
+.platform-card {
+    cursor: default;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+.platform-card:not(.in-development) {
+    cursor: pointer;
+}
+.platform-card:not(.in-development):hover {
+    transform: translateY(-10px);
+    background: #74155d;
+}
+.platform-card.in-development {
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+    position: relative;
+}
+.platform-card.in-development::after {
+    content: "в разработке";
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ── Курсор для перетаскивания ── */
+#vote-banner:not([data-collapsed="true"]) {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#vote-banner:not([data-collapsed="true"]):active {
+    cursor: grabbing;
+}
+
+/* ── Плавность при перетаскивании ── */
+#vote-banner {
+    transition: left 0.2s ease, top 0.2s ease;
+}
+
+/* ── В свёрнутом состоянии курсор pointer ── */
+#vote-banner[data-collapsed="true"] {
+    cursor: pointer;
+}
+
+/* ── Приветственное окошко Дасти (только на главной) ── */
+.dusty-greeting {
+    position: fixed;
+    top: calc(80px + 20px); /* высота хедера + 20px (для десктопа) */
+    right: 20px;
+    width: 260px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    z-index: 9998; /* чтобы быть под баннером (у баннера z-index: 1000) */
+    overflow: hidden;
+    transform-origin: top right;
+    opacity: 0;
+    transform: scaleX(0.01) scaleY(0.01);
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.35s ease;
+    pointer-events: none; /* пока скрыто, не мешает */
+}
+
+.dusty-greeting.show {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+    pointer-events: auto;
+}
+
+.dusty-greeting .greeting-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.dusty-greeting .greeting-close:hover {
+    color: #fff;
+}
+
+.dusty-greeting .greeting-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dusty-greeting .greeting-avatar {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(195, 33, 120, 0.2);
+    padding: 4px;
+    object-fit: contain;
+    animation: greetingFloat 1.8s ease-in-out infinite;
+}
+
+@keyframes greetingFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-4px) rotate(-1deg); }
+}
+
+.dusty-greeting .greeting-text {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #fff;
+}
+.dusty-greeting .greeting-text p {
+    margin: 0 0 2px;
+}
+.dusty-greeting .greeting-text .greeting-hint {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+/* ── Moonlight-тема ── */
+body.moonlight-theme .dusty-greeting {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(16px);
+}
+body.moonlight-theme .dusty-greeting .greeting-avatar {
+    background: rgba(100, 150, 255, 0.15);
+}
+body.moonlight-theme .dusty-greeting .greeting-close {
+    color: rgba(255, 255, 255, 0.4);
+}
+body.moonlight-theme .dusty-greeting .greeting-close:hover {
+    color: #fff;
+}
+
+/* ── Адаптивность ── */
+@media (max-width: 760px) {
+    .dusty-greeting {
+        top: calc(64px + 10px);
+        right: 10px;
+        width: 220px;
+        padding: 12px 14px 14px;
+    }
+    .dusty-greeting .greeting-avatar {
+        width: 36px;
+        height: 36px;
+    }
+    .dusty-greeting .greeting-text {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dusty-greeting {
+        width: 180px;
+        right: 6px;
+        top: calc(58px + 8px);
+    }
+    .dusty-greeting .greeting-text p:last-child {
+        display: none;
+    }
+}
+
 /* ══════════════════════════════════════
    АДАПТИВНОСТЬ
    ══════════════════════════════════════ */
+
+
 
 @media (max-width: 768px) {
 

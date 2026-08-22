@@ -3,6 +3,12 @@
 require_once 'user.php';
 require_once '../config.php';
 
+/* Страховка от частичного деплоя. activity.php — хартбит, он дёргается
+   с КАЖДОЙ страницы каждого авторизованного пользователя. Если он падает,
+   падает весь сайт. Поэтому он не имеет права жёстко зависеть от того,
+   что константа доехала: нет — берём разумный дефолт и работаем дальше. */
+if (!defined('ONLINE_WINDOW_MIN')) define('ONLINE_WINDOW_MIN', 15);
+
 $db = new Database();
 $pdo = $db->connect();
 $curr_user = new User();

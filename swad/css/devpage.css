@@ -78,7 +78,6 @@ html.dsp-dark body {
     position: relative;
     padding: 74px 0 0;
     overflow: hidden;
-    padding-bottom: 50px;
 }
 
 /* Раньше .studio-banner был position:absolute внутри position:static
@@ -264,6 +263,13 @@ html.dsp-dark body {
     background: rgba(255, 255, 255, .055);
     border-top: 2px solid rgba(195, 33, 120, .5);
     padding: 15px 16px;
+}
+
+.dsp-stat b small {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0;
 }
 
 .dsp-stat b {

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>К.О.Н.Т.У.Р. — Архивная База Данных</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/desktop.css">
+  <link rel="stylesheet" href="css/window.css">
+  <link rel="stylesheet" href="css/ui.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<!-- ── BOOT / LOGIN SCREEN ── -->
+<div id="boot-screen">
+  <div class="boot-header">
+    <div class="boot-header-title">К.О.Н.Т.У.Р.</div>
+    <div>АРХИВНАЯ БАЗА ДАННЫХ · СИСТЕМА ИДЕНТИФИКАЦИИ</div>
+  </div>
+  <div class="boot-win">
+    <div class="boot-tb">
+      <span>[ ИДЕНТИФИКАЦИЯ ПОЛЬЗОВАТЕЛЯ ]</span>
+      <div style="font-size:9px;opacity:.7;">К.О.Н.Т.У.Р.</div>
+    </div>
+    <div class="boot-body">
+      <div class="boot-logo">
+        <div class="boot-logo-text">К.О.Н.Т.У.Р.</div>
+        <div class="boot-logo-sub">КОНТРОЛЬ ОБЪЕКТОВ НЕИЗВЕСТНОГО ТИПА И УСЛОВНОЙ РЕАЛЬНОСТИ</div>
+      </div>
+      <div id="boot-error" style="display:none;background:#ffeeee;border:1px solid #800000;color:#800000;padding:5px 8px;font-size:10px;"></div>
+      <div class="boot-row">
+        <label>Имя пользователя:</label>
+        <input id="boot-name" type="text" maxlength="24" autocomplete="username"
+               onkeydown="if(event.key==='Enter')Auth.doBootLogin()">
+      </div>
+      <div class="boot-row">
+        <label>Пароль:</label>
+        <input id="boot-pass" type="password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')Auth.doBootLogin()">
+      </div>
+      <div class="boot-btns">
+        <button class="bigbtn blue" onclick="Auth.doBootLogin()">Войти →</button>
+        <button class="bigbtn" onclick="Auth.doBootRegister()">Регистрация</button>
+      </div>
+      <div class="boot-separator">или</div>
+      <button class="boot-guest-btn" onclick="Auth.loginAsGuest()">👁 Войти как гость (только просмотр)</button>
+      <div class="boot-footer">
+        Тестовые входы: admin/admin123 · moder/moder123 · archivist/user123
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app" style="background:#008080;">
+  <div id="desktop">
+    <div class="desk-icons" id="desk-icons">
+      <div class="dicon" id="dicon-main" onclick="WM.toggle('main')" title="Открыть архив">
+        <div class="ibox" id="main-ico">📂</div><span>Главная</span>
+      </div>
+      <div class="dicon" id="dicon-ent" onclick="WM.toggle('main');setTimeout(()=>UI.switchTab('ent'),380)" title="Сущности">
+        <div class="ibox">⚠️</div><span>Сущности</span>
+      </div>
+      <div class="dicon" id="dicon-exp" onclick="WM.toggle('main');setTimeout(()=>UI.switchTab('exp'),380)" title="Эксперименты">
+        <div class="ibox">🔬</div><span>Эксперим.</span>
+      </div>
+      <div class="dicon" id="dicon-fan" onclick="WM.toggle('main');setTimeout(()=>UI.switchTab('fan'),380)" title="Фан-архив">
+        <div class="ibox">🎨</div><span>Фан-архив</span>
+      </div>
+      <div class="dicon" id="dicon-login" onclick="Auth.openLogin()" title="Профиль">
+        <div class="ibox" id="login-ico">🔐</div><span id="login-ico-lbl">Вход</span>
+      </div>
+      <div class="dicon" onclick="UI.toggleFullscreen()" title="Полный экран (F11)">
+        <div class="ibox">⛶</div><span>Экран</span>
+      </div>
+    </div>
+  </div>
+  <div id="taskbar">
+    <button class="tbstart" onclick="WM.toggle('main')">
+      <span style="font-size:14px;font-family:serif;">К</span> ПУСК
+    </button>
+    <div class="tbwins" id="tbwins"></div>
+    <div class="tbright">
+      <span id="tb-clock">00:00</span>
+      <div class="tbicobtn" onclick="UI.toggleFullscreen()" title="Полный экран" id="btn-fs">⛶</div>
+      <div class="tbicobtn" onclick="UI.toggleSettings()" title="Настройки">⚙</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DIALOGS ── -->
+<div id="dlg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:60000;" onclick="Dialogs.closeAll()"></div>
+
+<div class="dialog" id="dlg-login">
+  <div class="dlg-tb"><span>[ АВТОРИЗАЦИЯ ]</span><div class="wbtn" onclick="Dialogs.closeAll()" style="font-size:11px;">✕</div></div>
+  <div class="dlg-body">
+    <div class="dlg-row"><label>Имя пользователя:</label><input id="l-name" type="text" maxlength="24"></div>
+    <div class="dlg-row"><label>Пароль:</label><input id="l-pass" type="password"></div>
+    <div class="dlg-btns">
+      <button class="bigbtn" onclick="Auth.doRegister()">Регистрация</button>
+      <button class="bigbtn blue" onclick="Auth.doLogin()">Войти →</button>
+    </div>
+  </div>
+</div>
+
+<div class="dialog" id="dlg-settings">
+  <div class="dlg-tb"><span>⚙ Настройки отображения</span><div class="wbtn" onclick="UI.toggleSettings()" style="font-size:11px;">✕</div></div>
+  <div class="dlg-body">
+    <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">Фон рабочего стола:</div>
+    <div class="bg-grid" id="bg-grid"></div>
+    <div style="margin-top:8px;"><button class="bigbtn" style="width:100%;" onclick="UI.toggleFullscreen()">⛶ Полный экран (F11)</button></div>
+  </div>
+</div>
+
+<!-- ── MAIN WINDOW TEMPLATE ── -->
+<template id="tpl-main-content">
+  <div id="search-bar">
+    <span style="font-size:10px;color:#404040;flex-shrink:0;">🔍</span>
+    <input id="search-input" type="text" placeholder="Поиск по архиву...">
+    <button id="search-clear">✕</button>
+  </div>
+  <div class="win-inner">
+    <div class="sidebar">
+      <div>
+        <div class="sg-hdr">▶ РАЗДЕЛЫ</div>
+        <div id="sb-main"></div>
+        <button class="addbtn admin-only" onclick="UI.addSection('main')">[ + ] Добавить раздел</button>
+      </div>
+      <div>
+        <div class="sg-hdr">✦ ФАН-АРХИВ</div>
+        <div id="sb-fan"></div>
+        <button class="addbtn admin-only" onclick="UI.addSection('fan')">[ + ] Добавить раздел</button>
+      </div>
+      <div>
+        <div class="sg-hdr">⚙ КАБИНЕТ</div>
+        <div class="si" id="sb-login-btn" onclick="Auth.openLogin()">Войти</div>
+        <div class="si" id="sb-reg-btn"><span class="bul">►</span>Регистрация</div>
+        <div id="sb-rank-row" style="display:none;flex-direction:column;align-items:flex-start;gap:0;padding:3px 7px;cursor:default;"></div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+      <div class="win-tabbar">
+        <div class="wtab active" data-tab="main" onclick="UI.switchTab('main')">Главная</div>
+        <div class="wtab" data-tab="obj"  onclick="UI.switchTab('obj')">Объекты</div>
+        <div class="wtab" data-tab="ent"  onclick="UI.switchTab('ent')">Сущности</div>
+        <div class="wtab" data-tab="exp"  onclick="UI.switchTab('exp')">Эксперименты</div>
+        <div class="wtab" data-tab="fan"  onclick="UI.switchTab('fan')">Фан-архив</div>
+        <div class="wtab" data-tab="mod"  onclick="UI.switchTab('mod')" id="tab-mod">Модерация</div>
+      </div>
+      <div class="wcontent">
+        <div class="panel active" id="panel-main">
+          <div class="chdr">
+            <div><div class="ctitle">К.О.Н.Т.У.Р.</div><div class="csub">КОНТРОЛЬ ОБЪЕКТОВ НЕИЗВЕСТНОГО ТИПА И УСЛОВНОЙ РЕАЛЬНОСТИ</div></div>
+            <div class="stamp">СЕКРЕТНО</div>
+          </div>
+          <div class="orgbox">
+            <p>В <b>1976 году</b> по указу специального комитета при Совете Министров СССР основано объединение по Контролю Объектов Неизвестного Типа и Условной Реальности — <b>К.О.Н.Т.У.Р.</b></p>
+            <p>Поводом послужил инцидент с материалом <b>О-41</b> — распространение аномального агента за пределы изолированной зоны привело к дестабилизации ряда населённых пунктов.</p>
+            <p>Организация занимается выявлением, изоляцией и изучением аномальных <b>Объектов</b>, контролем <b>Споровых заражений</b> и ведением реестра <b>Сущностей</b>.</p>
+          </div>
+          <div class="igrid">
+            <div class="icard"><div class="icard-t">Основана</div><div class="icard-v">1976 г.<br>Указ СМ СССР</div></div>
+            <div class="icard"><div class="icard-t">Экстр. связь</div><div class="icard-v" style="font-weight:bold;font-size:15px;color:#800000;">0-41</div></div>
+            <div class="icard"><div class="icard-t">Основная угроза</div><div class="icard-v">Материал О-41<br>Споровый Синдром</div></div>
+            <div class="icard"><div class="icard-t">Гриф</div><div class="icard-v" style="color:#800000;font-weight:bold;">СОВЕРШЕННО<br>СЕКРЕТНО</div></div>
+          </div>
+          <div><div class="slabel">ПОСЛЕДНИЕ ЗАПИСИ В АРХИВЕ</div><div id="articles-list"></div></div>
+          <div class="submit-cta" id="submit-area" style="display:none;">
+            <span style="font-size:11px;">Отправьте материал на модерацию:</span>
+            <button class="bigbtn blue" onclick="Editor.open()">[ + ] Написать материал</button>
+          </div>
+          <div class="submit-cta" id="login-cta">
+            <span style="font-size:11px;color:#404040;">Войдите, чтобы отправлять материалы и оценивать статьи.</span>
+            <button class="bigbtn" onclick="Auth.openLogin()">Войти / Зарегистрироваться</button>
+          </div>
+        </div>
+        <div class="panel" id="panel-obj">
+          <div class="chdr"><div><div class="ctitle">ОБЪЕКТЫ</div><div class="csub">РЕЕСТР АНОМАЛЬНЫХ ЛОКАЦИЙ</div></div></div>
+          <div class="slabel">ОДОБРЕННЫЕ ЗАПИСИ</div><div id="obj-list"></div>
+        </div>
+        <div class="panel" id="panel-ent">
+          <div class="chdr"><div><div class="ctitle">СУЩНОСТИ</div><div class="csub">КЛАССИФИКАЦИЯ АНОМАЛЬНЫХ СУЩЕСТВ</div></div></div>
+          <div class="ent-card"><div class="ent-tag">МИМИК I</div><div class="ent-name">Мимики первого порядка</div><div class="ent-desc">Сущности, похожие на человека видом: без кожи и органов. Только плоть и части тела, используемые не по назначению в ~80% случаев.</div></div>
+          <div class="ent-card"><div class="ent-tag">МИМИК II</div><div class="ent-name">Мимики второго порядка</div><div class="ent-desc">Максимально похожи на человека — кожа, одежда, поведение. Не понимают смысла копируемых действий. Наиболее опасная категория.</div></div>
+          <div class="ent-card"><div class="ent-tag">ФИЗИЧ.</div><div class="ent-name">Перекожники</div><div class="ent-desc">Физическое воплощение грибка О-41. Неподвижные образования в поражённых зонах. Первичный признак заражения Объекта.</div></div>
+          <div class="ent-card"><div class="ent-tag">ХИЩНИК</div><div class="ent-name">Каналотварь</div><div class="ent-desc">Существо чёрного цвета на четырёх конечностях. Длинные когти, третий или четвёртый глаз. Зафиксировано в шахтах и тоннелях.</div></div>
+          <div class="ent-card"><div class="ent-tag">ОСОБЫЙ</div><div class="ent-name">Хор</div><div class="ent-desc">Обращается к людям с тяжёлым Споровым Синдромом. Направляет их на глубинные уровни Объекта с целью выхода на Контур-1.</div></div>
+        </div>
+        <div class="panel" id="panel-exp">
+          <div class="chdr"><div><div class="ctitle">ЭКСПЕРИМЕНТЫ</div><div class="csub">ЖУРНАЛ ИССЛЕДОВАНИЙ К.О.Н.Т.У.Р.</div></div></div>
+          <div class="slabel">ОДОБРЕННЫЕ ЗАПИСИ</div><div id="exp-list"></div>
+        </div>
+        <div class="panel" id="panel-fan">
+          <div class="chdr"><div><div class="ctitle">ФАН-АРХИВ</div><div class="csub">ТВОРЧЕСТВО СООБЩЕСТВА</div></div></div>
+          <div class="fansec"><div class="fan-t">✦ Категории:</div><div class="fan-chips">
+            <div class="fchip">Арты</div><div class="fchip">Фанфики</div><div class="fchip">Исследования</div><div class="fchip">Прочее</div>
+          </div></div>
+          <div class="slabel">ОДОБРЕННЫЕ РАБОТЫ</div><div id="fan-list"></div>
+        </div>
+        <div class="panel" id="panel-mod">
+          <div class="chdr"><div><div class="ctitle" style="color:#800000;">МОДЕРАЦИЯ</div><div class="csub">ОЧЕРЕДЬ НА ПРОВЕРКУ</div></div></div>
+          <div class="slabel">НА РАССМОТРЕНИИ</div><div id="mod-pending"></div>
+          <div id="mod-archive-section" style="display:none;">
+            <div class="slabel" style="margin-top:8px;">АРХИВ ОТКЛОНЁННЫХ (ТОЛЬКО ADMIN)</div>
+            <div id="mod-rejected"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="win-statusbar">
+    <span class="sblink" id="status-user">Гость | Просмотр разрешён</span>
+    <div class="spills">
+      <span class="spill" id="pill-art">Статей: 0</span>
+      <span class="spill" id="pill-pend" style="display:none;">На модерации: 0</span>
+    </div>
+  </div>
+</template>
+
+<!-- ── SCRIPTS ── -->
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/window-manager.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/loader.js"></script>
+<script src="js/context-menu.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/articles.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/moderation.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/ui.js"></script>
+
+<script>
+(async function init() {
+  UI.initClock();
+
+  // Build main window
+  const tpl = document.getElementById('tpl-main-content');
+  const tmp = document.createElement('div');
+  tmp.appendChild(tpl.content.cloneNode(true));
+  WM.create({
+    id:'main', title:'К.О.Н.Т.У.Р. — Архивная База Данных', icon:'К',
+    width:840, height:570, x:40, y:20, content: tmp.innerHTML,
+    onClose: () => { const i=document.getElementById('main-ico'); if(i)i.textContent='📁'; return true; },
+  });
+  // Flatten WM inner wrapper
+  const winEl = document.getElementById('win-main');
+  const innerEl = document.getElementById('main-inner');
+  if (winEl && innerEl) { while (innerEl.firstChild) winEl.insertBefore(innerEl.firstChild, innerEl); innerEl.remove(); }
+
+  // Context menus
+  CtxMenu.bindDesktop(document.getElementById('desktop'));
+  CtxMenu.bindDicon(document.getElementById('dicon-main'), [
+    { key:'open', icon:'📂', label:'Открыть', action:()=>WM.toggle('main') },
+    { key:'close', icon:'✕', label:'Закрыть окно', action:()=>WM.close('main') },
+  ]);
+  CtxMenu.bindDicon(document.getElementById('dicon-login'), [
+    { key:'login', icon:'🔐', label:'Войти', action:()=>Auth.openLogin() },
+    { key:'logout', icon:'👤', label:'Выйти', action:()=>Auth.doLogout() },
+  ]);
+  document.querySelectorAll('.wtab').forEach(tab => { if (tab.dataset.tab) CtxMenu.bindTab(tab, tab.dataset.tab); });
+
+  UI.initSearch();
+  UI.initDialogs();
+  document.getElementById('main-ico').textContent = '📂';
+
+  // Fullscreen sync
+  document.addEventListener('fullscreenchange', () => {
+    const b = document.getElementById('btn-fs');
+    if (b) b.classList.toggle('fs-active', !!document.fullscreenElement);
+  });
+
+  // ── Загрузка данных с сервера ──
+  await UI.loadSections();
+  await Articles.load();
+
+  // ── Проверка активной сессии ──
+  const hasSession = await Auth.checkSession();
+  if (hasSession) {
+    Auth.hideBootScreen();  // уже залогинен — скрываем boot
+  } else {
+    setTimeout(() => { const n=document.getElementById('boot-name'); if(n)n.focus(); }, 200);
+  }
+})();
+</script>
+
+</body>
+</html>

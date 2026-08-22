@@ -1,0 +1,204 @@
+/* ============================================================
+   WINDOW.CSS — оконная система: drag, focus, minimize
+   ============================================================ */
+
+.win {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg);
+  border: var(--b-raise);
+  border-color: var(--b-raise-color);
+  box-shadow: 3px 3px 0 #000;
+  min-width: 280px;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+.win.focused {
+  box-shadow: 4px 4px 0 #000;
+}
+
+/* ── TITLEBAR ── */
+.win-titlebar {
+  background: var(--c-navy-grad);
+  color: #fff;
+  padding: 3px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 12px;
+  flex-shrink: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.win-titlebar.dragging {
+  cursor: grabbing;
+}
+
+.win-tb-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.win-emblem {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid rgba(255,255,255,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  background: rgba(0, 0, 60, .4);
+  flex-shrink: 0;
+}
+
+.win-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.win-tb-btns {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.wbtn {
+  width: 17px;
+  height: 15px;
+  background: var(--c-bg);
+  color: #000;
+  border: 1px solid;
+  border-color: #fff #404040 #404040 #fff;
+  font-size: 10px;
+  font-weight: bold;
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.wbtn:active { border-color: #404040 #fff #fff #404040; }
+
+/* ── MENUBAR ── */
+.win-menubar {
+  background: var(--c-bg);
+  border-bottom: 1px solid #808080;
+  display: flex;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.mi {
+  padding: 2px 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font);
+}
+.mi:hover { background: var(--c-navy); color: #fff; }
+
+/* ── TABBAR ── */
+.win-tabbar {
+  display: flex;
+  gap: 2px;
+  padding: 4px 7px 0;
+  background: var(--c-bg);
+  border-bottom: 2px solid #808080;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.wtab {
+  padding: 2px 12px;
+  border: 2px solid;
+  border-color: #fff #808080 transparent #fff;
+  background: #a0a0a0;
+  font-size: 11px;
+  font-family: var(--font);
+  cursor: pointer;
+  position: relative;
+  top: 2px;
+  white-space: nowrap;
+}
+.wtab.active {
+  background: var(--c-bg);
+  font-weight: bold;
+  border-bottom-color: var(--c-bg);
+  z-index: 1;
+}
+.wtab:hover:not(.active) { background: #b4b4b4; }
+.wtab[data-tab="mod"] { display: none; background: #400000; color: #ffa0a0; }
+
+/* ── WINDOW INNER LAYOUT ── */
+.win-inner {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── STATUSBAR ── */
+.win-statusbar {
+  border-top: 2px solid;
+  border-color: #808080 #fff #fff #808080;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: var(--c-text-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--c-bg);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.spill {
+  padding: 1px 5px;
+  border: 1px solid #808080;
+  background: var(--c-bg-light);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.spills {
+  display: flex;
+  gap: 4px;
+}
+
+.sblink::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── MINIMIZED STATE ── */
+.win.minimized {
+  display: none;
+}
+
+/* ── RESIZE HANDLE ── */
+.win-resize {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize;
+  font-size: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 1px;
+  color: #808080;
+  z-index: 10;
+}

@@ -2,6 +2,10 @@
 session_start();
 require_once('swad/config.php');
 
+// Тот же дефолт, что в activity.php — на случай, если config.php
+// на этом хосте ещё старый (частичный деплой).
+if (!defined('ONLINE_WINDOW_MIN')) define('ONLINE_WINDOW_MIN', 15);
+
 $db  = new Database();
 $pdo = $db->connect();
 
