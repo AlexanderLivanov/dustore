@@ -29,12 +29,17 @@ mobile_redirect_if_needed();
             </div>
             <div class="container">
                 <div class="hero-content">
-                    <h1 class="pixel-title">DUSTORE — открытое пространство для инди-разработчиков</h1>
-                    <p>Делаем платформу, где разработчики смогут свободно выложить проекты, а игроки - открыть новые игровые миры. Присоединяйтесь к сообществу!</p>
+                    <h1 class="pixel-title">DUSTORE — открытая open-source платформа для игр и джемов</h1>
+                    <p style="font-weight: 300; opacity: 0.8;">
+    Мы верим, что творчество не зависит от того, где вы находитесь и кто вы есть. Здесь можно создавать, делиться и находить единомышленников.
+</p>
                     <div class="hero-buttons">
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
                         <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
                         <a href="https://t.me/dustore_devs" target="_blank" class="btn btn-secondary">Чатик для разработчиков</a>
+                        <a href="https://t.me/dustore_official" target="_blank" class="btn btn-tg">
+                            <svg style="vertical-align: middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-telegram"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" /></svg>
+                            Telegram-канал Платформы</a>
                     </div>
                 </div>
             </div>
@@ -62,13 +67,12 @@ mobile_redirect_if_needed();
         <section class="slider-section" style="padding: 0">
             <div class="slider-container">
                 <div class="slider-track">
-                    <div class="slider-slide" style="background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
-                        <div class="slide-overlay"></div>
+                    <div class="slider-slide" style="background-image: url('/swad/static/img/KNTR_X_DSTR2.jpg');">
                         <div class="slide-content">
-                            <h2>Совместный аномальный джем с К.О.Н.Т.У.Р</h2>
-                            <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 5 по 13 августа.</p>
+                            <h2>Джем DUSTORE X К.О.Н.Т.У.Р</h2>
+                            <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 15 августа по 15 сентября.</p>
                             <a href="https://t.me/+T5CajyXvgvpmMjRi" target="_blank" class="btn">Группа для участников джема</a>
-                            <a href="https://dustore.ru/jams" target="_blank" class="btn">Страница джема</a>
+                            <a href="https://dustore.ru/jams/vote" target="_blank" class="btn">Оценить игры</a>
                         </div>
                     </div>
 
@@ -143,74 +147,101 @@ mobile_redirect_if_needed();
         </section>
 
 
-        <!-- Что это? -->
-        <section class="stats">
-            <div class="container">
-                <h2>Что входит в экосистему Dustore?</h2>
-                <div class="platform-grid">
-                    <div class="platform-card">
-                        <div class="platform-icon">💼</div>
-                        <h3>Платформа DUSTORE.ru</h3>
-                        <p>Главный узел в экосистеме. Это центр, где связываются все части Платформы. Преимущественно здесь находится каталог игр.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🚀</div>
-                        <h3>HidL</h3>
-                        <p>(в разработке) Собственный лаунчер, который вы даже не увидите. Можно будет связать со Steam, чтобы игры добавлялись в библиотеку Steam.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">💵</div>
-                        <h3>FinV2</h3>
-                        <p>Площадка для приёма платежей. Через неё разработчики монетизируют свои проекты, можно продавать свои ассеты, а также оплатить услуги исполнителя на L4T.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🍀</div>
-                        <h3>Dustore.L4T</h3>
-                        <p>Looking For a Team — наше решение для поиска команд на джемы, партнёров в проекты и исполнителей для решения своих задач.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">👨‍🎓</div>
-                        <h3>GDDB</h3>
-                        <p>(в разработке) Gamedev Database — единая база данных со всеми ресурсами по геймдеву. Каждый может добавить свою статью или ссылку.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">📸</div>
-                        <h3>Dustore.Media</h3>
-                        <p>(в разработке) Свой информационный ресурс, который управляется пользователями. Здесь можно выложить анонс своей игры или рассказать о новостях в мире геймдева.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🌐</div>
-                        <h3>Dustore.GIB</h3>
-                        <p>(в разработке) Games In Browser — помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать. Что-то общее между WebGL и Instant Play.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">👩‍💻</div>
-                        <h3>Dustore.Devs</h3>
-                        <p>Портал для разработчиков из студий. Публикация проектов, аналитика, монетизация.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">💔</div>
-                        <h3>"Битый Пиксель"</h3>
-                        <p>(В разработке) Наш сервис для отправки отчётов об уязвимостях и багрепортов.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🕹</div>
-                        <h3>Джемы</h3>
-                        <p>Тут можно проводить джемы.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🛠</div>
-                        <h3>DustAsset</h3>
-                        <p>Собственный ассетстор для разработчиков. Думаем, тут скоро каждый найдет что ищет.</p>
-                    </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">Ⓜ</div>
-                        <h3>Dustore.Mobile</h3>
-                        <p>Здесь можно выложить игру или приложение (в т.ч. платное) для мобильных устройств.</p>
-                    </div>
-                </div>
+<!-- Что это? -->
+<section class="stats">
+    <div class="container">
+        <h2>Что входит в экосистему Dustore?</h2>
+        <div class="platform-grid">
+            <!-- ===== РАБОТАЮЩИЕ СЕРВИСЫ (кликабельны) ===== -->
+
+            <!-- 1. Платформа DUSTORE.ru — ссылка на главную -->
+            <div class="platform-card" onclick="location.href='/'">
+                <div class="platform-icon">💼</div>
+                <h3>Платформа DUSTORE.ru</h3>
+                <p>Главный узел в экосистеме. Это центр, где связываются все части Платформы. Преимущественно здесь находится каталог игр.</p>
             </div>
-        </section>
+
+            <!-- 2. Dustore.L4T — ссылка на /l4t -->
+            <div class="platform-card" onclick="location.href='/l4t'">
+                <div class="platform-icon">🍀</div>
+                <h3>Dustore.L4T</h3>
+                <p>Looking For a Team — наше решение для поиска команд на джемы, партнёров в проекты и исполнителей для решения своих задач.</p>
+            </div>
+
+            <!-- 3. Dustore.Devs — ссылка на /devs -->
+            <div class="platform-card" onclick="location.href='/devs'">
+                <div class="platform-icon">👩‍💻</div>
+                <h3>Dustore.Devs</h3>
+                <p>Портал для разработчиков из студий. Публикация проектов, аналитика, монетизация.</p>
+            </div>
+
+            <!-- 4. Джемы — ссылка на /jams -->
+            <div class="platform-card" onclick="location.href='/jams'">
+                <div class="platform-icon">🕹</div>
+                <h3>Джемы</h3>
+                <p>Тут можно проводить джемы.</p>
+            </div>
+
+            <!-- 5. DustAsset — ссылка на /assetstore -->
+            <div class="platform-card" onclick="location.href='/assetstore'">
+                <div class="platform-icon">🛠</div>
+                <h3>DustAsset</h3>
+                <p>Собственный ассетстор для разработчиков. Думаем, тут скоро каждый найдет что ищет.</p>
+            </div>
+
+            <!-- ===== СЕРВИСЫ В РАЗРАБОТКЕ (неактивны, с меткой) ===== -->
+
+            <!-- 6. HidL — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">🚀</div>
+                <h3>HidL</h3>
+                <p>(в разработке) Собственный лаунчер, который вы даже не увидите. Можно будет связать со Steam, чтобы игры добавлялись в библиотеку Steam.</p>
+            </div>
+
+            <!-- 7. FinV2 — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">💵</div>
+                <h3>FinV2</h3>
+                <p>Площадка для приёма платежей. Через неё разработчики монетизируют свои проекты, можно продавать свои ассеты, а также оплатить услуги исполнителя на L4T.</p>
+            </div>
+
+            <!-- 8. GDDB — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">👨‍🎓</div>
+                <h3>GDDB</h3>
+                <p>(в разработке) Gamedev Database — единая база данных со всеми ресурсами по геймдеву. Каждый может добавить свою статью или ссылку.</p>
+            </div>
+
+            <!-- 9. Dustore.Media — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">📸</div>
+                <h3>Dustore.Media</h3>
+                <p>(в разработке) Свой информационный ресурс, который управляется пользователями. Здесь можно выложить анонс своей игры или рассказать о новостях в мире геймдева.</p>
+            </div>
+
+            <!-- 10. Dustore.GIB — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">🌐</div>
+                <h3>Dustore.GIB</h3>
+                <p>(в разработке) Games In Browser — помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать. Что-то общее между WebGL и Instant Play.</p>
+            </div>
+
+            <!-- 11. "Битый Пиксель" — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">💔</div>
+                <h3>"Битый Пиксель"</h3>
+                <p>(В разработке) Наш сервис для отправки отчётов об уязвимостях и багрепортов.</p>
+            </div>
+
+            <!-- 12. Dustore.Mobile — в разработке -->
+            <div class="platform-card in-development">
+                <div class="platform-icon">Ⓜ</div>
+                <h3>Dustore.Mobile</h3>
+                <p>Здесь можно выложить игру или приложение (в т.ч. платное) для мобильных устройств.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
         <!-- О платформе -->
         <section class="platform">
@@ -422,21 +453,16 @@ mobile_redirect_if_needed();
             let slideCount = slides.length;
             let autoSlideInterval;
 
-            // Функция для переключения слайдов
             function goToSlide(index) {
                 if (index < 0) index = slideCount - 1;
                 if (index >= slideCount) index = 0;
-
                 sliderTrack.style.transform = `translateX(-${index * 100}%)`;
                 currentIndex = index;
-
-                // Обновление активной точки
                 dots.forEach((dot, i) => {
                     dot.classList.toggle('active', i === index);
                 });
             }
 
-            // Переключение по точкам
             dots.forEach((dot, index) => {
                 dot.addEventListener('click', () => {
                     goToSlide(index);
@@ -444,7 +470,6 @@ mobile_redirect_if_needed();
                 });
             });
 
-            // Кнопки навигации
             prevBtn.addEventListener('click', () => {
                 goToSlide(currentIndex - 1);
                 resetAutoSlide();
@@ -455,11 +480,10 @@ mobile_redirect_if_needed();
                 resetAutoSlide();
             });
 
-            // Автоматическое переключение слайдов
             function startAutoSlide() {
                 autoSlideInterval = setInterval(() => {
                     goToSlide(currentIndex + 1);
-                }, 5000); // Меняем слайд каждые 5 секунд
+                }, 5000);
             }
 
             function resetAutoSlide() {
@@ -467,10 +491,8 @@ mobile_redirect_if_needed();
                 startAutoSlide();
             }
 
-            // Запуск автоматического слайдера
             startAutoSlide();
 
-            // Остановка автоматического переключения при наведении
             sliderTrack.addEventListener('mouseenter', () => {
                 clearInterval(autoSlideInterval);
             });
@@ -482,23 +504,18 @@ mobile_redirect_if_needed();
 
         // Анимация для карточек платформы
         document.addEventListener('DOMContentLoaded', function() {
-            // Анимация при прокрутке
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('animate');
                     }
                 });
-            }, {
-                threshold: 0.1
-            });
+            }, { threshold: 0.1 });
 
-            // Наблюдаем за карточками платформы
             document.querySelectorAll('.platform-card').forEach(card => {
                 observer.observe(card);
             });
 
-            // Наблюдаем за шагами
             document.querySelectorAll('.step').forEach(step => {
                 observer.observe(step);
             });
@@ -506,19 +523,13 @@ mobile_redirect_if_needed();
     </script>
     <script>
         if ('serviceWorker' in navigator) {
-            // регистрация сервис-воркера 
             navigator.serviceWorker.register('/sw.js')
                 .then(reg => {
                     reg.onupdatefound = () => {
                         const installingWorker = reg.installing;
-
                         installingWorker.onstatechange = () => {
                             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // Новая версия сервис-воркера доступна
                                 console.log('New service worker version available.');
-
-                                // Опционально: показать уведомление пользователю
-                                showUpdateNotification();
                             }
                         };
                     };
@@ -529,21 +540,13 @@ mobile_redirect_if_needed();
         (function() {
             const hero = document.querySelector('.hero');
             if (!hero) return;
-
-            // Максимальное смещение в пикселях (вправо)
             const MAX_OFFSET = 300;
-
             function updateHeroBgOffset() {
                 const scrollY = window.scrollY;
-                // Рассчитываем смещение: чем больше скролл, тем больше offset (но не больше MAX_OFFSET)
                 let offset = Math.min(scrollY * 0.5, MAX_OFFSET);
                 hero.style.setProperty('--hero-bg-offset', offset + 'px');
             }
-
-            // Запускаем при загрузке
             updateHeroBgOffset();
-
-            // Оптимизированный обработчик скролла с requestAnimationFrame
             let ticking = false;
             window.addEventListener('scroll', () => {
                 if (!ticking) {
@@ -557,175 +560,6 @@ mobile_redirect_if_needed();
         })();
     </script>
 
-    <div id="dust-intro-modal" class="dust-modal hidden">
-        <div class="dust-modal-content">
-            <button class="dust-modal-close" aria-label="Закрыть">×</button>
-            <div class="dust-cat-wrapper">
-                <img id="dust-cat" src="/swad/static/img/dastyframe1.png">
-            </div>
-            <div class="dust-dialogue">
-                <div id="dust-text"></div>
-                <button id="dust-close-btn" class="dust-close hidden">Продолжить</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        if (!localStorage.getItem("dust_intro_seen")) {
-            const modal = document.getElementById("dust-intro-modal");
-            const textElement = document.getElementById("dust-text");
-            const continueBtn = document.getElementById("dust-close-btn");
-            const cat = document.getElementById("dust-cat");
-            const closeCross = document.querySelector(".dust-modal-close");
-
-            const typeSound = new Audio("/swad/static/sounds/dusty_fx.mp3");
-            typeSound.volume = 0.3;
-            const SOUND_EVERY_N_CHARS = 3;
-
-            const catFrames = [
-                "/swad/static/img/dastyframe1.png",
-                "/swad/static/img/dastyframe2.png",
-                "/swad/static/img/dastyframe3.png"
-            ];
-
-            const dialogues = [
-                "Здарова! Добро пожаловать на наш Dustore!",
-                "Я Дасти кстати...",
-                "...ну, типа менеджер здесь. Да-да!",
-                "Это площадка для инди-разработчиков и игроков.",
-                "Тут можно публиковать игры, искать команду, участвовать в джемах и многое другое.",
-                "Надеюсь, что ты самостоятельно всё найдешь.",
-                "Но если нет... то ищи меня в правом верхнем углу, я помогу.",
-                "В общем, будь как дома и...",
-                "Надеюсь, тебе тут понравится. Свидимся!"
-            ];
-
-            const winkAfter = [0, 8];
-
-            let frameIndex = 0;
-            let animationInterval = null;
-            let dialogueIndex = 0;
-            let charIndex = 0;
-            let soundCounter = 0;
-            let isClosing = false;
-            let isTyping = false;
-
-            // Функция полного закрытия окна
-            function forceCloseModal() {
-                if (isClosing) return;
-                isClosing = true;
-
-                if (animationInterval) clearInterval(animationInterval);
-                modal.style.opacity = "0";
-                setTimeout(() => {
-                    if (modal && modal.parentNode) modal.remove();
-                }, 300);
-                localStorage.setItem("dust_intro_seen", "true");
-            }
-
-            // Анимация подмигивания
-            function winkAnimation(callback) {
-                cat.src = "/swad/static/img/dastyframe_half.png";
-                setTimeout(() => {
-                    cat.src = "/swad/static/img/dastyframe_full.png";
-                    setTimeout(() => {
-                        if (!isClosing) {
-                            cat.src = "/swad/static/img/dastyframe1.png";
-                            if (callback) callback();
-                        }
-                    }, 900);
-                }, 700);
-            }
-
-            // Печать текста
-            function typeDialogue() {
-                if (isClosing) return;
-                isTyping = true;
-                const currentText = dialogues[dialogueIndex];
-                if (charIndex < currentText.length) {
-                    textElement.textContent += currentText.charAt(charIndex);
-                    soundCounter++;
-                    if (soundCounter % SOUND_EVERY_N_CHARS === 0) {
-                        typeSound.currentTime = 0;
-                        typeSound.play().catch(() => {});
-                    }
-                    charIndex++;
-                    setTimeout(typeDialogue, 25);
-                } else {
-                    isTyping = false;
-                    clearInterval(animationInterval);
-                    if (winkAfter.includes(dialogueIndex)) {
-                        winkAnimation(() => {
-                            if (!isClosing) continueBtn.classList.remove("hidden");
-                        });
-                    } else {
-                        cat.src = "/swad/static/img/dastyframe1.png";
-                        if (!isClosing) continueBtn.classList.remove("hidden");
-                    }
-                }
-            }
-
-            // Переход к следующей фразе
-            function nextDialogue() {
-                if (isClosing) return;
-                dialogueIndex++;
-                if (dialogueIndex >= dialogues.length) {
-                    forceCloseModal();
-                    return;
-                }
-                textElement.textContent = "";
-                charIndex = 0;
-                soundCounter = 0;
-                continueBtn.classList.add("hidden");
-                // Перезапускаем анимацию кота
-                if (animationInterval) clearInterval(animationInterval);
-                animationInterval = setInterval(() => {
-                    if (!isClosing) {
-                        frameIndex = (frameIndex + 1) % catFrames.length;
-                        cat.src = catFrames[frameIndex];
-                    }
-                }, 150);
-                typeDialogue();
-            }
-
-            // Закрытие по крестику
-            function onCrossClose(e) {
-                e.stopPropagation();
-                forceCloseModal();
-            }
-
-            // Закрытие по клику на фон (overlay)
-            function onOverlayClick(e) {
-                if (e.target === modal) forceCloseModal();
-            }
-
-            // Закрытие по Escape
-            function onEscKey(e) {
-                if (e.key === "Escape") forceCloseModal();
-            }
-
-            // Запуск диалога автоматически при открытии
-            function startDialogue() {
-                modal.classList.remove("hidden");
-                animationInterval = setInterval(() => {
-                    if (!isClosing) {
-                        frameIndex = (frameIndex + 1) % catFrames.length;
-                        cat.src = catFrames[frameIndex];
-                    }
-                }, 150);
-                typeDialogue();
-            }
-
-            // Навешиваем обработчики
-            closeCross.addEventListener("click", onCrossClose);
-            continueBtn.addEventListener("click", nextDialogue);
-            modal.addEventListener("click", onOverlayClick);
-            document.addEventListener("keydown", onEscKey);
-
-            // Запускаем
-            startDialogue();
-        }
-    </script>
 
 <script>
     (function() {
@@ -739,25 +573,20 @@ mobile_redirect_if_needed();
 
         function updateBackgroundPosition() {
             if (!isMoonlight) return;
-
             currentX += (targetX - currentX) * 0.1;
             currentY += (targetY - currentY) * 0.1;
-
             const posX = 50 + currentX;
-            const posY = 35 + currentY;   // 35% — твой сдвиг вверх
+            const posY = 35 + currentY;
             document.body.style.backgroundPosition = `${posX}% ${posY}%`;
-
             animationFrame = requestAnimationFrame(updateBackgroundPosition);
         }
 
         function onMouseMove(e) {
             if (!isMoonlight) return;
-
             const wx = window.innerWidth;
             const wy = window.innerHeight;
             const nx = (e.clientX / wx - 0.5) * 2;
             const ny = (e.clientY / wy - 0.5) * 2;
-
             targetX = nx * MAX_OFFSET_X;
             targetY = ny * MAX_OFFSET_Y;
         }
@@ -792,17 +621,13 @@ mobile_redirect_if_needed();
         const rect = btn.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
         const nx = (x / rect.width) * 2 - 1;
         const ny = (y / rect.height) * 2 - 1;
-
-        const maxAngle = 15;          // максимальный угол наклона
+        const maxAngle = 15;
         const rotateY = maxAngle * nx;
         const rotateX = -maxAngle * ny;
-
-        const translateY = -3;        // подъём вверх при наведении
-        const scale = 1.1;           // небольшое увеличение
-
+        const translateY = -3;
+        const scale = 1.1;
         btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
     }
 
@@ -814,6 +639,415 @@ mobile_redirect_if_needed();
         btn.addEventListener('mousemove', handleMouseMove);
         btn.addEventListener('mouseleave', handleMouseLeave);
     });
+})();
+</script>
+
+<div id="vote-banner" data-collapsed="false">
+    <button id="vote-toggle-btn" class="vote-toggle" aria-label="Свернуть">✕</button>
+    <div class="vote-label">Идёт голосование:</div>
+    <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
+    <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
+    <a href="/jams/vote" class="vote-btn pixel-title">Оценить билды</a>
+</div>
+
+<script>
+(function() {
+    const banner = document.getElementById('vote-banner');
+    const toggleBtn = document.getElementById('vote-toggle-btn');
+    if (!banner) return;
+
+    const STORAGE_KEY = 'dustore_vote_banner_collapsed';
+
+    const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+    if (isCollapsed) {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+    }
+
+    toggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        collapseBanner();
+    });
+
+    banner.addEventListener('click', function() {
+        if (banner.dataset.collapsed === 'true') {
+            expandBanner();
+        }
+    });
+
+    function collapseBanner() {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+        localStorage.setItem(STORAGE_KEY, 'true');
+    }
+
+    function expandBanner() {
+        banner.classList.remove('collapsed');
+        banner.dataset.collapsed = 'false';
+        localStorage.setItem(STORAGE_KEY, 'false');
+    }
+})();
+</script>
+
+<script>
+(function() {
+    const banner = document.getElementById('vote-banner');
+    if (!banner) return;
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let startLeft = 0, startTop = 0;
+    let currentLeft = 0, currentTop = 0;
+    let hasSavedPosition = false;
+
+    const STORAGE_KEY = 'dustore_vote_banner_position';
+    const EDGE_OFFSET = 20;
+    const DRAG_THRESHOLD = 5;
+
+    function getHeaderHeight() {
+        const header = document.querySelector('.header');
+        if (header) return header.offsetHeight + 10;
+        return 80;
+    }
+
+    function loadPosition() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const pos = JSON.parse(saved);
+                if (pos.left !== undefined && pos.top !== undefined) {
+                    currentLeft = pos.left;
+                    currentTop = pos.top;
+                    hasSavedPosition = true;
+                    return true;
+                }
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    function applyPosition(left, top, animate = true) {
+        if (!animate) banner.style.transition = 'none';
+        else banner.style.transition = 'left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        banner.style.left = left + 'px';
+        banner.style.top = top + 'px';
+        banner.style.right = 'auto';
+        banner.style.bottom = 'auto';
+        if (!animate) {
+            void banner.offsetWidth;
+            banner.style.transition = '';
+        }
+        currentLeft = left;
+        currentTop = top;
+    }
+
+    function initPosition() {
+        const headerHeight = getHeaderHeight();
+        if (loadPosition()) {
+            if (currentTop < headerHeight + EDGE_OFFSET) {
+                currentTop = headerHeight + EDGE_OFFSET;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: currentLeft, top: currentTop }));
+            }
+            applyPosition(currentLeft, currentTop, false);
+            return;
+        }
+        const rect = banner.getBoundingClientRect();
+        const defaultLeft = window.innerWidth - rect.width - EDGE_OFFSET;
+        const defaultTop = headerHeight + EDGE_OFFSET;
+        currentLeft = defaultLeft;
+        currentTop = defaultTop;
+        applyPosition(defaultLeft, defaultTop, false);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: currentLeft, top: currentTop }));
+    }
+
+    function snapToEdge() {
+        const rect = banner.getBoundingClientRect();
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+        const bw = rect.width;
+        const bh = rect.height;
+        const headerHeight = getHeaderHeight();
+
+        const cx = rect.left + bw / 2;
+        const cy = rect.top + bh / 2;
+
+        let targetLeft, targetTop;
+        if (cx < winW / 2) targetLeft = EDGE_OFFSET;
+        else targetLeft = winW - bw - EDGE_OFFSET;
+
+        const topDist = cy - headerHeight;
+        const bottomDist = winH - cy;
+        if (topDist < bottomDist) targetTop = headerHeight + EDGE_OFFSET;
+        else targetTop = winH - bh - EDGE_OFFSET;
+
+        targetLeft = Math.max(EDGE_OFFSET, Math.min(targetLeft, winW - bw - EDGE_OFFSET));
+        targetTop = Math.max(headerHeight + EDGE_OFFSET, Math.min(targetTop, winH - bh - EDGE_OFFSET));
+
+        applyPosition(targetLeft, targetTop, true);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: targetLeft, top: targetTop }));
+    }
+
+    function onPointerDown(e) {
+        const target = e.target.closest('.vote-toggle, .vote-btn, a, button');
+        if (target) return;
+        e.preventDefault();
+
+        const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
+        const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
+        const rect = banner.getBoundingClientRect();
+        startX = clientX;
+        startY = clientY;
+        startLeft = rect.left;
+        startTop = rect.top;
+
+        let isDraggingNow = false;
+
+        function onPointerMove(ev) {
+            const cx = ev.clientX || ev.touches?.[0]?.clientX || 0;
+            const cy = ev.clientY || ev.touches?.[0]?.clientY || 0;
+            const dx = cx - startX;
+            const dy = cy - startY;
+            if (!isDraggingNow && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+                isDraggingNow = true;
+                banner.style.cursor = 'grabbing';
+            }
+            if (isDraggingNow) {
+                ev.preventDefault();
+                let newLeft = startLeft + dx;
+                let newTop = startTop + dy;
+                const headerHeight = getHeaderHeight();
+                const maxL = window.innerWidth - banner.offsetWidth - EDGE_OFFSET;
+                const maxT = window.innerHeight - banner.offsetHeight - EDGE_OFFSET;
+                newLeft = Math.max(EDGE_OFFSET, Math.min(newLeft, maxL));
+                newTop = Math.max(headerHeight + EDGE_OFFSET, Math.min(newTop, maxT));
+                applyPosition(newLeft, newTop, false);
+            }
+        }
+
+        function onPointerUp() {
+            document.removeEventListener('mousemove', onPointerMove);
+            document.removeEventListener('mouseup', onPointerUp);
+            document.removeEventListener('touchmove', onPointerMove);
+            document.removeEventListener('touchend', onPointerUp);
+            if (isDraggingNow) {
+                banner.style.cursor = '';
+                snapToEdge();
+            } else {
+                const isCollapsed = banner.dataset.collapsed === 'true';
+                if (isCollapsed) {
+                    banner.classList.remove('collapsed');
+                    banner.dataset.collapsed = 'false';
+                    localStorage.setItem('dustore_vote_banner_collapsed', 'false');
+                }
+            }
+            isDraggingNow = false;
+        }
+
+        document.addEventListener('mousemove', onPointerMove);
+        document.addEventListener('mouseup', onPointerUp);
+        document.addEventListener('touchmove', onPointerMove, { passive: false });
+        document.addEventListener('touchend', onPointerUp);
+    }
+
+    function updateCursor() {
+        const isCollapsed = banner.dataset.collapsed === 'true';
+        banner.style.cursor = isCollapsed ? 'pointer' : 'grab';
+    }
+
+    const observer = new MutationObserver(() => { updateCursor(); });
+    observer.observe(banner, { attributes: true, attributeFilter: ['data-collapsed'] });
+
+    const collapsedState = localStorage.getItem('dustore_vote_banner_collapsed') === 'true';
+    if (collapsedState) {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+    } else {
+        banner.dataset.collapsed = 'false';
+    }
+
+    initPosition();
+    updateCursor();
+
+    banner.addEventListener('mousedown', onPointerDown);
+    banner.addEventListener('touchstart', onPointerDown, { passive: false });
+
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            const rect = banner.getBoundingClientRect();
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            if (rect.left < 0 || rect.top < 0 || rect.right > winW || rect.bottom > winH) {
+                setTimeout(snapToEdge, 100);
+            }
+        }, 300);
+    });
+})();
+</script>
+
+<!-- Приветственное окошко Дасти (показывается один раз за сессию) -->
+<div id="dusty-greeting" class="dusty-greeting" style="display: none;">
+    <button class="greeting-close" aria-label="Закрыть">✕</button>
+    <div class="greeting-content">
+        <img class="greeting-avatar" src="/swad/static/img/dastyframe1.png" alt="Дасти">
+        <div class="greeting-text">
+            <p>Привет! Я Дасти — твой проводник по Dustore.</p>
+            <p class="greeting-hint">Нажми на лапку 🐾 в правом верхнем углу, если понадоблюсь.</p>
+        </div>
+    </div>
+</div>
+
+<div id="telegram-banner" class="telegram-banner" data-collapsed="false">
+    <div class="tg-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-telegram"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" /></svg></div>
+    <div class="tg-content">
+        <div class="tg-text">
+            Наш <a href="https://t.me/dustore_official" target="_blank">Telegram</a>
+        </div>
+        <button class="tg-toggle" aria-label="Свернуть">✕</button>
+    </div>
+</div>
+
+<script>
+/// Приветственное окошко Дасти на главной + сдвиг vote-banner
+(function() {
+    if (window.location.pathname !== '/') return;
+
+    const popup = document.getElementById('dusty-greeting');
+    const voteBanner = document.getElementById('vote-banner');
+    if (!popup || !voteBanner) {
+        console.warn('Окошко или баннер не найдены');
+        return;
+    }
+
+    const SESSION_KEY = 'dusty_greeting_shown';
+    if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+        popup.style.display = 'none';
+        return;
+    }
+
+    function getCurrentTop(el) {
+        const styleTop = el.style.top;
+        if (styleTop && styleTop !== 'auto' && styleTop !== '') {
+            return parseFloat(styleTop);
+        }
+        return el.getBoundingClientRect().top;
+    }
+
+    function isInTopRight(el) {
+        const rect = el.getBoundingClientRect();
+        const winW = window.innerWidth;
+        const isRight = rect.left + rect.width/2 > winW * 0.55;
+        const isTop = rect.top + rect.height/2 < window.innerHeight * 0.4;
+        return isRight && isTop;
+    }
+
+    let originalTopVote = null;
+
+    function shiftVoteDown() {
+        if (!isInTopRight(voteBanner)) return;
+        const currentTop = getCurrentTop(voteBanner);
+        if (currentTop === null || isNaN(currentTop)) return;
+        originalTopVote = currentTop;
+        voteBanner.style.transition = 'top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        voteBanner.style.top = (currentTop + 170) + 'px';
+    }
+
+    function shiftVoteUp() {
+        if (originalTopVote === null) return;
+        voteBanner.style.transition = 'top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        voteBanner.style.top = originalTopVote + 'px';
+        setTimeout(() => { voteBanner.style.transition = ''; }, 450);
+        originalTopVote = null;
+    }
+
+    function showPopup() {
+        popup.style.display = 'block';
+        void popup.offsetWidth;
+        popup.classList.add('show');
+
+        shiftVoteDown();
+
+        const autoCloseTimer = setTimeout(() => {
+            closePopup();
+        }, 7000);
+
+        const closeBtn = popup.querySelector('.greeting-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                clearTimeout(autoCloseTimer);
+                closePopup();
+            });
+        }
+
+        function closePopup() {
+            popup.classList.remove('show');
+            shiftVoteUp();
+            setTimeout(() => {
+                popup.style.display = 'none';
+            }, 450);
+            sessionStorage.setItem(SESSION_KEY, 'true');
+        }
+
+        sessionStorage.setItem(SESSION_KEY, 'true');
+    }
+
+    setTimeout(showPopup, 500);
+})();
+</script>
+
+// Telegram-баннер (простой, в правом нижнем углу, сворачивание)
+<script>
+(function() {
+    const banner = document.getElementById('telegram-banner');
+    if (!banner) return;
+
+    const STORAGE_KEY_COLL = 'dustore_tg_banner_collapsed';
+    const toggleBtn = banner.querySelector('.tg-toggle');
+
+    // Восстановление состояния свёрнутости
+    const savedCollapsed = localStorage.getItem(STORAGE_KEY_COLL) === 'true';
+    if (savedCollapsed) {
+        banner.classList.add('collapsed');
+        banner.dataset.collapsed = 'true';
+    } else {
+        banner.classList.remove('collapsed');
+        banner.dataset.collapsed = 'false';
+    }
+
+    // Обработчик сворачивания/разворачивания
+    function toggleBanner(e) {
+        e.stopPropagation();
+        const isCollapsed = banner.dataset.collapsed === 'true';
+        if (isCollapsed) {
+            banner.classList.remove('collapsed');
+            banner.dataset.collapsed = 'false';
+            localStorage.setItem(STORAGE_KEY_COLL, 'false');
+        } else {
+            banner.classList.add('collapsed');
+            banner.dataset.collapsed = 'true';
+            localStorage.setItem(STORAGE_KEY_COLL, 'true');
+        }
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleBanner);
+    }
+
+    // Клик по самому баннеру (кроме крестика) — если свёрнут, разворачиваем
+    banner.addEventListener('click', function(e) {
+        if (e.target.closest('.tg-toggle')) return;
+        const isCollapsed = banner.dataset.collapsed === 'true';
+        if (isCollapsed) {
+            banner.classList.remove('collapsed');
+            banner.dataset.collapsed = 'false';
+            localStorage.setItem(STORAGE_KEY_COLL, 'false');
+        }
+    });
+
+    // Анимация разворачивания справа налево: задаём transform-origin
+    banner.style.transformOrigin = 'right center';
 })();
 </script>
 

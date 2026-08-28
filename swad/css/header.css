@@ -44,6 +44,21 @@ body {
     transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
 }
 
+.nav-dropdown__item--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none; /* отключает клики */
+    color: rgba(255, 255, 255, 0.3);
+    text-decoration: none;
+    user-select: none;
+}
+
+/* Чтобы при наведении не было эффекта подсветки */
+.nav-dropdown__item--disabled:hover {
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
 .header-wrapper,
 .header {
     max-width: 100%;
@@ -319,6 +334,17 @@ body.moonlight-theme .image::after {
     opacity: 0.4;
 }
 
+body.moonlight-theme .vote-toggle {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+body.moonlight-theme .vote-toggle:hover {
+    color: #b8c8ff;
+}
+
+body.moonlight-theme .vote-image {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
 
 @media screen and (max-width: 900px) {
 

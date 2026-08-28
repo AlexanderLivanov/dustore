@@ -377,6 +377,14 @@ class User
 
     public function updateUserItems($user_id, $game_id)
     {
+        $user_id = (int)$user_id;
+        $game_id = (int)$game_id;
+
+        if ($user_id <= 0 || $game_id <= 0) {
+            error_log('[updateUserItems] пропуск: user_id=' . $user_id . ' game_id=' . $game_id);
+            return false;
+        }
+
         $stmt = $this->db->prepare("
             INSERT INTO library (player_id, game_id, purchased, date)
             SELECT ?, ?, 1, NOW()
@@ -385,6 +393,7 @@ class User
             )
         ");
         $stmt->execute([$user_id, $game_id, $user_id, $game_id]);
+        return true;
     }
 
     // 06.01.2026 (c) Alexander Livanov

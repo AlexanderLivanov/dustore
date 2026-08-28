@@ -366,22 +366,9 @@ $stmt->execute([
                 </div>
                 <div class="buttons-left">
                     <button class="button" onclick="location.href='/explore'">Игры</button>
-                    <!-- Dropdown «Платформа» -->
-                    <div class="nav-dropdown">
-                        <button class="button nav-dropdown__trigger" aria-haspopup="true" aria-expanded="false">
-                            Платформа
-                            <svg class="nav-dropdown__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
-                                <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </button>
-                        <ul class="nav-dropdown__menu" role="menu">
-                            <li><a class="nav-dropdown__item" href='/jams' role="menuitem">Спринты</a></li>
-                            <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
-                            <li><a class="nav-dropdown__item" href="#" role="menuitem">Битый Пиксель</a></li>
-                            <li><a class="nav-dropdown__item" href="#" role="menuitem">Медиа</a></li>
-                        </ul>
-                    </div>
-                    
+
+                    <!-- Кнопка «Джемы» вместо дропдауна -->
+                    <button class="button" onclick="location.href='/jams'">Джемы</button>
 
                     <!-- Dropdown «Для разработчиков» -->
                     <div class="nav-dropdown">
@@ -393,10 +380,13 @@ $stmt->execute([
                         </button>
                         <ul class="nav-dropdown__menu" role="menu">
                             <li><a class="nav-dropdown__item" href="/assetstore" role="menuitem">Ассеты</a></li>
-                            <li><a class="nav-dropdown__item" href="/l4t" role="menuitem">L4T</a></li>
-                            <li><a class="nav-dropdown__item" href="/dplx" role="menuitem">DeplexSDK</a></li>
-                            <li><a class="nav-dropdown__item" href="#" role="menuitem">GDDB</a></li>
-                            <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>
+                            <li><a class="nav-dropdown__item" href="/l4t" role="menuitem">L4T<span style="font-size:11px; opacity:0.6; margin-left:6px; font-weight:400;">биржа специалистов</span></a></li>
+                            <li><a class="nav-dropdown__item" href="/dplx" role="menuitem">DeplexSDK<span style="font-size:11px; opacity:0.6; margin-left:6px; font-weight:400;">загрузи игру на Dustore</span></a></li>
+                            <li><a class="nav-dropdown__item" href="/about" role="menuitem">О нас</a></li>
+                            <!--<li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">GDDB (база знаний)<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
+                            <li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">Битый Пиксель<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
+                            <li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">Медиа<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
+                            <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>-->
 
                             <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
                                 <li>
@@ -460,7 +450,7 @@ $stmt->execute([
                 </div>
             </div>
             <div class="section right-section">
-                <div class="buttons-right" style="padding-left:100px;">
+                <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
                         $pdo = $db->connect();
@@ -1774,6 +1764,65 @@ document.addEventListener('visibilitychange', function() {
 });
 </script>
 
+<script>
+// Легкая инерция для колесика мыши (с защитой от внутренних скроллов)
+(function() {
+    let targetScrollY = window.scrollY;
+    let currentScrollY = window.scrollY;
+    let isScrolling = false;
+    const easing = 0.12; // Оставляем твоё значение
+
+    // Функция проверки: есть ли у этого элемента или его родителей своя зона скролла
+    function hasOwnScrollableArea(element) {
+        while (element && element !== document.body) {
+            const style = window.getComputedStyle(element);
+            const overflowY = style.overflowY;
+            if (overflowY === 'auto' || overflowY === 'scroll') {
+                // Если элемент физически имеет контент для прокрутки
+                if (element.scrollHeight > element.clientHeight) {
+                    return true; // Да, тут своя прокрутка, не трогаем
+                }
+            }
+            element = element.parentElement;
+        }
+        return false;
+    }
+
+    document.addEventListener('wheel', function(e) {
+        // 1. Проверяем, не происходит ли скролл внутри элемента, у которого есть свой скроллбар
+        if (hasOwnScrollableArea(e.target)) {
+            return; // Пропускаем, работает нативная прокрутка внутри окошек!
+        }
+
+        // 2. Если нет — включаем нашу плавную инерцию для основной страницы
+        e.preventDefault();
+        targetScrollY += e.deltaY;
+
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        targetScrollY = Math.max(0, Math.min(targetScrollY, maxScroll));
+
+        if (!isScrolling) {
+            isScrolling = true;
+            requestAnimationFrame(smoothScroll);
+        }
+    }, { passive: false });
+
+    function smoothScroll() {
+        const diff = targetScrollY - currentScrollY;
+
+        if (Math.abs(diff) < 0.5) {
+            currentScrollY = targetScrollY;
+            window.scrollTo(0, currentScrollY);
+            isScrolling = false;
+            return;
+        }
+
+        currentScrollY += diff * easing;
+        window.scrollTo(0, currentScrollY);
+        requestAnimationFrame(smoothScroll);
+    }
+})();
+</script>
 
 </body>
 
