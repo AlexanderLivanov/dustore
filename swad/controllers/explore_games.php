@@ -57,27 +57,62 @@ if ($priceType === 'free') {
     });
 }
 
-// Сортировка:
-//   popularity → скачивания (downloads)
-//   price      → цена
-//   date       → дата релиза
-//   updated    → дата обновления
-$sortField = 'downloads';
-if ($sort === 'price')   $sortField = 'price';
-if ($sort === 'date')    $sortField = 'release_date';
-if ($sort === 'updated') $sortField = 'updated_at';
+/* ── Сортировка ──────────────────────────────────────────────────────
+ * popularity — НЕ сырой счётчик. Сырой счётчик — это «зал славы»:
+ * игра, скачанная год назад, вечно стоит выше свежей, у которой сейчас
+ * всплеск. Поэтому берём взвешенную оценку: всё время + утроенное окно
+ * за 30 дней + отзывы как признак живой аудитории.
+ * price/date/updated — просто поля.
+ */
+$popScore = function (array $g): float {
+    $all = (float)($g['downloads'] ?? 0);
+    $recent = (float)($g['downloads_30d'] ?? 0);
+    $rated = (float)($g['ratings_count'] ?? 0);
+    return $all + $recent * 3 + $rated * 2;
+};
 
-usort($games, function ($a, $b) use ($sortField, $dir) {
-    $va = $a[$sortField] ?? 0;
-    $vb = $b[$sortField] ?? 0;
-    if ($sortField === 'release_date' || $sortField === 'updated_at') {
-        $va = $va ? strtotime((string)$va) : 0;
-        $vb = $vb ? strtotime((string)$vb) : 0;
-    } else {
-        $va = (float)$va;
-        $vb = (float)$vb;
+/** Время в timestamp; пустые/битые даты уезжают в конец при любом dir. */
+$ts = function ($v): ?int {
+    if (empty($v) || str_starts_with((string)$v, '0000-')) return null;
+    $t = strtotime((string)$v);
+    return $t === false ? null : $t;
+};
+
+usort($games, function ($a, $b) use ($sort, $dir, $popScore, $ts) {
+    $asc = ($dir === 'asc');
+
+    if ($sort === 'date' || $sort === 'updated') {
+        $field = $sort === 'date' ? 'release_date' : 'updated_at';
+        $va = $ts($a[$field] ?? null);
+        $vb = $ts($b[$field] ?? null);
+        // Игры без даты всегда внизу, а не «в 1970-м».
+        if ($va === null && $vb === null) return 0;
+        if ($va === null) return 1;
+        if ($vb === null) return -1;
+        return $asc ? ($va <=> $vb) : ($vb <=> $va);
     }
-    return $dir === 'asc' ? ($va <=> $vb) : ($vb <=> $va);
+
+    if ($sort === 'price') {
+        $va = (float)($a['price'] ?? 0);
+        $vb = (float)($b['price'] ?? 0);
+        $cmp = $asc ? ($va <=> $vb) : ($vb <=> $va);
+        // При равной цене (а бесплатных много) — по популярности,
+        // иначе порядок выглядит случайным.
+        return $cmp !== 0 ? $cmp : ($popScore($b) <=> $popScore($a));
+    }
+
+    // popularity
+    $va = $popScore($a);
+    $vb = $popScore($b);
+    $cmp = $asc ? ($va <=> $vb) : ($vb <=> $va);
+    if ($cmp !== 0) return $cmp;
+    // Детерминированный тай-брейк: без него игры с нулём (а их большинство
+    // в молодом каталоге) шли в произвольном порядке и «популярное»
+    // выглядело сломанным.
+    $ga = (float)($a['GQI'] ?? 0);
+    $gb = (float)($b['GQI'] ?? 0);
+    if ($ga !== $gb) return $gb <=> $ga;
+    return ($ts($b['release_date'] ?? null) ?? 0) <=> ($ts($a['release_date'] ?? null) ?? 0);
 });
 
 // Ответ
@@ -89,6 +124,7 @@ foreach ($games as $game) {
         'path_to_cover' => $game['path_to_cover'] ?? '',
         'price'         => (float)($game['price'] ?? 0),
         'downloads'     => (int)($game['downloads'] ?? 0),
+        'downloads_30d' => (int)($game['downloads_30d'] ?? 0),
         'release_date'  => $game['release_date'] ?? '',
         'updated_at'    => $game['updated_at'] ?? '',
         'age_rating'    => (int)($game['age_rating'] ?? 0),

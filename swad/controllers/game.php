@@ -43,7 +43,17 @@ class Game
                 g.genre,
                 g.updated_at,
                 g.hidden,
-                (SELECT COUNT(*) FROM library l WHERE l.game_id = g.id) AS downloads,
+                -- ВАЖНО: player_id > 0.
+                -- download_game.php для анонимов подставлял $_COOKIE['temp_id'] —
+                -- случайное ОТРИЦАТЕЛЬНОЕ число из header.php. Каждый безкуковый
+                -- заход (в т.ч. краулер) создавал нового «владельца».
+                -- DISTINCT — на случай задвоенных строк в старых данных.
+                (SELECT COUNT(DISTINCT l.player_id) FROM library l
+                  WHERE l.game_id = g.id AND l.player_id > 0) AS downloads,
+                (SELECT COUNT(DISTINCT l.player_id) FROM library l
+                  WHERE l.game_id = g.id AND l.player_id > 0
+                    AND l.date >= NOW() - INTERVAL 30 DAY) AS downloads_30d,
+                (SELECT COUNT(*) FROM ratings r WHERE r.game_id = g.id) AS ratings_count,
                 s.name AS studio_name
             FROM games g
             JOIN studios s ON g.developer = s.id
