@@ -351,11 +351,16 @@ $stmt->execute([
             menu.style.display = 'none';
         });
     </script>
-    <div class="center-floating-block">
-        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;"></p>
-    </div>
     <div class="header-wrapper">
         <div class="header">
+            <!-- Единая поверхность хедера: фон + backdrop-filter + силуэт (clip-path). -->
+            <span class="header__bg" aria-hidden="true"></span>
+
+            <!-- «Монобровь»: слот под текст + подкова-обводка. Класс сохранён — на нём висит JS. -->
+            <div class="center-floating-block">
+                <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;"></p>
+            </div>
+
             <div class="section left-section">
                 <div>
                     <button id="burger" class="button" style="padding: 0; z-index: 1000;"><svg height="48" id="svg8" version="1.1" viewBox="0 0 12.7 12.7" width="48" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg">
@@ -388,37 +393,6 @@ $stmt->execute([
                             <li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">Медиа<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
                             <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>-->
 
-                            <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
-                                <li>
-                                    <a class="nav-dropdown__item nav-dropdown__item--accent"
-                                        href="/devs/" role="menuitem"
-                                        style="color:#ff5ba8;font-weight:600;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                            style="vertical-align:middle;margin-right:4px;">
-                                            <rect x="2" y="3" width="20" height="14" rx="2" />
-                                            <path d="M8 21h8M12 17v4" />
-                                        </svg>
-                                        Консоль разработчика
-                                    </a>
-                                </li>
-                            <?php else: ?>
-                                <li>
-                                    <a class="nav-dropdown__item nav-dropdown__item--accent"
-                                        href="/login?backUrl=/devs/" role="menuitem"
-                                        style="color:rgba(255,91,168,.7);font-weight:600;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                            style="vertical-align:middle;margin-right:4px;">
-                                            <rect x="2" y="3" width="20" height="14" rx="2" />
-                                            <path d="M8 21h8M12 17v4" />
-                                        </svg>
-                                        Войти в консоль
-                                    </a>
-                                </li>
-                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
@@ -433,20 +407,6 @@ $stmt->execute([
                     onclick="location.href='/'">
 
                 <audio id="cowSound" src="/swad/static/img/cow.mp3" preload="auto"></audio> -->
-                    <script>
-                        const gif = document.getElementById('dancingCow');
-                        const sound = document.getElementById('cowSound');
-
-                        gif.addEventListener('mouseenter', () => {
-                            sound.currentTime = 0; // перемотка на начало
-                            sound.play().catch(e => console.log('Автовоспроизведение заблокировано', e));
-                        });
-
-                        gif.addEventListener('mouseleave', () => {
-                            sound.pause();
-                            sound.currentTime = 0;
-                        });
-                    </script>
                 </div>
             </div>
             <div class="section right-section">
@@ -643,11 +603,14 @@ $stmt->execute([
             const header = document.querySelector('.header');
             const floatingBlock = document.querySelector('.center-floating-block');
 
-            header.addEventListener('mouseenter', () => {
-                floatingBlock.classList.add('header-hovered');
+            // Ховер теперь отрабатывает чистым CSS (.header:hover .center-floating-block).
+            // Класс оставлен для обратной совместимости со сторонними стилями,
+            // опциональная цепочка — чтобы разметка без «моноброви» не роняла скрипт.
+            header?.addEventListener('mouseenter', () => {
+                floatingBlock?.classList.add('header-hovered');
             });
-            header.addEventListener('mouseleave', () => {
-                floatingBlock.classList.remove('header-hovered');
+            header?.addEventListener('mouseleave', () => {
+                floatingBlock?.classList.remove('header-hovered');
             });
             document.addEventListener('DOMContentLoaded', function() {
                 const imageContainer = document.querySelector('.image');
@@ -905,22 +868,29 @@ $stmt->execute([
         <!-- Модалка помощника Дасти -->
         <div id="dusty-helper-modal" class="dust-modal hidden">
             <div class="dust-layout">
-                <button class="dust-helper-close">&times;</button>
 
-                <!-- Левая часть: котик -->
+                <!-- Левая часть: сцена с котиком -->
                 <div class="dust-layout__cat">
                     <img id="dusty-cat" src="/swad/static/img/dastyframe1.png" alt="Дасти">
                 </div>
 
-                <!-- Правая часть: диалог + нижняя панель -->
+                <!-- Правая часть: шапка + реплика + панель действий -->
                 <div class="dust-layout__right">
+
+                    <div class="dust-head">
+                        <span class="dust-name">Дасти</span>
+                        <button class="dust-helper-close" type="button" aria-label="Закрыть">&times;</button>
+                    </div>
+
                     <div class="dust-layout__dialogue">
                         <div id="dusty-text"></div>
                     </div>
+
                     <div class="dust-layout__actions">
-                        <button id="dusty-continue-btn" class="dust-close hidden">Продолжить</button>
-                        <!-- Здесь в будущем появятся кнопки вопросов -->
+                        <button id="dusty-continue-btn" class="dust-close hidden" type="button">Продолжить</button>
+                        <!-- Кнопки тем и «Ещё вопрос?» добавляет JS с тем же классом .dust-close -->
                     </div>
+
                 </div>
             </div>
         </div>

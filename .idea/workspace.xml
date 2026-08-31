@@ -5,9 +5,29 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/swad/css/chat.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/swad/css/vote.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chat/api.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/api.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chat/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chat/push_helpers.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/push_helpers.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/explore.php" beforeDir="false" afterPath="$PROJECT_DIR$/explore.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/vote.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/vote.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/l4t/.htaccess" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/.htaccess" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/l4t/api/getall.php" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/api/getall.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/l4t/core/db.php" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/core/db.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/l4t/core/respond.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/l4t/js/l4t.js" beforeDir="false" afterPath="$PROJECT_DIR$/l4t/js/l4t.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/l4t/create_bid.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/l4t/exp_log.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/l4t/l4t_update.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/l4t/l4t_update.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/l4t/respond_bid.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/l4t/respond_bid.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/l4t/upsert_bid.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/l4t/upsert_bid.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/explore.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/explore.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/header.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/header.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,27 +46,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/xampp/htdocs/swad/static/img&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/xampp/htdocs/l4t",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\xampp\htdocs\l4t" />
+      <recent name="C:\xampp\htdocs\swad\css" />
+      <recent name="C:\xampp\htdocs\jams\jam1" />
       <recent name="C:\xampp\htdocs\swad\static\img" />
       <recent name="C:\xampp\htdocs" />
-      <recent name="C:\xampp\htdocs\swad" />
-      <recent name="C:\xampp\htdocs\swad\static\elements" />
-      <recent name="C:\xampp\htdocs\swad\css" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\xampp\htdocs\swad\static\img" />
-      <recent name="C:\xampp\htdocs\swad\static" />
-      <recent name="C:\xampp\htdocs\swad\static\img\sounds" />
       <recent name="C:\xampp\htdocs\swad\css" />
+      <recent name="C:\xampp\htdocs\jams" />
+      <recent name="C:\xampp\htdocs" />
+      <recent name="C:\xampp\htdocs\jams\jam1" />
+      <recent name="C:\xampp\htdocs\swad\static\img" />
     </key>
   </component>
   <component name="RunManager">

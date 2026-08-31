@@ -34,14 +34,13 @@ body {
     padding-left: 15px;
     padding-right: 15px;
     height: 80px;
-    background-color: #0f0a20;
-    backdrop-filter: blur(1px);
     position: sticky;
     top: 0;
     z-index: 10;
-    border-radius: 0px 0px 20px 20px;
-    box-shadow: none;
-    transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
+    /* Фон / размытие / форма переехали на .header__bg (см. секцию «ХЕДЕР — ЕДИНАЯ ФОРМА») */
+    background-color: transparent;
+    /* полуширина «моноброви»: используется и в обводке, и в слоте текста */
+    --hdr-notch-w: 160px;
 }
 
 .nav-dropdown__item--disabled {
@@ -62,34 +61,6 @@ body {
 .header-wrapper,
 .header {
     max-width: 100%;
-}
-
-.header.scrolled {
-    backdrop-filter: blur(7px);
-    background-color: #0f0a203b;
-}
-
-.center-floating-block {
-    position: fixed;
-    margin-top: 80px;
-    left: 50%;
-    margin-left: -80px;
-    transform: none !important;
-    width: 160px;
-    height: 20px;
-    border-radius: 0px 0px 15px 15px;
-    text-align: center;
-    box-shadow: none;
-    transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
-    backdrop-filter: blur(1px);
-    z-index: 10;
-    background-color: #0f0a20;
-}
-
-.center-floating-block.scrolled {
-    box-shadow: 0px 1px 1px 0px #ffffff15;
-    backdrop-filter: blur(7px);
-    background-color: #0f0a203b;
 }
 
 .section {
@@ -242,49 +213,6 @@ body {
     transition: transform 0.001s ease-out;
 }
 
-
-/* =============================================
-   Лунная тема для хедера (moonlight)
-   ============================================= */
-
-/* Фон хедера в лунной теме */
-body.moonlight-theme .header {
-    background-color: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(10px);
-}
-
-/* При скролле — усиливаем размытие */
-body.moonlight-theme .header.scrolled {
-    background-color: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(10px);
-}
-
-/* При ховере на хедер — чуть светлеет */
-body.moonlight-theme .header:hover {
-    background-color: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(10px);
-}
-
-/* Псевдоэлементы для теней по бокам (если нужны) */
-body.moonlight-theme .header::before,
-body.moonlight-theme .header::after {
-    box-shadow: 0px 1px 0px 0px rgba(255, 255, 255, 0.08);
-}
-
-/* Блок "монобровь" под хедером */
-body.moonlight-theme .center-floating-block {
-    background-color: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(10px);
-    box-shadow: 0px 1px 1px 0px #ffffff15;
-    transition: box-shadow 0.5s ease, backdrop-filter 0.5s ease, background-color 0.5s ease;
-}
-
-body.moonlight-theme .center-floating-block.scrolled,
-body.moonlight-theme .center-floating-block.header-hovered {
-    background-color: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(10px);
-    box-shadow: 0px 1px 1px 0px #ffffff15;
-}
 
 /* Контейнеры кнопок (buttons-left/right) */
 body.moonlight-theme .buttons-left,
@@ -761,244 +689,553 @@ body.moonlight-theme .image img {
 }
 
 
+
+
+/* =============================================================================
+   ПОМОЩНИК ДАСТИ (модалка по кнопке-лапке)
+   -----------------------------------------------------------------------------
+   Вся палитра вынесена в переменные на #dusty-helper-modal, лунная тема — один
+   блок переопределений ниже. Между темами меняются ТОЛЬКО цвета: ни один
+   размер, отступ или форма не продублированы, поэтому темы не могут разъехаться.
+
+   Форма панели — пиксельная лесенка по углам (clip-path, 3 ступени по 6px):
+   тот же приём, что и в остальном интерфейсе Dustore. Скруглений нет нигде.
+
+   Убрано:
+   - backdrop-filter с самой панели. Под ней затемнение на 82% — размывать там
+     нечего, фильтр просто жёг GPU. Размытие переехало на подложку, где видно.
+   - дубли деклараций в .dust-layout__actions (display и min-height задавались
+     по два раза, побеждали вторые — вёрстка работала «случайно»).
+   ============================================================================= */
+
+#dusty-helper-modal {
+    /* ── Тема Appollo ── */
+    --d-scrim:      rgba(6, 1, 10, 0.86);
+    --d-panel-top:  #2c1240;
+    --d-panel-bot:  #1f0a2b;
+    --d-stage-top:  #3a1850;
+    --d-stage-bot:  #2a0f3a;
+    --d-line:       rgba(255, 255, 255, 0.11);
+    --d-line-soft:  rgba(255, 255, 255, 0.06);
+    --d-text:       #f2e9f6;
+    --d-muted:      rgba(242, 233, 246, 0.45);
+    --d-accent:     #c32178;
+    --d-accent-hi:  #e6379a;
+    --d-btn:        rgba(255, 255, 255, 0.05);
+    --d-btn-hover:  rgba(195, 33, 120, 0.20);
+
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--d-scrim);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    animation: dustyScrimIn 0.16s ease-out;
+}
+
+/* ── Тема Moonlight: только цвета ── */
+body.moonlight-theme #dusty-helper-modal {
+    --d-scrim:      rgba(2, 5, 13, 0.86);
+    --d-panel-top:  #182238;
+    --d-panel-bot:  #101829;
+    --d-stage-top:  #1f2c48;
+    --d-stage-bot:  #161f35;
+    --d-line:       rgba(184, 200, 255, 0.15);
+    --d-line-soft:  rgba(184, 200, 255, 0.08);
+    --d-text:       #eaf0ff;
+    --d-muted:      rgba(184, 200, 255, 0.48);
+    --d-accent:     #3e7ad9;
+    --d-accent-hi:  #5690f0;
+    --d-btn:        rgba(255, 255, 255, 0.05);
+    --d-btn-hover:  rgba(62, 122, 217, 0.24);
+}
+
+#dusty-helper-modal.hidden {
+    display: none;
+}
+
+/* ── Панель ─────────────────────────────────────────────────────────────── */
+.dust-layout {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 760px;
+    height: min(520px, 100%);
+    overflow: hidden;
+    text-align: left;
+    background: linear-gradient(180deg, var(--d-panel-top), var(--d-panel-bot));
+    animation: dustyPanelIn 0.18s ease-out;
+
+    clip-path: polygon(
+        0 18px, 6px 18px, 6px 12px, 12px 12px, 12px 6px, 18px 6px, 18px 0, calc(100% - 18px) 0,
+        calc(100% - 18px) 6px, calc(100% - 12px) 6px, calc(100% - 12px) 12px, calc(100% - 6px) 12px,
+        calc(100% - 6px) 18px, 100% 18px, 100% calc(100% - 18px), calc(100% - 6px) calc(100% - 18px),
+        calc(100% - 6px) calc(100% - 12px), calc(100% - 12px) calc(100% - 12px),
+        calc(100% - 12px) calc(100% - 6px), calc(100% - 18px) calc(100% - 6px), calc(100% - 18px) 100%,
+        18px 100%, 18px calc(100% - 6px), 12px calc(100% - 6px), 12px calc(100% - 12px), 6px calc(100% - 12px),
+        6px calc(100% - 18px), 0 calc(100% - 18px)
+    );
+}
+
+/* ── Левая колонка: сцена с котом ───────────────────────────────────────── */
+.dust-layout__cat {
+    flex: 0 0 38%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--d-stage-top), var(--d-stage-bot));
+    border-right: 1px solid var(--d-line-soft);
+}
+
+.dust-layout__cat img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+
+    /* Дасти нарисован по пикселям — без этого браузер мылит спрайт при масштабе */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+
+    animation: catFloat 2.4s steps(1, end) infinite;
+}
+
+/* Покачивание идёт целыми пикселями через steps(): у пиксель-арта дробное
+   смещение размывает спрайт и вся стилизация ломается. */
+@keyframes catFloat {
+    0%, 100% { transform: translateY(0); }
+    25%      { transform: translateY(-2px); }
+    50%      { transform: translateY(-4px); }
+    75%      { transform: translateY(-2px); }
+}
+
+/* ── Правая колонка ─────────────────────────────────────────────────────── */
+.dust-layout__right {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* ── Шапка: имя + закрытие ──────────────────────────────────────────────── */
+.dust-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 14px 12px 18px;
+    border-top: 3px solid var(--d-accent);
+    border-bottom: 1px solid var(--d-line);
+}
+
+.dust-name {
+    font-family: 'PixelizerBold', 'Press Start 2P', monospace;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--d-accent-hi);
+}
+
+.dust-helper-close {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--d-line);
+    color: var(--d-muted);
+    font-family: 'Bahnschrift Light', system-ui, sans-serif;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.dust-helper-close:hover,
+.dust-helper-close:focus-visible {
+    color: var(--d-text);
+    border-color: var(--d-accent);
+    background: var(--d-btn-hover);
+    outline: none;
+}
+
+/* ── Реплика ────────────────────────────────────────────────────────────── */
+.dust-layout__dialogue {
+    flex: 1 1 auto;
+    min-height: 0;          /* без этого flex-элемент не даст себя проскроллить */
+    overflow-y: auto;
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+#dusty-text {
+    font-family: 'PixelizerBold', 'Press Start 2P', monospace;
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--d-text);
+    word-break: break-word;
+}
+
+/* ── Панель действий: список вариантов ──────────────────────────────────── */
+.dust-layout__actions {
+    flex: 0 0 auto;
+    max-height: 52%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 18px 18px;
+    box-sizing: border-box;
+    border-top: 1px solid var(--d-line-soft);
+}
+
+/* Кнопки создаёт JS с этим же классом — и «Продолжить», и темы, и «Ещё вопрос?».
+   Поэтому все варианты выглядят одинаковыми пунктами списка: разной ширины
+   таблетки вперемешку читались как мусор. */
+.dust-close {
+    position: relative;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px 10px 27px;
+    text-align: left;
+    background: var(--d-btn);
+    border: 1px solid var(--d-line);
+    color: var(--d-text);
+    font-family: 'PixelizerBold', 'Press Start 2P', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.dust-close::before {
+    content: ">";
+    position: absolute;
+    left: 12px;
+    color: var(--d-muted);
+    transition: color 0.15s ease;
+}
+
+.dust-close:hover,
+.dust-close:focus-visible {
+    background: var(--d-btn-hover);
+    border-color: var(--d-accent);
+    outline: none;
+}
+
+.dust-close:hover::before,
+.dust-close:focus-visible::before {
+    color: var(--d-accent-hi);
+}
+
+.dust-close:active {
+    transform: translateY(1px);
+}
+
+.dust-close.hidden {
+    display: none;
+}
+
+/* ── Скроллбары ─────────────────────────────────────────────────────────── */
+.dust-layout__dialogue,
+.dust-layout__actions {
+    scrollbar-width: thin;
+    scrollbar-color: var(--d-line) transparent;
+}
+
+.dust-layout__dialogue::-webkit-scrollbar,
+.dust-layout__actions::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dust-layout__dialogue::-webkit-scrollbar-track,
+.dust-layout__actions::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dust-layout__dialogue::-webkit-scrollbar-thumb,
+.dust-layout__actions::-webkit-scrollbar-thumb {
+    background: var(--d-line);
+}
+
+.dust-layout__dialogue::-webkit-scrollbar-thumb:hover,
+.dust-layout__actions::-webkit-scrollbar-thumb:hover {
+    background: var(--d-accent);
+}
+
+/* ── Появление ──────────────────────────────────────────────────────────── */
+/* .hidden переключает display, а анимации при смене display: none → flex
+   перезапускаются сами. Поэтому JS трогать не пришлось. */
+@keyframes dustyScrimIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes dustyPanelIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ── Мобильная раскладка ────────────────────────────────────────────────── */
+@media (max-width: 620px) {
+    #dusty-helper-modal {
+        padding: 12px;
+    }
+
+    .dust-layout {
+        flex-direction: column;
+        height: min(600px, 100%);
+    }
+
+    .dust-layout__cat {
+        flex: 0 0 150px;
+        padding: 14px;
+        border-right: none;
+        border-bottom: 1px solid var(--d-line-soft);
+    }
+
+    .dust-layout__actions {
+        max-height: 46%;
+        padding: 10px 14px 14px;
+    }
+
+    .dust-layout__dialogue {
+        padding: 14px;
+    }
+
+    .dust-head {
+        padding: 11px 12px 10px 14px;
+    }
+
+    #dusty-text {
+        font-size: 15px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #dusty-helper-modal,
+    .dust-layout,
+    .dust-layout__cat img {
+        animation: none;
+    }
+}
+
+
+/* =============================================================================
+   ХЕДЕР — ЕДИНАЯ ФОРМА
+   -----------------------------------------------------------------------------
+   Было: .header (прямоугольник со скруглённым низом) + .center-floating-block
+   (position:fixed, margin-top:80px) — две независимые поверхности, каждая со
+   своим backdrop-filter. Отсюда шов по стыку, двойное размытие в перекрытии,
+   отвал «моноброви» на мобиле (хедер 64px, блок прибит к 80px) и разрыв
+   волоска-обводки (два псевдоэлемента по 682px сходились ровно на 1364px).
+
+   Стало: один слой .header__bg с одним background и одним backdrop-filter,
+   вырезанный по силуэту через clip-path: polygon(). Стык физически
+   отсутствует — это одна фигура.
+
+   Геометрия (y отсчитывается от НИЗА .header__bg, поэтому одна и та же
+   формула работает на 80 / 64 / 58 px высоты хедера):
+       высота .header__bg      = высота .header + 20px
+       радиус низа бара    R   = 20px
+       высота моноброви    NH  = 20px
+       радиус моноброви    NR  = 15px
+       ширина моноброви    --hdr-notch-w (160px / 120px на мобиле)
+
+   Дуги в polygon() аппроксимированы хордами по 15°: максимальное отклонение
+   от идеальной окружности 20*(1-cos7.5°) ≈ 0.17px — субпиксель, не видно.
+
+   Волосок-обводка не может быть box-shadow'ом самой фигуры (clip-path режет
+   тени), поэтому собран из трёх кусков, которые стыкуются по построению:
+       .header::before          низ бара слева   [0 … 50% - w/2]
+       .header::after           низ бара справа  [50% + w/2 … 100%]
+       .center-floating-block   подкова моноброви
+   У всех трёх нет фона — наружная box-shadow не рисуется внутри border-box,
+   поэтому они не «засвечивают» стекло, а дают ровно 1px по контуру.
+   ============================================================================= */
+
+/* ── Поверхность: фон + размытие + силуэт ─────────────────────────────────── */
+.header__bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(100% + 20px);   /* тело хедера + выступ моноброви */
+    z-index: 0;
+    display: block;
+    pointer-events: none;
+
+    background-color: #0f0a20;
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    transition: background-color 0.5s ease,
+                backdrop-filter 0.5s ease,
+                -webkit-backdrop-filter 0.5s ease;
+
+    clip-path: polygon(
+        0 0, 100% 0, 100% calc(100% - 40.0px), calc(100% - 0.68px) calc(100% - 34.82px),
+        calc(100% - 2.68px) calc(100% - 30.0px), calc(100% - 5.86px) calc(100% - 25.86px),
+        calc(100% - 10.0px) calc(100% - 22.68px), calc(100% - 14.82px) calc(100% - 20.68px),
+        calc(100% - 20.0px) calc(100% - 20.0px), calc(50% + 80px) calc(100% - 20px),
+        calc(50% + 80.0px) calc(100% - 15.0px), calc(50% + 79.49px) calc(100% - 11.12px),
+        calc(50% + 77.99px) calc(100% - 7.5px), calc(50% + 75.61px) calc(100% - 4.39px),
+        calc(50% + 72.5px) calc(100% - 2.01px), calc(50% + 68.88px) calc(100% - 0.51px), calc(50% + 65.0px) 100%,
+        calc(50% - 65.0px) 100%, calc(50% - 68.88px) calc(100% - 0.51px), calc(50% - 72.5px) calc(100% - 2.01px),
+        calc(50% - 75.61px) calc(100% - 4.39px), calc(50% - 77.99px) calc(100% - 7.5px),
+        calc(50% - 79.49px) calc(100% - 11.12px), calc(50% - 80.0px) calc(100% - 15.0px),
+        calc(50% - 80px) calc(100% - 20px), 20.0px calc(100% - 20.0px), 14.82px calc(100% - 20.68px),
+        10.0px calc(100% - 22.68px), 5.86px calc(100% - 25.86px), 2.68px calc(100% - 30.0px),
+        0.68px calc(100% - 34.82px), 0 calc(100% - 40.0px)
+    );
+}
+
+/* Контент поднимаем над поверхностью явным z-index, а не отрицательным у фона:
+   backdrop-filter на слое с z-index: -1 местами глючит в WebKit.
+   position не трогаем: .section — флекс-айтемы, а у флекс-айтема z-index работает
+   и создаёт контекст наложения даже при position: static. Иначе этот селектор
+   перебил бы `.left-section { position: static }` в мобильной медиа-квери. */
+.header > .section {
+    z-index: 1;
+}
+
+/* ── Волосок по низу бара (слева и справа от моноброви) ───────────────────── */
 .header::before,
 .header::after {
     content: "";
     position: absolute;
-    top: 0; bottom: 0;
-    width: 682px;
-    box-shadow: none;
+    top: 0;
+    height: 100%;
+    width: calc(50% - var(--hdr-notch-w) / 2);
+    box-shadow: 0px 1px 0px 0px transparent;
     transition: box-shadow 0.5s ease;
-    z-index: -10;
+    pointer-events: none;
+    z-index: 0;
 }
 
-.header::before { left: 0; border-radius: 0 0 0 20px; }
+.header::before { left: 0;  border-radius: 0 0 0 20px; }
 .header::after  { right: 0; border-radius: 0 0 20px 0; }
 
-.header.scrolled::before,
-.header.scrolled::after {
-    box-shadow: 0px 1px 0px 0px #ffffff15;
-}
-.header:hover {
-    backdrop-filter: blur(7px);
-    background-color: #0f0a203b;
+/* ── Монобровь: слот под текст + её собственная подкова-обводка ───────────── */
+.center-floating-block {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: calc(var(--hdr-notch-w) / -2);
+    width: var(--hdr-notch-w);
+    height: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
+
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0px 1px 1px 0px transparent;
+    transition: box-shadow 0.5s ease;
+
+    pointer-events: none;   /* декоративный слот не должен перехватывать клики */
+    z-index: 0;             /* ниже .section — логотип свисает в монобровь и должен быть сверху */
 }
 
+.center-floating-block > * {
+    margin: 0;
+}
+
+/* ── Состояния: скролл и наведение (тема Appollo) ─────────────────────────── */
+.header.scrolled .header__bg,
+.header:hover .header__bg {
+    background-color: #0f0a203b;
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+}
+
+.header.scrolled::before,
+.header.scrolled::after,
 .header:hover::before,
 .header:hover::after {
     box-shadow: 0px 1px 0px 0px #ffffff15;
 }
-.center-floating-block.scrolled,
+
+.header.scrolled .center-floating-block,
+.header:hover .center-floating-block,
+.center-floating-block.scrolled,          /* совместимость: класс вешает старый JS */
 .center-floating-block.header-hovered {
-  box-shadow: 0px 1px 1px 0px #ffffff15;
-  backdrop-filter: blur(7px);
-  background-color: #0f0a203b;
+    box-shadow: 0px 1px 1px 0px #ffffff15;
 }
 
-
-
-/* =============================================
-   Лунная тема — такие же эффекты, как в обычной
-   ============================================= */
+/* ── Лунная тема ──────────────────────────────────────────────────────────── */
+/* Специфичность выше, чем у .header.scrolled .header__bg — иначе при скролле
+   лунная тема проигрывала бы каскаду и получала фон Appollo. */
+body.moonlight-theme .header__bg,
+body.moonlight-theme .header.scrolled .header__bg,
+body.moonlight-theme .header:hover .header__bg {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
 
 body.moonlight-theme .header::before,
 body.moonlight-theme .header::after {
-    content: "";
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 682px;
-    box-shadow: 0px 1px 0px 0px #ffffff15;
-    transition: box-shadow 0.5s ease;
-    z-index: -10;
-}
-
-body.moonlight-theme .header::before { left: 0; border-radius: 0 0 0 20px; }
-body.moonlight-theme .header::after  { right: 0; border-radius: 0 0 20px 0; }
-
-body.moonlight-theme .header.scrolled::before,
-body.moonlight-theme .header.scrolled::after {
     box-shadow: 0px 1px 0px 0px #ffffff15;
 }
 
-body.moonlight-theme .header:hover {
-    backdrop-filter: blur(7px);
-    background-color: rgba(0, 0, 0, 0);
+body.moonlight-theme .center-floating-block {
+    box-shadow: 0px 1px 1px 0px #ffffff15;
 }
 
-body.moonlight-theme .header:hover::before,
-body.moonlight-theme .header:hover::after {
-    box-shadow: 0px 1px 0px 0px #ffffff15;
+/* ── Мобильная монобровь: уже, чтобы не занимать полэкрана ────────────────── */
+@media screen and (max-width: 560px) {
+    .header {
+        --hdr-notch-w: 120px;
+    }
+
+    .header__bg {
+        clip-path: polygon(
+            0 0, 100% 0, 100% calc(100% - 40.0px), calc(100% - 0.68px) calc(100% - 34.82px),
+            calc(100% - 2.68px) calc(100% - 30.0px), calc(100% - 5.86px) calc(100% - 25.86px),
+            calc(100% - 10.0px) calc(100% - 22.68px), calc(100% - 14.82px) calc(100% - 20.68px),
+            calc(100% - 20.0px) calc(100% - 20.0px), calc(50% + 60px) calc(100% - 20px),
+            calc(50% + 60.0px) calc(100% - 15.0px), calc(50% + 59.49px) calc(100% - 11.12px),
+            calc(50% + 57.99px) calc(100% - 7.5px), calc(50% + 55.61px) calc(100% - 4.39px),
+            calc(50% + 52.5px) calc(100% - 2.01px), calc(50% + 48.88px) calc(100% - 0.51px), calc(50% + 45.0px) 100%,
+            calc(50% - 45.0px) 100%, calc(50% - 48.88px) calc(100% - 0.51px), calc(50% - 52.5px) calc(100% - 2.01px),
+            calc(50% - 55.61px) calc(100% - 4.39px), calc(50% - 57.99px) calc(100% - 7.5px),
+            calc(50% - 59.49px) calc(100% - 11.12px), calc(50% - 60.0px) calc(100% - 15.0px),
+            calc(50% - 60px) calc(100% - 20px), 20.0px calc(100% - 20.0px), 14.82px calc(100% - 20.68px),
+            10.0px calc(100% - 22.68px), 5.86px calc(100% - 25.86px), 2.68px calc(100% - 30.0px),
+            0.68px calc(100% - 34.82px), 0 calc(100% - 40.0px)
+        );
+    }
 }
 
-body.moonlight-theme .center-floating-block.scrolled,
-body.moonlight-theme .center-floating-block.header-hovered {
-    box-shadow: 0px 1px 1px 0px rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(7px);
-    background-color: rgba(0, 0, 0, 0);
+/* ── Запасной вариант для браузеров без clip-path: polygon() ──────────────── */
+@supports not (clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), 0 calc(100% - 20px))) {
+    .header__bg {
+        height: 100%;
+        border-radius: 0 0 20px 20px;
+    }
+    .center-floating-block {
+        display: none;
+    }
+    .header::before,
+    .header::after {
+        width: 50%;
+    }
 }
-
-/* =============================================
-   Ð¢Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ð²Ñ‹Ð·Ñ‹Ð²Ð°ÐµÐ¼Ð¾Ð³Ð¾ Ð¿Ð¾Ð¼Ð¾Ñ‰Ð½Ð¸ÐºÐ° (Ð»Ð°Ð¿ÐºÐ°)
-   ============================================= */
-#dusty-helper-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-#dusty-helper-modal.hidden {
-  display: none;
-}
-
-/* ÐžÑÐ½Ð¾Ð²Ð½Ð¾Ð¹ ÐºÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€ Ð¿Ð¾Ð¼Ð¾Ñ‰Ð½Ð¸ÐºÐ° */
-.dust-layout {
-  display: flex;
-  flex-direction: row;
-  max-width: 840px;
-  width: 95%;
-  background: #ffffff0d;
-  border-radius: 24px;
-  padding: 0;
-  text-align: left;
-  box-shadow: 0 0 1px rgb(255 255 255 / 74%);
-  overflow: hidden;
-  position: relative;
-  height: 500px;
-  max-height: 90vh;
-  backdrop-filter: blur(10px);
-}
-
-/* Ð›ÐµÐ²Ð°Ñ Ñ‡Ð°ÑÑ‚ÑŒ â€“ ÐºÐ¾Ñ‚Ð¸Ðº */
-.dust-layout__cat {
-  width: 40%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #00000033;
-  padding: 20px;
-  box-sizing: border-box;
-  overflow: hidden;
-  height: 100%
-}
-
-.dust-layout__cat img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  display: block;
-  animation: catFloat 1.5s ease-in-out infinite;
-}
-
-@keyframes catFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-12px); }
-}
-
-
-.dust-layout__right {
-  width: 60%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 20px 16px;
-  box-sizing: border-box;
-}
-
-.dust-layout__dialogue {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding-right: 6px;
-  display: flex;
-  align-items: flex-start;
-  max-height: 66%;
-}
-
-/* Ð¢ÐµÐºÑÑ‚ Ð´Ð¸Ð°Ð»Ð¾Ð³Ð° (Ð² Ð¿Ð¾Ð¼Ð¾Ñ‰Ð½Ð¸ÐºÐµ) */
-#dusty-text {
-  font-family: 'PixelizerBold', 'Press Start 2P', monospace;
-  font-size: 22px;
-  line-height: 1.5;
-  color: #fff;
-  word-break: break-word;
-}
-
-/* ÐÐ¸Ð¶Ð½ÑÑ Ð¿Ð°Ð½ÐµÐ»ÑŒ Ñ ÐºÐ½Ð¾Ð¿ÐºÐ°Ð¼Ð¸ */
-.dust-layout__actions {
-  min-height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  margin-top: 12px;
-  padding-top: 12px;
-  box-sizing: border-box;
-  min-height: 30%;
-  display: inline-grid;
-  justify-content: center;
-}
-
-/* ÐšÐ½Ð¾Ð¿ÐºÐ° Â«ÐŸÑ€Ð¾Ð´Ð¾Ð»Ð¶Ð¸Ñ‚ÑŒÂ» */
-.dust-close {
-  background: #c32178;
-  color: white;
-  border: none;
-  padding: 8px 24px;
-  border-radius: 8px;
-  font-family: 'PixelizerBold', 'Press Start 2P', monospace;
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-.dust-close:hover {
-  background: #ff5ba8;
-}
-.dust-close.hidden {
-  display: none;
-}
-
-/* ÐšÑ€ÐµÑÑ‚Ð¸Ðº Ð·Ð°ÐºÑ€Ñ‹Ñ‚Ð¸Ñ (Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð¿Ð¾Ð¼Ð¾Ñ‰Ð½Ð¸ÐºÐµ) */
-.dust-helper-close {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 30px;
-  cursor: pointer;
-  line-height: 1;
-  z-index: 5;
-}
-.dust-helper-close:hover {
-  color: #ff5ba8;
-}
-
-/* ÐÐ´Ð°Ð¿Ñ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð¿Ð¾Ð¼Ð¾Ñ‰Ð½Ð¸ÐºÐ° */
-@media (max-width: 520px) {
-  .dust-layout {
-    flex-direction: column;
-    height: auto;
-    max-height: 95vh;
-  }
-  .dust-layout__cat {
-    width: 100%;
-    max-height: 180px;
-  }
-  .dust-layout__right {
-    width: 100%;
-    height: auto;
-  }
-  .dust-layout__dialogue {
-    max-height: 40vh;
-  }
-}
-#dusty-helper-modal .dust-layout__dialogue {
-  overflow-y: auto;
-}
-

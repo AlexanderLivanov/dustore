@@ -86,66 +86,154 @@ function unread_count(PDO $db, int $convId, int $afterId, int $excludeSender): i
     $q->execute([$convId,$afterId,$excludeSender]); return (int)$q->fetchColumn();
 }
 
-/* =================== ACTION: list =================== */
+/* =================== ACTION: list ===================
+ * Было: на каждую беседу отдельно customer_of(), last_read_message_id,
+ * unread_count() и выборка последнего сообщения в build_card(). При 50
+ * беседах — около 200 запросов, и это раз в 8 секунд на каждого открытого
+ * пользователя. Стало: фиксированные 5 запросов независимо от их числа.
+ */
 if ($action === 'list') {
-    $tab=($_GET['tab'] ?? 'personal')==='studio' ? 'studio':'personal';
-    $cards=[];
-    if ($tab==='studio') {
-        if(!$myStudioIds) out(['ok'=>true,'conversations'=>[]]);
-        $in=implode(',',array_fill(0,count($myStudioIds),'?'));
-        $rows=$db->prepare("SELECT * FROM conversations WHERE type='studio' AND studio_id IN ($in) ORDER BY last_message_at DESC LIMIT 200");
-        $rows->execute($myStudioIds); $rows=$rows->fetchAll(PDO::FETCH_ASSOC);
-        $studios=get_studios_meta($db,array_map(fn($r)=>(int)$r['studio_id'],$rows));
-        $convCust=[]; $custIds=[];
-        foreach($rows as $r){ $convCust[(int)$r['id']]=customer_of($db,(int)$r['id']); $custIds[]=$convCust[(int)$r['id']]; }
-        $users=get_users_meta($db,$custIds);
-        foreach($rows as $r){
-            $cid=(int)$r['id']; $cust=$convCust[$cid];
-            $q=$db->prepare("SELECT COUNT(*) FROM messages WHERE conversation_id=? AND id>? AND sender_id=? AND deleted_at IS NULL");
-            $q->execute([$cid,(int)$r['studio_last_read_id'],$cust]); $unread=(int)$q->fetchColumn();
-            $cards[]=build_card($db,$r,['kind'=>'user','id'=>$cust,'name'=>$users[$cust]['username'] ?? ('user#'.$cust),
-                'avatar'=>$users[$cust]['avatar'] ?? null,'tag'=>$studios[(int)$r['studio_id']]['name'] ?? null],$myId,$unread);
+    $tab   = ($_GET['tab'] ?? 'personal') === 'studio' ? 'studio' : 'personal';
+    $cards = [];
+
+    if ($tab === 'studio') {
+        if (!$myStudioIds) out(['ok' => true, 'conversations' => []]);
+        $in = implode(',', array_fill(0, count($myStudioIds), '?'));
+
+        // 1 запрос: беседы + последнее сообщение одним LEFT JOIN
+        $st = $db->prepare("
+            SELECT c.id, c.type, c.studio_id, c.last_message_id, c.last_message_at, c.studio_last_read_id,
+                   m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del
+              FROM conversations c
+              LEFT JOIN messages m ON m.id = c.last_message_id
+             WHERE c.type='studio' AND c.studio_id IN ($in)
+             ORDER BY c.last_message_at DESC LIMIT 200");
+        $st->execute($myStudioIds);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        if (!$rows) out(['ok' => true, 'conversations' => []]);
+
+        $convIds = array_map(fn($r) => (int)$r['id'], $rows);
+        $inC = implode(',', array_fill(0, count($convIds), '?'));
+
+        // 2 запрос: клиент каждой беседы
+        $cst = $db->prepare("SELECT conversation_id, user_id FROM conversation_participants
+                              WHERE conversation_id IN ($inC) AND role='customer'");
+        $cst->execute($convIds);
+        $custOf = [];
+        foreach ($cst->fetchAll(PDO::FETCH_ASSOC) as $r) $custOf[(int)$r['conversation_id']] = (int)$r['user_id'];
+
+        // 3 запрос: непрочитанное одним GROUP BY вместо запроса на беседу
+        $ust = $db->prepare("
+            SELECT m.conversation_id, COUNT(*) AS n
+              FROM messages m
+              JOIN conversations c ON c.id = m.conversation_id
+              JOIN conversation_participants p
+                ON p.conversation_id = m.conversation_id AND p.role='customer' AND p.user_id = m.sender_id
+             WHERE m.conversation_id IN ($inC)
+               AND m.id > c.studio_last_read_id
+               AND m.deleted_at IS NULL
+             GROUP BY m.conversation_id");
+        $ust->execute($convIds);
+        $unreadOf = [];
+        foreach ($ust->fetchAll(PDO::FETCH_ASSOC) as $r) $unreadOf[(int)$r['conversation_id']] = (int)$r['n'];
+
+        // 4 и 5: мета студий и клиентов, обе уже пакетные
+        $studios = get_studios_meta($db, array_map(fn($r) => (int)$r['studio_id'], $rows));
+        $users   = get_users_meta($db, array_values($custOf));
+
+        foreach ($rows as $r) {
+            $cid  = (int)$r['id'];
+            $cust = $custOf[$cid] ?? 0;
+            $cards[] = build_card($r, [
+                'kind'   => 'user',
+                'id'     => $cust,
+                'name'   => $users[$cust]['username'] ?? ('user#' . $cust),
+                'avatar' => $users[$cust]['avatar'] ?? null,
+                'tag'    => $studios[(int)$r['studio_id']]['name'] ?? null,
+            ], $myId, $unreadOf[$cid] ?? 0);
         }
     } else {
-        ensure_system_conv($db,$myId); // блок «Уведомления» всегда есть
-        $rows=$db->prepare(
-            "SELECT c.* FROM conversations c
-               JOIN conversation_participants p ON p.conversation_id=c.id
-              WHERE p.user_id=? AND p.archived=0
-              ORDER BY (c.type='system') DESC, c.last_message_at DESC LIMIT 200");
-        $rows->execute([$myId]); $rows=$rows->fetchAll(PDO::FETCH_ASSOC);
-        $peerUserIds=[]; $peerStudio=[]; $peerMap=[];
-        foreach($rows as $r){
-            if($r['type']==='studio'){ $peerStudio[]=(int)$r['studio_id']; $peerMap[(int)$r['id']]=['studio',(int)$r['studio_id']]; }
-            elseif($r['type']==='system'){ $peerMap[(int)$r['id']]=['system',0]; }
-            else { $o=$db->prepare("SELECT user_id FROM conversation_participants WHERE conversation_id=? AND user_id<>? LIMIT 1");
-                   $o->execute([(int)$r['id'],$myId]); $peer=(int)$o->fetchColumn(); $peerUserIds[]=$peer; $peerMap[(int)$r['id']]=['user',$peer]; }
+        ensure_system_conv($db, $myId);   // блок «Уведомления» всегда есть
+
+        $st = $db->prepare("
+            SELECT c.id, c.type, c.studio_id, c.last_message_id, c.last_message_at,
+                   p.last_read_message_id,
+                   m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del
+              FROM conversations c
+              JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = ?
+              LEFT JOIN messages m ON m.id = c.last_message_id
+             WHERE p.archived = 0
+             ORDER BY (c.type='system') DESC, c.last_message_at DESC LIMIT 200");
+        $st->execute([$myId]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        if (!$rows) out(['ok' => true, 'conversations' => []]);
+
+        $convIds = array_map(fn($r) => (int)$r['id'], $rows);
+        $inC = implode(',', array_fill(0, count($convIds), '?'));
+
+        // собеседники всех личных бесед одним запросом
+        $ost = $db->prepare("SELECT conversation_id, user_id FROM conversation_participants
+                              WHERE conversation_id IN ($inC) AND user_id <> ?");
+        $ost->execute([...$convIds, $myId]);
+        $peerOf = [];
+        foreach ($ost->fetchAll(PDO::FETCH_ASSOC) as $r) $peerOf[(int)$r['conversation_id']] = (int)$r['user_id'];
+
+        // непрочитанное одним GROUP BY
+        $ust = $db->prepare("
+            SELECT m.conversation_id, COUNT(*) AS n
+              FROM messages m
+              JOIN conversation_participants p
+                ON p.conversation_id = m.conversation_id AND p.user_id = ?
+             WHERE m.conversation_id IN ($inC)
+               AND m.id > p.last_read_message_id
+               AND m.sender_id <> ?
+               AND m.deleted_at IS NULL
+             GROUP BY m.conversation_id");
+        $ust->execute([$myId, ...$convIds, $myId]);
+        $unreadOf = [];
+        foreach ($ust->fetchAll(PDO::FETCH_ASSOC) as $r) $unreadOf[(int)$r['conversation_id']] = (int)$r['n'];
+
+        $peerUserIds = []; $peerStudioIds = [];
+        foreach ($rows as $r) {
+            if ($r['type'] === 'studio')      $peerStudioIds[] = (int)$r['studio_id'];
+            elseif ($r['type'] !== 'system')  $peerUserIds[]   = $peerOf[(int)$r['id']] ?? 0;
         }
-        $users=get_users_meta($db,$peerUserIds); $studios=get_studios_meta($db,$peerStudio);
-        foreach($rows as $r){
-            $cid=(int)$r['id']; [$kind,$pid]=$peerMap[$cid];
-            $lr=$db->prepare("SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=? AND user_id=?");
-            $lr->execute([$cid,$myId]); $lastRead=(int)$lr->fetchColumn();
-            $unread=unread_count($db,$cid,$lastRead,$myId);
-            if($kind==='studio') $peer=['kind'=>'studio','id'=>$pid,'name'=>$studios[$pid]['name'] ?? ('studio#'.$pid),'avatar'=>$studios[$pid]['logo'] ?? null];
-            elseif($kind==='system') $peer=['kind'=>'system','id'=>0,'name'=>'Уведомления','avatar'=>null];
-            else $peer=['kind'=>'user','id'=>$pid,'name'=>$users[$pid]['username'] ?? ('user#'.$pid),'avatar'=>$users[$pid]['avatar'] ?? null];
-            $cards[]=build_card($db,$r,$peer,$myId,$unread);
+        $users   = get_users_meta($db, $peerUserIds);
+        $studios = get_studios_meta($db, $peerStudioIds);
+
+        foreach ($rows as $r) {
+            $cid = (int)$r['id'];
+            if ($r['type'] === 'studio') {
+                $pid  = (int)$r['studio_id'];
+                $peer = ['kind' => 'studio', 'id' => $pid,
+                         'name' => $studios[$pid]['name'] ?? ('studio#' . $pid),
+                         'avatar' => $studios[$pid]['logo'] ?? null];
+            } elseif ($r['type'] === 'system') {
+                $peer = ['kind' => 'system', 'id' => 0, 'name' => 'Уведомления', 'avatar' => null];
+            } else {
+                $pid  = $peerOf[$cid] ?? 0;
+                $peer = ['kind' => 'user', 'id' => $pid,
+                         'name' => $users[$pid]['username'] ?? ('user#' . $pid),
+                         'avatar' => $users[$pid]['avatar'] ?? null];
+            }
+            $cards[] = build_card($r, $peer, $myId, $unreadOf[$cid] ?? 0);
         }
     }
-    out(['ok'=>true,'conversations'=>$cards]);
+    out(['ok' => true, 'conversations' => $cards]);
 }
-function build_card(PDO $db, array $r, array $peer, int $myId, int $unread): array {
-    $last=null;
-    if($r['last_message_id']){
-        $m=$db->prepare("SELECT sender_id, body, created_at, deleted_at FROM messages WHERE id=?");
-        $m->execute([(int)$r['last_message_id']]);
-        if($lm=$m->fetch(PDO::FETCH_ASSOC)){
-            $body=$lm['deleted_at'] ? 'сообщение удалено' : $lm['body'];
-            $last=['body'=>$body,'at'=>$lm['created_at'],'mine'=>(int)$lm['sender_id']===$myId];
-        }
+
+/** Последнее сообщение уже приехало в строке ($r['l_*']) — БД больше не трогаем. */
+function build_card(array $r, array $peer, int $myId, int $unread): array {
+    $last = null;
+    if (!empty($r['last_message_id']) && $r['l_at'] !== null) {
+        $last = [
+            'body' => $r['l_del'] ? 'сообщение удалено' : (string)$r['l_body'],
+            'at'   => $r['l_at'],
+            'mine' => (int)$r['l_sender'] === $myId,
+        ];
     }
-    return ['id'=>(int)$r['id'],'type'=>$r['type'],'peer'=>$peer,'last'=>$last,'unread'=>$unread,'ts'=>$r['last_message_at']];
+    return ['id' => (int)$r['id'], 'type' => $r['type'], 'peer' => $peer,
+            'last' => $last, 'unread' => $unread, 'ts' => $r['last_message_at']];
 }
 
 /* ── Уведомления как виртуальная беседа ──────────────────────────── */
@@ -164,18 +252,22 @@ function notif_dto(array $n): array {
 
 /* =================== ACTION: unread_total =================== */
 if ($action === 'unread_total') {
-    $rows=$db->prepare("SELECT c.id,(SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=c.id AND user_id=?) AS my_read
-                          FROM conversations c JOIN conversation_participants p ON p.conversation_id=c.id
-                         WHERE p.user_id=? AND p.archived=0");
-    $rows->execute([$myId,$myId]); $rows=$rows->fetchAll(PDO::FETCH_ASSOC);
-    $total=0; foreach($rows as $r){ $total+=unread_count($db,(int)$r['id'],(int)($r['my_read']??0),$myId); }
-    out(['ok'=>true,'total'=>$total]);
+    // Один агрегат вместо запроса на каждую беседу.
+    $st = $db->prepare("
+        SELECT COUNT(*) FROM messages m
+          JOIN conversation_participants p
+            ON p.conversation_id = m.conversation_id AND p.user_id = ? AND p.archived = 0
+         WHERE m.id > p.last_read_message_id AND m.sender_id <> ? AND m.deleted_at IS NULL");
+    $st->execute([$myId, $myId]);
+    out(['ok' => true, 'total' => (int)$st->fetchColumn()]);
 }
 
 /* =================== ACTION: search_users =================== */
 if ($action === 'search_users') {
     $q=trim((string)($_GET['q'] ?? '')); if(mb_strlen($q)<2) out(['ok'=>true,'users'=>[]]);
-    $like='%'.$q.'%'; $starts=$q.'%';
+    // % и _ — метасимволы LIKE. Без экранирования запрос «%» матчил всех.
+    $esc = addcslashes($q, '%_\\');
+    $like='%'.$esc.'%'; $starts=$esc.'%';
     $st=$db->prepare("SELECT id, username, first_name, last_name, profile_picture FROM users
                        WHERE id<>? AND ( username LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR telegram_username LIKE ? )
                        ORDER BY (username LIKE ?) DESC, username ASC LIMIT 12");
@@ -218,9 +310,36 @@ if ($action === 'start') {
 if ($action === 'thread') {
     $cid=(int)($_REQUEST['conversation_id'] ?? 0);
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
-    $after=(int)($_REQUEST['after_id'] ?? 0);
-    $q=$db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages WHERE conversation_id=? AND id>? ORDER BY id ASC LIMIT 500");
-    $q->execute([$cid,$after]); $rows=$q->fetchAll(PDO::FETCH_ASSOC);
+    $after  = (int)($_REQUEST['after_id']  ?? 0);
+    $before = (int)($_REQUEST['before_id'] ?? 0);
+    $LIMIT  = 60;
+    $hasMore = false;
+
+    /* Было: WHERE id > 0 ORDER BY id ASC LIMIT 500 — то есть при открытии
+       беседы отдавались САМЫЕ СТАРЫЕ 500 сообщений, а свежие догружались
+       только следующим поллингом. В длинной переписке человек открывал чат
+       и три секунды смотрел на прошлогоднюю историю. */
+    if ($after > 0) {
+        // поллинг: только то, что появилось после известного нам id
+        $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages
+                            WHERE conversation_id=? AND id>? ORDER BY id ASC LIMIT 200");
+        $q->execute([$cid, $after]);
+        $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        // открытие или подгрузка истории вверх: берём хвост и разворачиваем
+        if ($before > 0) {
+            $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages
+                                WHERE conversation_id=? AND id<? ORDER BY id DESC LIMIT " . ($LIMIT + 1));
+            $q->execute([$cid, $before]);
+        } else {
+            $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages
+                                WHERE conversation_id=? ORDER BY id DESC LIMIT " . ($LIMIT + 1));
+            $q->execute([$cid]);
+        }
+        $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        if (count($rows) > $LIMIT) { $hasMore = true; array_pop($rows); }
+        $rows = array_reverse($rows);
+    }
     $smeta=get_users_meta($db,array_map(fn($m)=>(int)$m['sender_id'],$rows));
     $msgs=[];
     foreach($rows as $m){
@@ -236,7 +355,7 @@ if ($action === 'thread') {
                                        WHERE conversation_id=? AND user_id=?")->execute([$trueMax,$cid,$myId]);
         if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(studio_last_read_id,?) WHERE id=?")->execute([$trueMax,$cid]);
     }
-    out(['ok'=>true,'messages'=>$msgs,'header'=>thread_header($db,$c,$myId)]);
+    out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId)]);
 }
 function thread_header(PDO $db, array $c, int $myId): array {
     if($c['type']==='system') return ['kind'=>'system','peer_id'=>0,'studio'=>false,'name'=>'Уведомления','avatar'=>null,'tag'=>null,'last_seen'=>null];
@@ -260,6 +379,11 @@ function thread_header(PDO $db, array $c, int $myId): array {
 if ($action === 'send') {
     $body=trim((string)($_POST['body'] ?? '')); if($body==='') out(['ok'=>false,'error'=>'empty']);
     if(mb_strlen($body)>4000) out(['ok'=>false,'error'=>'too_long']);
+    // простой троттлинг: не чаще 1 сообщения в секунду от одного пользователя
+    $fl=$db->prepare("SELECT created_at FROM messages WHERE sender_id=? ORDER BY id DESC LIMIT 1");
+    $fl->execute([$myId]);
+    $lastAt=$fl->fetchColumn();
+    if($lastAt && (time()-strtotime((string)$lastAt))<1) out(['ok'=>false,'error'=>'too_fast','message'=>'Слишком часто']);
     $cid=(int)($_POST['conversation_id'] ?? 0);
     if(!$cid){
         $toUser=(int)($_POST['to'] ?? 0); $toStudio=(int)($_POST['studio'] ?? 0);
