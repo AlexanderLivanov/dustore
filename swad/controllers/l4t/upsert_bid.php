@@ -20,6 +20,7 @@ declare(strict_types=1);
 
 session_start();
 require_once(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/_csrf.php');
 
 /* Все ответы — редирект, поэтому до header() ничего не печатаем. */
 function back(string $tab, string $status): void {
@@ -28,6 +29,7 @@ function back(string $tab, string $status): void {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') back('my', 'bad_method');
+if (!csrf_check())                          back('my', 'csrf');
 if (empty($_SESSION['USERDATA']['id']))     back('my', 'auth');
 
 $userId = (int)$_SESSION['USERDATA']['id'];
@@ -40,12 +42,18 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 /* ── Поля ───────────────────────────────────────────────────────────────── */
 $cut = fn($k, $n) => mb_substr(trim((string)($_POST[$k] ?? '')), 0, $n);
 
+/* Лимиты — ровно по колонкам bids (DESCRIBE):
+     search_role varchar(100)   search_spec varchar(100)
+     experience  varchar(50)    conditions  varchar(100)
+     goal        varchar(150)   details     text
+   В прошлой версии я резал длиннее, чем влезает, и в strict mode INSERT
+   падал с 1406 Data too long — отсюда и был status=error. */
 $bidId   = (int)($_POST['bid_id'] ?? 0);
-$role    = $cut('role', 120);
-$spec    = $cut('spec', 120);
-$exp     = $cut('exp', 120);
-$cond    = $cut('cond', 500);
-$goal    = $cut('goal', 500);
+$role    = $cut('role',    100);
+$spec    = $cut('spec',    100);
+$exp     = $cut('exp',      50);
+$cond    = $cut('cond',    100);
+$goal    = $cut('goal',    150);
 $details = $cut('details', 5000);
 
 if ($role === '') back('my', 'no_role');
@@ -98,12 +106,15 @@ try {
     /* stage при создании — 'active'. В create_bid.php стояло 'open',
        из-за чего такие заявки не попадали в ленту (index.php фильтрует
        по stage='active') и на них нельзя было откликнуться. */
+    $jamId = (int)($_POST['jam_id'] ?? 0) ?: null;
+
     $st = $pdo->prepare("
         INSERT INTO bids
-            (bidder_id, owner_type, owner_id, search_role, search_spec,
+            (bidder_id, owner_type, owner_id, jam_id, search_role, search_spec,
              experience, conditions, goal, details, stage, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())");
-    $st->execute([$userId, $ownerType, $ownerId, $role, $spec, $exp, $cond, $goal, $details]);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())");
+    $st->execute([$userId, $ownerType, $ownerId, $jamId,
+                  $role, $spec, $exp, $cond, $goal, $details]);
 
     back('my', 'created');
 

@@ -412,6 +412,14 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                 }
                 state.adult = state.adult ? 0 : 1;
                 state.genre = null;
+            } else if (target.dataset.genre === '') {
+                /* «Все игры» сбрасывает и жанр, И раздел 18+.
+                   Раньше сбрасывался только жанр, adult оставался включённым —
+                   и список жанров продолжал показывать лишь те, что есть у
+                   игр 18+. Со стороны это выглядело так, будто жанры пропали
+                   навсегда и вернуть их можно только повторным кликом по 18+. */
+                state.genre = null;
+                state.adult = 0;
             } else {
                 state.genre = target.dataset.genre || null;
             }

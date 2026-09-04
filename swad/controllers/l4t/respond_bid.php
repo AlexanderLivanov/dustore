@@ -18,6 +18,7 @@ declare(strict_types=1);
 
 session_start();
 require_once(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/_csrf.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -29,6 +30,8 @@ $userId = (int)$_SESSION['USERDATA']['id'];
 $data    = json_decode(file_get_contents('php://input'), true) ?: [];
 $bidId   = (int)($data['bid_id'] ?? 0);
 $message = mb_substr(trim((string)($data['message'] ?? '')), 0, 1000);
+
+csrf_guard_json($data);
 
 if (!$bidId)          reply(['success' => false, 'message' => 'Нет bid_id']);
 if ($message === '')  reply(['success' => false, 'message' => 'Напишите пару слов о себе']);

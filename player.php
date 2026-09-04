@@ -8,6 +8,20 @@ require_once('swad/controllers/organization.php');
 
 session_start();
 
+/* Формы «Безопасность и аккаунт» ниже постят в /me, а там теперь проверяется
+   CSRF-токен. Без этого подключения они будут отвечать «Сессия устарела». */
+require_once('swad/controllers/csrf.php');
+
+/** Ссылка из профиля: пропускаем только http(s).
+ *  htmlspecialchars экранирует кавычки, но схему не проверяет — website и vk
+ *  задаёт сам пользователь, и javascript:... в href выполнялся бы у каждого,
+ *  кто откроет чужой профиль и кликнет по ссылке. */
+function safe_link(?string $u): string
+{
+    $u = trim((string)$u);
+    return preg_match('~^https?://~i', $u) ? $u : '';
+}
+
 $request_uri = $_SERVER['REQUEST_URI'];
 $pattern = '/\/player\/([a-zA-Z0-9_]+)/';
 
@@ -32,7 +46,7 @@ $database = new Database();
 $pdo = $database->connect();
 
 $stmt = $pdo->prepare("
-    SELECT 
+    SELECT
         u.id, u.username, u.telegram_id, u.profile_picture, u.added,
         u.telegram_username, u.city, u.country, u.vk, u.website,
         u.first_name, u.last_name,
@@ -58,18 +72,18 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 }
 
 $stmt = $pdo->prepare("
-    SELECT 
+    SELECT
         (SELECT COUNT(*) FROM library WHERE player_id = :user_id) as library_count,
         (SELECT COUNT(*) FROM achievements WHERE player_id = :user_id) as achievements_count,
         (SELECT COUNT(*) FROM game_reviews WHERE user_id = :user_id) as reviews_count,
-        (SELECT COUNT(*) FROM friends WHERE 
+        (SELECT COUNT(*) FROM friends WHERE
             (player_id = :user_id OR friend_id = :user_id) AND status = 'accepted') as friends_count
 ");
 $stmt->execute([':user_id' => $user['id']]);
 $stats = $stmt->fetch();
 
 $stmt = $pdo->prepare("
-    SELECT 
+    SELECT
         g.id, g.name, g.description, g.path_to_cover, g.price, g.GQI, g.release_date,
         COALESCE(AVG(r.rating), 0) AS rating,
         MAX(l.date) AS last_added
@@ -95,10 +109,20 @@ $stmt = $pdo->prepare("
 $stmt->execute([':user_id' => $user['id']]);
 $reviews = $stmt->fetchAll();
 
+/* Предметы + данные игр одним запросом вместо SELECT в цикле ниже.
+   LEFT JOIN: коллекционные предметы (game_id = 0/NULL) игрой не подкреплены,
+   но из выдачи выпадать не должны. */
 $stmt_items = $pdo->prepare("
-    SELECT * FROM library 
-    WHERE player_id = :user_id 
-    ORDER BY rarity DESC, date DESC
+    SELECT l.*,
+           g.name          AS g_name,
+           g.description   AS g_description,
+           g.path_to_cover AS g_cover,
+           g.price         AS g_price
+      FROM library l
+      LEFT JOIN games g ON g.id = l.game_id
+     WHERE l.player_id = :user_id
+     ORDER BY l.rarity DESC, l.date DESC
+     LIMIT 500
 ");
 $stmt_items->execute([':user_id' => $user['id']]);
 $all_items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
@@ -118,14 +142,13 @@ $collectibles = [];
 
 foreach ($all_items as $item) {
     if (!empty($item['game_id']) && $item['game_id'] > 0) {
-        $stmt_game_info = $pdo->prepare("SELECT name, description, path_to_cover, price FROM games WHERE id = :game_id");
-        $stmt_game_info->execute([':game_id' => $item['game_id']]);
-        $game_info = $stmt_game_info->fetch(PDO::FETCH_ASSOC);
-        if ($game_info) {
-            $item['title']       = $game_info['name'];
-            $item['description'] = $game_info['description'];
-            $item['cover_image'] = $game_info['path_to_cover'];
-            $item['price']       = $game_info['price'];
+        // NULL здесь означает, что игру удалили — строку пропускаем,
+        // как это делал прежний код при пустом $game_info
+        if ($item['g_name'] !== null) {
+            $item['title']       = $item['g_name'];
+            $item['description'] = $item['g_description'];
+            $item['cover_image'] = $item['g_cover'];
+            $item['price']       = $item['g_price'];
             $item['item_type']   = 'game';
             $games_collection[]  = $item;
         }
@@ -391,14 +414,14 @@ function format_last_seen(int $ts): string
 
                         <?php if (!empty($user['website']) || !empty($user['vk']) || !empty($user['telegram_username'])): ?>
                         <div class="pf-socials">
-                            <?php if (!empty($user['website'])): ?>
-                            <a href="<?= htmlspecialchars($user['website']) ?>" class="pf-social-btn" target="_blank">
+                            <?php if (safe_link($user['website'])): ?>
+                            <a href="<?= htmlspecialchars(safe_link($user['website'])) ?>" class="pf-social-btn" target="_blank" rel="noopener nofollow">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                                 Сайт
                             </a>
                             <?php endif; ?>
-                            <?php if (!empty($user['vk'])): ?>
-                            <a href="<?= htmlspecialchars($user['vk']) ?>" class="pf-social-btn" target="_blank">
+                            <?php if (safe_link($user['vk'])): ?>
+                            <a href="<?= htmlspecialchars(safe_link($user['vk'])) ?>" class="pf-social-btn" target="_blank" rel="noopener nofollow">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14C20.67 22 22 20.67 22 15.07V8.93C22 3.33 20.67 2 15.07 2zm3.08 13.27h-1.56c-.59 0-.77-.47-1.83-1.54-.92-.9-1.33-.9-1.56-.9-.32 0-.41.09-.41.54v1.4c0 .38-.12.61-1.14.61-1.68 0-3.54-1.02-4.85-2.91C5.61 10.3 5 8.42 5 7.97c0-.23.09-.45.54-.45h1.56c.4 0 .56.18.72.63.79 2.29 2.12 4.3 2.67 4.3.2 0 .29-.09.29-.59V9.63c-.06-1.06-.62-1.15-.62-1.53 0-.18.15-.36.38-.36h2.45c.34 0 .45.18.45.56v3c0 .34.15.45.25.45.2 0 .38-.11.76-.49 1.17-1.31 2.01-3.33 2.01-3.33.11-.23.29-.45.69-.45h1.56c.47 0 .58.24.47.56-.2.92-2.12 3.63-2.12 3.63-.17.27-.23.38 0 .68.17.23.72.7 1.08 1.12.67.76 1.18 1.4 1.32 1.84.14.43-.09.65-.52.65z"/></svg>
                                 ВКонтакте
                             </a>
@@ -633,7 +656,8 @@ function format_last_seen(int $ts): string
                             <h3 style="margin-top:0;">Привязка почты</h3>
                             <p style="color:#888;font-size:.9em;">Для тех, кто скучает по 2007</p>
                             <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
-                                <input type="email" name="email" required placeholder="Email" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <?= csrf_field() ?>
+                                <input type="email" name="email" required placeholder="Email" autocomplete="email" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <input type="password" name="password" required placeholder="Пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <button name="bind_email" style="padding:10px 20px;background:#12556d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
@@ -646,7 +670,9 @@ function format_last_seen(int $ts): string
                             <?php endif; ?>
                             <h3>Смена пароля</h3>
                             <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
-                                <input type="password" name="new_password" required placeholder="Новый пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <?= csrf_field() ?>
+                                <input type="password" name="current_password" required placeholder="Текущий пароль" autocomplete="current-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <input type="password" name="new_password" required placeholder="Новый пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
                                 <button name="change_password" style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Обновить пароль</button>
                             </form>
@@ -657,6 +683,7 @@ function format_last_seen(int $ts): string
                             <h3 style="margin-top:0;">Завершение сеанса</h3>
                             <p style="color:#888;font-size:.9em;line-height:1.5;">Выход прекратит доступ на этом устройстве. Для повторного входа потребуется авторизация через Telegram или passphrase.</p>
                             <form action="/swad/controllers/logout.php" method="POST" onsubmit="return confirm('Вы уверены?')">
+                                <?= csrf_field() ?>
                                 <button type="submit" style="padding:10px 20px;background:#740101;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;width:100%;">Выйти из аккаунта</button>
                             </form>
                         </div>
@@ -701,6 +728,8 @@ function format_last_seen(int $ts): string
 </div>
 
 <script>
+const CSRF = <?= json_encode(csrf_token()) ?>;
+
 function showAchievementModal(ach) {
     document.getElementById('achievementModalBody').innerHTML = `
     <div style="text-align:center;">
@@ -735,7 +764,11 @@ document.getElementById('friendActionBtn')?.addEventListener('click', async func
     btn.setAttribute('disabled','true');
     let raw = '';
     try {
-        const res = await fetch('/api/friends.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action, user_id:uid}) });
+        const res = await fetch('/api/friends.php', {
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF},
+            body: new URLSearchParams({action, user_id:uid, csrf: CSRF})
+        });
         raw = await res.text();
         const data = JSON.parse(raw);
         if (!data.success) { alert('Ошибка: '+data.error); btn.removeAttribute('disabled'); return; }
@@ -755,7 +788,11 @@ document.getElementById('friendActionBtn')?.addEventListener('click', async func
 document.querySelectorAll('.acceptFriend').forEach(btn => {
     btn.addEventListener('click', async function() {
         const uid = this.dataset.user;
-        const res = await fetch('/api/friends.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action:'accept', user_id:uid}) });
+        const res = await fetch('/api/friends.php', {
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF},
+            body: new URLSearchParams({action:'accept', user_id:uid, csrf: CSRF})
+        });
         const data = await res.json();
         if (data.success) { this.innerText='В друзьях'; this.disabled=true; } else alert(data.error||'Ошибка');
     });

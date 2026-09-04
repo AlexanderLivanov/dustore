@@ -5,10 +5,16 @@ require_once('swad/config.php');
 $db = new Database();
 $pdo = $db->connect();
 
-// Получаем ID пользователя из сессии или GET параметра
-$user_id = $_SESSION['USERDATA']['id'] ?? 0;
-if(!empty($_GET['user_id'])){
-    $user_id = $_GET['user_id'];
+/* Страница показывает СВОЮ коллекцию.
+   Было: $user_id = $_GET['user_id'] без единой проверки — любой мог
+   подставить чужой id и посмотреть чью угодно библиотеку и предметы.
+   Инъекции там не было (запрос параметризован), но приватность утекала.
+   Чужие профили живут на /player/<username>, где показывается только
+   то, что задумано публичным. */
+$user_id = (int)($_SESSION['USERDATA']['id'] ?? 0);
+if ($user_id <= 0) {
+    header('Location: /login');
+    exit;
 }
 
 // Запрос для получения информации о пользователе
@@ -27,11 +33,22 @@ if (!$user) {
     ];
 }
 
-// Получаем ВСЕ предметы пользователя из единой таблицы
+/* Предметы пользователя + данные игр ОДНИМ запросом.
+   Было: SELECT * FROM library, потом в цикле по каждой строке отдельный
+   SELECT ... FROM games. У человека со ста играми — сто запросов на
+   загрузку страницы. LEFT JOIN, потому что коллекционные предметы
+   (game_id = 0 или NULL) игрой не подкреплены и должны остаться в выдаче. */
 $stmt_items = $pdo->prepare("
-    SELECT * FROM library 
-    WHERE player_id = :user_id 
-    ORDER BY rarity DESC, date DESC
+    SELECT l.*,
+           g.name            AS g_name,
+           g.description     AS g_description,
+           g.path_to_cover   AS g_cover,
+           g.price           AS g_price
+      FROM library l
+      LEFT JOIN games g ON g.id = l.game_id
+     WHERE l.player_id = :user_id
+     ORDER BY l.rarity DESC, l.date DESC
+     LIMIT 500
 ");
 $stmt_items->execute([':user_id' => $user_id]);
 $all_items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
@@ -40,26 +57,16 @@ $all_items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
 $games = [];
 $collectibles = [];
 
-// Для разделения нам нужно знать тип предмета
-// Предположим, что у нас есть поле `item_type` или будем использовать game_id
-// Если game_id > 0 - это игра, если game_id = 0 или NULL - коллекционный предмет
 foreach ($all_items as $item) {
     if (!empty($item['game_id']) && $item['game_id'] > 0) {
-        // Это игра - получаем дополнительную информацию об игре
-        $stmt_game_info = $pdo->prepare("
-            SELECT name, description, path_to_cover, price 
-            FROM games 
-            WHERE id = :game_id
-        ");
-        $stmt_game_info->execute([':game_id' => $item['game_id']]);
-        $game_info = $stmt_game_info->fetch(PDO::FETCH_ASSOC);
-
-        if ($game_info) {
-            $item['title'] = $game_info['name'];
-            $item['description'] = $game_info['description'];
-            $item['cover_image'] = $game_info['path_to_cover'];
-            $item['price'] = $game_info['price'];
-            $item['item_type'] = 'game';
+        // Игра могла быть удалена — тогда JOIN отдаст NULL, и в выдачу
+        // такую строку не берём (прежний код вёл себя так же)
+        if ($item['g_name'] !== null) {
+            $item['title']       = $item['g_name'];
+            $item['description'] = $item['g_description'];
+            $item['cover_image'] = $item['g_cover'];
+            $item['price']       = $item['g_price'];
+            $item['item_type']   = 'game';
             $games[] = $item;
         }
     } else {

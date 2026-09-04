@@ -494,7 +494,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
                             <?php $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game); ?>
                             <?php if ($distMode === 'deplex'): ?>
                                 <a class="gp-btn gp-btn-primary" href="#"
-                                    onclick="dpxDownload('https://api.dustore.ru/v1/games/<?= (int)$game_id ?>/installer?os=windows');return false;">⬇ Скачать (установщик)</a>
+                                    onclick="dpxDownload('https://api.dustore.ru/v1/games/<?= (int)$game_id ?>/installer?os=windows');return false;">⬇ Скачать (загрузчик)</a>
                             <?php elseif (($game['vt_status'] ?? '') === 'flagged'): ?>
                                 <div class="gp-no-file" style="color:#ff5f57;">⚠ Скачивание заблокировано антивирусом</div>
                             <?php elseif (!empty($game['game_zip_url'])): ?>

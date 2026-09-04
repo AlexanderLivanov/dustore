@@ -220,137 +220,13 @@ $stmt->execute([
 </head>
 
 <body>
-    <div id="custom-menu" class="context-menu">
-        <button class="context-menu-item" data-action="back">
-            <span class="context-menu-icon">←</span>
-            <span>Назад</span>
-            <span class="shortcut">Alt+←</span>
-        </button>
-
-        <button class="context-menu-item" data-action="forward">
-            <span class="context-menu-icon">→</span>
-            <span>Вперёд</span>
-            <span class="shortcut">Alt+→</span>
-        </button>
-
-        <button class="context-menu-item" data-action="reload">
-            <span class="context-menu-icon">↻</span>
-            <span>Перезагрузить</span>
-            <span class="shortcut">Ctrl+R</span>
-        </button>
-
-        <div class="context-menu-divider"></div>
-
-        <button class="context-menu-item" data-action="print">
-            <span class="context-menu-icon">🖨</span>
-            <span>Печать...</span>
-            <span class="shortcut">Ctrl+P</span>
-        </button>
-
-        <button class="context-menu-item" data-action="save">
-            <span class="context-menu-icon">💾</span>
-            <span>Сохранить страницу как...</span>
-            <span class="shortcut">Ctrl+S</span>
-        </button>
-
-        <button class="context-menu-item" data-action="translate">
-            <span class="context-menu-icon">🌐</span>
-            <span>Перевести на русский</span>
-        </button>
-
-        <button class="context-menu-item" data-action="find">
-            <span class="context-menu-icon">🔍</span>
-            <span>Поиск по странице</span>
-            <span class="shortcut">Ctrl+F</span>
-        </button>
-
-        <button class="context-menu-item" data-action="viewsource">
-            <span class="context-menu-icon">&lt;/&gt;</span>
-            <span>Просмотр кода страницы</span>
-            <span class="shortcut">Ctrl+U</span>
-        </button>
-
-        <div class="context-menu-divider"></div>
-
-        <button class="context-menu-item" data-action="inspect">
-            <span class="context-menu-icon">⚙</span>
-            <span>Посмотреть код</span>
-            <span class="shortcut">F12</span>
-        </button>
-    </div>
-
-    <script>
-        const menu = document.getElementById('custom-menu');
-
-        document.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-
-            menu.style.display = 'block';
-
-            const rect = menu.getBoundingClientRect();
-
-            let x = e.clientX;
-            let y = e.clientY;
-
-            if (x + rect.width > window.innerWidth) {
-                x = window.innerWidth - rect.width - 10;
-            }
-
-            if (y + rect.height > window.innerHeight) {
-                y = window.innerHeight - rect.height - 10;
-            }
-
-            menu.style.left = `${x}px`;
-            menu.style.top = `${y}px`;
-        });
-
-        document.addEventListener('click', () => {
-            menu.style.display = 'none';
-        });
-
-        menu.addEventListener('click', (e) => {
-            const button = e.target.closest('.context-menu-item');
-            if (!button) return;
-
-            const action = button.dataset.action;
-
-            switch (action) {
-                case 'back':
-                    history.back();
-                    break;
-
-                case 'forward':
-                    history.forward();
-                    break;
-
-                case 'reload':
-                    location.reload();
-                    break;
-
-                case 'print':
-                    window.print();
-                    break;
-
-                case 'save':
-                    alert('Браузеры не позволяют программно открыть "Сохранить как"');
-                    break;
-
-                case 'find':
-                    alert('Используйте Ctrl+F');
-                    break;
-
-                case 'viewsource':
-                    window.open('view-source:' + location.href);
-                    break;
-
-                case 'inspect':
-                    alert('Невозможно открыть DevTools через JS');
-                    break;
-            }
-
-            menu.style.display = 'none';
-        });
-    </script>
+    <!-- Кастомное контекстное меню удалено.
+         Оно перехватывало правый клик на ВСЕЙ странице через
+         document.addEventListener('contextmenu', e => e.preventDefault()),
+         то есть отбирало у человека копирование, «открыть в новой вкладке»,
+         проверку орфографии и вставку в поля ввода — взамен предлагая
+         три пункта, из которых работал не каждый. Подменять базовое
+         поведение браузера на весь документ нельзя. -->
     <div class="header-wrapper">
         <div class="header">
             <!-- Единая поверхность хедера: фон + backdrop-filter + силуэт (clip-path). -->
@@ -393,6 +269,37 @@ $stmt->execute([
                             <li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">Медиа<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
                             <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>-->
 
+                            <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
+                                <li>
+                                    <a class="nav-dropdown__item nav-dropdown__item--accent"
+                                        href="/devs/" role="menuitem"
+                                        style="color:#ff5ba8;font-weight:600;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                            style="vertical-align:middle;margin-right:4px;">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                                            <path d="M8 21h8M12 17v4" />
+                                        </svg>
+                                        Консоль разработчика
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li>
+                                    <a class="nav-dropdown__item nav-dropdown__item--accent"
+                                        href="/login?backUrl=/devs/" role="menuitem"
+                                        style="color:rgba(255,91,168,.7);font-weight:600;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                            style="vertical-align:middle;margin-right:4px;">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                                            <path d="M8 21h8M12 17v4" />
+                                        </svg>
+                                        Войти в консоль
+                                    </a>
+                                </li>
+                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
@@ -1563,8 +1470,46 @@ const pagesTopics = {
                 }
 
                 // ---------- Открытие / закрытие ----------
+                /* Блокировка скролла страницы под модалкой.
+                   Сначала это был класс + правило overflow:hidden в header.css,
+                   но на витрине и главной страница всё равно прокручивалась:
+                   у каждой из них своя таблица стилей, и какое-то из правил
+                   для body оказывалось сильнее. Вместо того чтобы искать, какое
+                   именно, ставим inline-стиль — он бьёт любую таблицу стилей,
+                   кроме !important, и не зависит от того, что подключено
+                   на конкретной странице.
+
+                   Заодно компенсируем ширину исчезнувшей полосы прокрутки:
+                   без этого при открытии модалки вся страница дёргается вбок. */
+                let dustyScrollLock = null;
+
+                function lockPageScroll() {
+                    if (dustyScrollLock) return;
+                    const html = document.documentElement;
+                    const gap  = window.innerWidth - html.clientWidth;
+
+                    dustyScrollLock = {
+                        htmlOverflow: html.style.overflow,
+                        bodyOverflow: document.body.style.overflow,
+                        bodyPadding:  document.body.style.paddingRight
+                    };
+
+                    html.style.overflow = 'hidden';
+                    document.body.style.overflow = 'hidden';
+                    if (gap > 0) document.body.style.paddingRight = gap + 'px';
+                }
+
+                function unlockPageScroll() {
+                    if (!dustyScrollLock) return;
+                    document.documentElement.style.overflow = dustyScrollLock.htmlOverflow;
+                    document.body.style.overflow = dustyScrollLock.bodyOverflow;
+                    document.body.style.paddingRight = dustyScrollLock.bodyPadding;
+                    dustyScrollLock = null;
+                }
+
                 function openModal() {
                     modal.classList.remove('hidden');
+                    lockPageScroll();
                     isModalOpen = true;
                     textElement.textContent = '';
                     clearActions();
@@ -1600,6 +1545,7 @@ const pagesTopics = {
 
                 function closeModal() {
                     modal.classList.add('hidden');
+                    unlockPageScroll();
                     isModalOpen = false;
                     stopAnimation();
                     cat.src = catEmotions.normal.idle[0];

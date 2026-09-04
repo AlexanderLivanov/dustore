@@ -758,6 +758,22 @@ body.moonlight-theme #dusty-helper-modal {
     display: none;
 }
 
+/* Замок скролла переехал в JS: он ставит inline-стиль, потому что правило
+   отсюда проигрывало таблицам стилей отдельных страниц (витрина, главная).
+   Класс оставлен на случай, если понадобится зацепиться стилями. */
+html.dusty-open,
+body.dusty-open {
+    overflow: hidden;
+}
+
+/* Скролл внутри модалки не должен «протекать» на страницу, когда список
+   вариантов домотан до конца. */
+#dusty-helper-modal,
+.dust-layout__dialogue,
+.dust-layout__actions {
+    overscroll-behavior: contain;
+}
+
 /* ── Панель ─────────────────────────────────────────────────────────────── */
 .dust-layout {
     position: relative;
@@ -917,9 +933,13 @@ body.moonlight-theme #dusty-helper-modal {
     background: var(--d-btn);
     border: 1px solid var(--d-line);
     color: var(--d-text);
-    font-family: 'PixelizerBold', 'Press Start 2P', monospace;
-    font-size: 13px;
-    line-height: 1.4;
+    /* Был PixelizerBold 13px. На реплике Дасти пиксельный шрифт уместен —
+       это его «голос». Но пункты выбора человек читает быстро и подряд,
+       и на 13px растровое начертание перестаёт разбираться. Оставляем
+       пиксель только реплике, варианты ответа — обычным шрифтом. */
+    font-family: 'Bahnschrift Light', 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
