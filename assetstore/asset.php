@@ -280,13 +280,565 @@ body.moonlight-theme {
     background: var(--primary);
     border-radius: 2px;
 }
-/* Все остальные специфические стили (3D-вьювер, галерея, вкладки, сайдбар, модалки) оставлены без изменений,
-   но их цветовые переменные адаптированы к новой палитре. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   СТРАНИЦА АССЕТА — восстановленный блок стилей
+   ───────────────────────────────────────────────────────────────────────────
+   В файле на его месте стоял комментарий «Все остальные специфические стили
+   ... оставлены без изменений», но правил там не было: 14 классов из 26
+   не имели вообще ни одного объявления. Отсюда все жалобы по вёрстке —
+   .ap-side без grid-area выпадал из сетки и ложился поверх контента,
+   картинки в галерее ничем не ограничивались, вкладки показывались все
+   разом, а блок отзывов схлопывался в кашу.
+
+   Палитра и приёмы — как на остальных страницах Dustore: акцент через
+   переменные, никаких свечений, разделители в 1px, углы 12–16px.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+    --ac-surf:      rgba(255, 255, 255, 0.035);
+    --ac-surf2:     rgba(255, 255, 255, 0.06);
+    --ac-line:      rgba(255, 255, 255, 0.08);
+    --ac-line-hi:   rgba(255, 255, 255, 0.16);
+    --ac-text:      #f2ecf6;
+    --ac-muted:     rgba(242, 236, 246, 0.5);
+    --ac-dim:       rgba(242, 236, 246, 0.3);
+    --ac-accent:    #c32178;
+    --ac-accent-hi: #e6379a;
+    --ac-soft:      rgba(195, 33, 120, 0.16);
+    --ac-ok:        #46d18a;
+    --ac-ok-soft:   rgba(70, 209, 138, 0.12);
+    --ac-radius:    14px;
+}
+
+body.moonlight-theme {
+    --ac-line:      rgba(184, 200, 255, 0.11);
+    --ac-line-hi:   rgba(184, 200, 255, 0.22);
+    --ac-text:      #eaf0ff;
+    --ac-muted:     rgba(184, 200, 255, 0.55);
+    --ac-dim:       rgba(184, 200, 255, 0.32);
+    --ac-accent:    #3e7ad9;
+    --ac-accent-hi: #5690f0;
+    --ac-soft:      rgba(62, 122, 217, 0.2);
+}
+
+/* ── Боковая колонка ────────────────────────────────────────────────────────
+   Главная поломка: правила не было вовсе, поэтому элемент не попадал
+   в область "sd" и авторазмещался поверх основной колонки. */
+.ap-side {
+    grid-area: sd;
+    min-width: 0;
+    align-self: start;
+    position: sticky;
+    top: 108px;              /* высота хедера + монобровь + зазор */
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 0;
+}
+
+/* ── Карточка покупки ───────────────────────────────────────────────────── */
+.buy-card {
+    border-radius: var(--ac-radius);
+    background: var(--ac-surf);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+    overflow: hidden;
+}
+
+.buy-card-header {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--ac-line);
+}
+.buy-price-label { font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; color: var(--ac-dim); }
+.buy-price {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-top: 4px;
+    color: var(--ac-text);
+}
+.buy-price.free { color: var(--ac-ok); }
+.buy-price-sub { font-size: .74rem; color: var(--ac-muted); margin-top: 4px; }
+
+.buy-card-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+.cta-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--ac-line-hi);
+    border-radius: 10px;
+    background: var(--ac-surf2);
+    color: var(--ac-text);
+    font: inherit;
+    font-size: .92rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .16s ease, border-color .16s ease, opacity .16s ease;
+}
+.cta-btn:hover { background: var(--ac-line-hi); }
+.cta-btn.primary { background: var(--ac-soft); border-color: var(--ac-accent); }
+.cta-btn.primary:hover { background: var(--ac-accent); }
+.cta-btn.free-dl { background: var(--ac-ok-soft); border-color: rgba(70, 209, 138, .35); color: var(--ac-ok); }
+.cta-btn.free-dl:hover { background: rgba(70, 209, 138, .22); }
+.cta-btn.owned { background: var(--ac-ok-soft); border-color: rgba(70, 209, 138, .3); }
+.cta-btn:disabled { opacity: .55; cursor: default; }
+
+.cta-btn-sub {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--ac-line);
+    border-radius: 10px;
+    background: none;
+    color: var(--ac-muted);
+    font: inherit;
+    font-size: .84rem;
+    cursor: pointer;
+    transition: color .16s ease, border-color .16s ease;
+}
+.cta-btn-sub:hover { color: var(--ac-text); border-color: var(--ac-accent); }
+
+.owned-info { display: flex; gap: 10px; align-items: center; padding: 4px 0 10px; }
+.oi-ico { font-size: 1.3rem; }
+.oi-date { font-size: .76rem; color: var(--ac-muted); margin-top: 2px; }
+
+/* ── Разделение выручки ─────────────────────────────────────────────────── */
+.split-preview {
+    padding: 14px 16px;
+    border-radius: var(--ac-radius);
+    background: var(--ac-surf);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+}
+.sp-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: .74rem; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--ac-dim); margin-bottom: 10px;
+}
+.split-bar, .modal-split-bar {
+    display: flex; height: 6px; border-radius: 3px;
+    overflow: hidden; background: var(--ac-surf2);
+}
+/* В сайдбаре полосы названы .dev/.plat, а в модалке оплаты — .d/.p.
+   Разметку не трогаю, чтобы не задеть JS, поэтому покрываю оба имени. */
+.split-bar .dev,  .modal-split-bar .dev,  .modal-split-bar .d { background: var(--ac-accent); }
+.split-bar .plat, .modal-split-bar .plat, .modal-split-bar .p { background: var(--ac-line-hi); }
+.split-labels { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: .74rem; }
+.sl-dev  { color: var(--ac-accent-hi); }
+.sl-plat { color: var(--ac-muted); }
+
+/* ── Список характеристик в сайдбаре ────────────────────────────────────── */
+.info-list { display: flex; flex-direction: column; }
+.info-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--ac-line);
+    font-size: .82rem;
+}
+.info-row:last-child { border-bottom: none; }
+.ir-l { color: var(--ac-muted); flex-shrink: 0; }
+.ir-r { color: var(--ac-text); text-align: right; min-width: 0; word-break: break-word; }
+
+/* ── Карточка автора ────────────────────────────────────────────────────── */
+.author-card {
+    padding: 14px 16px;
+    border-radius: var(--ac-radius);
+    background: var(--ac-surf);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+}
+.ac-head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.ac-name { font-weight: 600; font-size: .92rem; }
+.ac-sub  { font-size: .74rem; color: var(--ac-muted); margin-top: 1px; }
+.ac-link {
+    display: block; text-align: center;
+    padding: 9px; border-radius: 9px;
+    background: var(--ac-surf2);
+    color: var(--ac-text); text-decoration: none;
+    font-size: .84rem; font-weight: 600;
+    transition: background .16s ease;
+}
+.ac-link:hover { background: var(--ac-line-hi); }
+
+/* ── Вкладки ────────────────────────────────────────────────────────────────
+   .tab-panel без display:none показывал ВСЕ панели разом — страница
+   выглядела как свалка из галереи, описания, состава и отзывов подряд. */
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 22px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--ac-line);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--ac-muted);
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .16s ease, border-color .16s ease;
+}
+.tab:hover { color: var(--ac-text); }
+.tab.active { color: var(--ac-text); border-bottom-color: var(--ac-accent); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── 3D-вьювер ──────────────────────────────────────────────────────────── */
+.viewer-wrap {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--ac-radius);
+    overflow: hidden;
+    background: #0d0316;
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+}
+body.moonlight-theme .viewer-wrap { background: #070c18; }
+.viewer-wrap canvas { width: 100%; height: 100%; display: block; }
+
+.viewer-loading {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; color: var(--ac-muted); font-size: .85rem;
+    background: inherit;
+}
+.viewer-loading.hidden { display: none; }
+.viewer-spinner {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--ac-line-hi);
+    border-top-color: var(--ac-accent);
+    animation: acSpin .8s linear infinite;
+}
+@keyframes acSpin { to { transform: rotate(360deg); } }
+
+.viewer-hint {
+    position: absolute; left: 12px; bottom: 12px;
+    padding: 5px 10px; border-radius: 7px;
+    background: rgba(0, 0, 0, .55);
+    font-size: .72rem; color: var(--ac-muted);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+.viewer-controls { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
+.viewer-btn {
+    padding: 6px 11px; border-radius: 7px;
+    border: 1px solid var(--ac-line-hi);
+    background: rgba(0, 0, 0, .5);
+    color: var(--ac-text); font: inherit; font-size: .76rem; cursor: pointer;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    transition: background .16s ease, border-color .16s ease;
+}
+.viewer-btn:hover { background: var(--ac-soft); border-color: var(--ac-accent); }
+.viewer-btn.on { background: var(--ac-accent); border-color: var(--ac-accent); }
+
+.no-model {
+    border-radius: var(--ac-radius);
+    background: var(--ac-surf);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+}
+
+/* ── Галерея ────────────────────────────────────────────────────────────────
+   Раньше у .gallery-item и его img не было ни одного правила: картинка
+   выводилась в натуральную величину и вылезала за сетку. */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+.gallery-item {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--ac-surf2);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+    cursor: zoom-in;
+    transition: box-shadow .16s ease;
+}
+.gallery-item:hover { box-shadow: inset 0 0 0 1px var(--ac-accent); }
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Страховка: любая картинка внутри основной колонки не может вылезти
+   за её ширину, чем бы её ни вставили. */
+.ap-main img { max-width: 100%; height: auto; }
+
+/* ── Аудиоплеер ─────────────────────────────────────────────────────────── */
+.audio-player {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--ac-radius);
+    background: var(--ac-surf);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+}
+.ap-play {
+    flex-shrink: 0;
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 0; background: var(--ac-accent); color: #fff;
+    font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .16s ease;
+}
+.ap-play:hover { background: var(--ac-accent-hi); }
+.audio-meta { flex: 1; min-width: 0; }
+.a-title { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-dur { font-size: .74rem; color: var(--ac-muted); margin-top: 2px; }
+.audio-waveform { width: 100%; height: 36px; display: block; margin-top: 6px; }
+
+/* ── Описание, теги, состав ─────────────────────────────────────────────── */
+.desc { font-size: .92rem; line-height: 1.75; color: rgba(242, 236, 246, .82); }
+.desc p { margin-bottom: 12px; }
+body.moonlight-theme .desc { color: rgba(234, 240, 255, .82); }
+
+.tags-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+    padding: 4px 11px; border-radius: 20px;
+    background: var(--ac-surf2);
+    border: 1px solid var(--ac-line);
+    color: var(--ac-muted);
+    font-size: .78rem; text-decoration: none;
+    transition: color .16s ease, border-color .16s ease;
+}
+.tag:hover { color: var(--ac-text); border-color: var(--ac-accent); }
+
+.contents-list { display: flex; flex-direction: column; }
+.content-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ac-line);
+    font-size: .85rem;
+}
+.content-item:last-child { border-bottom: none; }
+.ci-icon { flex-shrink: 0; }
+.ci-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ci-size { color: var(--ac-muted); font-size: .78rem; flex-shrink: 0; }
+.ci-fmt {
+    flex-shrink: 0; padding: 2px 8px; border-radius: 5px;
+    background: var(--ac-surf2); color: var(--ac-muted);
+    font-family: monospace; font-size: .72rem; text-transform: uppercase;
+}
+
+/* ── Таблица характеристик ──────────────────────────────────────────────── */
+.specs { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.specs td { padding: 10px 4px; border-bottom: 1px solid var(--ac-line); }
+.specs tr:last-child td { border-bottom: none; }
+.specs td:first-child { color: var(--ac-muted); width: 45%; }
+.specs td:last-child { color: var(--ac-text); }
+
+/* ── Отзывы ─────────────────────────────────────────────────────────────────
+   Все .rv-* были без правил, поэтому блок «выглядел нерабочим»:
+   он не сломан, он был невидим — аватар в натуральную величину,
+   текст без отступов, ответ разработчика слит с отзывом. */
+.rating-big { display: flex; align-items: center; gap: 16px; }
+.rb-num { font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 800; line-height: 1; }
+.rb-stars { color: #f5b942; font-size: 1rem; letter-spacing: 2px; }
+.rb-count { font-size: .76rem; color: var(--ac-muted); margin-top: 3px; }
+
+/* В разметке контейнер называется #reviews-container, а карточка — .review-card.
+   В прошлой правке я написал стили под #reviewsList и .review — промахнулся
+   именами, и блок отзывов остался без оформления. */
+#reviews-container { display: flex; flex-direction: column; gap: 12px; }
+
+.review-card {
+    padding: 14px 16px;
+    border-radius: var(--ac-radius);
+    background: var(--ac-surf);
+    box-shadow: inset 0 0 0 1px var(--ac-line);
+}
+.rv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.rv-author { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rv-ava {
+    width: 36px; height: 36px; border-radius: 50%;
+    object-fit: cover; flex-shrink: 0;
+    background: var(--ac-surf2);
+}
+.rv-name { font-weight: 600; font-size: .88rem; }
+.rv-stars { font-size: .76rem; color: #f5b942; margin-top: 2px; }
+.rv-date { font-size: .74rem; color: var(--ac-dim); flex-shrink: 0; }
+.rv-text { font-size: .88rem; line-height: 1.65; color: rgba(242, 236, 246, .82); white-space: pre-wrap; word-break: break-word; }
+body.moonlight-theme .rv-text { color: rgba(234, 240, 255, .82); }
+
+.rv-dev-reply {
+    margin-top: 12px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: var(--ac-soft);
+    border-left: 2px solid var(--ac-accent);
+    font-size: .85rem;
+    line-height: 1.6;
+}
+.rv-dev-badge {
+    font-size: .72rem; font-weight: 700; letter-spacing: .4px;
+    color: var(--ac-accent-hi); margin-bottom: 5px;
+}
+
+/* Звёзды оценки. Правил не было вообще: спаны рисовались обычным текстом
+   в цвете абзаца, без курсора и без реакции на .highlighted. Кликались они
+   и раньше, но выглядели как декоративный символ, а не как элемент выбора. */
+#review-stars { display: inline-flex; gap: 2px; }
+#review-stars span {
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--ac-line-hi);
+    cursor: pointer;
+    user-select: none;
+    transition: color .12s ease, transform .12s ease;
+}
+#review-stars span:hover { transform: scale(1.15); }
+#review-stars span.highlighted { color: #f5b942; }
+
+.review-form { display: flex; flex-direction: column; gap: 10px; }
+.review-form select,
+.review-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--ac-surf2);
+    border: 1px solid var(--ac-line);
+    color: var(--ac-text);
+    font: inherit;
+    font-size: .88rem;
+    outline: none;
+    transition: border-color .16s ease;
+}
+.review-form textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+.review-form select:focus,
+.review-form textarea:focus { border-color: var(--ac-accent); }
+.review-form textarea::placeholder { color: var(--ac-dim); }
+
+.btn-sm {
+    align-self: flex-start;
+    padding: 9px 18px;
+    border-radius: 9px;
+    border: 1px solid var(--ac-accent);
+    background: var(--ac-soft);
+    color: var(--ac-text);
+    font: inherit; font-size: .85rem; font-weight: 600;
+    cursor: pointer;
+    transition: background .16s ease;
+}
+.btn-sm:hover { background: var(--ac-accent); }
+
+/* ── Модалки ────────────────────────────────────────────────────────────── */
+.modal, .offer-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 10000;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    background: rgba(6, 1, 10, .82);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+}
+.modal.open, .offer-modal.open { display: flex; }
+
+.modal-box, .offer-box {
+    width: 100%; max-width: 440px;
+    max-height: 88vh; overflow-y: auto;
+    border-radius: 16px;
+    background: #1b0a26;
+    box-shadow: inset 0 0 0 1px var(--ac-line-hi), 0 24px 60px rgba(0, 0, 0, .6);
+}
+.offer-box { max-width: 640px; padding: 24px; font-size: .88rem; line-height: 1.7; }
+body.moonlight-theme .modal-box,
+body.moonlight-theme .offer-box { background: #101728; }
+
+.modal-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--ac-line);
+    font-weight: 700;
+}
+.modal-close-x {
+    width: 28px; height: 28px; flex-shrink: 0;
+    border: 1px solid var(--ac-line); border-radius: 8px;
+    background: none; color: var(--ac-muted);
+    cursor: pointer; font-size: .85rem;
+    transition: color .16s ease, border-color .16s ease;
+}
+.modal-close-x:hover { color: var(--ac-text); border-color: var(--ac-accent); }
+
+.modal-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.modal-asset { display: flex; align-items: center; gap: 12px; }
+.modal-asset img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.modal-asset-name { font-weight: 600; font-size: .92rem; }
+.modal-asset-auth { font-size: .78rem; color: var(--ac-muted); margin-top: 2px; }
+
+.pay-breakdown { display: flex; flex-direction: column; gap: 2px; }
+.pb-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: .86rem; border-bottom: 1px solid var(--ac-line); }
+.pb-row:last-child { border-bottom: none; }
+.pb-row.total { font-weight: 700; font-size: .98rem; padding-top: 12px; }
+.pb-label { color: var(--ac-muted); }
+.pb-row.total .pb-label { color: var(--ac-text); }
+.pb-val { color: var(--ac-text); }
+
+.pay-btn {
+    width: 100%; padding: 13px;
+    border: 1px solid var(--ac-accent); border-radius: 10px;
+    background: var(--ac-accent); color: #fff;
+    font: inherit; font-size: .95rem; font-weight: 700; cursor: pointer;
+    transition: background .16s ease, opacity .16s ease;
+}
+.pay-btn:hover:not(:disabled) { background: var(--ac-accent-hi); }
+.pay-btn:disabled { opacity: .55; cursor: default; }
+
+.pay-secure { text-align: center; font-size: .74rem; color: var(--ac-dim); }
+.offer-link { display: block; text-align: center; font-size: .78rem; color: var(--ac-accent-hi); text-decoration: underline; text-underline-offset: 3px; }
+.offer-link:hover { color: var(--ac-text); }
+
+/* Спиннер на кнопке во время запроса */
+.loading-spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(255, 255, 255, .3);
+    border-radius: 50%; border-top-color: #fff;
+    animation: acSpin 1s linear infinite;
+    margin-right: 6px;
+}
+
+/* ── Лайтбокс галереи ───────────────────────────────────────────────────── */
+#lightbox {
+    display: none;
+    position: fixed; inset: 0; z-index: 10001;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    background: rgba(6, 1, 10, .9);
+    cursor: zoom-out;
+}
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; display: block; }
+
+/* ── Мобильная раскладка ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .ap-side { position: static; top: auto; }
+    .ap-hd { flex-direction: column; align-items: flex-start; padding: 20px 0 18px; }
+    .ap-cover { width: 84px; height: 84px; }
+    .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .rating-big { gap: 12px; }
+    .rb-num { font-size: 2rem; }
+    .viewer-controls { right: 8px; top: 8px; }
+    .viewer-hint { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .viewer-spinner, .loading-spinner { animation: none; }
+}
     </style>
 </head>
 
 <body>
-    <?php require_once('../swad/static/elements/header.php'); ?>
+    <?php
+    require_once('../swad/controllers/csrf.php');
+    require_once('../swad/static/elements/header.php');
+    ?>
 
     <main>
         <!-- Banner -->
@@ -551,7 +1103,7 @@ body.moonlight-theme {
                     <?php endif; ?>
 
                     <!-- Audio player for music/sfx -->
-                    <?php 
+                    <?php
                     // Определяем источник аудио для превью
                     $audioSrc = '';
                     if (!empty($asset['preview_audio'])) {
@@ -559,7 +1111,7 @@ body.moonlight-theme {
                     } elseif (in_array($asset['category'], ['music', 'sfx']) && !empty($asset['asset_file_path'])) {
                         $audioSrc = $asset['asset_file_path'];
                     }
-                    if (!empty($audioSrc)): 
+                    if (!empty($audioSrc)):
                     ?>
                         <div class="ap-section">
                             <div class="ap-section-title">🎵 Аудио-превью</div>
@@ -870,6 +1422,11 @@ body.moonlight-theme {
     <?php endif; ?>
 
     <script>
+        /* Контроллеры ассет-стора проверяют CSRF-токен, а страница его не
+           отправляла — отсюда «Сессия устарела» при попытке оставить отзыв.
+           Мой недосмотр: закрыл эндпоинты токеном, но не обновил вызовы. */
+        const CSRF = <?= json_encode(csrf_token()) ?>;
+
         /* ── Tabs ── */
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', function() {
@@ -918,7 +1475,7 @@ body.moonlight-theme {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `asset_id=${assetId}`
+                    body: `asset_id=${assetId}&csrf=${encodeURIComponent(CSRF)}`
                 })
                 .then(r => r.json())
                 .then(d => {
@@ -943,13 +1500,14 @@ body.moonlight-theme {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `asset_id=${id}`
+                    body: `asset_id=${id}&csrf=${encodeURIComponent(CSRF)}`
                 })
                 .then(r => r.json())
                 .then(d => {
                     if (d.success) location.reload();
                     else alert('Ошибка: ' + (d.error || ''));
-                });
+                })
+                .catch(() => alert('Не удалось связаться с сервером'));
         }
 
         function toggleWishlist(id) {
@@ -958,8 +1516,9 @@ body.moonlight-theme {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: `asset_id=${id}`
-            }).then(r => r.json()).catch(() => {});
+                body: `asset_id=${id}&csrf=${encodeURIComponent(CSRF)}`
+            }).then(r => r.json())/* был пустой catch: кнопка молчала при любой ошибке */
+                .catch(() => alert('Не удалось связаться с сервером'));
         }
 
         /* ── Reviews ── */
@@ -1061,7 +1620,7 @@ body.moonlight-theme {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `asset_id=${assetId}&rating=${selRating}&text=${encodeURIComponent(text)}`
+                    body: `asset_id=${assetId}&rating=${selRating}&text=${encodeURIComponent(text)}&csrf=${encodeURIComponent(CSRF)}`
                 }).then(r => r.json()).then(d => {
                     if (d.success) location.reload();
                     else alert('Ошибка: ' + (d.error || d.message || ''));

@@ -144,7 +144,7 @@ mobile_redirect_if_needed();
         </section>
 
 
-<!-- Что это? -->
+<<!-- Что это? -->
 <section class="stats">
     <div class="container">
         <h2>Что входит в экосистему Dustore?</h2>
@@ -153,35 +153,67 @@ mobile_redirect_if_needed();
 
             <!-- 1. Платформа DUSTORE.ru — ссылка на главную -->
             <div class="platform-card" onclick="location.href='/'">
-                <div class="platform-icon">💼</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                </div>
                 <h3>Платформа DUSTORE.ru</h3>
                 <p>Главный узел в экосистеме. Это центр, где связываются все части Платформы. Преимущественно здесь находится каталог игр.</p>
             </div>
 
             <!-- 2. Dustore.L4T — ссылка на /l4t -->
             <div class="platform-card" onclick="location.href='/l4t'">
-                <div class="platform-icon">🍀</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="3" />
+                        <circle cx="6" cy="18" r="3" />
+                        <circle cx="18" cy="18" r="3" />
+                        <line x1="8.21" y1="13.89" x2="10" y2="17" />
+                        <line x1="15.79" y1="13.89" x2="14" y2="17" />
+                    </svg>
+                </div>
                 <h3>Dustore.L4T</h3>
                 <p>Looking For a Team — наше решение для поиска команд на джемы, партнёров в проекты и исполнителей для решения своих задач.</p>
             </div>
 
             <!-- 3. Dustore.Devs — ссылка на /devs -->
             <div class="platform-card" onclick="location.href='/devs'">
-                <div class="platform-icon">👩‍💻</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6" />
+                        <polyline points="8 6 2 12 8 18" />
+                    </svg>
+                </div>
                 <h3>Dustore.Devs</h3>
                 <p>Портал для разработчиков из студий. Публикация проектов, аналитика, монетизация.</p>
             </div>
 
             <!-- 4. Джемы — ссылка на /jams -->
             <div class="platform-card" onclick="location.href='/jams'">
-                <div class="platform-icon">🕹</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="6" width="20" height="12" rx="2" />
+                        <path d="M6 12h4" />
+                        <path d="M15 12h3" />
+                        <path d="M6 9h2" />
+                        <path d="M17 9h1" />
+                    </svg>
+                </div>
                 <h3>Джемы</h3>
                 <p>Тут можно проводить джемы.</p>
             </div>
 
             <!-- 5. DustAsset — ссылка на /assetstore -->
             <div class="platform-card" onclick="location.href='/assetstore'">
-                <div class="platform-icon">🛠</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20" />
+                        <path d="M2 12h20" />
+                        <circle cx="12" cy="12" r="9" />
+                    </svg>
+                </div>
                 <h3>DustAsset</h3>
                 <p>Собственный ассетстор для разработчиков. Думаем, тут скоро каждый найдет что ищет.</p>
             </div>
@@ -190,49 +222,90 @@ mobile_redirect_if_needed();
 
             <!-- 6. HidL — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">🚀</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                    </svg>
+                </div>
                 <h3>HidL</h3>
                 <p>(в разработке) Собственный лаунчер, который вы даже не увидите. Можно будет связать со Steam, чтобы игры добавлялись в библиотеку Steam.</p>
             </div>
 
             <!-- 7. FinV2 — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">💵</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v10" />
+                        <path d="M9 10h3.5a1.5 1.5 0 0 1 0 3H10" />
+                    </svg>
+                </div>
                 <h3>FinV2</h3>
                 <p>Площадка для приёма платежей. Через неё разработчики монетизируют свои проекты, можно продавать свои ассеты, а также оплатить услуги исполнителя на L4T.</p>
             </div>
 
             <!-- 8. GDDB — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">👨‍🎓</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                </div>
                 <h3>GDDB</h3>
                 <p>(в разработке) Gamedev Database — единая база данных со всеми ресурсами по геймдеву. Каждый может добавить свою статью или ссылку.</p>
             </div>
 
             <!-- 9. Dustore.Media — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">📸</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <path d="M8 12h8" />
+                        <path d="M8 8h4" />
+                        <path d="M8 16h6" />
+                    </svg>
+                </div>
                 <h3>Dustore.Media</h3>
                 <p>(в разработке) Свой информационный ресурс, который управляется пользователями. Здесь можно выложить анонс своей игры или рассказать о новостях в мире геймдева.</p>
             </div>
 
             <!-- 10. Dustore.GIB — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">🌐</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path d="M12 3a15 15 0 0 0 0 18 15 15 0 0 0 0-18z" />
+                    </svg>
+                </div>
                 <h3>Dustore.GIB</h3>
                 <p>(в разработке) Games In Browser — помогаем портировать игры в браузере, чтобы игрокам не приходилось их скачивать. Что-то общее между WebGL и Instant Play.</p>
             </div>
 
             <!-- 11. "Битый Пиксель" — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">💔</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        <path d="M9 9l6 6" />
+                        <path d="M15 9l-6 6" />
+                    </svg>
+                </div>
                 <h3>"Битый Пиксель"</h3>
                 <p>(В разработке) Наш сервис для отправки отчётов об уязвимостях и багрепортов.</p>
             </div>
 
             <!-- 12. Dustore.Mobile — в разработке -->
             <div class="platform-card in-development">
-                <div class="platform-icon">Ⓜ</div>
+                <div class="platform-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                        <line x1="12" y1="18" x2="12.01" y2="18" />
+                    </svg>
+                </div>
                 <h3>Dustore.Mobile</h3>
                 <p>Здесь можно выложить игру или приложение (в т.ч. платное) для мобильных устройств.</p>
             </div>

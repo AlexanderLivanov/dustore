@@ -270,20 +270,6 @@ $stmt->execute([
                             <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>-->
 
                             <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
-                                <li>
-                                    <a class="nav-dropdown__item nav-dropdown__item--accent"
-                                        href="/devs/" role="menuitem"
-                                        style="color:#ff5ba8;font-weight:600;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                            style="vertical-align:middle;margin-right:4px;">
-                                            <rect x="2" y="3" width="20" height="14" rx="2" />
-                                            <path d="M8 21h8M12 17v4" />
-                                        </svg>
-                                        Консоль разработчика
-                                    </a>
-                                </li>
                             <?php else: ?>
                                 <li>
                                     <a class="nav-dropdown__item nav-dropdown__item--accent"
@@ -459,15 +445,21 @@ $stmt->execute([
 
             setInterval(updateUserActivity, 60000);
         </script>
-        <script>
-            function setUpdateProgress(percent, nextText) {
-                document.getElementById("updatePercent").textContent = percent + "%";
-                document.getElementById("updateBarFill").style.width = percent + "%";
-                document.getElementById("updateNext").textContent = nextText;
-            }
+        <?php /* Блок «прогресс обновления» удалён.
+                 Разметка с #updatePercent / #updateBarFill / #updateNext
+                 закомментирована выше (строка ~337), а скрипт продолжал
+                 её искать и звать setUpdateProgress(12, ...) на КАЖДОЙ
+                 загрузке любой страницы сайта:
 
-            setUpdateProgress(12, "Следующее обновление: v1.15.2");
-        </script>
+                   Cannot set properties of null (setting 'textContent')
+
+                 Обычный getElementById без проверки на null. Ошибка
+                 обрывала свой скрипт-блок, а в консоли висела красным поверх
+                 настоящих проблем — именно из-за неё было сложнее заметить
+                 ERR_CONNECTION_REFUSED, когда лежал Apache.
+
+                 Если фича вернётся — раскомментируй разметку и верни
+                 скрипт, но уже с проверкой, что элементы на странице есть. */ ?>
         <!-- subscribe to push 19.01.2025 (c) Alexander Livanov -->
         <script>
             function urlBase64ToUint8Array(base64String) {
