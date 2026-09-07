@@ -491,12 +491,35 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 <div class="gp-price-tag gp-price-free">Бесплатно</div>
                             <?php endif; ?>
 
-                            <?php $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game); ?>
-                            <?php if ($distMode === 'deplex'): ?>
-                                <a class="gp-btn gp-btn-primary" href="#"
-                                    onclick="dpxDownload('https://api.dustore.ru/v1/games/<?= (int)$game_id ?>/installer?os=windows');return false;">⬇ Скачать (загрузчик)</a>
-                            <?php elseif (($game['vt_status'] ?? '') === 'flagged'): ?>
+                            <?php
+                            /* OS для загрузчика. Android-UA тоже содержит "Linux",
+                               поэтому исключаем его явно. Раньше os был захардкожен
+                               в windows, и на macOS приезжал виндовый установщик. */
+                            $ua    = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                            $dpxOs = 'windows';
+                            if (stripos($ua, 'Macintosh') !== false || stripos($ua, 'Mac OS X') !== false) {
+                                $dpxOs = 'macos';
+                            } elseif (stripos($ua, 'Linux') !== false && stripos($ua, 'Android') === false) {
+                                $dpxOs = 'linux';
+                            }
+                            $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game);
+                            ?>
+                            <?php /* Проверка антивируса поднята ВЫШЕ deplex-ветки.
+                                     Раньше deplex перехватывал первым, и ветка
+                                     vt_status === 'flagged' была недостижима: игра,
+                                     помеченная антивирусом, спокойно отдавала кнопку. */ ?>
+                            <?php if (($game['vt_status'] ?? '') === 'flagged'): ?>
                                 <div class="gp-no-file" style="color:#ff5f57;">⚠ Скачивание заблокировано антивирусом</div>
+                            <?php elseif ($distMode === 'deplex'): ?>
+                                <?php /* Ведём через свой контроллер, а не напрямую на
+                                         api.dustore.ru. Прямая ссылка минует сайт, поэтому
+                                         строка в `library` не создавалась — а именно её
+                                         проверяет $userCanReview. Отсюда и жалоба
+                                         «нельзя оставить отзыв к играм через установщик»:
+                                         у бесплатной deplex-игры отзыв не мог оставить
+                                         вообще никто. */ ?>
+                                <a class="gp-btn gp-btn-primary" href="#"
+                                    onclick="dpxDownload('/swad/controllers/download_deplex.php?game_id=<?= (int)$game_id ?>&amp;os=<?= $dpxOs ?>');return false;">⬇ Скачать (загрузчик)</a>
                             <?php elseif (!empty($game['game_zip_url'])): ?>
                                 <?php if ($isWeb): ?>
                                     <button class="gp-btn gp-btn-primary" onclick="location.href='/webplayer?id=<?= $game_id ?>'">▶ Запустить в браузере</button>
@@ -969,8 +992,8 @@ fetch('/swad/controllers/jams/jam_play.php', {
                         </div>
                     </div>
                     <div class="review-text">${esc(r.text)}</div>
-                    ${replyHTML(r)}
                     ${votes}
+                    ${replyHTML(r)}
                 </div>`;
         }
 

@@ -63,36 +63,22 @@ if ($asset_id <= 0) {
 }
 
 try {
-    // Проверяем что ассет реально бесплатный и опубликован
-    $asset = $pdo->prepare("SELECT id, price FROM assets WHERE id = ? AND status = 'published' LIMIT 1");
-    $asset->execute([$asset_id]);
-    $row = $asset->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-        reply(['success' => false, 'error' => 'Ассет не найден']);
-    }
-    if ($row['price'] > 0) {
-        reply(['success' => false, 'error' => 'Этот ассет платный']);
-    }
-
-    // Проверяем что ещё не получен
-    $exists = $pdo->prepare("SELECT id FROM asset_library WHERE player_id = ? AND asset_id = ? LIMIT 1");
+    $exists = $pdo->prepare("SELECT id FROM asset_wishlist WHERE player_id = ? AND asset_id = ? LIMIT 1");
     $exists->execute([$user_id, $asset_id]);
+
     if ($exists->fetch()) {
-        reply(['success' => true, 'already_owned' => true]);
+        // Удаляем из вишлиста
+        $pdo->prepare("DELETE FROM asset_wishlist WHERE player_id = ? AND asset_id = ?")
+            ->execute([$user_id, $asset_id]);
+        reply(['success' => true, 'action' => 'removed']);
+    } else {
+        // Добавляем в вишлист
+        $pdo->prepare("INSERT INTO asset_wishlist (player_id, asset_id, added_at) VALUES (?, ?, NOW())")
+            ->execute([$user_id, $asset_id]);
+        reply(['success' => true, 'action' => 'added']);
     }
-
-    // Добавляем в библиотеку
-    $pdo->prepare("INSERT INTO asset_library (player_id, asset_id, date) VALUES (?, ?, NOW())")
-        ->execute([$user_id, $asset_id]);
-
-    // Увеличиваем счётчик скачиваний
-    $pdo->prepare("UPDATE assets SET downloads_count = downloads_count + 1 WHERE id = ?")
-        ->execute([$asset_id]);
-
-    reply(['success' => true]);
 } catch (Throwable $e) {
     // Текст исключения PDO содержит куски запроса — наружу его нельзя
-    error_log('[assetstore/get_asset_free.php] ' . $e->getMessage());
+    error_log('[assetstore/wishlist.php] ' . $e->getMessage());
     reply(['success' => false, 'error' => 'Внутренняя ошибка']);
 }
