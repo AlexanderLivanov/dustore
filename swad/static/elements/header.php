@@ -220,142 +220,23 @@ $stmt->execute([
 </head>
 
 <body>
-    <div id="custom-menu" class="context-menu">
-        <button class="context-menu-item" data-action="back">
-            <span class="context-menu-icon">←</span>
-            <span>Назад</span>
-            <span class="shortcut">Alt+←</span>
-        </button>
-
-        <button class="context-menu-item" data-action="forward">
-            <span class="context-menu-icon">→</span>
-            <span>Вперёд</span>
-            <span class="shortcut">Alt+→</span>
-        </button>
-
-        <button class="context-menu-item" data-action="reload">
-            <span class="context-menu-icon">↻</span>
-            <span>Перезагрузить</span>
-            <span class="shortcut">Ctrl+R</span>
-        </button>
-
-        <div class="context-menu-divider"></div>
-
-        <button class="context-menu-item" data-action="print">
-            <span class="context-menu-icon">🖨</span>
-            <span>Печать...</span>
-            <span class="shortcut">Ctrl+P</span>
-        </button>
-
-        <button class="context-menu-item" data-action="save">
-            <span class="context-menu-icon">💾</span>
-            <span>Сохранить страницу как...</span>
-            <span class="shortcut">Ctrl+S</span>
-        </button>
-
-        <button class="context-menu-item" data-action="translate">
-            <span class="context-menu-icon">🌐</span>
-            <span>Перевести на русский</span>
-        </button>
-
-        <button class="context-menu-item" data-action="find">
-            <span class="context-menu-icon">🔍</span>
-            <span>Поиск по странице</span>
-            <span class="shortcut">Ctrl+F</span>
-        </button>
-
-        <button class="context-menu-item" data-action="viewsource">
-            <span class="context-menu-icon">&lt;/&gt;</span>
-            <span>Просмотр кода страницы</span>
-            <span class="shortcut">Ctrl+U</span>
-        </button>
-
-        <div class="context-menu-divider"></div>
-
-        <button class="context-menu-item" data-action="inspect">
-            <span class="context-menu-icon">⚙</span>
-            <span>Посмотреть код</span>
-            <span class="shortcut">F12</span>
-        </button>
-    </div>
-
-    <script>
-        const menu = document.getElementById('custom-menu');
-
-        document.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-
-            menu.style.display = 'block';
-
-            const rect = menu.getBoundingClientRect();
-
-            let x = e.clientX;
-            let y = e.clientY;
-
-            if (x + rect.width > window.innerWidth) {
-                x = window.innerWidth - rect.width - 10;
-            }
-
-            if (y + rect.height > window.innerHeight) {
-                y = window.innerHeight - rect.height - 10;
-            }
-
-            menu.style.left = `${x}px`;
-            menu.style.top = `${y}px`;
-        });
-
-        document.addEventListener('click', () => {
-            menu.style.display = 'none';
-        });
-
-        menu.addEventListener('click', (e) => {
-            const button = e.target.closest('.context-menu-item');
-            if (!button) return;
-
-            const action = button.dataset.action;
-
-            switch (action) {
-                case 'back':
-                    history.back();
-                    break;
-
-                case 'forward':
-                    history.forward();
-                    break;
-
-                case 'reload':
-                    location.reload();
-                    break;
-
-                case 'print':
-                    window.print();
-                    break;
-
-                case 'save':
-                    alert('Браузеры не позволяют программно открыть "Сохранить как"');
-                    break;
-
-                case 'find':
-                    alert('Используйте Ctrl+F');
-                    break;
-
-                case 'viewsource':
-                    window.open('view-source:' + location.href);
-                    break;
-
-                case 'inspect':
-                    alert('Невозможно открыть DevTools через JS');
-                    break;
-            }
-
-            menu.style.display = 'none';
-        });
-    </script>
-    <div class="center-floating-block">
-        <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;"></p>
-    </div>
+    <!-- Кастомное контекстное меню удалено.
+         Оно перехватывало правый клик на ВСЕЙ странице через
+         document.addEventListener('contextmenu', e => e.preventDefault()),
+         то есть отбирало у человека копирование, «открыть в новой вкладке»,
+         проверку орфографии и вставку в поля ввода — взамен предлагая
+         три пункта, из которых работал не каждый. Подменять базовое
+         поведение браузера на весь документ нельзя. -->
     <div class="header-wrapper">
         <div class="header">
+            <!-- Единая поверхность хедера: фон + backdrop-filter + силуэт (clip-path). -->
+            <span class="header__bg" aria-hidden="true"></span>
+
+            <!-- «Монобровь»: слот под текст + подкова-обводка. Класс сохранён — на нём висит JS. -->
+            <div class="center-floating-block">
+                <p style="color: #c4a93a; font-weight: 100; font-size: large; font-family: 'PixelizerBold'; margin-top: -4px;"></p>
+            </div>
+
             <div class="section left-section">
                 <div>
                     <button id="burger" class="button" style="padding: 0; z-index: 1000;"><svg height="48" id="svg8" version="1.1" viewBox="0 0 12.7 12.7" width="48" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg">
@@ -433,20 +314,6 @@ $stmt->execute([
                     onclick="location.href='/'">
 
                 <audio id="cowSound" src="/swad/static/img/cow.mp3" preload="auto"></audio> -->
-                    <script>
-                        const gif = document.getElementById('dancingCow');
-                        const sound = document.getElementById('cowSound');
-
-                        gif.addEventListener('mouseenter', () => {
-                            sound.currentTime = 0; // перемотка на начало
-                            sound.play().catch(e => console.log('Автовоспроизведение заблокировано', e));
-                        });
-
-                        gif.addEventListener('mouseleave', () => {
-                            sound.pause();
-                            sound.currentTime = 0;
-                        });
-                    </script>
                 </div>
             </div>
             <div class="section right-section">
@@ -643,11 +510,14 @@ $stmt->execute([
             const header = document.querySelector('.header');
             const floatingBlock = document.querySelector('.center-floating-block');
 
-            header.addEventListener('mouseenter', () => {
-                floatingBlock.classList.add('header-hovered');
+            // Ховер теперь отрабатывает чистым CSS (.header:hover .center-floating-block).
+            // Класс оставлен для обратной совместимости со сторонними стилями,
+            // опциональная цепочка — чтобы разметка без «моноброви» не роняла скрипт.
+            header?.addEventListener('mouseenter', () => {
+                floatingBlock?.classList.add('header-hovered');
             });
-            header.addEventListener('mouseleave', () => {
-                floatingBlock.classList.remove('header-hovered');
+            header?.addEventListener('mouseleave', () => {
+                floatingBlock?.classList.remove('header-hovered');
             });
             document.addEventListener('DOMContentLoaded', function() {
                 const imageContainer = document.querySelector('.image');
@@ -905,22 +775,29 @@ $stmt->execute([
         <!-- Модалка помощника Дасти -->
         <div id="dusty-helper-modal" class="dust-modal hidden">
             <div class="dust-layout">
-                <button class="dust-helper-close">&times;</button>
 
-                <!-- Левая часть: котик -->
+                <!-- Левая часть: сцена с котиком -->
                 <div class="dust-layout__cat">
                     <img id="dusty-cat" src="/swad/static/img/dastyframe1.png" alt="Дасти">
                 </div>
 
-                <!-- Правая часть: диалог + нижняя панель -->
+                <!-- Правая часть: шапка + реплика + панель действий -->
                 <div class="dust-layout__right">
+
+                    <div class="dust-head">
+                        <span class="dust-name">Дасти</span>
+                        <button class="dust-helper-close" type="button" aria-label="Закрыть">&times;</button>
+                    </div>
+
                     <div class="dust-layout__dialogue">
                         <div id="dusty-text"></div>
                     </div>
+
                     <div class="dust-layout__actions">
-                        <button id="dusty-continue-btn" class="dust-close hidden">Продолжить</button>
-                        <!-- Здесь в будущем появятся кнопки вопросов -->
+                        <button id="dusty-continue-btn" class="dust-close hidden" type="button">Продолжить</button>
+                        <!-- Кнопки тем и «Ещё вопрос?» добавляет JS с тем же классом .dust-close -->
                     </div>
+
                 </div>
             </div>
         </div>
@@ -1593,8 +1470,46 @@ const pagesTopics = {
                 }
 
                 // ---------- Открытие / закрытие ----------
+                /* Блокировка скролла страницы под модалкой.
+                   Сначала это был класс + правило overflow:hidden в header.css,
+                   но на витрине и главной страница всё равно прокручивалась:
+                   у каждой из них своя таблица стилей, и какое-то из правил
+                   для body оказывалось сильнее. Вместо того чтобы искать, какое
+                   именно, ставим inline-стиль — он бьёт любую таблицу стилей,
+                   кроме !important, и не зависит от того, что подключено
+                   на конкретной странице.
+
+                   Заодно компенсируем ширину исчезнувшей полосы прокрутки:
+                   без этого при открытии модалки вся страница дёргается вбок. */
+                let dustyScrollLock = null;
+
+                function lockPageScroll() {
+                    if (dustyScrollLock) return;
+                    const html = document.documentElement;
+                    const gap  = window.innerWidth - html.clientWidth;
+
+                    dustyScrollLock = {
+                        htmlOverflow: html.style.overflow,
+                        bodyOverflow: document.body.style.overflow,
+                        bodyPadding:  document.body.style.paddingRight
+                    };
+
+                    html.style.overflow = 'hidden';
+                    document.body.style.overflow = 'hidden';
+                    if (gap > 0) document.body.style.paddingRight = gap + 'px';
+                }
+
+                function unlockPageScroll() {
+                    if (!dustyScrollLock) return;
+                    document.documentElement.style.overflow = dustyScrollLock.htmlOverflow;
+                    document.body.style.overflow = dustyScrollLock.bodyOverflow;
+                    document.body.style.paddingRight = dustyScrollLock.bodyPadding;
+                    dustyScrollLock = null;
+                }
+
                 function openModal() {
                     modal.classList.remove('hidden');
+                    lockPageScroll();
                     isModalOpen = true;
                     textElement.textContent = '';
                     clearActions();
@@ -1630,6 +1545,7 @@ const pagesTopics = {
 
                 function closeModal() {
                     modal.classList.add('hidden');
+                    unlockPageScroll();
                     isModalOpen = false;
                     stopAnimation();
                     cat.src = catEmotions.normal.idle[0];

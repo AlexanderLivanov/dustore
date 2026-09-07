@@ -17,1029 +17,7 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dustore L4T</title>
     <link rel="stylesheet" href="css/main.css">
-    <style>
-        .hidden {
-            display: none !important;
-        }
-
-        .l4t-input,
-        .l4t-select,
-        .l4t-textarea {
-            background: rgba(0, 0, 0, .45);
-            border: 1px solid rgba(255, 255, 255, .2);
-            border-radius: 5px;
-            color: #e8ddf0;
-            padding: 6px 10px;
-            font-family: inherit;
-            font-size: .88rem;
-            outline: none;
-            transition: border-color .15s;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .l4t-input:focus,
-        .l4t-select:focus,
-        .l4t-textarea:focus {
-            border-color: #c32178;
-        }
-
-        .l4t-textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .l4t-select {
-            appearance: none;
-            cursor: pointer;
-            padding-right: 28px;
-            background-image: linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, .4) 50%),
-                linear-gradient(135deg, rgba(255, 255, 255, .4) 50%, transparent 50%);
-            background-position: calc(100% - 14px) 50%, calc(100% - 8px) 50%;
-            background-size: 5px 5px;
-            background-repeat: no-repeat;
-        }
-
-        .editable-text {
-            border-bottom: 1px dashed rgba(255, 255, 255, .35);
-            cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 3px;
-            display: inline-block;
-            min-width: 40px;
-            transition: background .15s, border-color .15s;
-        }
-
-        .editable-text:hover {
-            background: rgba(255, 255, 255, .06);
-            border-color: #c32178;
-        }
-
-        .exp-tags-wrap {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 6px;
-        }
-
-        .exp-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(195, 33, 120, .15);
-            border: 1px solid rgba(195, 33, 120, .3);
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: .82rem;
-            color: #e8ddf0;
-        }
-
-        .exp-tag input {
-            background: transparent;
-            border: none;
-            border-bottom: 1px dashed rgba(255, 255, 255, .3);
-            color: inherit;
-            font-size: inherit;
-            outline: none;
-            padding: 0 2px;
-        }
-
-        .exp-tag input:focus {
-            border-bottom-color: #c32178;
-        }
-
-        .exp-tag .exp-role {
-            width: 110px;
-        }
-
-        .exp-tag .exp-years {
-            width: 36px;
-            text-align: center;
-            -moz-appearance: textfield;
-        }
-
-        .exp-tag .exp-years::-webkit-outer-spin-button,
-        .exp-tag .exp-years::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-        }
-
-        .exp-tag .del-btn {
-            cursor: pointer;
-            color: rgba(255, 255, 255, .3);
-            transition: color .1s;
-            font-size: .9rem;
-        }
-
-        .exp-tag .del-btn:hover {
-            color: #f44336;
-        }
-
-        .l4t-add-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: transparent;
-            border: 1px dashed rgba(255, 255, 255, .2);
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: .82rem;
-            color: rgba(255, 255, 255, .4);
-            cursor: pointer;
-            transition: border-color .15s, color .15s;
-            font-family: inherit;
-        }
-
-        .l4t-add-btn:hover {
-            border-color: #c32178;
-            color: #e8ddf0;
-        }
-
-        .files-wrap {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-        }
-
-        .file-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 6px;
-            padding: 5px 10px;
-            font-size: .8rem;
-            color: #e8ddf0;
-            text-decoration: none;
-            transition: background .15s;
-            cursor: pointer;
-        }
-
-        .file-chip:hover {
-            background: rgba(255, 255, 255, .12);
-        }
-
-        .file-chip .chip-icon {
-            opacity: .6;
-        }
-
-        .projects-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 6px;
-        }
-
-        .proj-thumb {
-            width: 72px;
-            height: 72px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, .06) center/cover no-repeat;
-            border: 1px solid rgba(255, 255, 255, .12);
-            cursor: pointer;
-            transition: border-color .15s;
-            position: relative;
-            display: flex;
-            align-items: flex-end;
-            overflow: hidden;
-        }
-
-        .proj-thumb:hover {
-            border-color: #c32178;
-        }
-
-        .proj-thumb .proj-label {
-            width: 100%;
-            background: rgba(0, 0, 0, .65);
-            font-size: .6rem;
-            color: #fff;
-            padding: 3px 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            opacity: 0;
-            transition: opacity .2s;
-        }
-
-        .proj-thumb:hover .proj-label {
-            opacity: 1;
-        }
-
-        .about-block {
-            font-size: .88rem;
-            color: #e8ddf0;
-            line-height: 1.6;
-        }
-
-        .about-more {
-            color: #c32178;
-            cursor: pointer;
-            font-size: .8rem;
-            display: inline-block;
-            margin-top: 4px;
-        }
-
-        .about-more:hover {
-            text-decoration: underline;
-        }
-
-        .about-empty {
-            color: rgba(255, 255, 255, .35);
-            font-size: .85rem;
-            font-style: italic;
-        }
-
-        .about-edit-btn {
-            margin-top: 6px;
-            background: transparent;
-            border: 1px dashed rgba(255, 255, 255, .2);
-            border-radius: 5px;
-            padding: 3px 10px;
-            font-size: .78rem;
-            color: rgba(255, 255, 255, .4);
-            cursor: pointer;
-            transition: border-color .15s, color .15s;
-            font-family: inherit;
-        }
-
-        .about-edit-btn:hover {
-            border-color: #c32178;
-            color: #e8ddf0;
-        }
-
-        /* ── Модал ── */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .7);
-            z-index: 900;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.hidden {
-            display: none !important;
-        }
-
-        .modal-box {
-            background: #160822;
-            border: 1px solid rgba(195, 33, 120, .35);
-            border-radius: 12px;
-            padding: 26px;
-            width: 480px;
-            max-width: 95vw;
-            max-height: 85vh;
-            overflow-y: auto;
-            box-shadow: 0 0 40px rgba(195, 33, 120, .2);
-            position: relative;
-        }
-
-        .modal-title {
-            font-size: 1rem;
-            font-weight: 500;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, .1);
-            color: #fff;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 14px;
-            right: 16px;
-            cursor: pointer;
-            color: rgba(255, 255, 255, .4);
-            font-size: 1.2rem;
-            line-height: 1;
-            transition: color .15s;
-        }
-
-        .modal-close:hover {
-            color: #fff;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 18px;
-            padding-top: 14px;
-            border-top: 1px solid rgba(255, 255, 255, .08);
-        }
-
-        .modal-btn {
-            padding: 7px 18px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: .85rem;
-            font-family: inherit;
-            transition: background .15s;
-        }
-
-        .modal-btn-primary {
-            background: #c32178;
-            color: #fff;
-        }
-
-        .modal-btn-primary:hover {
-            background: #9e1a66;
-        }
-
-        .modal-btn-ghost {
-            background: rgba(255, 255, 255, .08);
-            color: #e8ddf0;
-        }
-
-        .modal-btn-ghost:hover {
-            background: rgba(255, 255, 255, .15);
-        }
-
-        .modal-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .modal-row .l4t-input {
-            flex: 1;
-        }
-
-        .modal-row .modal-del {
-            cursor: pointer;
-            color: rgba(255, 255, 255, .3);
-            font-size: 1rem;
-            padding: 4px;
-            flex-shrink: 0;
-            transition: color .1s;
-        }
-
-        .modal-row .modal-del:hover {
-            color: #f44336;
-        }
-
-        .modal-field {
-            margin-bottom: 12px;
-        }
-
-        .modal-label {
-            font-size: .75rem;
-            color: rgba(255, 255, 255, .45);
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .cover-preview {
-            width: 100%;
-            height: 110px;
-            border-radius: 7px;
-            margin-top: 8px;
-            background: rgba(255, 255, 255, .05) center/cover no-repeat;
-            border: 1px solid rgba(255, 255, 255, .12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255, 255, 255, .3);
-            font-size: .8rem;
-        }
-
-        .upload-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255, 255, 255, .07);
-            border: 1px solid rgba(255, 255, 255, .15);
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-size: .82rem;
-            color: #e8ddf0;
-            cursor: pointer;
-            transition: background .15s;
-            margin-top: 6px;
-        }
-
-        .upload-btn:hover {
-            background: rgba(255, 255, 255, .13);
-        }
-
-        .upload-btn input[type=file] {
-            display: none;
-        }
-
-        .char-count {
-            font-size: .7rem;
-            color: rgba(255, 255, 255, .3);
-            text-align: right;
-            margin-top: 3px;
-        }
-
-        /* ── Карточки биржи ── */
-        .bid-card-item {
-            background: rgba(0, 0, 0, .25);
-            border: 1px solid rgba(255, 255, 255, .1);
-            border-radius: 12px;
-            padding: 16px 18px;
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-            margin-bottom: 10px;
-        }
-
-        .bid-badge {
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .bid-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .bid-icon.user {
-            background: rgba(195, 33, 120, .15);
-        }
-
-        .bid-icon.studio {
-            background: rgba(33, 195, 120, .15);
-        }
-
-        .bid-type {
-            font-size: 11px;
-            color: rgba(255, 255, 255, .35);
-        }
-
-        .bid-main {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .bid-role {
-            font-size: 15px;
-            font-weight: 500;
-            color: #e8ddf0;
-            margin-bottom: 4px;
-        }
-
-        .bid-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-bottom: 8px;
-        }
-
-        .bid-tag {
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 5px;
-            padding: 2px 8px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, .6);
-        }
-
-        .bid-desc {
-            font-size: 13px;
-            color: rgba(255, 255, 255, .5);
-            line-height: 1.5;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 400px;
-        }
-
-        .bid-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-
-        .bid-date {
-            font-size: 11px;
-            color: rgba(255, 255, 255, .3);
-        }
-
-        .bid-stats {
-            font-size: 11px;
-            color: rgba(255, 255, 255, .3);
-            display: flex;
-            gap: 8px;
-        }
-
-        .respond-btn {
-            font-size: 12px;
-            padding: 5px 14px;
-            border-radius: 6px;
-            border: 1px solid rgba(195, 33, 120, .4);
-            background: rgba(195, 33, 120, .1);
-            color: #e8ddf0;
-            cursor: pointer;
-            transition: background .15s;
-        }
-
-        .respond-btn:hover {
-            background: rgba(195, 33, 120, .25);
-        }
-
-        /* ── Тулбар поиска / фильтры ── */
-        .my-bids-toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .my-bids-search {
-            flex: 1;
-            min-width: 160px;
-            background: rgba(0, 0, 0, .4);
-            border: 1px solid rgba(255, 255, 255, .15);
-            border-radius: 7px;
-            color: #e8ddf0;
-            padding: 6px 10px 6px 30px;
-            font-family: inherit;
-            font-size: .85rem;
-            outline: none;
-            transition: border-color .15s;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,.35)' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: 8px center;
-        }
-
-        .my-bids-search:focus {
-            border-color: #c32178;
-        }
-
-        .my-bids-filter-tags {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-
-        .my-bids-ftag {
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .14);
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: .78rem;
-            color: rgba(255, 255, 255, .55);
-            cursor: pointer;
-            transition: background .12s, border-color .12s, color .12s;
-            font-family: inherit;
-        }
-
-        .my-bids-ftag.active {
-            background: rgba(195, 33, 120, .18);
-            border-color: rgba(195, 33, 120, .45);
-            color: #e8ddf0;
-        }
-
-        .my-bids-ftag:hover {
-            border-color: rgba(195, 33, 120, .35);
-            color: #e8ddf0;
-        }
-
-        /* ── Баннер редактирования ── */
-        .editing-banner {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(195, 33, 120, .12);
-            border: 1px solid rgba(195, 33, 120, .3);
-            border-radius: 8px;
-            padding: 8px 14px;
-            margin-bottom: 12px;
-            font-size: .84rem;
-            color: #e8ddf0;
-        }
-
-        .editing-banner .cancel-edit {
-            margin-left: auto;
-            cursor: pointer;
-            color: rgba(255, 255, 255, .4);
-            font-size: .78rem;
-            background: none;
-            border: none;
-            font-family: inherit;
-            transition: color .12s;
-        }
-
-        .editing-banner .cancel-edit:hover {
-            color: #f44336;
-        }
-
-        /* ── Кнопка отправки ── */
-        .ok-btn {
-            opacity: 0.4;
-            pointer-events: none;
-            transition: background .2s, opacity .2s;
-            background: #555 !important;
-        }
-
-        .ok-btn.dirty {
-            opacity: 1;
-            pointer-events: all;
-            background: #c32178 !important;
-        }
-
-        /* ── Бейдж вкладки ── */
-        .tab-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #c32178;
-            color: #fff;
-            border-radius: 10px;
-            font-size: .65rem;
-            font-weight: 600;
-            min-width: 16px;
-            height: 16px;
-            padding: 0 4px;
-            margin-left: 4px;
-            line-height: 1;
-        }
-
-        .tab-badge.zero {
-            display: none;
-        }
-
-        /* ── Подвкладки откликов ── */
-        .resp-sub-tabs {
-            display: flex;
-            border-bottom: 1px solid rgba(255, 255, 255, .1);
-            margin-bottom: 14px;
-        }
-
-        .resp-sub-tab {
-            padding: 6px 16px;
-            font-size: .83rem;
-            color: rgba(255, 255, 255, .45);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: color .12s, border-color .12s;
-            margin-bottom: -1px;
-        }
-
-        .resp-sub-tab.active {
-            color: #e8ddf0;
-            border-bottom-color: #c32178;
-        }
-
-        .resp-sub-tab:hover {
-            color: #e8ddf0;
-        }
-
-        .resp-pane {
-            display: none;
-        }
-
-        .resp-pane.active {
-            display: block;
-        }
-
-        /* ── Карточки откликов ── */
-        .resp-card {
-            background: rgba(0, 0, 0, .22);
-            border: 1px solid rgba(255, 255, 255, .09);
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: border-color .15s;
-        }
-
-        .resp-card:hover {
-            border-color: rgba(195, 33, 120, .35);
-        }
-
-        .resp-card-title {
-            font-size: .9rem;
-            color: #e8ddf0;
-            margin-bottom: 4px;
-        }
-
-        .resp-card-meta {
-            font-size: .75rem;
-            color: rgba(255, 255, 255, .35);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .resp-card-meta .rc-status {
-            color: #c32178;
-        }
-
-        /* ── Блок контактов в модале отклика ── */
-        .contact-block {
-            margin-top: 16px;
-            padding: 14px 16px;
-            background: rgba(195, 33, 120, .07);
-            border: 1px solid rgba(195, 33, 120, .2);
-            border-radius: 10px;
-        }
-
-        .contact-block-title {
-            font-size: .72rem;
-            color: rgba(255, 255, 255, .4);
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-        }
-
-        .contact-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            font-size: .88rem;
-            color: #e8ddf0;
-        }
-
-        .contact-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .contact-row a {
-            color: #c32178;
-            text-decoration: none;
-        }
-
-        .contact-row a:hover {
-            text-decoration: underline;
-        }
-
-        .contact-icon {
-            font-size: 1rem;
-            opacity: .7;
-            flex-shrink: 0;
-        }
-
-        /* ── Прокрутка ── */
-        .profile-page {
-            padding-right: 4px;
-        }
-
-        .right-content-view {
-            overflow-y: auto;
-            max-height: calc(100vh - 80px);
-        }
-
-        .right-content-view::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .right-content-view::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .right-content-view::-webkit-scrollbar-thumb {
-            background: rgba(195, 33, 120, .3);
-            border-radius: 4px;
-        }
-
-        /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
-@media screen and (max-width: 768px) {
-    /* Основной контейнер – в колонку */
-    .view-container {
-        flex-direction: column !important;
-    }
-
-    /* Левое меню – горизонтальная полоса */
-    .left-side-menu {
-        width: 100% !important;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-around;
-        padding: 8px 0;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 0;
-    }
-    .left-side-menu .avatar-canvas {
-        width: 60px !important;
-        height: 60px !important;
-        margin: 0;
-    }
-    .left-side-menu .avatar-canvas .profile-image-container {
-        height: 60px !important;
-        width: 60px !important;
-        border-radius: 50% !important;
-        -webkit-mask-image: none !important;
-        mask-image: none !important;
-    }
-    .left-side-menu .image-subtitle {
-        display: none;
-    }
-    .left-side-menu .buttons-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        justify-content: center;
-        margin: 0;
-    }
-    .left-side-menu .left-side-button,
-    .left-side-menu .left-side-button1 {
-        margin: 0 4px;
-        padding: 4px 12px;
-        font-size: 0.85rem;
-        white-space: nowrap;
-    }
-    .left-side-menu hr {
-        display: none;
-    }
-
-    /* Правая панель – на всю ширину, без ограничения высоты */
-    .right-content-view {
-        max-height: none !important;
-        overflow-y: visible !important;
-        padding: 10px;
-    }
-    .content-background {
-        padding: 10px !important;
-    }
-
-    /* Карточки заявок – в колонку */
-    .bid-card-item {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-        padding: 12px;
-    }
-    .bid-badge {
-        flex-direction: row;
-        gap: 8px;
-        align-items: center;
-    }
-    .bid-right {
-        align-items: stretch;
-        gap: 6px;
-    }
-    .respond-btn {
-        width: 100%;
-        text-align: center;
-        padding: 8px;
-    }
-    .bid-desc {
-        max-width: 100%;
-        white-space: normal;
-        overflow: visible;
-    }
-
-    /* Форма создания заявки – сетка в одну колонку */
-    .grid-2x2 {
-        grid-template-columns: 1fr !important;
-        gap: 8px;
-    }
-    .desc-row .desc-wrap {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .desc-row .desc-wrap .ok-btn {
-        width: 100%;
-        margin-top: 8px;
-        padding: 10px;
-    }
-    .switch-row {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 4px;
-    }
-
-    /* Модальные окна */
-    .modal-box {
-        width: 95vw;
-        padding: 16px;
-        max-height: 90vh;
-    }
-
-    /* Мои заявки */
-    .my-bid-main {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .my-bid-main .edit-btn {
-        width: 100%;
-        margin-top: 6px;
-    }
-
-    /* Отклики – вкладки */
-    .resp-sub-tabs {
-        flex-wrap: wrap;
-    }
-    .resp-sub-tab {
-        flex: 1 0 auto;
-        text-align: center;
-        padding: 6px 10px;
-        font-size: 0.8rem;
-    }
-
-    /* Профиль – блоки друг под другом */
-    .card-body-main {
-        flex-direction: column !important;
-    }
-    .card-body-main .left,
-    .card-body-main .right {
-        width: 100% !important;
-        padding: 0 !important;
-    }
-    .card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-    }
-    .card-header .since {
-        margin-left: 0 !important;
-        font-size: 0.75rem;
-    }
-
-    /* Проекты – выравнивание по центру */
-    .projects-grid {
-        justify-content: center;
-    }
-
-    /* Тулбары поиска */
-    .my-bids-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-    }
-    .my-bids-filter-tags {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    .my-bids-ftag {
-        font-size: 0.75rem;
-        padding: 3px 8px;
-    }
-
-    /* О себе – кнопка редактирования */
-    .about-edit-btn {
-        width: 100%;
-        text-align: center;
-    }
-
-    /* Убираем лишние отступы */
-    .profile-page {
-        padding-right: 0;
-    }
-}
-
-@media screen and (max-width: 480px) {
-    /* Мелкие экраны – ещё меньше отступов и шрифтов */
-    .content-background {
-        padding: 6px !important;
-    }
-    .left-side-menu .left-side-button,
-    .left-side-menu .left-side-button1 {
-        font-size: 0.75rem;
-        padding: 3px 8px;
-    }
-    .bid-role {
-        font-size: 1rem;
-    }
-    .bid-meta {
-        gap: 3px;
-    }
-    .bid-tag {
-        font-size: 0.65rem;
-        padding: 1px 6px;
-    }
-    .modal-box {
-        padding: 12px;
-    }
-    .modal-title {
-        font-size: 0.9rem;
-    }
-    .l4t-input,
-    .l4t-select,
-    .l4t-textarea {
-        font-size: 0.8rem;
-        padding: 4px 8px;
-    }
-    .switch-row span {
-        font-size: 0.8rem;
-    }
-    .resp-card {
-        padding: 10px 12px;
-    }
-    .resp-card-title {
-        font-size: 0.85rem;
-    }
-}
-    </style>
+    <link rel="stylesheet" href="/swad/css/l4t.css">
 </head>
 
 <body>
@@ -1047,7 +25,10 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
 
     require_once('../swad/config.php');
     require_once('../swad/controllers/user.php');
+    require_once(__DIR__ . '/../swad/controllers/l4t/_csrf.php');
     require_once(__DIR__ . '/../swad/static/elements/header.php');
+
+    $CSRF = csrf_token();
 
     $db        = new Database();
     $pdo       = $db->connect();
@@ -1067,7 +48,7 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
 
     $my_bids = [];
     if (!empty($_SESSION['USERDATA']['id'])) {
-        $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE bidder_id = ? ORDER BY created_at DESC");
+        $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE bidder_id = ? ORDER BY created_at DESC LIMIT 200");
         $stmt->execute([$_SESSION['USERDATA']['id']]);
         $my_bids = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -1095,9 +76,33 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
     $l4t_projects = json_decode($userdata['l4t_projects'] ?? '[]', true) ?: [];
     $l4t_about    = $userdata['l4t_about'] ?? '';
 
-    $stmt = $desl4tpdo->prepare("SELECT * FROM bids WHERE stage = 'active' ORDER BY created_at DESC");
+    /* Лента: первая страница. Дальше догружает l4t/api/feed.php тем же
+       партиалом _bid_card.php, поиск и теги фильтрует БД, а не JS. */
+    const L4T_FEED_PAGE = 20;
+
+    $stmt = $desl4tpdo->prepare(
+        "SELECT * FROM bids WHERE stage = 'active'
+          ORDER BY created_at DESC, id DESC LIMIT " . L4T_FEED_PAGE
+    );
     $stmt->execute();
     $bids_array = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $bids_total    = (int)$desl4tpdo->query("SELECT COUNT(*) FROM bids WHERE stage = 'active'")->fetchColumn();
+    $bids_has_more = count($bids_array) < $bids_total;
+
+    /* Теги собираем из ВСЕЙ таблицы, а не из отрисованных карточек: раньше
+       список зависел от того, что попало на страницу, и после пагинации
+       показывал бы теги только первых двадцати заявок. */
+    $market_tags = [];
+    foreach (['search_spec', 'experience', 'conditions'] as $col) {
+        $r = $desl4tpdo->query("SELECT DISTINCT $col FROM bids
+                                 WHERE stage = 'active' AND $col IS NOT NULL AND $col <> ''
+                                 ORDER BY $col LIMIT 40");
+        foreach ($r->fetchAll(PDO::FETCH_COLUMN) as $v) {
+            $v = trim((string)$v);
+            if ($v !== '' && !in_array($v, $market_tags, true)) $market_tags[] = $v;
+        }
+    }
 
     $aboutPreview = mb_substr($l4t_about, 0, 200);
     $aboutHasMore = mb_strlen($l4t_about) > 200;
@@ -1128,6 +133,10 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
             $stmt3->execute([$_SESSION['USERDATA']['id']]);
             $incoming_responds = $stmt3->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
+            // Раньше исключение гасилось молча: если запрос падал (нет таблицы,
+            // разъехались колонки), пользователь видел «откликов нет» и был
+            // уверен, что их правда нет. Теперь причина хотя бы в логе.
+            error_log('[l4t/index] responds query failed: ' . $e->getMessage());
             $my_responds = [];
             $incoming_responds = [];
         }
@@ -1325,82 +334,21 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                                 placeholder="Поиск по роли, условиям, описанию…">
                             <div class="my-bids-filter-tags" id="marketFilterTags">
                                 <button class="my-bids-ftag active" data-tag="">Все</button>
-                                <?php
-                                $market_tags = [];
-                                foreach ($bids_array as $bid) {
-                                    foreach (['search_spec', 'experience', 'conditions'] as $col) {
-                                        $v = trim($bid[$col] ?? '');
-                                        if ($v && !in_array($v, $market_tags)) {
-                                            $market_tags[] = $v;
-                                            echo '<button class="my-bids-ftag" data-tag="'
-                                                . htmlspecialchars($v, ENT_QUOTES) . '">'
-                                                . htmlspecialchars($v) . '</button>';
-                                        }
-                                    }
-                                }
-                                ?>
+                                <?php foreach ($market_tags as $t): ?>
+                                    <button class="my-bids-ftag" data-tag="<?= htmlspecialchars($t, ENT_QUOTES) ?>"><?= htmlspecialchars($t) ?></button>
+                                <?php endforeach; ?>
                             </div>
                         </div>
 
+                        <div class="market-count" id="marketCount"><?= $bids_total ?></div>
+
                         <div id="market-projects" class="market-view active">
-                            <?php foreach ($bids_array as $bid): ?>
-                                <div class="bid-card-item"
-                                    data-role="<?= htmlspecialchars($bid['search_role']  ?? '', ENT_QUOTES) ?>"
-                                    data-spec="<?= htmlspecialchars($bid['search_spec']  ?? '', ENT_QUOTES) ?>"
-                                    data-exp="<?= htmlspecialchars($bid['experience']    ?? '', ENT_QUOTES) ?>"
-                                    data-cond="<?= htmlspecialchars($bid['conditions']   ?? '', ENT_QUOTES) ?>"
-                                    data-goal="<?= htmlspecialchars($bid['goal']         ?? '', ENT_QUOTES) ?>"
-                                    data-details="<?= htmlspecialchars(mb_substr($bid['details'] ?? '', 0, 300), ENT_QUOTES) ?>">
+                            <?php foreach ($bids_array as $bid): require __DIR__ . '/_bid_card.php'; endforeach; ?>
+                        </div>
 
-                                    <div class="bid-badge">
-                                        <div class="bid-icon <?= $bid['owner_type'] === 'studio' ? 'studio' : 'user' ?>">
-                                            <?= $bid['owner_type'] === 'studio' ? '🏢' : '👤' ?>
-                                        </div>
-                                        <div class="bid-type">
-                                            <?= $bid['owner_type'] === 'studio' ? 'студия' : 'пользователь' ?>
-                                        </div>
-                                    </div>
-
-                                    <div class="bid-main">
-                                        <div class="bid-role"><?= htmlspecialchars($bid['search_role']) ?></div>
-                                        <div class="bid-meta">
-                                            <?php if ($bid['jam_id']): ?>
-                                            <span class="bid-tag">
-                                                🎮 Джем
-                                            </span>
-                                            <?php endif; ?>
-                                            <?php if ($bid['search_spec']): ?><span class="bid-tag"><?= htmlspecialchars($bid['search_spec']) ?></span><?php endif; ?>
-                                            <?php if ($bid['experience']): ?><span class="bid-tag"><?= htmlspecialchars($bid['experience']) ?></span><?php endif; ?>
-                                            <?php if ($bid['conditions']): ?><span class="bid-tag"><?= htmlspecialchars($bid['conditions']) ?></span><?php endif; ?>
-                                            <?php if ($bid['goal']): ?><span class="bid-tag"><?= mb_substr($bid['goal'], 0, 20) ?></span><?php endif; ?>
-                                        </div>
-                                        <div class="bid-desc"><?= htmlspecialchars(mb_substr($bid['details'] ?? '', 0, 120)) ?></div>
-                                    </div>
-
-                                    <div class="bid-right">
-                                        <div class="bid-date"><?= date('d.m.Y', strtotime($bid['created_at'])) ?></div>
-                                        <div class="bid-stats">
-                                            <span>👁 <?= (int)$bid['views'] ?></span>
-                                            <span>💬 <?= (int)$bid['responses'] ?></span>
-                                        </div>
-                                        <button class="respond-btn"
-                                            data-bid="<?= (int)$bid['id'] ?>"
-                                            data-role="<?= htmlspecialchars($bid['search_role']) ?>"
-                                            data-spec="<?= htmlspecialchars($bid['search_spec']  ?? '') ?>"
-                                            data-exp="<?= htmlspecialchars($bid['experience']    ?? '') ?>"
-                                            data-cond="<?= htmlspecialchars($bid['conditions']   ?? '') ?>"
-                                            data-goal="<?= htmlspecialchars($bid['goal']         ?? '') ?>"
-                                            data-details="<?= htmlspecialchars($bid['details']   ?? '') ?>"
-                                            data-type="<?= htmlspecialchars($bid['owner_type']   ?? 'user') ?>"
-                                            data-date="<?= date('d.m.Y', strtotime($bid['created_at'])) ?>"
-                                            data-views="<?= (int)$bid['views'] ?>"
-                                            data-responses="<?= (int)$bid['responses'] ?>">
-                                            Откликнуться
-                                        </button>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div><!-- /market-projects -->
+                        <div class="market-more-wrap">
+                            <button class="market-more" id="marketMore"<?= $bids_has_more ? '' : ' hidden' ?>>Показать ещё</button>
+                        </div>
 
                         <div id="market-people" class="market-view">
                             <div class="bid-container"></div>
@@ -1438,6 +386,7 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                             </div>
 
                             <form action="/swad/controllers/l4t/upsert_bid.php" method="POST">
+                                <input type="hidden" name="csrf" value="<?= htmlspecialchars($CSRF, ENT_QUOTES) ?>">
                                 <input type="hidden" name="owner_type" id="owner_type">
                                 <input type="hidden" name="bidder_id" id="bidder_id">
                                 <input type="hidden" name="bid_id" id="bid_id">
@@ -1634,13 +583,6 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
         </div>
     </div>
 
-    <style>
-        .resp-empty {
-            color: rgba(255, 255, 255, .35);
-            font-size: .85rem;
-            padding: 20px 0;
-        }
-    </style>
 
     <script>
     const JAM_MODE = <?= $jamMode ? 'true' : 'false' ?>;
@@ -1660,6 +602,7 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
     <script>
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
         const USER_ID = <?= (int)($userdata['id'] ?? 0) ?>;
+        const CSRF = <?= json_encode($CSRF) ?>;
         let expModel = <?= json_encode($l4t_exp) ?>;
         let filesModel = <?= json_encode($l4t_files) ?>;
         let projectsModel = <?= json_encode($l4t_projects) ?>;
@@ -1672,13 +615,17 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
         }
 
         function apiPost(url, payload) {
+            // Токен идёт и заголовком, и в теле — контроллер принимает любой
+            // из вариантов, так что порядок раскатки файлов не важен.
             return fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF
                 },
-                body: JSON.stringify(payload),
-            }).then(r => r.json());
+                body: JSON.stringify({ ...payload, csrf: CSRF }),
+            }).then(r => r.json())
+              .catch(() => ({ success: false, msg: 'network' }));
         }
 
         function uploadFile(file) {
@@ -2214,30 +1161,81 @@ $jamId     = (int)($_GET['jam_id'] ?? 0);
                 });
             });
 
-            /* ── Фильтрация биржи ── */
+            /* ── Лента биржи: фильтрует сервер ──────────────────────────────
+               Раньше поиск и теги прятали уже отрисованные карточки через
+               card.style.display. Из-за этого страница обязана была держать
+               в разметке ВСЕ активные заявки — иначе фильтр отвечал бы
+               «ничего не найдено» там, где совпадение лежит дальше по списку.
+               Теперь фильтрует БД, а сюда приезжает готовый кусок разметки
+               из того же партиала _bid_card.php. */
             const marketSearch = document.getElementById('marketSearch');
+            const marketGrid   = document.getElementById('market-projects');
+            const marketMore   = document.getElementById('marketMore');
+            const marketCount  = document.getElementById('marketCount');
 
-            function applyMarketFilter() {
-                const query = (marketSearch?.value || '').toLowerCase().trim();
-                const activeTag = document.querySelector('#marketFilterTags .my-bids-ftag.active')?.dataset.tag || '';
-                document.querySelectorAll('#market-projects .bid-card-item').forEach(card => {
-                    const text = [card.dataset.role, card.dataset.spec, card.dataset.exp,
-                        card.dataset.cond, card.dataset.goal, card.dataset.details
-                    ].join(' ').toLowerCase();
-                    const matchSearch = !query || text.includes(query);
-                    const matchTag = !activeTag || [card.dataset.spec, card.dataset.exp, card.dataset.cond]
-                        .some(v => (v || '').toLowerCase() === activeTag.toLowerCase());
-                    card.style.display = (matchSearch && matchTag) ? '' : 'none';
+            const feed = { q: '', tag: '', offset: 0, busy: false };
+
+            const bidsWord = n => {
+                const d = n % 10, h = n % 100;
+                if (d === 1 && h !== 11) return 'заявка';
+                if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return 'заявки';
+                return 'заявок';
+            };
+
+            async function loadFeed(append) {
+                if (feed.busy) return;
+                feed.busy = true;
+                if (marketMore) marketMore.disabled = true;
+
+                const p = new URLSearchParams({
+                    q: feed.q, tag: feed.tag, offset: append ? feed.offset : 0
                 });
+
+                try {
+                    const r = await fetch('/l4t/api/feed.php?' + p).then(r => r.json());
+                    if (!r.ok) throw new Error('feed');
+
+                    if (append) marketGrid.insertAdjacentHTML('beforeend', r.html);
+                    else        marketGrid.innerHTML = r.html || '';
+
+                    feed.offset = (append ? feed.offset : 0) + r.shown;
+
+                    if (marketCount) marketCount.textContent = r.total + ' ' + bidsWord(r.total);
+                    if (marketMore)  marketMore.hidden = !r.has_more;
+
+                    if (!append && r.total === 0) {
+                        marketGrid.innerHTML = '<div class="market-empty">Ничего не нашлось. Попробуйте снять фильтр.</div>';
+                    }
+                } catch (e) {
+                    if (!append) marketGrid.innerHTML = '<div class="market-empty">Не удалось загрузить ленту</div>';
+                } finally {
+                    feed.busy = false;
+                    if (marketMore) marketMore.disabled = false;
+                }
             }
-            marketSearch?.addEventListener('input', applyMarketFilter);
+
+            let feedTimer;
+            marketSearch?.addEventListener('input', () => {
+                clearTimeout(feedTimer);
+                // дебаунс: без него каждая буква уходила бы запросом в БД
+                feedTimer = setTimeout(() => { feed.q = marketSearch.value.trim(); loadFeed(false); }, 250);
+            });
+
             document.querySelectorAll('#marketFilterTags .my-bids-ftag').forEach(tag => {
                 tag.addEventListener('click', () => {
                     document.querySelectorAll('#marketFilterTags .my-bids-ftag').forEach(t => t.classList.remove('active'));
                     tag.classList.add('active');
-                    applyMarketFilter();
+                    feed.tag = tag.dataset.tag || '';
+                    loadFeed(false);
                 });
             });
+
+            marketMore?.addEventListener('click', () => loadFeed(true));
+
+            // стартовое смещение = то, что уже отрисовал сервер
+            feed.offset = marketGrid ? marketGrid.querySelectorAll('.bid-card-item').length : 0;
+            if (marketCount) marketCount.textContent =
+                marketCount.textContent.trim() + ' ' + bidsWord(parseInt(marketCount.textContent, 10) || 0);
 
             /* ── Редактирование роли ── */
             if (IS_OWNER) {

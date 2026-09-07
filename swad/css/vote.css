@@ -1,0 +1,346 @@
+/* =============================================================================
+   ГОЛОСОВАНИЕ ДЖЕМА — swad/css/vote.css
+   -----------------------------------------------------------------------------
+   Палитра та же, что у витрины: переменные --jv-*, лунная тема переопределяет
+   только цвета. Все классы под префиксом .jv-, чтобы не столкнуться с
+   explore.css, если он когда-нибудь окажется подключён на этой же странице.
+   ============================================================================= */
+
+:root {
+    --jv-page:        linear-gradient(180deg, #0f0a20, #1c0a2b, #2a0d3a);
+    --jv-shell:       linear-gradient(180deg, #00000020, #00000038);
+    --jv-shell-line:  rgba(255, 255, 255, 0.09);
+    --jv-panel:       linear-gradient(180deg, #00000022, #00000042);
+    --jv-panel-line:  rgba(255, 255, 255, 0.08);
+
+    --jv-card:        #1b0a26;
+    --jv-card-line:   rgba(255, 255, 255, 0.08);
+    --jv-card-line-hi:rgba(255, 255, 255, 0.18);
+    --jv-cover:       #100418;
+
+    --jv-text:        #f4ecf7;
+    --jv-muted:       rgba(244, 236, 247, 0.48);
+    --jv-dim:         rgba(244, 236, 247, 0.28);
+
+    --jv-accent:      #c32178;
+    --jv-accent-hi:   #e6379a;
+    --jv-accent-soft: rgba(195, 33, 120, 0.18);
+
+    --jv-gold:        #fbbf24;
+    --jv-gold-soft:   rgba(251, 191, 36, 0.12);
+    --jv-ok:          #46d18a;
+    --jv-ok-soft:     rgba(70, 209, 138, 0.14);
+
+    --jv-chip:        rgba(255, 255, 255, 0.05);
+    --jv-chip-line:   rgba(255, 255, 255, 0.10);
+
+    --jv-sb:          rgba(255, 255, 255, 0.16);
+    --jv-sb-hover:    #c32178;
+
+    --jv-header:      80px;
+    --jv-radius:      14px;
+    --jv-radius-sm:   9px;
+}
+
+html:has(body.moonlight-theme) { --jv-sb: rgba(184, 200, 255, 0.22); --jv-sb-hover: #3e7ad9; }
+
+body.moonlight-theme {
+    --jv-page:        #070c18;
+    --jv-shell:       linear-gradient(180deg, #00000030, #00000050);
+    --jv-shell-line:  rgba(184, 200, 255, 0.15);
+    --jv-panel:       linear-gradient(180deg, #00000028, #00000048);
+    --jv-panel-line:  rgba(184, 200, 255, 0.10);
+
+    --jv-card:        #101728;
+    --jv-card-line:   rgba(184, 200, 255, 0.11);
+    --jv-card-line-hi:rgba(184, 200, 255, 0.24);
+    --jv-cover:       #080d18;
+
+    --jv-text:        #eaf0ff;
+    --jv-muted:       rgba(184, 200, 255, 0.52);
+    --jv-dim:         rgba(184, 200, 255, 0.30);
+
+    --jv-accent:      #3e7ad9;
+    --jv-accent-hi:   #5690f0;
+    --jv-accent-soft: rgba(62, 122, 217, 0.22);
+
+    --jv-chip:        rgba(255, 255, 255, 0.06);
+    --jv-chip-line:   rgba(184, 200, 255, 0.13);
+
+    --jv-sb:          rgba(184, 200, 255, 0.22);
+    --jv-sb-hover:    #3e7ad9;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    min-height: 100vh;
+    color: var(--jv-text);
+    background: var(--jv-page);
+    background-attachment: fixed;
+    font-family: 'Bahnschrift Light', 'Manrope', system-ui, sans-serif;
+}
+body.moonlight-theme {
+    background-image: url("/swad/static/img/Moonlight_pict.jpeg");
+    background-size: cover;
+    background-position: center 35%;
+    background-attachment: fixed;
+}
+
+.jv-wrap { max-width: 1400px; margin: 0 auto; padding: 16px 20px 48px; }
+
+.jv-shell {
+    padding: 14px;
+    border-radius: 18px;
+    background: var(--jv-shell);
+    box-shadow: 0 0 0 1px var(--jv-shell-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+/* ── Шапка страницы ───────────────────────────────────────────────────────── */
+.jv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.jv-title { font-size: 1.35rem; font-weight: 700; line-height: 1.25; }
+.jv-sub { font-size: 0.85rem; color: var(--jv-muted); margin-top: 3px; }
+.jv-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: var(--jv-radius-sm);
+    background: var(--jv-chip); border: 1px solid var(--jv-chip-line);
+    color: var(--jv-muted); text-decoration: none; font-size: 0.84rem;
+    transition: color 0.16s ease, border-color 0.16s ease;
+}
+.jv-back:hover { color: var(--jv-text); border-color: var(--jv-card-line-hi); }
+
+/* ── Правила (сворачиваемые) ──────────────────────────────────────────────── */
+.jv-rules { margin-bottom: 12px; border-radius: var(--jv-radius); background: var(--jv-panel); box-shadow: inset 0 0 0 1px var(--jv-panel-line); overflow: hidden; }
+.jv-rules-btn {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    padding: 11px 14px; background: none; border: none;
+    color: var(--jv-text); font: inherit; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; text-align: left;
+}
+.jv-rules-btn .jv-chev { margin-left: auto; color: var(--jv-muted); transition: transform 0.2s ease; }
+.jv-rules.open .jv-rules-btn .jv-chev { transform: rotate(180deg); }
+.jv-rules-body { display: none; padding: 0 14px 14px; font-size: 0.83rem; line-height: 1.65; color: var(--jv-muted); }
+.jv-rules.open .jv-rules-body { display: block; }
+.jv-rules-body b { color: var(--jv-text); font-weight: 600; }
+.jv-rules-body p + p { margin-top: 5px; }
+
+/* ── Липкая панель: прогресс + фильтры + поиск ────────────────────────────── */
+/* +28px, а не +8: «монобровь» хедера свисает на 20px ниже его высоты и
+   иначе перекрывает панель ровно по центру. */
+.jv-bar {
+    position: sticky;
+    top: calc(var(--jv-header) + 28px);
+    z-index: 5;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px;
+    margin-bottom: 14px;
+    border-radius: var(--jv-radius);
+    background: var(--jv-panel);
+    box-shadow: inset 0 0 0 1px var(--jv-panel-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.jv-stats { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.jv-stat { display: flex; flex-direction: column; gap: 3px; min-width: 132px; }
+.jv-stat-label { font-size: 0.7rem; letter-spacing: 0.6px; text-transform: uppercase; color: var(--jv-dim); }
+.jv-stat-value { font-size: 0.92rem; font-weight: 600; }
+.jv-stat-value b { color: var(--jv-accent-hi); }
+
+.jv-meter { height: 4px; border-radius: 2px; background: var(--jv-chip); overflow: hidden; }
+.jv-meter i { display: block; height: 100%; background: var(--jv-accent); transition: width 0.25s ease; }
+.jv-meter.done i { background: var(--jv-ok); }
+
+.jv-note {
+    flex: 1 1 220px;
+    padding: 8px 12px;
+    border-radius: var(--jv-radius-sm);
+    font-size: 0.82rem;
+    background: var(--jv-chip);
+    border: 1px solid var(--jv-chip-line);
+    color: var(--jv-muted);
+}
+.jv-note.warn { background: var(--jv-gold-soft); border-color: rgba(251,191,36,.3); color: var(--jv-gold); }
+
+.jv-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.jv-seg { display: flex; gap: 5px; flex-wrap: wrap; }
+.jv-chip-btn {
+    padding: 7px 12px;
+    border-radius: var(--jv-radius-sm);
+    background: var(--jv-chip);
+    border: 1px solid var(--jv-chip-line);
+    color: var(--jv-muted);
+    font: inherit; font-size: 0.82rem;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.jv-chip-btn:hover, .jv-chip-btn:focus-visible { color: var(--jv-text); border-color: var(--jv-card-line-hi); outline: none; }
+.jv-chip-btn.active { background: var(--jv-accent-soft); border-color: var(--jv-accent); color: var(--jv-text); }
+.jv-chip-btn .jv-n { opacity: .6; margin-left: 4px; font-size: 0.76rem; }
+
+.jv-search { position: relative; flex: 1 1 200px; min-width: 170px; }
+.jv-search input {
+    width: 100%;
+    padding: 8px 30px 8px 36px;
+    background: var(--jv-chip); border: 1px solid var(--jv-chip-line);
+    border-radius: var(--jv-radius-sm);
+    color: var(--jv-text); font: inherit; font-size: 0.85rem; outline: none;
+    transition: border-color 0.18s ease, background 0.18s ease;
+}
+.jv-search input:focus { border-color: var(--jv-accent); background: var(--jv-accent-soft); }
+.jv-search input::placeholder { color: var(--jv-dim); }
+.jv-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--jv-muted); pointer-events: none; display: flex; }
+.jv-search-clear {
+    position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+    display: none; width: 20px; height: 20px; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--jv-dim); font-size: 15px; cursor: pointer; border-radius: 4px;
+}
+.jv-search.has-value .jv-search-clear { display: flex; }
+.jv-search-clear:hover { color: var(--jv-text); background: var(--jv-chip); }
+
+.jv-count { font-size: 0.8rem; color: var(--jv-muted); margin-bottom: 10px; min-height: 18px; }
+
+/* ── Сетка ────────────────────────────────────────────────────────────────── */
+.jv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+.jv-card {
+    display: flex; flex-direction: column;
+    border-radius: var(--jv-radius);
+    overflow: hidden;
+    background: var(--jv-card);
+    box-shadow: inset 0 0 0 1px var(--jv-card-line);
+    transition: box-shadow 0.18s ease;
+}
+.jv-card:hover { box-shadow: inset 0 0 0 1px var(--jv-card-line-hi), 0 10px 26px rgba(0,0,0,.4); }
+.jv-card.rated { box-shadow: inset 0 0 0 1px var(--jv-accent), 0 6px 20px rgba(0,0,0,.35); }
+.jv-card[hidden] { display: none; }
+
+.jv-cover { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--jv-cover); overflow: hidden; text-decoration: none; }
+.jv-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.jv-cover .jv-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--jv-dim); font-size: 2rem; }
+
+.jv-tags { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+.jv-tag {
+    padding: 3px 8px; border-radius: 5px; font-size: 0.68rem; font-weight: 600;
+    background: rgba(0,0,0,.62); color: var(--jv-text); text-decoration: none;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.jv-tag.gold { color: var(--jv-gold); }
+.jv-tag.ok { color: var(--jv-ok); }
+.jv-tag.mine { background: var(--jv-accent); color: #fff; }
+
+.jv-body { display: flex; flex-direction: column; gap: 8px; padding: 12px; flex: 1; }
+.jv-name { font-size: 1rem; font-weight: 600; line-height: 1.3; color: var(--jv-text); text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jv-name:hover { color: var(--jv-accent-hi); }
+.jv-desc { font-size: 0.79rem; line-height: 1.5; color: var(--jv-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.jv-agg { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.78rem; color: var(--jv-muted); }
+.jv-agg b { color: var(--jv-text); }
+.jv-link { background: none; border: none; padding: 0; color: var(--jv-accent-hi); font: inherit; font-size: 0.78rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.jv-link:hover { color: var(--jv-text); }
+
+.jv-votes { display: none; margin-top: 2px; max-height: 168px; overflow-y: auto; padding: 8px 10px; border-radius: var(--jv-radius-sm); background: var(--jv-chip); }
+.jv-votes.open { display: block; }
+.jv-vrow { display: flex; justify-content: space-between; gap: 8px; font-size: 0.76rem; padding: 3px 0; border-bottom: 1px solid var(--jv-chip-line); }
+.jv-vrow:last-child { border-bottom: none; }
+
+/* ── Блок оценки ──────────────────────────────────────────────────────────── */
+.jv-rate { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--jv-chip-line); display: flex; flex-direction: column; gap: 8px; }
+
+.jv-play {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 12px; border-radius: var(--jv-radius-sm);
+    background: var(--jv-accent-soft); border: 1px solid var(--jv-accent);
+    color: var(--jv-text); text-decoration: none; font-size: 0.84rem; font-weight: 600;
+    transition: background 0.16s ease;
+}
+.jv-play:hover { background: var(--jv-accent); }
+.jv-play.done { background: var(--jv-chip); border-color: var(--jv-chip-line); color: var(--jv-muted); font-weight: 400; }
+
+.jv-scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; }
+.jv-pt {
+    padding: 6px 0; border-radius: 6px;
+    background: var(--jv-chip); border: 1px solid transparent;
+    color: var(--jv-muted); font: inherit; font-size: 0.76rem; cursor: pointer;
+    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.jv-pt:hover:not(:disabled) { color: var(--jv-text); border-color: var(--jv-card-line-hi); }
+.jv-pt.on { background: var(--jv-accent); border-color: var(--jv-accent); color: #fff; font-weight: 700; }
+.jv-scale.locked .jv-pt, .jv-pt:disabled { opacity: .4; cursor: not-allowed; }
+
+.jv-hint { font-size: 0.74rem; color: var(--jv-gold); }
+.jv-mine { font-size: 0.78rem; color: var(--jv-accent-hi); font-weight: 600; }
+
+/* ── Пустое состояние и раздел «на проверке» ──────────────────────────────── */
+.jv-empty { grid-column: 1 / -1; padding: 52px 20px; text-align: center; color: var(--jv-muted); font-size: 0.9rem; }
+.jv-empty strong { display: block; color: var(--jv-text); font-weight: 600; margin-bottom: 5px; }
+
+.jv-section { margin-top: 30px; }
+.jv-section-title { font-size: 1rem; font-weight: 600; margin-bottom: 3px; }
+.jv-section-sub { font-size: 0.8rem; color: var(--jv-muted); margin-bottom: 12px; }
+.jv-card.pending { opacity: .62; }
+.jv-card.pending .jv-cover img { filter: grayscale(.5); }
+
+/* ── Список джемов ────────────────────────────────────────────────────────── */
+.jv-jam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.jv-jam {
+    display: flex; flex-direction: column;
+    border-radius: var(--jv-radius); overflow: hidden;
+    background: var(--jv-card); box-shadow: inset 0 0 0 1px var(--jv-card-line);
+    color: inherit; text-decoration: none;
+    transition: box-shadow 0.18s ease, transform 0.001s ease-out;
+}
+.jv-jam:hover { box-shadow: inset 0 0 0 1px var(--jv-card-line-hi), 0 10px 26px rgba(0,0,0,.42); }
+.jv-jam:focus-visible { outline: 2px solid var(--jv-accent-hi); outline-offset: 2px; }
+.jv-jam-logo { position: relative; aspect-ratio: 16 / 9; background: var(--jv-cover); overflow: hidden; }
+.jv-jam-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.jv-jam-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.jv-jam-name { font-size: 0.98rem; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jv-jam-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; font-size: 0.78rem; color: var(--jv-muted); }
+.jv-badge { padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; background: var(--jv-accent-soft); border: 1px solid var(--jv-accent); color: var(--jv-text); }
+.jv-badge.live { background: var(--jv-ok-soft); border-color: rgba(70,209,138,.35); color: var(--jv-ok); }
+.jv-badge.over { background: var(--jv-chip); border-color: var(--jv-chip-line); color: var(--jv-muted); }
+
+/* ── Тост ─────────────────────────────────────────────────────────────────── */
+.jv-toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px);
+    z-index: 1100; max-width: min(420px, calc(100vw - 32px));
+    padding: 11px 16px; border-radius: var(--jv-radius-sm);
+    background: var(--jv-card); box-shadow: inset 0 0 0 1px var(--jv-accent), 0 12px 30px rgba(0,0,0,.55);
+    font-size: 0.85rem; color: var(--jv-text);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.jv-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.jv-toast.err { box-shadow: inset 0 0 0 1px #f4556d, 0 12px 30px rgba(0,0,0,.55); }
+
+/* ── Скроллбары ───────────────────────────────────────────────────────────── */
+html { scrollbar-width: thin; scrollbar-color: var(--jv-sb) transparent; scrollbar-gutter: stable; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-thumb {
+    background: var(--jv-sb); background-clip: padding-box;
+    border: 3px solid transparent; border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--jv-sb-hover); background-clip: padding-box; }
+
+@media (max-width: 900px) { :root { --jv-header: 64px; } }
+
+@media (max-width: 720px) {
+    .jv-wrap { padding: 10px 10px 32px; }
+    .jv-shell { padding: 10px; border-radius: 14px; }
+    .jv-grid, .jv-jam-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    .jv-stat { min-width: 110px; }
+    .jv-search { flex: 1 1 100%; }
+    .jv-scale { grid-template-columns: repeat(6, 1fr); }
+}
+
+@media (max-width: 480px) { :root { --jv-header: 58px; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .jv-card, .jv-jam, .jv-toast, .jv-meter i { transition: none; }
+}

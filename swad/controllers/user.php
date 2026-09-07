@@ -32,7 +32,14 @@ class User
         $stmt->execute();
 
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['username'] ? $result['telegram_username'] : null;
+        if (!$result) return null;
+
+        /* Было: return $result['username'] ? $result['telegram_username'] : null;
+           То есть если username ЗАПОЛНЕН — метод возвращал telegram_username,
+           а сам username не возвращал никогда. Условие и ветки перепутаны
+           местами. Плюс при ненайденном пользователе $result === false и
+           обращение по ключу роняло warning. */
+        return $result['username'] ?: ($result['telegram_username'] ?: null);
     }
 
     public function getUserByUsername($username)
@@ -78,19 +85,30 @@ class User
     public function getUserRole($id, $type)
     {
         if ($type == "in_company") {
-            $stmt = $this->db->prepare("
-                SELECT `role_id` FROM staff WHERE user_id = ?
-            ");
-            $stmt->execute([$id]);
+            /* Было: SELECT role_id FROM staff WHERE user_id = ?
+               В таблице staff нет ни колонки user_id, ни role_id.
+               Реальный состав: id, telegram_id (BIGINT), uid, org_id, created, role.
+               Запрос падал на каждом вызове.
+
+               Связь идёт через telegram_id. Джойнить напрямую нельзя:
+               staff.telegram_id BIGINT против users.telegram_id VARCHAR(32) —
+               при неявном касте индекс на users не используется. Два запроса. */
+            $t = $this->db->prepare("SELECT telegram_id FROM users WHERE id = ? LIMIT 1");
+            $t->execute([$id]);
+            $tg = $t->fetchColumn();
+            if ($tg === false || $tg === null || $tg === '') return null;
+
+            $stmt = $this->db->prepare("SELECT role FROM staff WHERE telegram_id = ? LIMIT 1");
+            $stmt->execute([$tg]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $result ? $result['role_id'] : null; 
+            return $result ? $result['role'] : null;
         } else if ($type == "global") {
             $stmt = $this->db->prepare("
                 SELECT `global_role` FROM users WHERE id = ?
             ");
             $stmt->execute([$id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $result ? $result['global_role'] : null; 
+            return $result ? $result['global_role'] : null;
         }
         return null;
     }
@@ -106,22 +124,46 @@ class User
         ");
         $stmt->execute([$role_id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ? $result['name'] : null; 
+        return $result ? $result['name'] : null;
     }
 
+    /**
+     * Есть ли у пользователя роль в студии.
+     *
+     * Было: SELECT ... FROM user_organization. Такой таблицы в базе НЕТ —
+     * в дампе её нет среди 86 таблиц. Метод падал при каждом вызове, а из-за
+     * этого addUserToOrganization() ниже ВСЕГДА бросал "Access denied":
+     * добавить сотрудника в студию было невозможно в принципе.
+     *
+     * Роли живут в двух местах: владелец — это studios.owner_id, остальные —
+     * строки в staff (org_id + telegram_id + role).
+     */
     public function userHasRole($userId, $organizationId, $requiredRole)
     {
+        // владелец студии
+        $o = $this->db->prepare("SELECT 1 FROM studios WHERE id = ? AND owner_id = ? LIMIT 1");
+        $o->execute([$organizationId, $userId]);
+        if ($o->fetchColumn()) {
+            // владельцу доступно всё, что доступно сотруднику
+            return true;
+        }
+        if ($requiredRole === 'owner') return false;
+
+        $t = $this->db->prepare("SELECT telegram_id FROM users WHERE id = ? LIMIT 1");
+        $t->execute([$userId]);
+        $tg = $t->fetchColumn();
+        if ($tg === false || $tg === null || $tg === '') return false;
+
+        /* staff.role — TEXT. Где-то туда пишут имя роли, где-то её id из
+           roles, поэтому принимаем оба варианта, а не гадаем. */
         $stmt = $this->db->prepare("
-            SELECT COUNT(*) 
-            FROM user_organization 
-            WHERE 
-                user_id = ? AND 
-                organization_id = ? AND 
-                role_id = (SELECT id FROM roles WHERE name = ?) AND 
-                status = 'active'
+            SELECT 1 FROM staff
+             WHERE org_id = ? AND telegram_id = ?
+               AND (role = ? OR role = (SELECT id FROM roles WHERE name = ? LIMIT 1))
+             LIMIT 1
         ");
-        $stmt->execute([$userId, $organizationId, $requiredRole]);
-        return $stmt->fetchColumn() > 0;
+        $stmt->execute([$organizationId, $tg, $requiredRole, $requiredRole]);
+        return (bool)$stmt->fetchColumn();
     }
 
     public function checkAuth()
@@ -153,21 +195,32 @@ class User
 
     public function auth()
     {
-        if (empty($_SESSION['auth_token'])) {
-            $_SESSION['auth_token'] = $_COOKIE['auth_token'];
-            return validateToken($_COOKIE['auth_token']);
-        }
-        return validateToken($_COOKIE['auth_token']);
+        /* Обе ветки делали одно и то же — validateToken($_COOKIE['auth_token']).
+           Запись в $_SESSION['auth_token'] нигде не читалась, а при прямом
+           вызове метода без куки давала warning. */
+        $token = $_COOKIE['auth_token'] ?? '';
+        if ($token === '') return null;
+
+        return validateToken($token);
     }
 
     public function checkRole()
     {
-        if ($_SESSION['USERDATA']['global_role'] != -1 && $_SESSION['USERDATA']['global_role'] < 2) {
-            echo ("<script>alert('У вас нет прав на использование этой функции');</script>");
+        $role = $_SESSION['USERDATA']['global_role'] ?? 0;
+
+        if ($role != -1 && $role < 2) {
+            /* Было: echo "<script>alert(...)</script>" + exit().
+               На JSON-эндпоинте это подмешивало HTML в тело ответа, и клиент
+               получал не «доступ запрещён», а битый JSON. Плюс страница
+               отдавалась с кодом 200, то есть для мониторинга отказ доступа
+               выглядел успешным запросом.
+               Поведение прежнее (обрываем выполнение), но ответ корректный. */
+            http_response_code(403);
+            if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
+            echo 'У вас нет прав на использование этой функции';
             exit();
-        } else {
-            return True;
         }
+        return true;
     }
 
     public function addUserToOrganization($owner_id, $userId, $organizationId, $givenRoleId)
@@ -176,18 +229,37 @@ class User
             throw new Exception("Access denied");
         }
 
+        /* Было: INSERT INTO user_organization — таблицы не существует.
+           Сотрудники хранятся в staff, связь с пользователем — по telegram_id. */
+        $t = $this->db->prepare("SELECT telegram_id FROM users WHERE id = ? LIMIT 1");
+        $t->execute([$userId]);
+        $tg = $t->fetchColumn();
+        if ($tg === false || $tg === null || $tg === '') {
+            throw new Exception("У пользователя нет telegram_id");
+        }
+
+        $dup = $this->db->prepare("SELECT 1 FROM staff WHERE org_id = ? AND telegram_id = ? LIMIT 1");
+        $dup->execute([$organizationId, $tg]);
+        if ($dup->fetchColumn()) return;   // уже в студии
+
         $stmt = $this->db->prepare("
-                INSERT INTO user_organization 
-                (user_id, organization_id, role_id) 
-                VALUES (?, ?, ?)
-            ");
-        $stmt->execute([$userId, $organizationId, $givenRoleId]);
+            INSERT INTO staff (telegram_id, uid, org_id, role, created)
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([$tg, $userId, $organizationId, $givenRoleId]);
     }
 
-    public function getUO($user_id, $limit = "100")
+    public function getUO($user_id, $limit = 100)
     {
+        /* $limit подставлялся в строку запроса как есть. Сейчас все вызовы
+           передают литерал, поэтому дыра не эксплуатируется — но стоит
+           кому-нибудь прокинуть сюда $_GET, и это готовая инъекция.
+           Приводим к int и зажимаем диапазон: биндить LIMIT плейсхолдером
+           MySQL не даёт. */
+        $limit = max(1, min(500, (int)$limit));
+
         $stmt = $this->db->prepare(
-            "SELECT * FROM studios WHERE owner_id = :id ORDER BY status DESC LIMIT $limit;"
+            "SELECT * FROM studios WHERE owner_id = :id ORDER BY status DESC LIMIT $limit"
         );
         $stmt->execute(['id' => $user_id]);
 
@@ -246,9 +318,16 @@ class User
     public function updatePassphrase($userID, $hashed_passphrase)
     {
         try {
+            /* Было: сброс шёл WHERE id = :user_id, а установка ниже —
+               WHERE telegram_id = :user_id. Один и тот же аргумент означал
+               разные вещи в зависимости от ветки. Так как hasPassphrase() и
+               verifyPassphrase() работают по telegram_id, вызывающий код
+               передаёт именно его — значит сброс не находил строку и
+               НИЧЕГО не делал. Пользователь не мог снять пассфразу.
+               Приводим обе ветки к telegram_id. */
             if ($hashed_passphrase === null) {
                 $stmt = $this->db->prepare(
-                    "UPDATE users SET passphrase = NULL, updated = NOW() WHERE id = :user_id;"
+                    "UPDATE users SET passphrase = NULL, updated = NOW() WHERE telegram_id = :user_id;"
                 );
                 return $stmt->execute(['user_id' => $userID]);
             }
@@ -365,15 +444,7 @@ class User
         ];
     }
 
-    public function getUserItems($user_id)
-    {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM user_items WHERE user_id = :id LIMIT 1;"
-        );
-        $stmt->execute(['id' => $user_id]);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
 
     public function updateUserItems($user_id, $game_id)
     {
@@ -459,23 +530,40 @@ class User
         }
 
         $stmt = $this->db->prepare("
-            SELECT status FROM friends
+            SELECT id, status, player_id FROM friends
             WHERE (player_id = ? AND friend_id = ?)
             OR (player_id = ? AND friend_id = ?)
             LIMIT 1
         ");
         $stmt->execute([$from_id, $to_id, $to_id, $from_id]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($stmt->fetch()) {
-            throw new Exception("Заявка уже существует или вы уже друзья");
+        if ($existing) {
+            /* Раньше строка в ЛЮБОМ статусе означала отказ. То есть если тебе
+               один раз отклонили заявку, добавиться повторно было нельзя
+               никогда — строка со status='declined' оставалась навсегда.
+               Отклонённую заявку разрешаем оживить, остальные — нет. */
+            if ($existing['status'] === 'blocked') {
+                throw new Exception("Пользователь недоступен");
+            }
+            if ($existing['status'] !== 'declined') {
+                throw new Exception("Заявка уже существует или вы уже друзья");
+            }
+
+            $upd = $this->db->prepare("
+                UPDATE friends
+                   SET player_id = ?, friend_id = ?, status = 'pending', updated_at = NOW()
+                 WHERE id = ?
+            ");
+            $upd->execute([$from_id, $to_id, $existing['id']]);
+        } else {
+            $stmt = $this->db->prepare("
+                INSERT INTO friends
+                (player_id, friend_id, status, created_at, updated_at)
+                VALUES (?, ?, 'pending', NOW(), NOW())
+            ");
+            $stmt->execute([$from_id, $to_id]);
         }
-
-        $stmt = $this->db->prepare("
-            INSERT INTO friends
-            (player_id, friend_id, status, created_at, updated_at)
-            VALUES (?, ?, 'pending', NOW(), NOW())
-        ");
-        $stmt->execute([$from_id, $to_id]);
 
         try {
             $nc = new NotificationCenter();

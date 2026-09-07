@@ -37,9 +37,6 @@ mobile_redirect_if_needed();
                         <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
                         <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
                         <a href="https://t.me/dustore_devs" target="_blank" class="btn btn-secondary">Чатик для разработчиков</a>
-                        <a href="https://t.me/dustore_official" target="_blank" class="btn btn-tg">
-                            <svg style="vertical-align: middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-telegram"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4" /></svg>
-                            Telegram-канал Платформы</a>
                     </div>
                 </div>
             </div>
@@ -49,7 +46,7 @@ mobile_redirect_if_needed();
         require_once('swad/config.php');
         $db = new Database();
         $conn = $db->connect();
-        $sql = "SELECT 
+        $sql = "SELECT
             (SELECT COUNT(*) FROM studios) AS count_user_organization,
             (SELECT COUNT(*) FROM users) AS count_users,
             (SELECT COUNT(*) FROM games) AS count_games,
@@ -607,38 +604,117 @@ mobile_redirect_if_needed();
 </script>
 
 <script>
-// Эффект наклона и масштаба для всех кнопок .btn на странице (как в хедере)
-(function() {
-    const btns = document.querySelectorAll('.btn');
-    if (!btns.length) return;
+/* ─────────────────────────────────────────────────────────────────────────────
+   Наклон за курсором — общий модуль.
 
-    function resetTilt(btn) {
-        btn.style.transform = '';
+   Раньше этот блок ловил только `.btn`. Теперь он параметризован и покрывает
+   ещё баннер голосования, кнопку внутри него и карточки сервисов, чтобы вся
+   страница реагировала на мышь одинаково.
+
+   Регистрация отложена до DOMContentLoaded: #vote-banner объявлен в разметке
+   ниже этого скрипта, при немедленном запуске querySelectorAll его бы не нашёл.
+   ───────────────────────────────────────────────────────────────────────────── */
+(function () {
+    // Только мышь. На тач-устройствах mousemove либо не приходит вовсе, либо
+    // синтезируется при тапе — но без парного mouseleave, и элемент залипает
+    // в наклоне навсегда.
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    var GROUPS = [
+        /* селектор                                  угол  подъём  масштаб  перспектива */
+        { sel: '.btn',                                a: 15, lift: -3,  s: 1.10, p: 400 },
+        { sel: '.vote-btn',                           a: 15, lift: -3,  s: 1.10, p: 400 },
+        { sel: '#vote-banner',                        a: 6,  lift: 0,   s: 1.00, p: 900 },
+        { sel: '.platform-card:not(.in-development)', a: 8,  lift: -10, s: 1.02, p: 900 }
+    ];
+
+    // Баннер голосования можно таскать мышью, и драг считает позицию через
+    // getBoundingClientRect(). Этот метод возвращает габариты УЖЕ
+    // трансформированного элемента, поэтому с активным наклоном баннер прыгал бы
+    // в момент захвата и неправильно прилипал к краю. Гасим наклон на время драга.
+    var dragSuspended = false;
+
+    function tilt(el, cfg, e) {
+        // offsetWidth/offsetHeight — размеры ДО трансформации, они не «плывут»
+        // от собственного scale. Исходный код нормировал по getBoundingClientRect(),
+        // из-за чего наклон считался от уже увеличенного бокса и слегка
+        // подрагивал. Центр берём из rect: transform-origin по умолчанию 50% 50%,
+        // значит он смещается только на translateY, который мы и вычитаем.
+        var hw = el.offsetWidth / 2;
+        var hh = el.offsetHeight / 2;
+        if (!hw || !hh) return;
+
+        var r = el.getBoundingClientRect();
+        var lift = el.style.transform ? cfg.lift : 0;
+        var cx = r.left + r.width / 2;
+        var cy = r.top + r.height / 2 - lift;
+
+        var nx = Math.max(-1, Math.min(1, (e.clientX - cx) / hw));
+        var ny = Math.max(-1, Math.min(1, (e.clientY - cy) / hh));
+
+        el.style.transform =
+            'perspective(' + cfg.p + 'px) ' +
+            'rotateX(' + (-cfg.a * ny).toFixed(2) + 'deg) ' +
+            'rotateY(' + (cfg.a * nx).toFixed(2) + 'deg) ' +
+            'translateY(' + cfg.lift + 'px) ' +
+            'scale(' + cfg.s + ')';
     }
 
-    function handleMouseMove(e) {
-        const btn = e.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const nx = (x / rect.width) * 2 - 1;
-        const ny = (y / rect.height) * 2 - 1;
-        const maxAngle = 15;
-        const rotateY = maxAngle * nx;
-        const rotateX = -maxAngle * ny;
-        const translateY = -3;
-        const scale = 1.1;
-        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+    function bind(el, cfg) {
+        if (el.dataset.tiltBound) return;   // защита от двойной привязки
+        el.dataset.tiltBound = '1';
+
+        var isBanner = el.id === 'vote-banner';
+
+        el.addEventListener('mouseenter', function () {
+            if (isBanner && dragSuspended) return;
+            el.classList.add('is-tilting');
+        });
+
+        el.addEventListener('mousemove', function (e) {
+            if (isBanner && dragSuspended) return;
+            tilt(el, cfg, e);
+        });
+
+        el.addEventListener('mouseleave', function () {
+            // Сначала снимаем is-tilting — возвращается «долгий» transition из CSS,
+            // и только потом сбрасываем transform. Поэтому карточки уезжают назад
+            // плавно (как и раньше, transform 0.3s ease), а кнопки — мгновенно.
+            el.classList.remove('is-tilting');
+            el.style.transform = '';
+        });
     }
 
-    function handleMouseLeave(e) {
-        resetTilt(e.currentTarget);
+    function init() {
+        GROUPS.forEach(function (cfg) {
+            document.querySelectorAll(cfg.sel).forEach(function (el) { bind(el, cfg); });
+        });
+
+        var banner = document.getElementById('vote-banner');
+        if (!banner) return;
+
+        // capture-фаза на document: слушатель на предке в capture гарантированно
+        // отрабатывает раньше слушателей самого баннера, независимо от порядка
+        // регистрации. Успеваем сбросить transform до того, как драг прочитает rect.
+        document.addEventListener('mousedown', function (e) {
+            if (!e.target.closest || !e.target.closest('#vote-banner')) return;
+            dragSuspended = true;
+            banner.classList.remove('is-tilting');
+            banner.style.transform = '';
+        }, true);
+
+        document.addEventListener('mouseup', function () { dragSuspended = false; });
+        document.addEventListener('touchstart', function (e) {
+            if (e.target.closest && e.target.closest('#vote-banner')) dragSuspended = true;
+        }, { passive: true, capture: true });
+        document.addEventListener('touchend', function () { dragSuspended = false; });
     }
 
-    btns.forEach(btn => {
-        btn.addEventListener('mousemove', handleMouseMove);
-        btn.addEventListener('mouseleave', handleMouseLeave);
-    });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();
 </script>
 
@@ -997,7 +1073,7 @@ mobile_redirect_if_needed();
 })();
 </script>
 
-// Telegram-баннер (простой, в правом нижнем углу, сворачивание)
+<!-- Telegram-баннер (простой, в правом нижнем углу, сворачивание) -->
 <script>
 (function() {
     const banner = document.getElementById('telegram-banner');
@@ -1050,6 +1126,323 @@ mobile_redirect_if_needed();
     banner.style.transformOrigin = 'right center';
 })();
 </script>
+
+<!-- ============================================================
+     БЫСТРЫЙ ДОСТУП (левый нижний угол) — показывается только при наличии пунктов
+     ============================================================ -->
+<?php
+// ---- Проверяем, есть ли у пользователя студия (владелец) ----
+$hasStudio = false;
+if (!empty($_SESSION['USERDATA']['id'])) {
+    $userId = (int)$_SESSION['USERDATA']['id'];
+    try {
+        $stmt = $conn->prepare("SELECT id FROM studios WHERE owner_id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        if ($stmt->rowCount() > 0) {
+            $hasStudio = true;
+        }
+    } catch (Exception $e) {
+        // Если таблицы нет или ошибка – просто игнорируем
+    }
+}
+
+// В будущем сюда добавятся другие проверки:
+// $hasMedia = ...;
+// $hasSomethingElse = ...;
+
+$hasAnyItem = $hasStudio; // || $hasMedia || $hasSomethingElse;
+?>
+
+<?php if ($hasAnyItem): ?>
+<style>
+/* =============================================================================
+   БЫСТРЫЙ ДОСТУП (кнопка-домик внизу слева)
+   -----------------------------------------------------------------------------
+   Кнопка .quick-menu-toggle не тронута — её стили ниже слово в слово прежние.
+   Переделана только панель и то, как она открывается.
+
+   Что было сломано:
+   1. .quick-access-container.open { transform: translateY(-100px) }
+      поднимал ВЕСЬ контейнер вместе с кнопкой. Домик подпрыгивал на 100px
+      при каждом открытии — это и выглядело криво. Подъём был лишним:
+      контейнер прибит к bottom, панель и так растёт вверх.
+   2. Раскрытие через max-height: 0 → 250px при реальной высоте контента
+      ~70px. Видимый рост заканчивался за ~28% времени анимации, остальные
+      72% ничего не происходило — на закрытии выходила заметная задержка
+      перед тем, как панель вообще начнёт двигаться.
+
+   Стало: панель абсолютно спозиционирована над кнопкой и вообще не влияет
+   на размер контейнера — кнопка физически не может сдвинуться. Появление
+   через opacity + transform, они анимируются на композиторе и от высоты
+   контента не зависят.
+
+   Палитра — те же переменные, что у модалки Дасти, чтобы всплывашки на
+   сайте не расходились по цветам. Лунная тема переопределяет только цвета.
+   ============================================================================= */
+
+.quick-access-container {
+    --qa-top:    #2c1240;
+    --qa-bot:    #1f0a2b;
+    --qa-line:   rgba(255, 255, 255, 0.13);
+    --qa-text:   #f2e9f6;
+    --qa-muted:  rgba(242, 233, 246, 0.45);
+    --qa-accent: #c32178;
+    --qa-hover:  rgba(195, 33, 120, 0.20);
+
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 10000;
+    width: 48px;   /* по кнопке: панель висит абсолютом и ширину не задаёт */
+}
+
+body.moonlight-theme .quick-access-container {
+    --qa-top:    #182238;
+    --qa-bot:    #101829;
+    --qa-line:   rgba(184, 200, 255, 0.17);
+    --qa-text:   #eaf0ff;
+    --qa-muted:  rgba(184, 200, 255, 0.48);
+    --qa-accent: #3e7ad9;
+    --qa-hover:  rgba(62, 122, 217, 0.24);
+}
+
+/* ── Панель: позиционирование, тень, появление ──────────────────────────── */
+.quick-menu-panel {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: max-content;
+    min-width: 214px;
+    max-width: 280px;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(6px);
+    transform-origin: 0 100%;
+
+    /* clip-path режет box-shadow, поэтому тень живёт на обёртке через
+       drop-shadow — он повторяет ступенчатый контур, а не прямоугольник. */
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+
+    transition: opacity 0.16s ease,
+                transform 0.16s ease,
+                visibility 0s linear 0.16s;
+}
+
+.quick-access-container.open .quick-menu-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition: opacity 0.16s ease,
+                transform 0.16s ease,
+                visibility 0s;
+}
+
+/* ── Карточка: пиксельная лесенка по углам + кант в 1px ─────────────────── */
+/* Фон карточки виден только как кант: ::before лежит с отступом 1px и
+   повторяет тот же полигон, поэтому обводка ровно 1px по всему контуру,
+   включая ступеньки. box-shadow с clip-path так не умеет. */
+.quick-menu-card {
+    position: relative;
+    padding: 7px;
+    background: var(--qa-line);
+    clip-path: polygon(
+        0 8px, 4px 8px, 4px 4px, 8px 4px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px,
+        calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px, 100% calc(100% - 8px),
+        calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px),
+        calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 4px),
+        4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px)
+    );
+}
+
+.quick-menu-card::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    background: linear-gradient(180deg, var(--qa-top), var(--qa-bot));
+    clip-path: polygon(
+        0 8px, 4px 8px, 4px 4px, 8px 4px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px,
+        calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px, 100% calc(100% - 8px),
+        calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px),
+        calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 4px),
+        4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px)
+    );
+}
+
+/* ── Заголовок ──────────────────────────────────────────────────────────── */
+.quick-menu-title {
+    position: relative;
+    z-index: 1;
+    display: block;
+    padding: 4px 8px 8px;
+    font-family: 'Bahnschrift Light', system-ui, sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--qa-muted);
+}
+
+/* ── Пункты меню ────────────────────────────────────────────────────────── */
+.quick-menu-item {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    color: var(--qa-text);
+    text-decoration: none;
+    font-family: 'Bahnschrift Light', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.25;
+    border: 1px solid transparent;
+    transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.quick-menu-item:hover,
+.quick-menu-item:focus-visible {
+    background: var(--qa-hover);
+    border-color: var(--qa-accent);
+    outline: none;
+}
+
+/* Иконка — inline-SVG в одну заливку вместо эмодзи: эмодзи рисуется
+   цветным глифом системы и не совпадает по весу с домиком на кнопке. */
+.quick-menu-icon {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    display: block;
+    fill: var(--qa-muted);
+    transition: fill 0.14s ease;
+}
+
+.quick-menu-item:hover .quick-menu-icon,
+.quick-menu-item:focus-visible .quick-menu-icon {
+    fill: var(--qa-accent);
+}
+
+/* ── Кнопка-домик: без изменений ────────────────────────────────────────── */
+.quick-menu-toggle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary, #c32178);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.quick-menu-toggle:hover {
+    background: #e62e8a;
+    transform: scale(1.05);
+}
+
+.quick-menu-toggle:active {
+    transform: scale(0.95);
+}
+
+.quick-menu-toggle svg {
+    fill: white;
+    width: 28px;
+    height: 28px;
+}
+
+body.moonlight-theme .quick-menu-toggle {
+    border: 3px solid rgba(255, 255, 255, 0.08);
+    background: #3e7ad900;
+}
+
+body.moonlight-theme .quick-menu-toggle:hover {
+    background: #5690f069;
+}
+
+@media (max-width: 600px) {
+    .quick-access-container {
+        left: 14px;
+        bottom: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .quick-menu-panel {
+        transition: opacity 0.01s linear, visibility 0s linear 0.01s;
+        transform: none;
+    }
+    .quick-access-container.open .quick-menu-panel {
+        transition: opacity 0.01s linear, visibility 0s;
+    }
+}
+</style>
+
+<div class="quick-access-container" id="quickAccess">
+    <div class="quick-menu-panel" id="quickPanel">
+        <div class="quick-menu-card">
+            <span class="quick-menu-title">Быстрый доступ</span>
+
+            <?php if ($hasStudio): ?>
+                <a href="/devs/" class="quick-menu-item">
+                    <svg class="quick-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 4h18v16H3V4zm2 2v12h14V6H5z"/>
+                        <path d="M7 9l3 3-3 3V9zm5 5h5v2h-5v-2z"/>
+                    </svg>
+                    Консоль разработчика
+                </a>
+            <?php endif; ?>
+            <!-- Здесь позже добавятся другие пункты (медиа, студия и т.д.) -->
+        </div>
+    </div>
+
+    <button class="quick-menu-toggle" id="quickToggle" aria-label="Быстрый доступ"
+            aria-expanded="false" aria-controls="quickPanel">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+        </svg>
+    </button>
+</div>
+
+<script>
+(function() {
+    const container = document.getElementById('quickAccess');
+    const toggle = document.getElementById('quickToggle');
+    if (!container || !toggle) return;
+
+    let isOpen = false;
+
+    function setOpen(state) {
+        isOpen = state;
+        container.classList.toggle('open', isOpen);
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        setOpen(!isOpen);
+    });
+
+    // Закрытие при клике вне меню и кнопки
+    document.addEventListener('click', function(e) {
+        if (isOpen && !container.contains(e.target)) setOpen(false);
+    });
+
+    // Закрытие по Escape — фокус возвращаем на кнопку, иначе он повисает
+    // на скрытой ссылке внутри панели
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            setOpen(false);
+            toggle.focus();
+        }
+    });
+})();
+</script>
+<?php endif; ?>
+<!-- ============================================================ -->
 
 </body>
 

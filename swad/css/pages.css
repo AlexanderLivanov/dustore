@@ -1266,7 +1266,7 @@ body.moonlight-theme .telegram-banner.collapsed {
 }
 body.moonlight-theme .platform-card:hover {
     transform: translateY(-10px);
-    background: #74155d;
+    background: #6b8ff780;
 }
 
 body.moonlight-theme h2:after {
@@ -1277,7 +1277,7 @@ body.moonlight-theme h2:after {
     transform: translateX(-50%);
     width: 100px;
     height: 4px;
-    background: var(--primary);
+    background: #3e7ad9;
     border-radius: 2px;
 }
 
@@ -1306,3 +1306,47 @@ body.moonlight-theme .hero::before {
     transform: translateX(var(--hero-bg-offset, 0px));
     transition: transform 0.60s ease-out;
 }
+
+
+/* =============================================================================
+   НАКЛОН ЗА КУРСОРОМ — общие правила
+   -----------------------------------------------------------------------------
+   Сам наклон вешает JS инлайновым transform (модуль в index.php). Здесь только
+   две вещи, без которых эффект выглядит сломанным:
+
+   1. Пока курсор внутри элемента, transform должен успевать за мышью.
+      У .platform-card в базе стоит `transform 0.3s ease`, у .vote-btn —
+      `transform 0.1s`: с ними элемент тащился бы за курсором с задержкой.
+      Класс .is-tilting подменяет ТОЛЬКО длительность transform, оставляя
+      background/left/top как были.
+
+   2. На mouseleave JS сначала снимает .is-tilting и лишь потом чистит transform.
+      Значит возврат считается уже по базовому transition: карточки уезжают
+      назад плавно (0.3s, как и до правки), кнопки — мгновенно (как .btn).
+      Отдельного «плавного возврата» городить не пришлось.
+
+   will-change ставится только на время наклона: постоянный will-change держит
+   лишний композитный слой на каждой кнопке страницы. #vote-banner сюда
+   намеренно не входит — у него backdrop-filter, и лишнее промотирование слоя
+   на нём только повышает риск артефактов в WebKit.
+   ============================================================================= */
+
+.btn.is-tilting,
+.vote-btn.is-tilting,
+.platform-card.is-tilting {
+    will-change: transform;
+}
+
+.platform-card.is-tilting {
+    transition: transform 0.001s linear, background 0.3s ease;
+}
+
+/* Второй селектор нужен из-за body.moonlight-theme .vote-btn — он переопределяет
+   transition и по специфичности бьёт одиночный .vote-btn.is-tilting. */
+.vote-btn.is-tilting,
+body.moonlight-theme .vote-btn.is-tilting {
+    transition: background 0.2s ease, transform 0.001s linear;
+}
+
+/* #vote-banner отдельного правила не требует: в его базовом transition
+   перечислены только left/top, значит transform меняется мгновенно. */

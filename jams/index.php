@@ -649,7 +649,11 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
     function renderGrid() {
         const q = document.getElementById('search')?.value.toLowerCase() || '';
         const filtered = sprints.filter(s => {
-                const matchesFilter = curFilter === 'all' || phase === curFilter
+                /* Было `phase === curFilter`: переменная phase объявлена ниже,
+                   внутри filtered.forEach, и в колбэке .filter() её ещё нет.
+                   Отсюда ReferenceError: phase is not defined — фильтрация
+                   падала целиком при первом же клике по любой вкладке. */
+                const matchesFilter = curFilter === 'all' || s.phase === curFilter
                    || (curFilter === 'registration' && s.reg_open);
                 return matchesFilter &&
                    (s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
