@@ -220,6 +220,44 @@ $stmt->execute([
 </head>
 
 <body>
+
+<!-- Штора перехода между страницами. См. комментарий в header.css. -->
+<div id="pageTransition" class="page-transition" aria-hidden="true"></div>
+<script>
+  // Если пришли сюда после клика по ссылке — ставим штору в полное состояние
+  // ДО первой отрисовки. Иначе браузер успеет мигнуть новой страницей.
+  (function () {
+    try {
+      var ts = sessionStorage.getItem('dustore_page_transition_ts');
+      // Флаг живёт 5 секунд: если что-то пошло не так и страница не
+      // открылась, при следующем заходе штра не выскочит из ниоткуда.
+      if (!ts || Date.now() - parseInt(ts, 10) > 5000) return;
+      sessionStorage.removeItem('dustore_page_transition_ts');
+
+      var ov = document.getElementById('pageTransition');
+      if (!ov) return;
+
+      // Мгновенно — полное состояние. Никакой анимации, никакой вспышки.
+      ov.classList.add('is-instant', 'is-active');
+      void ov.offsetWidth; // форсируем reflow, чтобы состояние зафиксировалось
+
+      // На DOMContentLoaded начинаем растворение.
+      document.addEventListener('DOMContentLoaded', function () {
+        ov.classList.remove('is-instant');
+        ov.classList.add('is-revealing');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            ov.classList.remove('is-active');
+            // Убираем is-revealing после завершения, чтобы не висел зря
+            setTimeout(function () {
+              ov.classList.remove('is-revealing');
+            }, 300);
+          });
+        });
+      }, { once: true });
+    } catch (e) {}
+  })();
+</script>
     <!-- Кастомное контекстное меню удалено.
          Оно перехватывало правый клик на ВСЕЙ странице через
          document.addEventListener('contextmenu', e => e.preventDefault()),
@@ -303,6 +341,8 @@ $stmt->execute([
                 </div>
             </div>
             <div class="section right-section">
+                <!-- Бейдж версии (чуть левее от кнопок) -->
+                <span class="version-badge">1.0.0-beta</span>
                 <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
@@ -611,42 +651,53 @@ $stmt->execute([
             });
 
             (function() {
-                const headerButtons = document.querySelectorAll('.header .button');
-                if (!headerButtons.length) return;
+                // Добавляем .version-badge в список
+                const items = document.querySelectorAll('.header .button, .version-badge');
+                if (!items.length) return;
 
-                function resetTilt(btn) {
-                    btn.style.transform = '';
+                function resetTilt(el) {
+                    el.style.transform = '';
+                    el.style.removeProperty('--dx');
                 }
 
                 function handleMouseMove(e) {
-                    const btn = e.currentTarget;
-                    const rect = btn.getBoundingClientRect();
+                    const el = e.currentTarget;
+                    const rect = el.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-
 
                     const nx = (x / rect.width) * 2 - 1;
                     const ny = (y / rect.height) * 2 - 1;
 
-                    const maxAngle = 15; // мягкий наклон
+                    const maxAngle = 15;
                     const rotateY = maxAngle * nx;
                     const rotateX = -maxAngle * ny;
 
-
-                    const translateY = -3; // в пикселях
+                    const translateY = -3;
                     const scale = 1.1;
 
+                    el.style.transform =
+                        `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
 
-                    btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+                    // Для блика (--dx)
+                    el.style.setProperty('--dx', (nx * 50) + '%');
                 }
 
                 function handleMouseLeave(e) {
                     resetTilt(e.currentTarget);
                 }
 
-                headerButtons.forEach(btn => {
-                    btn.addEventListener('mousemove', handleMouseMove);
-                    btn.addEventListener('mouseleave', handleMouseLeave);
+                items.forEach(el => {
+                    el.addEventListener('mousemove', handleMouseMove);
+                    el.addEventListener('mouseleave', handleMouseLeave);
+                    // Добавляем класс is-tilting при наведении (для активации блика)
+                    el.addEventListener('mouseenter', function() {
+                        this.classList.add('is-tilting');
+                    });
+                    // Убираем класс при уходе
+                    el.addEventListener('mouseleave', function() {
+                        this.classList.remove('is-tilting');
+                    });
                 });
             })();
 
@@ -1729,6 +1780,99 @@ document.addEventListener('visibilitychange', function() {
         window.scrollTo(0, currentScrollY);
         requestAnimationFrame(smoothScroll);
     }
+})();
+</script>
+
+<script>
+// =============================================================================
+// Перехват навигации → «штора» → плавный переход между страницами (MPA).
+// Ловит и <a href>, и <button onclick="location.href=...">.
+// =============================================================================
+(function () {
+  var overlay = document.getElementById('pageTransition');
+  if (!overlay) return;
+
+  var isTransitioning = false;
+
+  function isSameOrigin(href) {
+    try { return new URL(href, location.href).origin === location.origin; }
+    catch (e) { return false; }
+  }
+
+  function urlFromOnclickAttr(onclick) {
+    var m = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+    return m ? m[1] : null;
+  }
+
+  // Возвращает абсолютный URL цели или null, если перехватывать не надо.
+  function resolveNavTarget(e) {
+    // 1) обычная <a href>
+    var a = e.target.closest('a[href]');
+    if (a) {
+      if (a.target === '_blank') return null;
+      if (a.hasAttribute('download')) return null;
+      if (!isSameOrigin(a.href)) return null;
+      var u = new URL(a.href, location.href);
+      // Тот же путь + query, отличается только hash → не наш случай
+      if (u.pathname === location.pathname && u.search === location.search) return null;
+      return u.href;
+    }
+    // 2) <button onclick="location.href='...'"> и любые [onclick] с href
+    var el = e.target.closest('[onclick]');
+    if (el) {
+      var onclick = el.getAttribute('onclick') || '';
+      var url = urlFromOnclickAttr(onclick);
+      if (!url) return null;
+      if (!isSameOrigin(url)) return null;
+      var abs = new URL(url, location.href).href;
+      if (abs === location.href) return null;
+      return abs;
+    }
+    return null;
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (isTransitioning) return;
+
+    var target = resolveNavTarget(e);
+    if (!target) return;
+
+    // Стоп оригинальной навигации и inline-обработчикам (button onclick=...).
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    isTransitioning = true;
+
+    // 1. Плавно уходим в тёмный блюр.
+    overlay.classList.add('is-active');
+
+    // 2. Параллельно ставим флаг для новой страницы (с меткой времени).
+    try { sessionStorage.setItem('dustore_page_transition_ts', String(Date.now())); } catch (err) {}
+
+    // 3. Когда штора полностью встала — навигируем.
+    var navigated = false;
+    function go() {
+      if (navigated) return;
+      navigated = true;
+      location.href = target;
+    }
+    overlay.addEventListener('transitionend', function onEnd(ev) {
+      if (ev.propertyName !== 'opacity') return;
+      overlay.removeEventListener('transitionend', onEnd);
+      go();
+    });
+    // Страховка: если transitionend не пришёл (например, transition отключён
+    // prefers-reduced-motion-ом или свойством) — не ждём вечно.
+    setTimeout(go, 500);
+  }, { capture: true });
+
+  // Возврат через bfcache — сбрасываем всё в исходное.
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    try { sessionStorage.removeItem('dustore_page_transition_ts'); } catch (err) {}
+    overlay.classList.remove('is-active', 'is-instant', 'is-revealing');
+    isTransitioning = false;
+  });
 })();
 </script>
 

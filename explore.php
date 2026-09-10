@@ -4,51 +4,56 @@ require_once('swad/config.php');
 require_once('swad/controllers/game.php');
 
 $gameController = new Game();
-$games = $gameController->getLatestGames();
 
-// Серверная фильтрация нужна для первой отрисовки и для поисковиков.
-$games = array_filter($games, function ($game) {
-    return isset($game['status']) && strtolower($game['status']) === 'published'
-        && empty($game['hidden']);
-});
+/* Размер порции. 48, а не 49: делится на 2, 3, 4 и 6 — при любом числе
+   колонок последний ряд получается полным, без «хвоста» из одной карточки. */
+const EXPLORE_PAGE = 48;
 
-$adultSection = isset($_GET['adult']) && $_GET['adult'] == 1;
-
-if ($adultSection) {
-    $games = array_filter($games, function ($game) {
-        return isset($game['age_rating']) && intval($game['age_rating']) >= 18;
-    });
-} else {
-    $games = array_filter($games, function ($game) {
-        return !isset($game['age_rating']) || intval($game['age_rating']) < 18;
-    });
-}
-
-// Сбор жанров для начального состояния
-$allGenres = [];
-foreach ($games as $game) {
-    if (!empty($game['genre'])) {
-        $genres = array_map('trim', explode(',', $game['genre']));
-        foreach ($genres as $g) {
-            if ($g !== '' && !in_array($g, $allGenres)) {
-                $allGenres[] = $g;
-            }
-        }
-    }
-}
-sort($allGenres);
-
+$adultSection  = isset($_GET['adult']) && $_GET['adult'] == 1;
 $selectedGenre = isset($_GET['genre']) ? trim(urldecode($_GET['genre'])) : null;
-if ($selectedGenre) {
-    $games = array_filter($games, function ($game) use ($selectedGenre) {
-        if (empty($game['genre'])) return false;
-        $genres = array_map('trim', explode(',', $game['genre']));
-        return in_array(mb_strtolower($selectedGenre), array_map('mb_strtolower', $genres));
-    });
-}
+
+/* Первая порция считается в SQL — ровно тем же запросом, которым потом
+   ходит подгрузка. Раньше здесь вызывался getLatestGames(99999): вся
+   таблица приезжала в PHP и фильтровалась через array_filter.
+   С постраничностью это было бы не просто медленно, а бессмысленно —
+   тот же объём работы на каждую порцию. */
+$page = $gameController->queryGames([
+    'genre'  => $selectedGenre,
+    'adult'  => $adultSection,
+    'sort'   => 'popularity',
+    'dir'    => 'desc',
+    'limit'  => EXPLORE_PAGE,
+    'offset' => 0,
+]);
+
+$games      = $page['items'];
+$gamesTotal = $page['total'];
+$hasMore    = count($games) < $gamesTotal;
+
+/* Список жанров строится по всему разделу, а не по загруженной порции:
+   иначе после первой страницы фильтр показывал бы жанры только сорока
+   восьми игр. */
+$allGenres = $gameController->collectGenres($adultSection);
 
 /* Заглушка обложки. Раньше здесь был via.placeholder.com — сервис закрыт
    в 2024-м, поэтому у каждой игры без обложки висела битая картинка. */
+/**
+ * Пути скриншотов из games.screenshots (JSON вида [{"path":"..."}]).
+ * Нужны для превью при наведении: карточка проигрывает их по очереди.
+ */
+function shot_paths($raw, int $max = 5): array
+{
+    $arr = json_decode((string)$raw, true);
+    if (!is_array($arr)) return [];
+    $out = [];
+    foreach ($arr as $s) {
+        $p = trim((string)(is_array($s) ? ($s['path'] ?? '') : $s));
+        if ($p !== '') $out[] = $p;
+        if (count($out) >= $max) break;
+    }
+    return $out;
+}
+
 $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">'
     . '<rect width="320" height="180" fill="#1b0a26"/>'
@@ -151,7 +156,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
 
                     <div class="content-row">
                         <div class="results-bar">
-                            <span id="resultsCount"><?= count($games) ?> <?= ((count($games) % 10 === 1 && count($games) % 100 !== 11) ? 'игра' : 'игр') ?></span>
+                            <span id="resultsCount"><?= $gamesTotal ?> <?= (($gamesTotal % 10 === 1 && $gamesTotal % 100 !== 11) ? 'игра' : 'игр') ?></span>
                             <button type="button" class="results-reset" id="resetFilters" style="display:none">Сбросить фильтры</button>
                         </div>
 
@@ -165,6 +170,14 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                                     $isSoon  = $rel && $rel > time();
                                     $isNew   = $rel && !$isSoon && (time() - $rel) < 30 * 24 * 60 * 60;
                                     $genre   = trim(explode(',', (string)($game['genre'] ?? ''))[0]);
+                                    $shots     = shot_paths($game['screenshots'] ?? '');
+                                    $avgRating = isset($game['avg_rating']) && $game['avg_rating'] !== null
+                                                 ? round((float)$game['avg_rating'], 1) : null;
+                                    // рейтинг десятибалльный, звёзд пять — как на странице игры
+                                    $stars     = $avgRating !== null ? max(0, min(5, (int)round($avgRating / 2))) : 0;
+                                    $descShort = trim((string)($game['short_description'] ?? ''));
+                                    if ($descShort === '') $descShort = trim(strip_tags((string)($game['description'] ?? '')));
+                                    $descShort = mb_substr($descShort, 0, 220);
                                     $isBlur  = $adultSection && (int)($game['age_rating'] ?? 0) >= 18;
                                 ?>
                                 <a class="game-card"
@@ -173,10 +186,13 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                                    data-popularity="<?= (int)($game['downloads'] ?? 0) ?>"
                                    data-date="<?= $rel ?: 0 ?>"
                                    data-genre="<?= htmlspecialchars(mb_strtolower((string)($game['genre'] ?? ''))) ?>"
-                                   data-id="<?= (int)$game['id'] ?>">
+                                   data-id="<?= (int)$game['id'] ?>"
+                                   data-shots="<?= htmlspecialchars(json_encode($shots), ENT_QUOTES) ?>">
+                                    <div class="gc-inner">
                                     <div class="game-image<?= $isBlur ? ' blur-adult' : '' ?>">
-                                        <img src="<?= htmlspecialchars(!empty($game['path_to_cover']) ? $game['path_to_cover'] : $COVER_FALLBACK) ?>"
+                                        <img class="gc-cover" src="<?= htmlspecialchars(!empty($game['path_to_cover']) ? $game['path_to_cover'] : $COVER_FALLBACK) ?>"
                                              alt="<?= htmlspecialchars($game['name']) ?>" loading="lazy" decoding="async">
+                                        <div class="gc-shots" aria-hidden="true"></div>
                                         <?php if ($isSoon): ?>
                                             <span class="game-badge soon">Скоро</span>
                                         <?php elseif ($isNew): ?>
@@ -185,14 +201,51 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                                     </div>
                                     <div class="game-info">
                                         <h3 class="game-title"><?= htmlspecialchars($game['name']) ?></h3>
+
+                                        <?php /* Показывается только у раскрытой карточки. Держим в разметке,
+                                                 а не подставляем скриптом: так текст есть в исходном коде
+                                                 страницы и доступен поисковику и screen reader'у. */ ?>
+                                        <div class="gc-more">
+                                          <?php /* один общий потомок обязателен:
+                                                   анимация grid-template-rows 0fr -> 1fr
+                                                   работает только с единственной строкой */ ?>
+                                          <div class="gc-block">
+                                            <div class="gc-line">
+                                                <?php if (!empty($game['studio_name'])): ?>
+                                                    <span class="gc-studio"><?= htmlspecialchars($game['studio_name']) ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($avgRating !== null): ?>
+                                                    <span class="gc-rating" title="<?= $avgRating ?> из 10">
+                                                        <span class="gc-stars"><?= str_repeat('★', $stars) . str_repeat('☆', 5 - $stars) ?></span>
+                                                        <span class="gc-rnum"><?= $avgRating ?></span>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php if ($descShort !== ''): ?>
+                                                <p class="gc-desc"><?= htmlspecialchars($descShort) ?></p>
+                                            <?php endif; ?>
+                                          </div>
+                                        </div>
+
                                         <div class="game-meta">
                                             <span class="game-genre"><?= htmlspecialchars($genre) ?></span>
                                             <span class="game-price <?= ($game['price'] == 0) ? 'free' : '' ?>"><?= $price ?></span>
                                         </div>
                                     </div>
+                                    </div>
                                 </a>
                                 <?php endforeach; ?>
                             <?php endif; ?>
+                        </div>
+
+                        <?php /* Маячок для IntersectionObserver: когда он попадает
+                                 в зону видимости, подгружается следующая порция.
+                                 Наблюдатель, в отличие от обработчика scroll,
+                                 срабатывает один раз при пересечении и не жжёт
+                                 кадры на каждом движении колеса. */ ?>
+                        <div class="grid-sentinel" id="gridSentinel"<?= $hasMore ? '' : ' hidden' ?>>
+                            <span class="gs-spinner" aria-hidden="true"></span>
+                            <span class="gs-text">Загружаем ещё…</span>
                         </div>
                     </div>
                 </div>
@@ -237,7 +290,10 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         const resultsCount = document.getElementById('resultsCount');
         const resetBtn     = document.getElementById('resetFilters');
 
-        const DEFAULTS = { adult: 0, genre: null, sort: 'popularity', dir: 'desc', priceType: 'all', priceMax: 5000 };
+        const SERVER_TOTAL = <?= (int)$gamesTotal ?>;
+        const sentinel = document.getElementById('gridSentinel');
+
+        const DEFAULTS = { adult: 0, genre: null, sort: 'popularity', dir: 'desc', priceType: 'all', priceMax: 5000, q: '', offset: 0 };
         const state = Object.assign({}, DEFAULTS, {
             genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
             adult: <?= $adultSection ? 1 : 0 ?>
@@ -275,6 +331,8 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             p.set('dir', state.dir);
             p.set('price_type', state.priceType);
             if (state.priceType === 'paid') p.set('price_max', state.priceMax);
+            if (state.q) p.set('q', state.q);
+            p.set('offset', state.offset);
 
             const res = await fetch(API_URL + '?' + p.toString());
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -294,26 +352,50 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             const badge  = isSoon ? '<span class="game-badge soon">Скоро</span>'
                          : isNew  ? '<span class="game-badge">Новинка</span>' : '';
 
+            const shots  = Array.isArray(game.screenshots) ? game.screenshots : [];
+            const rating = (game.avg_rating !== null && game.avg_rating !== undefined)
+                         ? Math.round(game.avg_rating * 10) / 10 : null;
+            // рейтинг десятибалльный, звёзд пять — как на странице игры
+            const stars  = rating !== null ? Math.max(0, Math.min(5, Math.round(rating / 2))) : 0;
+            const starStr = rating !== null ? '★'.repeat(stars) + '☆'.repeat(5 - stars) : '';
+
             return '<a class="game-card" href="/g/' + encodeURIComponent(game.id) + '"'
                  + ' data-price="' + esc(game.price) + '"'
                  + ' data-popularity="' + esc(game.downloads) + '"'
                  + ' data-date="' + (isFinite(rel) ? Math.floor(rel / 1000) : 0) + '"'
                  + ' data-genre="' + esc(String(game.genre || '').toLowerCase()) + '"'
-                 + ' data-id="' + esc(game.id) + '">'
+                 + ' data-id="' + esc(game.id) + '"'
+                 + ' data-shots="' + esc(JSON.stringify(shots)) + '">'
+                 +   '<div class="gc-inner">'
                  +   '<div class="game-image' + blur + '">'
-                 +     '<img src="' + esc(game.path_to_cover || COVER_FALLBACK) + '"'
+                 +     '<img class="gc-cover" src="' + esc(game.path_to_cover || COVER_FALLBACK) + '"'
                  +          ' alt="' + esc(game.name) + '" loading="lazy" decoding="async">'
+                 +     '<div class="gc-shots" aria-hidden="true"></div>'
                  +     badge
                  +   '</div>'
                  +   '<div class="game-info">'
                  +     '<h3 class="game-title">' + esc(game.name) + '</h3>'
+                 +     '<div class="gc-more"><div class="gc-block">'
+                 +       '<div class="gc-line">'
+                 +         (game.studio_name ? '<span class="gc-studio">' + esc(game.studio_name) + '</span>' : '')
+                 +         (rating !== null
+                            ? '<span class="gc-rating" title="' + rating + ' из 10">'
+                              + '<span class="gc-stars">' + starStr + '</span>'
+                              + '<span class="gc-rnum">' + rating + '</span></span>'
+                            : '')
+                 +       '</div>'
+                 +       (game.description ? '<p class="gc-desc">' + esc(game.description) + '</p>' : '')
+                 +     '</div></div>'
                  +     '<div class="game-meta">'
                  +       '<span class="game-genre">' + esc(genre) + '</span>'
                  +       '<span class="game-price' + (game.price == 0 ? ' free' : '') + '">' + price + '</span>'
                  +     '</div>'
                  +   '</div>'
+                 +   '</div>'
                  + '</a>';
         }
+
+        const renderCards = games => games.map(cardHTML).join('');
 
         function renderGames(games) {
             if (!games.length) {
@@ -321,7 +403,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     + '<strong>Ничего не нашлось</strong>Попробуйте снять часть фильтров</div>';
                 return;
             }
-            grid.innerHTML = games.map(cardHTML).join('');
+            grid.innerHTML = renderCards(games);
         }
 
         function renderFilters(genres) {
@@ -346,12 +428,16 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         }
 
         function updateResultsBar() {
-            const visible = Array.from(grid.querySelectorAll('.game-card'))
-                .filter(c => c.style.display !== 'none').length;
-            resultsCount.textContent = visible + ' ' + plural(visible);
+            /* Показываем СКОЛЬКО НАЙДЕНО, а не сколько подгружено:
+               «48 игр» при трёхстах в каталоге вводило бы в заблуждение. */
+            const loaded = grid.querySelectorAll('.game-card').length;
+            const total  = Number.isFinite(state.total) ? state.total : loaded;
+            resultsCount.textContent = total + ' ' + plural(total)
+                + (loaded < total ? ' · показано ' + loaded : '');
+
             const dirty = state.genre || state.adult
                 || state.priceType !== DEFAULTS.priceType
-                || (searchInput.value.trim() !== '');
+                || state.q !== '';
             resetBtn.style.display = dirty ? '' : 'none';
         }
 
@@ -364,39 +450,146 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             return html;
         }
 
-        let firstLoad = true;
-        async function updateUI() {
-            grid.setAttribute('aria-busy', 'true');
-            // На первой загрузке в гриде уже лежит серверная разметка — не мигаем.
-            if (!firstLoad) grid.innerHTML = skeletons(8);
+        /* ── Загрузка порциями ───────────────────────────────────────────
+           Первая порция уже отрисована сервером, поэтому при открытии
+           страницы запроса нет вообще — каталог виден сразу, без «прыжка»
+           из скелетонов в карточки.
+
+           loadPage(false) — заново с нулевого смещения (сменили фильтр,
+           сортировку или поиск). loadPage(true) — дописать следующую порцию.
+           Флаг busy обязателен: наблюдатель может сработать дважды подряд,
+           пока первый запрос ещё в пути, и порция задвоится. */
+        /* hoverPreview объявлен ниже по файлу через const, а loadPage его
+           вызывает. К моменту первого вызова он уже инициализирован (скрипт
+           к тому времени дочитан), но полагаться на это неудобно — держим
+           безопасную обёртку. */
+        const closeExpanded = () => { try { hoverPreview.closeNow(); } catch (e) {} };
+
+        let inFlight = false;      // запрос сейчас в пути
+        let reqId    = 0;          // номер последнего запроса, для отсева устаревших ответов
+        let seenBottom = false;    // маячок в зоне видимости прямо сейчас
+
+        async function loadPage(append) {
+            /* Догрузку при занятой линии просто пропускаем — её перезапустит
+               maybeLoadMore() после завершения текущего запроса.
+               А вот СБРОС (смена фильтра, сортировки, поиска) пропускать
+               нельзя: раньше стоял общий `if (busy) return`, и второй клик
+               по фильтру молча терялся. Кнопка переключалась, выдача
+               оставалась от предыдущего фильтра, состояние разъезжалось. */
+            if (append && inFlight) return;
+
+            const my = ++reqId;
+            inFlight = true;
+
+            if (!append) {
+                state.offset = 0;
+                closeExpanded();                  // раскрытая карточка сейчас исчезнет из DOM
+                grid.setAttribute('aria-busy', 'true');
+                grid.innerHTML = skeletons(12);
+            }
+            sentinel.classList.toggle('is-loading', append);
 
             try {
                 const data = await fetchGames();
-                renderGames(data.games);
-                renderFilters(data.genres);
+
+                /* Ответ устарел: пока он ехал, человек успел сменить фильтр.
+                   Раньше такого отсева не было, и медленный ответ мог
+                   перерисовать грид поверх более свежего. */
+                if (my !== reqId) return;
+
+                const games = Array.isArray(data.games) ? data.games : [];
+                // shown/total появились вместе с постраничностью; если их нет,
+                // значит на сервере лежит старая версия explore_games.php
+                const shown = Number.isFinite(data.shown) ? data.shown : games.length;
+
+                /* Страховка от бесконечного цикла: если сервер вернул пустую
+                   порцию, но всё ещё говорит has_more, смещение не сдвинется
+                   и maybeLoadMore() будет дёргать API до посинения.
+                   Такое возможно при рассинхроне total и фактической выдачи. */
+                if (append && shown === 0) {
+                    sentinel.hidden = true;
+                    return;
+                }
+
+                if (append) grid.insertAdjacentHTML('beforeend', renderCards(games));
+                else        renderGames(games);
+
+                state.offset = (append ? state.offset : 0) + shown;
+
+                if (Number.isFinite(data.total)) {
+                    state.total = data.total;
+                } else {
+                    console.warn('[explore] в ответе нет поля total — обновите swad/controllers/explore_games.php');
+                    state.total = state.offset;
+                }
+
+                // жанры приходят только на нулевом смещении
+                if (data.genres) renderFilters(data.genres);
+
+                sentinel.hidden = (data.has_more === undefined)
+                    ? (state.offset >= state.total)
+                    : !data.has_more;
 
                 adultWarning.classList.toggle('visible', !!state.adult);
 
                 localStorage.setItem('explore_sort', JSON.stringify({ sort: state.sort, dir: state.dir }));
                 localStorage.setItem('explore_filter', JSON.stringify({ priceType: state.priceType, priceMax: state.priceMax }));
 
-                if (searchInput.value.trim()) applySearch();
                 updateResultsBar();
             } catch (err) {
-                console.error(err);
-                grid.innerHTML = '<div class="no-games-message">'
-                    + '<strong>Не удалось загрузить каталог</strong>Проверьте соединение и обновите страницу</div>';
+                console.error('[explore]', err);
+                if (my === reqId) {
+                    sentinel.hidden = true;
+                    if (!append) {
+                        grid.innerHTML = '<div class="no-games-message">'
+                            + '<strong>Не удалось загрузить каталог</strong>Проверьте соединение и обновите страницу</div>';
+                    }
+                }
             } finally {
-                grid.removeAttribute('aria-busy');
-                firstLoad = false;
+                if (my === reqId) {
+                    inFlight = false;
+                    grid.removeAttribute('aria-busy');
+                    sentinel.classList.remove('is-loading');
+                    maybeLoadMore();
+                }
             }
+        }
+
+        /* Ключевая мелочь. После смены фильтра новая выдача короткая, и маячок
+           сразу оказывается в зоне видимости — но наблюдатель уже сработал,
+           пока шёл запрос, и его вызов был отброшен. Нового пересечения не
+           происходит, потому что маячок и не уходил с экрана: подгрузка
+           замирала до тех пор, пока человек не проскроллит туда-обратно.
+           Поэтому после каждой загрузки проверяем видимость сами. */
+        function maybeLoadMore() {
+            if (!inFlight && seenBottom && !sentinel.hidden) loadPage(true);
+        }
+
+        const updateUI = () => loadPage(false);
+
+        /* rootMargin 700px — подгружаем ЗАРАНЕЕ, за экран до низа.
+           Если ждать фактического пересечения, человек успевает упереться
+           в пустоту и увидеть паузу. */
+        if ('IntersectionObserver' in window) {
+            new IntersectionObserver(entries => {
+                seenBottom = entries[0].isIntersecting;
+                maybeLoadMore();
+            }, { rootMargin: '700px 0px' }).observe(sentinel);
+        } else {
+            // очень старый браузер — даём кнопку вместо наблюдателя
+            sentinel.addEventListener('click', () => loadPage(true));
+            sentinel.classList.add('is-manual');
         }
 
         function updateURL() {
             const url = new URL(window.location);
             state.genre ? url.searchParams.set('genre', state.genre) : url.searchParams.delete('genre');
             state.adult ? url.searchParams.set('adult', '1')         : url.searchParams.delete('adult');
-            window.history.pushState({}, '', url);
+            state.q     ? url.searchParams.set('q', state.q)         : url.searchParams.delete('q');
+            /* replaceState, а не pushState: каждый клик по фильтру добавлял
+               запись в историю, и кнопка «назад» вместо возврата на прошлую
+               страницу отматывала фильтры по одному. */
+            window.history.replaceState({}, '', url);
         }
 
         /* ── Фильтры по жанру и 18+ ──────────────────────────────────────── */
@@ -477,25 +670,22 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         }
 
         /* ── Поиск ───────────────────────────────────────────────────────── */
+        /* Поиск ушёл на сервер. Раньше он прятал уже отрисованные карточки
+           через card.style.display — с постраничностью это ломается:
+           нужная игра лежит на третьей порции, которая ещё не загружена,
+           и человек видит «ничего не найдено» там, где совпадение есть. */
         function applySearch() {
-            const term = searchInput.value.toLowerCase().trim();
-            grid.querySelectorAll('.game-card').forEach(card => {
-                // Ищем по названию И по жанру — плейсхолдер обещает и то и другое,
-                // а сравнивалось только название, поэтому запрос вроде «хоррор»
-                // не находил ничего.
-                const title = (card.querySelector('.game-title')?.textContent || '').toLowerCase();
-                const genre = (card.dataset.genre || '').toLowerCase();
-                const hit = title.includes(term) || genre.includes(term);
-                card.style.display = (!term || hit) ? '' : 'none';
-            });
-            searchBar.classList.toggle('has-value', term !== '');
-            updateResultsBar();
+            state.q = searchInput.value.trim();
+            searchBar.classList.toggle('has-value', state.q !== '');
+            updateURL();
+            return loadPage(false);
         }
 
         let searchTimer;
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(applySearch, 120);
+            // 300 мс, а не 120: каждый вызов теперь идёт запросом в базу
+            searchTimer = setTimeout(applySearch, 300);
         });
         searchInput.addEventListener('keydown', e => {
             if (e.key === 'Escape') { searchInput.value = ''; applySearch(); }
@@ -512,6 +702,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             state.priceType = DEFAULTS.priceType;
             state.priceMax = DEFAULTS.priceMax;
             searchInput.value = '';
+            state.q = '';
             searchBar.classList.remove('has-value');
             updatePriceUI();
             updateURL();
@@ -618,14 +809,30 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     active.style.transform = '';
                     active = null;
                 }
-                if (!el) return;
+                /* Отмена ДО раннего выхода. Раньше track(null) стоял ниже, и при
+                   уходе курсора не на другую карточку, а в пустое место
+                   выполнение обрывалось здесь — таймер продолжал тикать,
+                   и через секунду карточка раскрывалась под уже уехавшей мышью. */
+                if (!el) { hoverPreview.track(null); return; }
                 if (active !== el) { active = el; el.classList.add('is-tilting'); }
 
                 const cfg = GROUPS.find(g => el.matches(g.sel));
-                const hw = el.offsetWidth / 2, hh = el.offsetHeight / 2;
-                if (!cfg || !hw || !hh) return;
+                if (!cfg) return;
 
-                const r = el.getBoundingClientRect();
+                /* Мерим ВИДИМУЮ поверхность, а не сам грид-элемент.
+                   У карточки это .gc-inner: при раскрытии он вырастает, а
+                   .game-card остаётся прежнего размера (иначе поехала бы сетка).
+                   Если считать от .game-card, то на раскрытой карточке курсор
+                   уходит за её коробку, nx/ny упираются в ±1 и наклон
+                   «залипает» у краёв вместо того, чтобы следовать за мышью. */
+                const surf = el.querySelector(':scope > .gc-inner') || el;
+                const hw = surf.offsetWidth / 2, hh = surf.offsetHeight / 2;
+                if (!hw || !hh) return;
+
+                /* offsetWidth — размеры ДО трансформации, они не «плывут» от
+                   собственного scale. Центр берём из rect: transform-origin
+                   по умолчанию 50% 50%, значит он смещается только на translateY. */
+                const r = surf.getBoundingClientRect();
                 const lift = el.style.transform ? cfg.lift : 0;
                 const nx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / hw));
                 const ny = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2 - lift)) / hh));
@@ -637,14 +844,120 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     + 'rotateX(' + (-cfg.a * ny).toFixed(2) + 'deg) '
                     + 'rotateY(' + (cfg.a * nx).toFixed(2) + 'deg) '
                     + 'translateY(' + cfg.lift + 'px) scale(' + cfg.s + ')';
+
+                // раскрытие карточки завязано на тот же «активный элемент»
+                if (cfg.sel === '.game-card') hoverPreview.track(el);
+                else hoverPreview.track(null);
             });
+
+            document.addEventListener('mouseleave', () => hoverPreview.track(null));
         }
 
-        /* ── Старт ───────────────────────────────────────────────────────── */
+        /* ── Раскрытие карточки при задержке курсора ─────────────────────────
+           Карточка не меняет своих размеров — растёт только внутренний слой
+           .gc-inner через отрицательные inset. Поэтому грид не пересчитывается
+           и соседи не двигаются, что бы ни происходило с раскрытой карточкой.
+
+           Наклон при этом не сбрасывается: transform живёт на .game-card,
+           а вырастает её потомок — состояние поворота сохраняется как есть. */
+        const hoverPreview = (function () {
+            const OPEN_DELAY = 450;   // сколько держать курсор до раскрытия
+            const SHOT_EVERY = 2000;   // как часто листать скриншоты
+
+            let timer = null, current = null, shotTimer = null;
+
+            function close() {
+                clearTimeout(timer); timer = null;
+                clearInterval(shotTimer); shotTimer = null;
+                if (!current) return;
+                current.classList.remove('gc-open');
+                const box = current.querySelector('.gc-shots');
+                if (box) box.innerHTML = '';
+                current.style.removeProperty('--gc-l');
+                current.style.removeProperty('--gc-r');
+                current = null;
+            }
+
+            /* Карточка у края сетки не должна вылезать за контейнер: growth
+               перекидываем в ту сторону, где есть место. */
+            function placeSides(card) {
+                const grid = card.parentElement;
+                if (!grid) return;
+                const g = grid.getBoundingClientRect();
+                const c = card.getBoundingClientRect();
+                const grow = c.width * 0.5;              // суммарный прирост по ширине
+
+                let left = grow / 2, right = grow / 2;
+                if (c.left - left < g.left)   { right += left - Math.max(0, c.left - g.left);  left = Math.max(0, c.left - g.left); }
+                if (c.right + right > g.right) { left += right - Math.max(0, g.right - c.right); right = Math.max(0, g.right - c.right); }
+
+                card.style.setProperty('--gc-l', (-left).toFixed(1) + 'px');
+                card.style.setProperty('--gc-r', (-right).toFixed(1) + 'px');
+            }
+
+            function startShots(card) {
+                let shots = [];
+                try { shots = JSON.parse(card.dataset.shots || '[]'); } catch (e) {}
+                if (!Array.isArray(shots) || shots.length === 0) return;
+
+                const box = card.querySelector('.gc-shots');
+                if (!box) return;
+
+                box.innerHTML = shots.map((src, i) =>
+                    '<img src="' + String(src).replace(/"/g, '&quot;') + '" alt="" loading="lazy"'
+                    + (i === 0 ? ' class="on"' : '') + '>').join('');
+
+                const imgs = box.querySelectorAll('img');
+                if (imgs.length < 2) return;
+
+                let i = 0;
+                shotTimer = setInterval(() => {
+                    imgs[i].classList.remove('on');
+                    i = (i + 1) % imgs.length;
+                    imgs[i].classList.add('on');
+                }, SHOT_EVERY);
+            }
+
+            function open(card) {
+                current = card;
+                placeSides(card);
+                card.classList.add('gc-open');
+                startShots(card);
+            }
+
+            return {
+                track(card) {
+                    if (card === current) return;          // уже раскрыта — ничего не делаем
+                    close();
+                    if (!card) return;
+                    timer = setTimeout(() => open(card), OPEN_DELAY);
+                },
+                closeNow: close
+            };
+        })();
+
+        // при перерисовке грида раскрытая карточка исчезает из DOM
+        grid.addEventListener('scroll', () => hoverPreview.closeNow(), { passive: true });
+        window.addEventListener('scroll', () => hoverPreview.closeNow(), { passive: true });
+
+        /* ── Старт ─────────────────────────────────────────────────────────
+           Первая порция уже отрисована сервером, поэтому запроса при
+           открытии страницы НЕТ. Раньше здесь безусловно вызывался
+           updateUI(): каталог рисовался дважды — сначала серверной
+           разметкой, потом поверх неё ответом API. */
+        state.offset = grid.querySelectorAll('.game-card').length;
+        state.total  = SERVER_TOTAL;
+
         updateSortButtonsUI();
         updatePriceUI();
         updateResultsBar();
-        updateUI();
+
+        /* Если состояние восстановилось из localStorage и отличается от
+           того, что отрисовал сервер, — перезапрашиваем. */
+        if (state.sort !== DEFAULTS.sort || state.dir !== DEFAULTS.dir
+            || state.priceType !== DEFAULTS.priceType) {
+            updateUI();
+        }
     })();
     </script>
 </body>

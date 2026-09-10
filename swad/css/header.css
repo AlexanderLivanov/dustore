@@ -118,6 +118,7 @@ body {
     font-family:"Bahnschrift Light" !important;
     font-size: 13pt;
     box-shadow: 1px 1px 1px 1px #00000060;
+    color: #ffffffa1;
 }
 
 .footer {
@@ -223,7 +224,6 @@ body.moonlight-theme .buttons-right {
 /* Сами кнопки в хедере */
 body.moonlight-theme .button {
     background-color: rgba(255, 255, 255, 0.08);
-    color: #ffffffcc;
     box-shadow: 1px 1px 1px 1px rgba(0, 0, 0, 0.4);
 }
 
@@ -1200,6 +1200,93 @@ body.dusty-open {
     box-shadow: 0px 1px 1px 0px #ffffff15;
 }
 
+/* =============================================================================
+   БЕЙДЖ ВЕРСИИ (справа в хедере)
+   ============================================================================= */
+
+.version-badge {
+    display: inline-block;
+    padding: 4px 9px;
+    margin-right: 6px;
+    margin-bottom: -18px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'Bahnschrift Light', system-ui, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    user-select: none;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.001s ease-out;
+}
+
+/* Moonlight-тема */
+body.moonlight-theme .version-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(184, 200, 255, 0.7);
+}
+
+/* Блик (как на карточках игр) */
+.version-badge::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.10) 20%,
+        rgba(255, 255, 255, 0.30) 40%,
+        rgba(255, 255, 255, 0.10) 60%,
+        transparent 80%
+    );
+    background-size: 200% 100%;
+    background-position: calc(50% + var(--dx, 0%)) 0;
+    opacity: 0;
+    transition: opacity 0.01s ease;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+    border-radius: inherit;
+}
+
+.version-badge.is-tilting::after {
+    opacity: 1;
+}
+
+/* =============================================================================
+   БЛИК НА КНОПКАХ ХЕДЕРА
+   ============================================================================= */
+
+.header .button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0) 30%,
+        rgba(255, 255, 255, 0) 40%,
+        rgba(255, 255, 255, 0.08) 47%,
+        transparent 80%
+    );
+    background-size: 200% 100%;
+    background-position: calc(50% + var(--dx, 0%)) 0;
+    opacity: 0;
+    transition: opacity 0.01s ease;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+    border-radius: inherit;
+}
+
+.header .button.is-tilting::after {
+    opacity: 1;
+}
+
 /* ── Лунная тема ──────────────────────────────────────────────────────────── */
 /* Специфичность выше, чем у .header.scrolled .header__bg — иначе при скролле
    лунная тема проигрывала бы каскаду и получала фон Appollo. */
@@ -1257,5 +1344,266 @@ body.moonlight-theme .center-floating-block {
     .header::before,
     .header::after {
         width: 50%;
+    }
+}
+
+
+/* =============================================================================
+   DROPDOWN «DEVS» — стеклянный стиль + плавность
+   ============================================================================= */
+
+.nav-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Триггер — кнопка с иконкой и стрелкой */
+.nav-dropdown__trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    padding: 0;
+    /* Наследуем стили .button, но если нужно подправить — можно */
+}
+
+/* Стрелка — поворот на 180° при открытии */
+.nav-dropdown__arrow {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+}
+.nav-dropdown.open .nav-dropdown__arrow {
+    transform: rotate(180deg);
+}
+
+/* ── Выпадающее меню ──────────────────────────────────────────────────────── */
+.nav-dropdown__menu {
+    display: block;                /* вместо none, управляем через opacity/visibility */
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 210px;
+    padding: 8px;
+    list-style: none;
+    z-index: 200;
+
+    /* Стеклянный фон */
+    background: rgba(10, 6, 18, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    /* Начальное состояние — скрыто */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top left;
+    transition:
+        opacity 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+        transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+        visibility 0s linear 0.18s;
+}
+
+/* Открытое состояние */
+.nav-dropdown.open .nav-dropdown__menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    transition:
+        opacity 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+        transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+        visibility 0s;
+}
+
+/* ── Пункты меню ────────────────────────────────────────────────────────── */
+.nav-dropdown__item {
+    display: block;
+    padding: 8px 14px 8px 12px;
+    color: rgba(242, 233, 246, 0.7);
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Bahnschrift Light', system-ui, sans-serif;
+    line-height: 1.4;
+    white-space: nowrap;
+    position: relative;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease,
+        padding-left 0.15s ease;
+    cursor: pointer;
+}
+
+.nav-dropdown__item:hover {
+    background: rgba(195, 33, 120, 0.18);
+    color: #fff;
+    padding-left: 18px;  /* лёгкое смещение вправо */
+    transform: translateX(2px);
+}
+
+/* Акцентный пункт (вход в консоль) — уже есть класс .nav-dropdown__item--accent */
+.nav-dropdown__item--accent {
+    color: rgba(255, 91, 168, 0.7) !important;
+}
+.nav-dropdown__item--accent:hover {
+    color: #ff5ba8 !important;
+    background: rgba(195, 33, 120, 0.12);
+}
+
+/* Разделитель (уже есть в HTML) */
+.nav-dropdown__menu [role="separator"] {
+    height: 1px;
+    margin: 6px 8px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+
+/* ── Маленькая подсказка внутри пункта (например, «биржа специалистов») ── */
+.nav-dropdown__item span {
+    font-size: 11px;
+    opacity: 0.6;
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+/* ── Адаптивность: на мобильных меню раскрывается снизу вверх ────────────── */
+@media (max-width: 900px) {
+    .nav-dropdown__menu {
+        position: static;
+        top: auto;
+        left: auto;
+        min-width: unset;
+        background: transparent;
+        backdrop-filter: none;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0 0 0 12px;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        transition: none;
+    }
+    .nav-dropdown.open .nav-dropdown__menu {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        transition: none;
+    }
+    .nav-dropdown__item {
+        padding: 10px 14px;
+        white-space: normal;
+    }
+    .nav-dropdown__item:hover {
+        padding-left: 14px;
+        transform: none;
+    }
+}
+
+/* ── Лунная тема: переопределяем цвета ───────────────────────────────────── */
+body.moonlight-theme .nav-dropdown__menu {
+    background: rgba(8, 12, 24, 0.88);
+    border-color: rgba(184, 200, 255, 0.12);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+body.moonlight-theme .nav-dropdown__item {
+    color: rgba(184, 200, 255, 0.7);
+}
+body.moonlight-theme .nav-dropdown__item:hover {
+    background: rgba(62, 122, 217, 0.18);
+    color: #eaf0ff;
+}
+body.moonlight-theme .nav-dropdown__item--accent {
+    color: rgba(100, 150, 255, 0.7) !important;
+}
+body.moonlight-theme .nav-dropdown__item--accent:hover {
+    color: #6ab0f7 !important;
+    background: rgba(62, 122, 217, 0.12);
+}
+body.moonlight-theme .nav-dropdown__menu [role="separator"] {
+    background: linear-gradient(90deg, transparent, rgba(184, 200, 255, 0.12), transparent);
+}
+
+/* =============================================================================
+   PAGE TRANSITION — «штора» между страницами
+   -----------------------------------------------------------------------------
+   Схема (MPA, без View Transitions, работает везде):
+     1. Клик по ссылке/кнопке с навигацией → JS перехватывает переход.
+     2. Поверх страницы появляется overlay: он из полностью прозрачного
+        становится тёмным и всё сильнее блюрит то, что под ним. К моменту
+        завершения анимации за ним не разобрать ничего — сплошная мутная тьма.
+     3. В этот момент JS ставит флаг в sessionStorage и навигирует.
+     4. Новая страница при загрузке видит флаг → рендерит overlay сразу в
+        полном состоянии (без анимации, чтобы не было вспышки), а затем
+        плавно его снимает: тёмный блюр-мессив за ~240мс превращается в
+        новую страницу.
+
+   Никаких View Transitions, никаких prerender — только один fixed-элемент
+   и два класса. Работает в любом браузере, где есть backdrop-filter
+   (Chrome, Safari, Firefox 103+).
+   ============================================================================= */
+
+.page-transition {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;          /* поверх всего, включая модалку Дасти */
+    pointer-events: none;
+    opacity: 0;
+    background: rgba(8, 5, 18, 0.88);
+    backdrop-filter: blur(0px) saturate(100%);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    transition:
+        opacity 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        backdrop-filter 500ms cubic-bezier(0.4, 0, 0.2, 1),
+        -webkit-backdrop-filter 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, backdrop-filter;
+    contain: strict;
+}
+
+/* Рабочее состояние: полное затемнение + сильный блюр */
+.page-transition.is-active {
+    opacity: 1;
+    pointer-events: all;
+    cursor: wait;
+    backdrop-filter: blur(40px) saturate(100%);
+    -webkit-backdrop-filter: blur(40px) saturate(100%);
+}
+
+/* Состояние «растворение» — быстрее, чем вход, и без перехвата кликов.
+   Идёт ПОСЛЕ .is-active, чтобы перебить pointer-events. */
+.page-transition.is-revealing {
+    pointer-events: none;
+    transition:
+        opacity 250ms cubic-bezier(0.4, 0, 0.2, 1),
+        backdrop-filter 250ms cubic-bezier(0.4, 0, 0.2, 1),
+        -webkit-backdrop-filter 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Мгновенная установка — без анимации. Ставится на новой странице ДО первой
+   отрисовки, чтобы штра не «проявлялась» из прозрачного состояния. */
+.page-transition.is-instant {
+    transition: none !important;
+}
+
+/* Лунная тема — затемнение чуть холоднее */
+body.moonlight-theme .page-transition {
+    background: rgba(4, 8, 18, 0.88);
+}
+
+/* Уважение к настройкам ОС */
+@media (prefers-reduced-motion: reduce) {
+    .page-transition {
+        transition: opacity 120ms linear;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
     }
 }

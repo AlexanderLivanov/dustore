@@ -1,90 +1,77 @@
 <?php
+declare(strict_types=1);
+
+/**
+ * swad/controllers/explore_games.php — выдача витрины.
+ *
+ * Было: getLatestGames(99999) тянул ВСЮ таблицу в PHP, дальше фильтрация
+ * через array_filter и сортировка через usort — в памяти, на каждый запрос.
+ * Постраничность на клиенте это бы не вылечила: база и PHP всё равно
+ * перемалывали бы весь каталог на каждую подгрузку, а отдавали бы кусок.
+ *
+ * Стало: фильтры, сортировка и LIMIT/OFFSET живут в SQL (Game::queryGames),
+ * а этот файл — тонкая обёртка, которая приводит параметры к нужному виду
+ * и раскладывает ответ.
+ */
+
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
 
 require_once(__DIR__ . '/../config.php');
 require_once(__DIR__ . '/game.php');
+
+const EXPLORE_PAGE = 48;
+
 $gameController = new Game();
-$allGames = $gameController->getLatestGames();
 
-// Параметры
-$genre     = $_GET['genre']  ?? null;
-$adult     = isset($_GET['adult']) ? (int)$_GET['adult'] : 0;
-$sort      = $_GET['sort']   ?? 'popularity';
-$dir       = $_GET['dir']    ?? 'desc';
-$priceType = $_GET['price_type'] ?? 'all';
-$priceMax  = isset($_GET['price_max']) ? (int)$_GET['price_max'] : 5000;
+$adult  = !empty($_GET['adult']);
+$offset = max(0, (int)($_GET['offset'] ?? 0));
 
-// Только опубликованные и НЕ скрытые
-$games = array_filter($allGames, function ($game) {
-    return isset($game['status']) && strtolower($game['status']) === 'published'
-        && empty($game['hidden']);
-});
+$filters = [
+    'genre'      => trim((string)($_GET['genre'] ?? '')) ?: null,
+    'adult'      => $adult,
+    'sort'       => (string)($_GET['sort'] ?? 'popularity'),
+    'dir'        => (string)($_GET['dir'] ?? 'desc'),
+    'price_type' => (string)($_GET['price_type'] ?? 'all'),
+    'price_max'  => (int)($_GET['price_max'] ?? 5000),
+    'q'          => trim((string)($_GET['q'] ?? '')),
+    'limit'      => EXPLORE_PAGE,
+    'offset'     => $offset,
+];
 
-// 18+
-if ($adult) {
-    $games = array_filter($games, fn($g) => isset($g['age_rating']) && (int)$g['age_rating'] >= 18);
-} else {
-    $games = array_filter($games, fn($g) => !isset($g['age_rating']) || (int)$g['age_rating'] < 18);
-}
-
-// Сбор жанров (до жанрового/ценового фильтра)
-$allGenres = [];
-foreach ($games as $game) {
-    if (!empty($game['genre'])) {
-        foreach (array_map('trim', explode(',', $game['genre'])) as $g) {
-            if ($g !== '' && !in_array($g, $allGenres, true)) $allGenres[] = $g;
-        }
+/**
+ * Скриншоты в games.screenshots лежат как JSON: [{"path":"..."}, ...].
+ * Наружу отдаём плоский список путей — объекты клиенту не нужны.
+ */
+function shot_paths($raw, int $max = 5): array
+{
+    $arr = json_decode((string)$raw, true);
+    if (!is_array($arr)) return [];
+    $out = [];
+    foreach ($arr as $s) {
+        $p = trim((string)(is_array($s) ? ($s['path'] ?? '') : $s));
+        if ($p !== '') $out[] = $p;
+        if (count($out) >= $max) break;
     }
-}
-sort($allGenres);
-
-// Жанровый фильтр
-if ($genre) {
-    $games = array_filter($games, function ($game) use ($genre) {
-        if (empty($game['genre'])) return false;
-        $genres = array_map('trim', explode(',', $game['genre']));
-        return in_array(mb_strtolower($genre), array_map('mb_strtolower', $genres));
-    });
+    return $out;
 }
 
-// Цена
-if ($priceType === 'free') {
-    $games = array_filter($games, fn($g) => (float)($g['price'] ?? 0) == 0);
-} elseif ($priceType === 'paid') {
-    $games = array_filter($games, function ($g) use ($priceMax) {
-        $p = (float)($g['price'] ?? 0);
-        return $p > 0 && $p <= $priceMax;
-    });
+try {
+    $page = $gameController->queryGames($filters);
+} catch (PDOException $e) {
+    error_log('[explore_games] ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['games' => [], 'genres' => [], 'error' => 'db'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-// Сортировка:
-//   popularity → скачивания (downloads)
-//   price      → цена
-//   date       → дата релиза
-//   updated    → дата обновления
-$sortField = 'downloads';
-if ($sort === 'price')   $sortField = 'price';
-if ($sort === 'date')    $sortField = 'release_date';
-if ($sort === 'updated') $sortField = 'updated_at';
-
-usort($games, function ($a, $b) use ($sortField, $dir) {
-    $va = $a[$sortField] ?? 0;
-    $vb = $b[$sortField] ?? 0;
-    if ($sortField === 'release_date' || $sortField === 'updated_at') {
-        $va = $va ? strtotime((string)$va) : 0;
-        $vb = $vb ? strtotime((string)$vb) : 0;
-    } else {
-        $va = (float)$va;
-        $vb = (float)$vb;
-    }
-    return $dir === 'asc' ? ($va <=> $vb) : ($vb <=> $va);
-});
-
-// Ответ
 $result = [];
-foreach ($games as $game) {
+foreach ($page['items'] as $game) {
+    $desc = trim((string)($game['short_description'] ?? ''));
+    if ($desc === '') $desc = trim(strip_tags((string)($game['description'] ?? '')));
+
     $result[] = [
-        'id'            => $game['id'],
+        'id'            => (int)$game['id'],
         'name'          => $game['name'],
         'path_to_cover' => $game['path_to_cover'] ?? '',
         'price'         => (float)($game['price'] ?? 0),
@@ -92,10 +79,36 @@ foreach ($games as $game) {
         'release_date'  => $game['release_date'] ?? '',
         'updated_at'    => $game['updated_at'] ?? '',
         'age_rating'    => (int)($game['age_rating'] ?? 0),
+        'genre'         => $game['genre'] ?? '',
+        'studio_name'   => $game['studio_name'] ?? '',
+        'description'   => mb_substr($desc, 0, 220),
+        'screenshots'   => shot_paths($game['screenshots'] ?? ''),
+        'avg_rating'    => $game['avg_rating'] !== null ? (float)$game['avg_rating'] : null,
+        'reviews_count' => (int)($game['reviews_count'] ?? 0),
     ];
 }
 
+$shown = $offset + count($result);
+
 echo json_encode([
-    'games'  => $result,
-    'genres' => array_values($allGenres),
-]);
+    /* Эхо применённых фильтров. Нужно ровно для одного: открыть вкладку
+       Network, посмотреть ответ и сразу увидеть, что сервер РЕАЛЬНО получил.
+       Без этого приходится гадать, дошёл ли параметр до запроса. */
+    'applied'  => [
+        'q'          => $filters['q'],
+        'genre'      => $filters['genre'],
+        'adult'      => $adult ? 1 : 0,
+        'sort'       => $filters['sort'],
+        'dir'        => $filters['dir'],
+        'price_type' => $filters['price_type'],
+    ],
+    'games'    => $result,
+    /* Список жанров нужен только при первой загрузке страницы фильтра.
+       На подгрузке следующей порции он не меняется — не гоняем лишний
+       запрос и не раздуваем ответ. */
+    'genres'   => $offset === 0 ? $gameController->collectGenres($adult) : null,
+    'total'    => $page['total'],
+    'offset'   => $offset,
+    'shown'    => count($result),
+    'has_more' => $shown < $page['total'],
+], JSON_UNESCAPED_UNICODE);

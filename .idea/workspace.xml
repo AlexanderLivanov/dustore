@@ -5,17 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/swad/controllers/download_deplex.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/wishlist.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game.php" beforeDir="false" afterPath="$PROJECT_DIR$/game.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chat/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/explore.php" beforeDir="false" afterPath="$PROJECT_DIR$/explore.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/buy_asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/buy_asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/get_asset_free.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/get_asset_free.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/get_asset_reviews.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/get_asset_reviews.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/submit_asset_review.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/submit_asset_review.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/wishlist_controller.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/player.php" beforeDir="false" afterPath="$PROJECT_DIR$/player.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/explore_games.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/explore_games.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/controllers/game.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/game.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/explore.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/explore.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/header.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/header.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -103,6 +102,7 @@
   </component>
   <component name="UnknownFeatures">
     <option featureType="com.intellij.fileTypeFactory" implementationName=".htaccess" />
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.php" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">

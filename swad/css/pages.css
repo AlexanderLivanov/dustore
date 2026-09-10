@@ -607,14 +607,14 @@ body.moonlight-theme .btn-secondary:hover {
 /* ── Баннер голосования ── */
 #vote-banner {
     position: fixed;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(8px);
-    padding: 14px 20px;
+    padding: 7px 12px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 1000;
     text-align: -webkit-center;
-    max-width: 260px;
+    max-width: 180px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
     transition: opacity 0.2s;
     transition: left 0.2s ease, top 0.2s ease;
@@ -635,7 +635,7 @@ body.moonlight-theme .btn-secondary:hover {
 
 .vote-title {
     font-size: 15px;
-    color: #fff;
+    color: #ffffffa1;
     margin-bottom: 5px;
     line-height: 1.2;
     letter-spacing: 0.3px;
@@ -643,7 +643,7 @@ body.moonlight-theme .btn-secondary:hover {
 
 .vote-btn {
     display: inline-block;
-    padding: 6px 18px;
+    padding: 4px 13px;
     background: #c32178;
     color: #fff;
     border-radius: 30px;
@@ -662,7 +662,7 @@ body.moonlight-theme .btn-secondary:hover {
 
 /* ── Баннер голосования — Moonlight Theme ── */
 body.moonlight-theme #vote-banner {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgb(255 255 255 / 4%);
     border: 1px solid rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(16px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -749,6 +749,7 @@ body.moonlight-theme .vote-btn:hover {
     display: block;
     font-size: 12px;
     margin-bottom: 0;
+    color: #ffffffa1;
 }
 
 /* ── Карточки сервисов: активные и в разработке ── */
@@ -940,7 +941,7 @@ body.moonlight-theme .dusty-greeting .greeting-close:hover {
     bottom: 20px;
     right: 20px;
     z-index: 999;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1014,7 +1015,7 @@ body.moonlight-theme .dusty-greeting .greeting-close:hover {
     height: 48px !important;
     padding: 8px !important;
     border-radius: 50% !important;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.4);
     border-color: rgba(255, 255, 255, 0.15);
 }
 .telegram-banner.collapsed .tg-content {
@@ -1032,16 +1033,14 @@ body.moonlight-theme .dusty-greeting .greeting-close:hover {
 
 /* Moonlight-тема */
 body.moonlight-theme .telegram-banner {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(16px);
 }
 body.moonlight-theme .telegram-banner .tg-text a {
     color: #6ab0f7;
 }
-body.moonlight-theme .telegram-banner.collapsed {
-    background: rgba(0, 0, 0, 0.7);
-}
+
 
 /* ══════════════════════════════════════
    АДАПТИВНОСТЬ

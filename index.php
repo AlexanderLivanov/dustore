@@ -29,7 +29,7 @@ mobile_redirect_if_needed();
             </div>
             <div class="container">
                 <div class="hero-content">
-                    <h1 class="pixel-title">DUSTORE — открытая open-source платформа для игр и джемов</h1>
+                    <h1 class="pixel-title">DUSTORE — свободная open-source платформа для игр и джемов</h1>
                     <p style="font-weight: 300; opacity: 0.8;">
     Мы верим, что творчество не зависит от того, где вы находитесь и кто вы есть. Здесь можно создавать, делиться и находить единомышленников.
 </p>
@@ -1402,7 +1402,7 @@ body.moonlight-theme .quick-access-container {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: var(--primary, #c32178);
+    background: rgba(0, 0, 0, 0.4);
     border: none;
     cursor: pointer;
     display: flex;
@@ -1428,8 +1428,8 @@ body.moonlight-theme .quick-access-container {
 }
 
 body.moonlight-theme .quick-menu-toggle {
-    border: 3px solid rgba(255, 255, 255, 0.08);
-    background: #3e7ad900;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 body.moonlight-theme .quick-menu-toggle:hover {

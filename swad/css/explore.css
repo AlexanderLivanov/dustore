@@ -368,22 +368,76 @@ main { display: block; }
 /* ── Карточка ─────────────────────────────────────────────────────────────── */
 /* Была <div onclick>. Стала <a href> — работает средний клик, «открыть в новой
    вкладке», Tab с клавиатуры, и ссылки видит поисковик. */
+/* ── Карточка ────────────────────────────────────────────────────────────
+   Сама .game-card — только «место в сетке»: она НИКОГДА не меняет размер,
+   поэтому раскрытие карточки физически не может сдвинуть соседей.
+   Всё видимое живёт во внутреннем слое .gc-inner, который и растёт.
+
+   Раз .gc-inner абсолютный, у карточки нет содержимого, задающего высоту —
+   поэтому пропорция задана явно. Обложка внутри держит 16/9, а подпись
+   забирает остаток. */
 .game-card {
     position: relative;
+    display: block;
+    aspect-ratio: 20 / 19;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.001s ease-out;
+}
+.game-card.is-tilting { will-change: transform; z-index: 2; }
+.game-card:focus-visible { outline: 2px solid var(--ex-accent-hi); outline-offset: 2px; }
+.game-card[hidden] { display: none; }
+
+.gc-inner {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
     border-radius: var(--ex-radius);
     overflow: hidden;
     background: var(--ex-card);
     box-shadow: inset 0 0 0 1px var(--ex-card-line);
-    color: inherit;
-    text-decoration: none;
-    transition: box-shadow 0.18s ease, transform 0.001s ease-out;
+    transition: inset 0.26s cubic-bezier(.2, .7, .3, 1),
+                box-shadow 0.2s ease;
 }
-.game-card:hover { box-shadow: inset 0 0 0 1px var(--ex-card-line-hi), 0 10px 28px rgba(0, 0, 0, 0.42); }
+.game-card:hover .gc-inner { box-shadow: inset 0 0 0 1px var(--ex-card-line-hi), 0 10px 28px rgba(0, 0, 0, 0.42); }
+
+/* ── Раскрытие по задержке курсора ───────────────────────────────────────
+   --gc-l / --gc-r ставит JS: у карточки с краю прирост перекидывается
+   внутрь сетки, чтобы она не вылезала за контейнер. */
+.game-card.gc-open { z-index: 20; }
+.game-card.gc-open .gc-inner {
+    /* Растём в основном ВНИЗ. Симметричный рост на 13% вверх и вниз не давал
+       нужной высоты, а карточка первого ряда лезла бы на панель фильтров. */
+    inset: -10% var(--gc-r, -25%) -46% var(--gc-l, -25%);
+    /* Раньше рамка была акцентной по всему контуру — карточка выглядела
+       «выбранной», а не «раскрытой», и спорила за внимание с ценой.
+       Достаточно тени: она сама поднимает карточку над сеткой. */
+    box-shadow: inset 0 0 0 1px var(--ex-card-line-hi), 0 26px 60px rgba(0, 0, 0, 0.65);
+}
+
+/* Вот из-за чего блок со студией, рейтингом и описанием исчезал.
+   У обложки aspect-ratio 16/9 — её высота считается от ШИРИНЫ. При росте
+   карточки ширина увеличивалась в 1.5 раза, а высота всего в 1.26 —
+   обложка съедала прирост целиком и подпись становилась ДАЖЕ МЕНЬШЕ,
+   чем в закрытом виде (82px против 90px). Свободного места под текст
+   не оставалось вовсе, и он схлопывался в ноль.
+   У раскрытой карточки обложка занимает фиксированную долю высоты,
+   а не привязывается к ширине. */
+.game-card.gc-open .game-image {
+    aspect-ratio: auto;
+    flex: 0 0 50%;
+}
+
+/* Пока одна карточка раскрыта, соседние приглушаются — взгляд не разбегается */
+.games-grid:has(.game-card.gc-open) .game-card:not(.gc-open) .gc-inner {
+    opacity: 0.45;
+    transition: opacity 0.22s ease, inset 0.26s cubic-bezier(.2, .7, .3, 1), box-shadow 0.2s ease;
+}
+
 
 /* Блик: скользит за курсором через --dx, задаёт tilt-IIFE */
-.game-card::after {
+.gc-inner::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -404,13 +458,12 @@ main { display: block; }
     mix-blend-mode: overlay;
     border-radius: inherit;
 }
-.game-card.is-tilting::after,
-.game-card:hover::after { opacity: 1; }
-.game-card:focus-visible { outline: 2px solid var(--ex-accent-hi); outline-offset: 2px; }
-.game-card.is-tilting { will-change: transform; }
+.game-card.is-tilting .gc-inner::after,
+.game-card:hover .gc-inner::after { opacity: 1; }
 
 .game-image {
     position: relative;
+    flex: 0 0 auto;
     aspect-ratio: 16 / 9;
     background: var(--ex-cover);
     overflow: hidden;
@@ -437,18 +490,125 @@ main { display: block; }
 }
 .game-badge.soon { background: rgba(0, 0, 0, 0.62); color: #ffd479; }
 
+/* ── Содержимое, которое появляется только при раскрытии ──────────────── */
+/* Блок появляется через flex-basis: закрыт — нулевая высота, открыт —
+   занимает весь остаток подписи. Раньше я пробовал flex-grow, но у
+   .game-meta стоит margin-top:auto, и свободное место уходило туда;
+   с flex-basis: 100% и flex-shrink блок забирает своё гарантированно. */
+.gc-more {
+    flex: 0 1 0;
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: flex-basis 0.26s cubic-bezier(.2, .7, .3, 1),
+                opacity 0.18s ease;
+}
+.game-card.gc-open .gc-more { flex-basis: 100%; opacity: 1; }
+
+.gc-block {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    height: 100%;
+    min-height: 0;
+    padding-top: 2px;
+}
+
+.gc-line {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    /* Разделительной линии тут больше нет: она превращала строку в
+       подобие заголовка секции и добавляла ей веса, которого у неё
+       быть не должно. */
+    margin-bottom: 1px;
+}
+
+/* Студия — служебная подпись, а не второе название. Раньше шла тем же
+   кеглем и цветом, что и рейтинг, и спорила с названием игры за внимание.
+   Мельче, тусклее, капителью — читается как источник, а не как заголовок. */
+.gc-studio {
+    font-size: 0.68rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--ex-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Рейтинг, наоборот, остаётся заметным — за ним и тянутся глазами */
+.gc-rating { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: 0.78rem; }
+.gc-stars { color: #f5b942; letter-spacing: 0.5px; }
+.gc-rnum { color: var(--ex-text); font-weight: 600; }
+
+.gc-desc {
+    flex: 1;
+    min-height: 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    /* было var(--ex-muted) — на тёмной карточке описание почти сливалось */
+    color: rgba(244, 236, 247, 0.72);
+    display: -webkit-box;
+    /* потолок высокий: реальную высоту ограничивает flex-контейнер,
+       а не число строк — иначе снова получилась бы дырка снизу */
+    -webkit-line-clamp: 7;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+
+/* ── Перелистывание скриншотов ───────────────────────────────────────────
+   Лежат поверх обложки и проявляются по очереди. Обложка остаётся снизу:
+   если скриншот не догрузился, дырки не будет. */
+.gc-shots { position: absolute; inset: 0; pointer-events: none; }
+.gc-shots img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+.gc-shots img.on { opacity: 1; }
+
+/* Скриншоты бывают светлыми, а поверх обложки лежат бейджи «Новинка»/«Скоро».
+   Лёгкое затемнение снизу держит их читаемыми на любом кадре. */
+.game-card.gc-open .game-image::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 42%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent);
+    pointer-events: none;
+}
+
 .game-info {
     display: flex;
     flex-direction: column;
     gap: 7px;
     padding: 11px 12px 12px;
     flex: 1;
+    min-height: 0;
 }
 
+/* Было -webkit-line-clamp: 1 — длинное название обрезалось многоточием,
+   хотя свободное место на раскрытой карточке есть. */
+.game-card.gc-open .game-title {
+    font-size: 1.05rem;
+    -webkit-line-clamp: 2;
+}
+.game-card.gc-open .game-info { gap: 8px; padding: 13px 14px 14px; }
+
+/* flex: 0 0 auto здесь принципиально.
+   .game-info — флекс-колонка, а у .gc-more стоит flex-basis: 100%, то есть
+   он запрашивает всю высоту контейнера. Сумма запросов превышает реальную
+   высоту, и flex-shrink (по умолчанию 1 У ВСЕХ) ужимает КАЖДЫЙ элемент
+   пропорционально — включая название. Оно теряло около 12px, а
+   overflow:hidden от line-clamp срезал то, что не поместилось.
+   Запрещаем сжимать название и строку с жанром: пусть ужимается только
+   блок описания, он для этого и растягивался. */
 .game-title {
+    flex: 0 0 auto;
     font-size: 0.95rem;
     font-weight: 500;
-    line-height: 1.3;
+    line-height: 1.35;
     color: var(--ex-text);
     /* две строки вместо обрезки в одну: длинные названия читаемы */
     display: -webkit-box;
@@ -458,6 +618,7 @@ main { display: block; }
 }
 
 .game-meta {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -670,6 +831,11 @@ html {
     .search-bar { flex: 1 1 100%; }
 
     .games-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .game-card { aspect-ratio: 10 / 11; }
+    /* Раскрытие по наведению — приём для мыши. На тач-устройствах курсор
+       не «задерживается», а тап должен открывать игру, а не превью. */
+    .game-card.gc-open .gc-inner { inset: 0; box-shadow: inset 0 0 0 1px var(--ex-card-line); }
+    .game-card.gc-open .gc-more { grid-template-rows: 0fr; opacity: 0; }
     .game-title { font-size: 0.85rem; }
     .game-info { padding: 9px 10px 10px; gap: 5px; }
 }
@@ -681,7 +847,7 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .games-grid, .game-card, .search-bar { transition: none; }
+    .games-grid, .game-card, .search-bar, .gc-inner, .gc-more, .gc-shots img { transition: none; }
     .shake-it { animation: none; }
 }
 
@@ -694,3 +860,50 @@ html {
     80%      { transform: translateX(2px)  rotate(0.5deg); }
 }
 .shake-it { animation: shakeSearch 0.3s ease-in-out; }
+
+
+/* ── Маячок подгрузки ─────────────────────────────────────────────────────
+   Место, по появлению которого в зоне видимости грузится следующая порция.
+   Пока порция едет — крутится индикатор; в остальное время блок занимает
+   немного высоты, чтобы наблюдателю было что пересекать. */
+.grid-sentinel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 18px 0 6px;
+    font-size: 0.84rem;
+    color: var(--ex-muted);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.grid-sentinel[hidden] { display: none; }
+.grid-sentinel.is-loading { opacity: 1; }
+
+.gs-spinner {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    border: 2px solid var(--ex-chip-line);
+    border-top-color: var(--ex-accent);
+    animation: exSpin 0.8s linear infinite;
+}
+@keyframes exSpin { to { transform: rotate(360deg); } }
+
+/* Запасной вариант для браузеров без IntersectionObserver — обычная кнопка */
+.grid-sentinel.is-manual {
+    opacity: 1;
+    cursor: pointer;
+    border-radius: var(--ex-radius-sm);
+    background: var(--ex-chip);
+    border: 1px solid var(--ex-chip-line);
+    margin-top: 12px;
+}
+.grid-sentinel.is-manual .gs-spinner { display: none; }
+.grid-sentinel.is-manual .gs-text::before { content: "Показать ещё"; }
+.grid-sentinel.is-manual .gs-text { font-size: 0; }
+.grid-sentinel.is-manual .gs-text::before { font-size: 0.86rem; color: var(--ex-text); }
+
+@media (prefers-reduced-motion: reduce) {
+    .gs-spinner { animation: none; }
+}
