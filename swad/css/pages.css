@@ -609,12 +609,12 @@ body.moonlight-theme .btn-secondary:hover {
     position: fixed;
     background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(8px);
-    padding: 7px 12px;
+    padding: 14px 20px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 1000;
     text-align: -webkit-center;
-    max-width: 180px;
+    max-width: 260px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
     transition: opacity 0.2s;
     transition: left 0.2s ease, top 0.2s ease;
@@ -643,7 +643,7 @@ body.moonlight-theme .btn-secondary:hover {
 
 .vote-btn {
     display: inline-block;
-    padding: 4px 13px;
+    padding: 5px 15px;
     background: #c32178;
     color: #fff;
     border-radius: 30px;
@@ -653,6 +653,7 @@ body.moonlight-theme .btn-secondary:hover {
     border: none;
     cursor: pointer;
     font-family: 'PixelizerBold', sans-serif;
+    margin-top: 10px;
 }
 
 .vote-btn:hover {
@@ -690,14 +691,14 @@ body.moonlight-theme .vote-btn:hover {
 /* ── Крестик ── */
 .vote-toggle {
     position: absolute;
-    top: 8px;
+    top: 3px;
     right: 10px;
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.5);
     font-size: 14px;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 1px 0px;
     line-height: 1;
     transition: color 0.2s;
 }
@@ -712,7 +713,7 @@ body.moonlight-theme .vote-btn:hover {
     width: 100%;
     max-width: 180px;
     height: auto;
-    margin: 6px auto 10px;
+    margin: 5px auto 5px;
     border-radius: 8px;
     object-fit: cover;
 }

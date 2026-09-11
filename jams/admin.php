@@ -554,7 +554,7 @@ require_once('../swad/static/elements/header.php');
     const m = document.getElementById('ej-msg');
     m.textContent = r.message || (r.success ? 'Добавлен' : 'Ошибка');
     m.style.color = r.success ? '#5b8def' : '#f88';
-    if (r.success) loadJudges(JAM_ID);
+    if (r.success) location.reload();   // источник истины — $experts с сервера
 }
 
     async function removeJudge(userIdOrJudge) {
@@ -886,7 +886,13 @@ require_once('../swad/static/elements/header.php');
 
     // ── INIT ──
     loadUsers();
-    if (JAM_ID) loadJudges(JAM_ID);
+    /* loadJudges() здесь убран намеренно.
+       В #judges-list писали ДВЕ функции из разных источников:
+         loadJudges()   -> get_jam_judges.php -> таблица jam_judges
+         renderJudges() -> $experts           -> таблица sprint_experts
+       Выигрывала та, что отработает последней, поэтому список жюри показывал
+       то одно, то другое, а чаще «Жюри пока не назначено».
+       Голосование читает только sprint_experts — оставляем один источник. */
     renderDashboard();
     renderAnalytics2();
     renderParticipants();

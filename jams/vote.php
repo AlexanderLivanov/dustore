@@ -15,6 +15,10 @@
 date_default_timezone_set('Europe/Moscow');
 require_once('../swad/config.php');
 session_start();
+/* Токен нужен save_vote.php и set_expert_pick.php. Эти два файла надо
+   выкатывать ВМЕСТЕ с этим: сначала контроллеры, потом страница — иначе
+   между заливками голосование будет отвечать «сессия устарела». */
+require_once('../swad/controllers/csrf.php');
 
 /* ─────────────────────────────  НАСТРОЙКИ ВИДИМОСТИ  ─────────────────────────────
  * Кто и когда видит результаты. Держим здесь, чтобы не искать по коду.
@@ -492,6 +496,7 @@ require_once('../swad/static/elements/header.php');
     'use strict';
 
     const SPRINT_ID    = <?= (int)$sprint_id ?>;
+    const CSRF         = <?= json_encode(csrf_token()) ?>;
     const MY_EXPERT_ID = <?= (int)($myExpertId ?? 0) ?>;
     const LIVE_COUNT   = <?= (int)$liveCount ?>;
     const BUDGET       = <?= (int)$budget ?>;
@@ -508,7 +513,7 @@ require_once('../swad/static/elements/header.php');
         toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
     }
 
-    /* ── Правила ─────────────────────────────────────────────────────────── */
+
     const rules = document.getElementById('rules');
     const rulesBtn = document.getElementById('rulesBtn');
     if (rules && rulesBtn) {
@@ -521,7 +526,7 @@ require_once('../swad/static/elements/header.php');
     if (!grid) return;
     const cards = Array.from(grid.querySelectorAll('.jv-card'));
 
-    /* ── Фильтры и поиск ─────────────────────────────────────────────────── */
+
     const searchInput = document.getElementById('gameSearch');
     const searchBar   = document.getElementById('searchBar');
     const searchClear = document.getElementById('searchClear');
@@ -586,16 +591,15 @@ require_once('../swad/static/elements/header.php');
         });
     }
 
-    /* ── Открытие работы разблокирует оценку ─────────────────────────────── */
-    /* Делегат вместо inline-onclick на каждой ссылке: карточек бывает много,
-       а обработчик нужен один. */
+
     document.addEventListener('click', e => {
         const link = e.target.closest('[data-open]');
         if (!link) return;
         const gid = parseInt(link.dataset.open, 10);
         fetch('/swad/controllers/jams/jam_play.php', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+            body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid, csrf: CSRF })
         }).catch(() => {});
         unlock(gid);
     });
@@ -617,10 +621,7 @@ require_once('../swad/static/elements/header.php');
         apply();
     }
 
-    /* ── Оценка в один клик ──────────────────────────────────────────────── */
-    /* Раньше было: выбрать в <select>, потом нажать «Отдать», потом «Отменить»
-       отдельной кнопкой. Три элемента и два клика на каждую работу. Теперь
-       цифра сразу отправляется, 0 — снятие голоса. */
+
     let busy = false;
     grid.addEventListener('click', async e => {
         const btn = e.target.closest('[data-vote]');
@@ -636,8 +637,9 @@ require_once('../swad/static/elements/header.php');
 
         try {
             const r = await fetch('/swad/controllers/jams/save_vote.php', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid, points })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+                body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid, points, csrf: CSRF })
             }).then(r => r.json());
 
             if (!r.success) {
@@ -691,7 +693,7 @@ require_once('../swad/static/elements/header.php');
         apply();
     }
 
-    /* ── Выбор эксперта ──────────────────────────────────────────────────── */
+
     grid.addEventListener('click', async e => {
         const btn = e.target.closest('[data-pick]');
         if (!btn) return;
@@ -699,8 +701,10 @@ require_once('../swad/static/elements/header.php');
         const on  = btn.classList.contains('active');
         try {
             const r = await fetch('/swad/controllers/jams/set_expert_pick.php', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid, expert_id: MY_EXPERT_ID, action: on ? 'remove' : 'add' })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+                body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid, expert_id: MY_EXPERT_ID,
+                                       action: on ? 'remove' : 'add', csrf: CSRF })
             }).then(r => r.json());
             if (!r.success) { showToast(r.message || 'Ошибка', true); return; }
             btn.classList.toggle('active', !on);
@@ -709,7 +713,7 @@ require_once('../swad/static/elements/header.php');
         } catch (err) { showToast('Сеть недоступна', true); }
     });
 
-    /* ── Раскрытие списка голосов ────────────────────────────────────────── */
+
     grid.addEventListener('click', e => {
         const btn = e.target.closest('[data-votes]');
         if (!btn) return;

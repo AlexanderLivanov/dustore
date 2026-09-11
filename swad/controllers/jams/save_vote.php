@@ -13,6 +13,7 @@
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../csrf.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function v_out(array $d, int $code = 200): void {
@@ -25,6 +26,17 @@ $userId = (int)($_SESSION['USERDATA']['id'] ?? 0);
 if (!$userId) v_out(['success' => false, 'message' => 'Нужна авторизация'], 403);
 
 $in        = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+
+/* Проверка происхождения запроса.
+   Без неё голосование подделывается тривиально: строка выше принимает и
+   обычный $_POST, то есть достаточно формы на стороннем сайте с полями
+   sprint_id / game_id / points. Залогиненный посетитель открывает страницу —
+   и его 10 баллов уходят на нужную злоумышленнику работу, молча.
+   JSON-тело тоже обходится через enctype="text/plain", так что «у нас же
+   JSON» защитой не является. */
+if (!csrf_valid($in)) {
+    v_out(['success' => false, 'message' => 'Сессия устарела, обновите страницу'], 403);
+}
 $sprint_id = (int)($in['sprint_id'] ?? 0);
 $game_id   = (int)($in['game_id'] ?? 0);
 $points    = (int)($in['points'] ?? 0);
@@ -56,10 +68,15 @@ if (!$votingOpen) {
     v_out(['success' => false, 'message' => $msg], 409);
 }
 
-// Организатор джема не голосует.
-// if ((int)$sprint['host_user_id'] === $userId && !$forceOpen) {
-//     v_out(['success' => false, 'message' => 'Организатор джема не может голосовать'], 403);
-// }
+/* Организатор джема не голосует.
+   Проверка была закомментирована — видимо, на время отладки. Страница
+   голосования кнопки ему не показывает, но эндпоинт принимал запрос:
+   организатор мог отдать голоса в собственном джеме прямым вызовом.
+   Раскомментировано. JAM_VOTING_FORCE_OPEN по-прежнему снимает ограничение,
+   если константа включена для отладки. */
+if ((int)$sprint['host_user_id'] === $userId && !$forceOpen) {
+    v_out(['success' => false, 'message' => 'Организатор джема не может голосовать'], 403);
+}
 
 /* ─────────────── Игра должна быть в этом джеме и допущена ─────────────── */
 $g = $pdo->prepare("
@@ -146,6 +163,12 @@ if ((int)$lk->fetchColumn() !== 1) {
 
 $fail = null;
 
+/* try/finally: если INSERT упадёт, GET_LOCK останется висеть до закрытия
+   соединения. Обычно это конец запроса, но при использовании постоянных
+   соединений (PDO::ATTR_PERSISTENT) замок пережил бы запрос и заблокировал
+   этому же пользователю следующий голос. */
+try {
+
 $b = $pdo->prepare("SELECT COALESCE(SUM(points),0) FROM jam_votes
                     WHERE sprint_id = ? AND user_id = ? AND game_id <> ?");
 $b->execute([$sprint_id, $userId, $game_id]);
@@ -187,7 +210,9 @@ if ($usedOther + $points > $budget) {
     ]);
 }
 
-$pdo->prepare("SELECT RELEASE_LOCK(?)")->execute([$lockKey]);
+} finally {
+    $pdo->prepare("SELECT RELEASE_LOCK(?)")->execute([$lockKey]);
+}
 
 if ($fail) v_out($fail, 409);
 

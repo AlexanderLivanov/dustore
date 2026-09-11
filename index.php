@@ -796,7 +796,7 @@ mobile_redirect_if_needed();
     <div class="vote-label">Идёт голосование:</div>
     <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
     <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
-    <a href="/jams/vote" class="vote-btn pixel-title">Оценить билды</a>
+    <a href="/jams/vote?id=12" class="vote-btn pixel-title">Оценить билды</a>
 </div>
 
 <script>
