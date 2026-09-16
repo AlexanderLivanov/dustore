@@ -343,29 +343,8 @@ $stmt->execute([
                 </div>
             </div>
             <div class="section right-section">
-<<<<<<< HEAD
-                <button id="userChip" class="user-chip" type="button"
-                    aria-haspopup="true" aria-expanded="false" aria-label="Меню профиля">
-                    <span class="user-chip__ava">
-                        <?php if ($u_avatar): ?>
-                            <img src="<?= htmlspecialchars($u_avatar) ?>" alt="">
-                        <?php else: ?>
-                            <span class="user-chip__letter"><?= htmlspecialchars(mb_strtoupper(mb_substr($u_name, 0, 1))) ?></span>
-                        <?php endif; ?>
-                        <?php if ($u_auth && !empty($unread_notif_count)): ?>
-                            <span class="user-chip__dot"></span>
-                        <?php endif; ?>
-                    </span>
-                    <span class="user-chip__name"><?= htmlspecialchars($u_name) ?></span>
-                    <svg class="user-chip__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
-                        <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
-=======
                 <!-- Бейдж версии (чуть левее от кнопок) -->
                 <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.0.0-beta</span>
->>>>>>> ba3303ee84ac39b297fa0b2ab160fa8c0c84a319
                 <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
