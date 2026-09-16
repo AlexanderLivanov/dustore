@@ -4,9 +4,6 @@ CDN
 vendor
 media.
 preset
-magazine
-newmagazine
-feed.php
 swad/pass.php
 db_migration.php
 webplayerdata/*

@@ -76,6 +76,7 @@ foreach ($page['items'] as $game) {
         'path_to_cover' => $game['path_to_cover'] ?? '',
         'price'         => (float)($game['price'] ?? 0),
         'downloads'     => (int)($game['downloads'] ?? 0),
+        'downloads_30d' => (int)($game['downloads_30d'] ?? 0),
         'release_date'  => $game['release_date'] ?? '',
         'updated_at'    => $game['updated_at'] ?? '',
         'age_rating'    => (int)($game['age_rating'] ?? 0),

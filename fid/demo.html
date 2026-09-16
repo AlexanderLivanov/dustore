@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dustore — Media Feed</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0d0911;color:#f4edf5;font-family:Inter,Arial,sans-serif}
+button,input{font:inherit}.top{height:64px;border-bottom:1px solid #2b2130;display:flex;align-items:center;padding:0 28px;gap:28px;position:sticky;top:0;background:#0d0911eF;backdrop-filter:blur(14px);z-index:10}.logo{font-weight:900;letter-spacing:2px;font-size:22px}.logo span{color:#c32178}.search{width:280px;background:#19121d;border:1px solid #2b2130;border-radius:9px;padding:10px 13px;color:#ddd}.nav{margin-left:auto;display:flex;gap:20px;color:#988e9d;font-size:14px}.nav b{color:#fff}.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c32178,#74155d);display:grid;place-items:center;font-weight:800}
+.layout{width:1000px;margin:auto;display:grid;grid-template-columns:170px 650px 150px;gap:24px;padding:25px 0}.side{position:sticky;top:89px;height:max-content}.side a{display:block;padding:11px;color:#988e9d;text-decoration:none;border-radius:8px}.side a.active{background:#1b141e;color:#fff}.new{margin-top:15px!important;background:#c32178!important;color:#fff!important;text-align:center;font-weight:800}
+.tabs{display:flex;border-bottom:1px solid #2b2130;margin-bottom:15px}.tab{padding:13px 18px;background:none;border:0;color:#988e9d;font-weight:700;cursor:pointer}.tab.active{color:#fff;border-bottom:2px solid #c32178}
+.post{background:#151019;border:1px solid #2b2130;border-radius:12px;overflow:hidden;margin-bottom:15px}.head{display:flex;align-items:center;gap:11px;padding:16px 17px 10px}.pa{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#40233f,#c32178);display:grid;place-items:center;font-weight:900}.author{font-weight:800;font-size:14px}.meta{font-size:12px;color:#988e9d;margin-top:3px}.follow{margin-left:auto;background:none;border:1px solid #403244;color:#ddd;border-radius:7px;padding:6px 10px;font-size:12px}.body{padding:3px 17px 16px}.body h2{font-size:18px;margin:7px 0}.body p{color:#d0c8d2;line-height:1.5}.media{margin:0 17px 16px;border-radius:9px;overflow:hidden;background:#09070b;position:relative}.media img,.media video{display:block;width:100%;height:auto;max-height:520px;object-fit:cover}.media video{background:#000}.mute{position:absolute;right:12px;bottom:12px;border:1px solid #ffffff35;background:#09070bb8;color:#fff;border-radius:50%;width:38px;height:38px;cursor:pointer}.progress{height:3px;background:#ffffff12;position:absolute;left:0;right:0;bottom:0}.progress i{display:block;height:100%;width:0;background:#c32178}.actions{border-top:1px solid #2b2130;padding:10px 17px;display:flex;gap:18px;color:#988e9d;font-size:13px}.actions button{background:none;border:0;color:inherit;cursor:pointer}.actions button:hover{color:#fff}.composer{background:#151019;border:1px solid #2b2130;border-radius:12px;padding:15px;margin-bottom:15px}.composer textarea{width:100%;height:65px;background:#100c13;border:0;resize:none;color:#fff;outline:none;font-size:14px}.composer-bottom{display:flex;align-items:center;border-top:1px solid #2b2130;padding-top:12px;margin-top:8px}.attach{border:1px solid #3a2c3c;background:#1b141e;border-radius:7px;padding:8px 11px;cursor:pointer}.publish{margin-left:auto;border:0;background:#c32178;padding:9px 15px;border-radius:7px;font-weight:800;cursor:pointer}.preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.thumb{width:82px;height:82px;border-radius:7px;overflow:hidden;position:relative;background:#09070b}.thumb img,.thumb video{width:100%;height:100%;object-fit:cover}.remove{position:absolute;right:3px;top:3px;width:20px;height:20px;border:0;border-radius:50%;background:#000b;color:#fff;cursor:pointer}.uploadbar{font-size:12px;color:#988e9d;margin-top:8px;display:none}.uploadbar.show{display:block}.right .mini{border:1px solid #2b2130;border-radius:9px;padding:12px;color:#988e9d;font-size:12px}.right b{color:#fff}.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,80px);background:#f4edf5;color:#150c17;padding:10px 15px;border-radius:8px;font-weight:700;transition:.2s}.toast.show{transform:translate(-50%,0)}
+@media(max-width:900px){.layout{width:auto;margin:0 15px;display:block}.side,.right,.search{display:none}.nav{gap:10px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="logo">DUS<span>T</span>ORE</div><input class="search" placeholder="Поиск игр, людей, студий"><nav class="nav"><b>Лента</b><span>Игры</span><span>Jams</span><span>Сообщения</span></nav><div class="avatar">D</div></header>
+
+<main class="layout">
+<aside class="side"><a class="active">⌁ Лента</a><a>★ Популярное</a><a>◉ Мои игры</a><a>◌ Друзья</a><a>⚡ Челленджи</a><a>◈ Spaces</a><a class="new">+ Новый пост</a></aside>
+
+<section>
+<div class="tabs"><button class="tab active">Лента</button><button class="tab">Популярное</button></div>
+
+<div class="composer">
+<textarea id="text" placeholder="Что происходит?"></textarea>
+<input id="files" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple hidden>
+<div id="preview" class="preview"></div>
+<div id="uploadbar" class="uploadbar">Загрузка: <b id="uploadtext">0%</b></div>
+<div class="composer-bottom"><button class="attach" onclick="document.getElementById('files').click()">＋ Фото / видео</button><button class="publish" onclick="publish()">Опубликовать</button></div>
+</div>
+
+<div id="feed">
+<article class="post">
+<div class="head"><div class="pa">N</div><div><div class="author">Nuclear Muffin</div><div class="meta">студия · 24 мин назад · Space: К.О.Н.Т.У.Р.</div></div><button class="follow">Подписаться</button></div>
+<div class="body"><h2>Мы наконец поняли, зачем здесь нужен этот лифт</h2><p>Спойлер: игроки нашли применение раньше нас.</p></div>
+<div class="media"><video muted loop playsinline preload="metadata" src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video><button class="mute" onclick="toggleMute(this)">🔇</button><div class="progress"><i></i></div></div>
+<div class="actions"><button>♡ 184</button><button>◌ 32</button><button>↗ Поделиться</button></div>
+</article>
+
+<article class="post">
+<div class="head"><div class="pa">A</div><div><div class="author">Антон К.</div><div class="meta">игрок · 1 ч назад · Space: Iron Orchard</div></div><button class="follow">Подписаться</button></div>
+<div class="body"><h2>Этот момент я пересматривал раз пять</h2><p>Пытался пройти комнату без урона. Получилось случайно.</p></div>
+<div class="media"><img src="https://picsum.photos/seed/dustore-demo/1000/650" loading="lazy" alt=""><button class="mute" style="display:none">🔇</button></div>
+<div class="actions"><button>♡ 927</button><button>◌ 71</button><button>↗ Поделиться</button></div>
+</article>
+
+<article class="post">
+<div class="head"><div class="pa">F</div><div><div class="author">Frog Factory</div><div class="meta">студия · 3 ч назад · обновление игры</div></div><button class="follow">✓ Вы подписаны</button></div>
+<div class="body"><h2>Версия 0.8.0 уже здесь</h2><p>Добавили новый район, 14 предметов и переработали боёвку.</p></div>
+<div class="media"><video muted loop playsinline preload="metadata" src="https://www.w3schools.com/html/mov_bbb.mp4"></video><button class="mute" onclick="toggleMute(this)">🔇</button><div class="progress"><i></i></div></div>
+<div class="actions"><button>♡ 341</button><button>◌ 48</button><button>▣ Changelog</button></div>
+</article>
+</div>
+</section>
+
+<aside class="right"><div class="mini"><b>Лента</b><br><br>Видео начинают играть сами, когда попадают в область просмотра. Звук всегда выключен.</div></aside>
+</main>
+<div id="toast" class="toast"></div>
+
+<script>
+const selected=[];
+const files=document.getElementById('files');
+files.addEventListener('change',()=>{
+ for(const file of files.files) {
+   if(selected.length>=8) break;
+   if(!file.type.startsWith('image/')&&!file.type.startsWith('video/')) continue;
+   if(file.size>500*1024*1024) continue;
+   selected.push(file);
+ }
+ files.value='';
+ renderPreview();
+});
+
+function renderPreview(){
+ const box=document.getElementById('preview');box.innerHTML='';
+ selected.forEach((file,i)=>{
+   const el=document.createElement('div');el.className='thumb';
+   const media=file.type.startsWith('video/')?document.createElement('video'):document.createElement('img');
+   media.src=URL.createObjectURL(file);
+   if(media.tagName==='VIDEO'){media.muted=true;media.playsInline=true}
+   el.appendChild(media);
+   const x=document.createElement('button');x.className='remove';x.textContent='×';x.onclick=()=>{selected.splice(i,1);renderPreview()};
+   el.appendChild(x);box.appendChild(el);
+ });
+}
+
+async function uploadFile(file,index,total){
+ const init=new FormData();
+ init.append('name',file.name);
+ init.append('mime',file.type);
+ init.append('size',file.size);
+
+ const r=await fetch('/swad/controllers/media_upload.php?action=init',{method:'POST',body:init});
+ const data=await r.json();
+ if(!data.ok) throw new Error(data.error||'UPLOAD_INIT_FAILED');
+
+ await new Promise((resolve,reject)=>{
+   const xhr=new XMLHttpRequest();
+   xhr.open('PUT',data.url,true);
+   xhr.setRequestHeader('Content-Type',file.type);
+   xhr.upload.onprogress=e=>{
+     if(e.lengthComputable){
+       const current=(index+e.loaded/e.total)/total*100;
+       document.getElementById('uploadtext').textContent=Math.round(current)+'%';
+     }
+   };
+   xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new Error('S3_UPLOAD_FAILED'));
+   xhr.onerror=()=>reject(new Error('NETWORK_ERROR'));
+   xhr.send(file);
+ });
+ return {key:data.key,url:data.public_url,type:file.type,name:file.name,size:file.size};
+}
+
+async function publish(){
+ const text=document.getElementById('text').value.trim();
+ if(!text&&!selected.length){toast('Добавь текст или медиа');return}
+ const bar=document.getElementById('uploadbar');bar.classList.add('show');
+ try{
+   const media=[];
+   for(let i=0;i<selected.length;i++) media.push(await uploadFile(selected[i],i,selected.length));
+   addPost(text,media);
+   selected.length=0;renderPreview();document.getElementById('text').value='';
+   bar.classList.remove('show');document.getElementById('uploadtext').textContent='0%';
+   toast('Пост опубликован');
+ }catch(e){
+   bar.classList.remove('show');toast('Ошибка загрузки: '+e.message);
+ }
+}
+
+function addPost(text,media){
+ const article=document.createElement('article');article.className='post';
+ article.innerHTML='<div class="head"><div class="pa">D</div><div><div class="author">Вы</div><div class="meta">только что</div></div></div>';
+ const body=document.createElement('div');body.className='body';
+ if(text){const p=document.createElement('p');p.textContent=text;body.appendChild(p)}
+ article.appendChild(body);
+ media.forEach(m=>{
+   const wrap=document.createElement('div');wrap.className='media';
+   const el=document.createElement(m.type.startsWith('video/')?'video':'img');
+   el.src=m.url;el.loading='lazy';
+   if(el.tagName==='VIDEO'){el.muted=true;el.loop=true;el.playsInline=true;el.preload='metadata'}
+   wrap.appendChild(el);
+   if(el.tagName==='VIDEO'){
+     const b=document.createElement('button');b.className='mute';b.textContent='🔇';b.onclick=()=>toggleMute(b);wrap.appendChild(b);
+     const pr=document.createElement('div');pr.className='progress';pr.innerHTML='<i></i>';wrap.appendChild(pr);
+   }
+   article.appendChild(wrap);
+ });
+ const actions=document.createElement('div');actions.className='actions';actions.innerHTML='<button>♡ 0</button><button>◌ 0</button><button>↗ Поделиться</button>';article.appendChild(actions);
+ document.getElementById('feed').prepend(article);
+ observeVideos();
+}
+
+function toggleMute(button){
+ const video=button.parentElement.querySelector('video');
+ video.muted=!video.muted;button.textContent=video.muted?'🔇':'🔊';
+ if(!video.muted) video.volume=.7;
+}
+
+function observeVideos(){
+ const videos=document.querySelectorAll('.media video');
+ const observer=new IntersectionObserver(entries=>{
+   entries.forEach(entry=>{
+     const video=entry.target;
+     if(entry.isIntersecting&&entry.intersectionRatio>=.55){
+       video.play().catch(()=>{});
+     }else{
+       video.pause();
+     }
+   });
+ },{threshold:[0,.55,1]});
+ videos.forEach(video=>{
+   if(video.dataset.observed) return;
+   video.dataset.observed='1';
+   observer.observe(video);
+   video.addEventListener('timeupdate',()=>{
+     const i=video.parentElement.querySelector('.progress i');
+     if(i&&video.duration)i.style.width=(video.currentTime/video.duration*100)+'%';
+   });
+ });
+}
+observeVideos();
+
+function toast(t){const x=document.getElementById('toast');x.textContent=t;x.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>x.classList.remove('show'),1800)}
+</script>
+</body>
+</html>
