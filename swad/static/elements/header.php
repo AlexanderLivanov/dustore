@@ -342,7 +342,7 @@ $stmt->execute([
             </div>
             <div class="section right-section">
                 <!-- Бейдж версии (чуть левее от кнопок) -->
-                <span class="version-badge">1.0.0-beta</span>
+                <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.0.0-beta</span>
                 <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
