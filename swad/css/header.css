@@ -1216,7 +1216,7 @@ body.dusty-open {
     font-size: 10px;
     letter-spacing: 0.3px;
     user-select: none;
-    cursor: default;
+    cursor: pointer;
     position: relative;
     overflow: hidden;
     transform-style: preserve-3d;
@@ -1247,7 +1247,7 @@ body.moonlight-theme .version-badge {
     background-position: calc(50% + var(--dx, 0%)) 0;
     opacity: 0;
     transition: opacity 0.01s ease;
-    pointer-events: none;
+    /* pointer-events: none; */
     z-index: 2;
     mix-blend-mode: overlay;
     border-radius: inherit;

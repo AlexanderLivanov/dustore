@@ -342,7 +342,7 @@ $stmt->execute([
             </div>
             <div class="section right-section">
                 <!-- Бейдж версии (чуть левее от кнопок) -->
-                <span class="version-badge">1.0.0-beta</span>
+                <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.0.0-beta</span>
                 <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
@@ -400,7 +400,7 @@ $stmt->execute([
                 </a>
             </li>
             <li>
-                <a class="theme-dropdown__item" href="#" data-theme="madness" role="menuitem">
+                <a class="theme-dropdown__item" style="display: none;" href="#" data-theme="madness" role="menuitem">
                     <span class="theme-dropdown__swatch" data-theme="madness"></span>
                     Madness
                 </a>
