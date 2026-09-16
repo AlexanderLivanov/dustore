@@ -1651,7 +1651,7 @@ const pagesTopics = {
             const logos = {
                 pinksparkle: '/swad/static/img/LogoV3-Appolo_mini.png',
                 moonlight:   '/swad/static/img/LogoV3-Moonlight_mini.png',
-                madness:     '/swad/static/img/LogoV3-Madness.png'
+               // madness:     '/swad/static/img/LogoV3-Madness.png'
             };
 
         const icons = {
