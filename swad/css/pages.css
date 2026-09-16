@@ -1350,3 +1350,26 @@ body.moonlight-theme .vote-btn.is-tilting {
 
 /* #vote-banner отдельного правила не требует: в его базовом transition
    перечислены только left/top, значит transform меняется мгновенно. */
+
+   /* =============================================================================
+   ТЕМА MADNESS
+   -----------------------------------------------------------------------------
+   Хедер для madness переиспользует стили moonlight — класс moonlight-theme
+   навешивается вместе с madness-theme (см. скрипт темы в header.php). Поэтому
+   здесь только то, что уникально для madness: чисто чёрный фон без картинки.
+   ============================================================================= */
+
+body.madness-theme {
+    background: #000 !important;
+    background-image: none !important;
+    background-attachment: scroll !important;
+}
+
+/* Показываем hellfire только в madness. Сам блок .hellfire-bg объявлен
+   в index.php; по умолчанию он display:none, а тут включаем. */
+.hellfire-bg {
+    display: none;
+}
+body.madness-theme .hellfire-bg {
+    display: block;
+}

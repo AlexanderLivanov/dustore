@@ -370,20 +370,43 @@ $stmt->execute([
 -->
 
 
-                    <!-- Кнопка переключения темы (Appollo / Moonlight) -->
-                    <button class="button" style="padding: 6px;" id="themeToggleBtn">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </button>
+    <!-- Переключатель темы: PinkSparkle / Moonlight / Madness -->
+    <div class="theme-dropdown" id="themeDropdown">
+        <button class="button" style="padding: 6px;" id="themeToggleBtn"
+                aria-haspopup="true" aria-expanded="false" aria-label="Выбор темы">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+        <ul class="theme-dropdown__menu" role="menu">
+            <li>
+                <a class="theme-dropdown__item" href="#" data-theme="pinksparkle" role="menuitem">
+                    <span class="theme-dropdown__swatch" data-theme="pinksparkle"></span>
+                    PinkSparkle
+                </a>
+            </li>
+            <li>
+                <a class="theme-dropdown__item" href="#" data-theme="moonlight" role="menuitem">
+                    <span class="theme-dropdown__swatch" data-theme="moonlight"></span>
+                    Moonlight
+                </a>
+            </li>
+            <li>
+                <a class="theme-dropdown__item" href="#" data-theme="madness" role="menuitem">
+                    <span class="theme-dropdown__swatch" data-theme="madness"></span>
+                    Madness
+                </a>
+            </li>
+        </ul>
+    </div>
                     <button class="button" style="padding: 6px;" id="modeBtn">
                         <svg xmlns="http://www.w3.org/2000/svg"
                             width="24"
@@ -1611,64 +1634,115 @@ const pagesTopics = {
             })();
         </script>
 
-        <script>
-            // Тоггл темы (иконка солнце/луна + localStorage + логотип)
-            (function() {
-                const themeBtn = document.getElementById('themeToggleBtn');
-                const logoImg = document.querySelector('.image img');
-                if (!themeBtn) return;
+<script>
+    // Переключение темы: PinkSparkle / Moonlight / Madness
+    // Хранится в localStorage под ключом dustore_theme.
+    //   - 'pinksparkle' → без классов (это дефолт)
+    //   - 'moonlight'   → body.moonlight-theme
+    //   - 'madness'     → body.moonlight-theme + body.madness-theme
+    //                     (madness переиспользует хедер от moonlight,
+    //                      но фон и hellfire у него собственные)
+    (function() {
+        const themeBtn = document.getElementById('themeToggleBtn');
+        const themeDropdown = document.getElementById('themeDropdown');
+        const logoImg = document.querySelector('.image img');
+        if (!themeBtn || !themeDropdown) return;
 
-                // Пути к логотипам
-                const logoAppollo = '/swad/static/img/LogoV3-Appolo_mini.png';
-                const logoMoonlight = '/swad/static/img/LogoV3-Moonlight_mini.png';
+            const logos = {
+                pinksparkle: '/swad/static/img/LogoV3-Appolo_mini.png',
+                moonlight:   '/swad/static/img/LogoV3-Moonlight_mini.png',
+                madness:     '/swad/static/img/LogoV3-Madness.png'
+            };
 
-                // Установить иконку и логотип в зависимости от темы
-                function setThemeUI(theme) {
-                    // Меняем иконку кнопки
-                    if (theme === 'moonlight') {
-                        themeBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>`;
-                        // Меняем логотип на лунный
-                        if (logoImg) logoImg.src = logoMoonlight;
-                    } else {
-                        themeBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="5"/>
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                </svg>`;
-                        // Меняем логотип на светлый
-                        if (logoImg) logoImg.src = logoAppollo;
-                    }
-                }
+        const icons = {
+            pinksparkle: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>`,
+            moonlight: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>`,
+            madness: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2c.4 2.8 2.2 4.6 3.9 6.2C17.8 10 19 11.8 19 14a7 7 0 1 1-14 0c0-2.4 1.4-4.4 3.2-6.1C9.9 6.5 11.4 4.6 12 2z"/>
+                <path d="M12 11c.3 1.2 1 2 1.9 2.8.8.7 1.3 1.5 1.3 2.5a3.2 3.2 0 0 1-6.4 0c0-1 .5-1.9 1.4-2.6.8-.7 1.5-1.5 1.8-2.7z" opacity="0.55"/>
+            </svg>`
+        };
 
-                // Загружаем сохранённую тему (по умолчанию 'appollo')
-                const savedTheme = localStorage.getItem('dustore_theme');
-                if (savedTheme === 'moonlight') {
-                    setThemeUI('moonlight');
-                    document.body.classList.add('moonlight-theme');
-                } else {
-                    setThemeUI('appollo');
-                    document.body.classList.remove('moonlight-theme');
-                    if (!savedTheme) localStorage.setItem('dustore_theme', 'appollo');
-                }
+        const VALID = ['pinksparkle', 'moonlight', 'madness'];
 
-                // Клик — переключение
-                themeBtn.addEventListener('click', function() {
-                    const current = localStorage.getItem('dustore_theme');
-                    const newTheme = current === 'moonlight' ? 'appollo' : 'moonlight';
-                    localStorage.setItem('dustore_theme', newTheme);
-                    setThemeUI(newTheme);
-                    document.body.classList.toggle('moonlight-theme', newTheme === 'moonlight');
-                });
-            })();
-        </script>
+        function applyTheme(theme) {
+            document.body.classList.remove('moonlight-theme', 'madness-theme');
+
+            if (theme === 'moonlight') {
+                document.body.classList.add('moonlight-theme');
+            } else if (theme === 'madness') {
+                // madness переиспользует хедер от moonlight — поэтому оба класса
+                document.body.classList.add('moonlight-theme', 'madness-theme');
+            }
+            // pinksparkle = ни одного класса (дефолт)
+
+            if (logoImg && logos[theme]) logoImg.src = logos[theme];
+            themeBtn.innerHTML = icons[theme] || icons.pinksparkle;
+
+            document.querySelectorAll('.theme-dropdown__item').forEach(item => {
+                item.classList.toggle('is-active', item.dataset.theme === theme);
+            });
+
+            // Сообщаем другим модулям на странице (hellfire, parallax и т.п.),
+            // что тема переключилась — им не нужно пересчитывать всё каждый кадр.
+            try {
+                window.dispatchEvent(new CustomEvent('dustore:themechange', {
+                    detail: { theme: theme }
+                }));
+            } catch (e) {}
+        }
+
+        // Миграция со старого ключа 'appollo' → 'pinksparkle'
+        let savedTheme = localStorage.getItem('dustore_theme') || 'pinksparkle';
+        if (savedTheme === 'appollo') savedTheme = 'pinksparkle';
+        if (VALID.indexOf(savedTheme) === -1) savedTheme = 'pinksparkle';
+        localStorage.setItem('dustore_theme', savedTheme);
+
+        applyTheme(savedTheme);
+
+        // Клик по кнопке — на тач-устройствах hover нет, поэтому нужен явный
+        // переключатель. На десктопе это просто дублирующий путь.
+        themeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = themeDropdown.classList.toggle('open');
+            themeBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+
+        // Выбор темы в меню
+        document.querySelectorAll('.theme-dropdown__item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const theme = this.dataset.theme;
+                if (VALID.indexOf(theme) === -1) return;
+                localStorage.setItem('dustore_theme', theme);
+                applyTheme(theme);
+                themeDropdown.classList.remove('open');
+                themeBtn.setAttribute('aria-expanded', 'false');
+            });
+        });
+
+        // Клик вне меню — закрыть
+        document.addEventListener('click', function(e) {
+            if (!themeDropdown.contains(e.target)) {
+                themeDropdown.classList.remove('open');
+                themeBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    })();
+</script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const burger = document.getElementById('burger');

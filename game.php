@@ -18,7 +18,50 @@ if (!$game) { header('Location: /explore'); exit(); }
 
 $viewerStudio = (int)($_SESSION['studio_id'] ?? 0);
 $isAdminView  = ((int)($_SESSION['USERDATA']['global_role'] ?? 0)) === -1;
-$isOwnerView  = $isAdminView || ($viewerStudio > 0 && (int)($game['developer'] ?? 0) === $viewerStudio);
+$viewerUserId = (int)($_SESSION['USERDATA']['id'] ?? 0);
+$gameStudio   = (int)($game['developer'] ?? 0);
+
+/* Было: владение определялось ТОЛЬКО по $_SESSION['studio_id'].
+   Эта переменная ставится при выборе студии в консоли разработчика
+   (/devs/select) и живёт в рамках сессии. Кто зашёл на сайт обычным входом
+   и не заглядывал в консоль, студии в сессии не имеет — и собственная
+   неопубликованная игра для него «чужая»: редирект на витрину, ни страницы
+   билда, ни отзывов, ни кнопки «Опубликовать».
+   Отсюда жалоба «режим разработчика куда-то делся»: он не делся, он
+   зависел от того, заходил ли человек в консоль в этой же сессии.
+
+   Теперь принадлежность берётся из БД — владелец студии или её сотрудник.
+   Сессионная переменная осталась как быстрый путь: если она есть и совпадает,
+   в базу не ходим вовсе. */
+$isOwnerView = $isAdminView
+            || ($viewerStudio > 0 && $gameStudio === $viewerStudio)
+            || ($viewerUserId > 0 && $gameStudio > 0
+                && viewer_owns_studio($pdo, $viewerUserId, $gameStudio));
+
+/**
+ * Владелец студии или её сотрудник.
+ * staff.telegram_id BIGINT против users.telegram_id VARCHAR(32) — джойнить
+ * напрямую нельзя, индекс при неявном касте не используется. Два запроса.
+ */
+function viewer_owns_studio(PDO $pdo, int $userId, int $studioId): bool
+{
+    static $cache = [];
+    $k = "$userId:$studioId";
+    if (isset($cache[$k])) return $cache[$k];
+
+    $o = $pdo->prepare("SELECT 1 FROM studios WHERE id = ? AND owner_id = ? LIMIT 1");
+    $o->execute([$studioId, $userId]);
+    if ($o->fetchColumn()) return $cache[$k] = true;
+
+    $t = $pdo->prepare("SELECT telegram_id FROM users WHERE id = ? LIMIT 1");
+    $t->execute([$userId]);
+    $tg = $t->fetchColumn();
+    if ($tg === false || $tg === null || $tg === '') return $cache[$k] = false;
+
+    $s = $pdo->prepare("SELECT 1 FROM staff WHERE org_id = ? AND telegram_id = ? LIMIT 1");
+    $s->execute([$studioId, $tg]);
+    return $cache[$k] = (bool)$s->fetchColumn();
+}
 
 $isPublished  = strtolower($game['status'] ?? '') === 'published';
 $isHidden     = !empty($game['hidden']);
@@ -48,8 +91,20 @@ if ($jamInfo) {
     $vs    = $jamInfo['voting_start'] ? strtotime($jamInfo['voting_start']) : null;
     $ve    = $jamInfo['voting_end']   ? strtotime($jamInfo['voting_end'])   : null;
     $nowTs = time();
-    $windowOpen = (!$vs || $vs <= $nowTs) && (!$ve || $nowTs <= $ve);
-    $isJamVisible = $modOk && $windowOpen;
+    /* Было: $windowOpen с ВЕРХНЕЙ границей по voting_end.
+       Работа джема почти всегда лежит со status='draft' — в магазин её не
+       публикуют. Значит после окончания голосования $storeVisible = false
+       и $isJamVisible = false одновременно, страница уходила редиректом
+       на /explore. Именно это и видели «отдельные люди»: у них страницы
+       работ джема, окно которого уже закрылось, открывали витрину.
+       У админа всё работало, потому что $isOwnerView обходит проверку.
+
+       Ссылки на такие страницы живут в результатах джема, в анонсах и в
+       чужих сообщениях — закрывать их по таймеру нельзя. Оставляем нижнюю
+       границу (до старта голосования работу показывать рано) и убираем
+       верхнюю: открылась однажды — доступна дальше. */
+    $jamStarted   = (!$vs || $vs <= $nowTs);
+    $isJamVisible = $modOk && $jamStarted;
 }
 
 $storeVisible    = $isPublished && !$isHidden;

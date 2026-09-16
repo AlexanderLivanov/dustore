@@ -176,7 +176,7 @@ if (!$sprint_id) {
 }
 
 /* ═════════════════════════════  РЕЖИМ: РАБОТЫ ДЖЕМА  ═════════════════════════════ */
-$s = $pdo->prepare("SELECT id, title, status, host_user_id, jam_end, voting_start, voting_end FROM sprints WHERE id = ?");
+$s = $pdo->prepare("SELECT id, title, status, host_user_id, jam_end, voting_start, voting_end, expert_voting_end FROM sprints WHERE id = ?");
 $s->execute([$sprint_id]);
 $sprint = $s->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) die('Джем не найден');
@@ -193,7 +193,6 @@ $isHost = ((int)$sprint['host_user_id'] === $userId);
 $votingOpen = (!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd);
 $revealed   = !$vStart || $vStart <= $now;
 $votingOver = $vEnd && $now > $vEnd;
-$canVote    = !$isHost && $votingOpen;
 
 $showTotals = SHOW_TOTALS_DURING_VOTING || !$votingOpen;
 $showNames  = SHOW_VOTER_NAMES === 'always'
@@ -203,6 +202,21 @@ $es = $pdo->prepare("SELECT id FROM sprint_experts WHERE sprint_id = ? AND user_
 $es->execute([$sprint_id, $userId]);
 $myExpertId = $es->fetchColumn() ?: null;
 $iAmExpert  = (bool)$myExpertId;
+
+/* ── Продлённое окно для экспертов ─────────────────────────────────────────
+   Общее голосование закрывается по voting_end, но жюри нередко доставляет
+   баллы позже. Срок хранится в sprints.expert_voting_end и задаётся на
+   каждый джем отдельно: NULL — поведение как раньше, окно закрывается для
+   всех одновременно.
+
+   $canVote считается ПОСЛЕ определения $iAmExpert — раньше он стоял выше,
+   и продление было бы невозможно в принципе. */
+$eEnd = !empty($sprint['expert_voting_end']) ? strtotime($sprint['expert_voting_end']) : null;
+$expertWindow = $iAmExpert && $eEnd
+             && (!$vStart || $vStart <= $now)
+             && $now <= $eEnd;
+
+$canVote = !$isHost && ($votingOpen || $expertWindow);
 
 /* Свои студии — чтобы автор не голосовал за собственную работу.
    Покрывает владельца студии; участники команды через staff сюда не попадают,
@@ -315,7 +329,10 @@ require_once('../swad/static/elements/header.php');
         <div class="jv-head">
             <div>
                 <h1 class="jv-title">Оцените работы</h1>
-                <div class="jv-sub"><?= h($sprint['title']) ?><?php if ($vEnd): ?> · голосование до <?= date('d.m.Y H:i', $vEnd) ?><?php endif; ?></div>
+                <div class="jv-sub"><?= h($sprint['title']) ?><?php
+                    if (!$votingOpen && $expertWindow) echo ' · оценка жюри до ' . date('d.m.Y H:i', $eEnd);
+                    elseif ($vEnd)                     echo ' · голосование до ' . date('d.m.Y H:i', $vEnd);
+                ?></div>
             </div>
             <a href="/jams/participant.php?sprint_id=<?= (int)$sprint_id ?>" class="jv-back">← К странице джема</a>
         </div>
@@ -331,6 +348,9 @@ require_once('../swad/static/elements/header.php');
                 <p><b>Сначала откройте работу</b> — оценка разблокируется после этого.</p>
                 <p><b>Оценку можно менять</b> до конца голосования: нажмите другую цифру, 0 — снять голос.</p>
                 <p><b>За свою работу голосовать нельзя.</b></p>
+                <?php if ($iAmExpert && $eEnd): ?>
+                    <p><b>Для жюри:</b> оценки принимаются до <?= date('d.m.Y H:i', $eEnd) ?>, даже после окончания общего голосования.</p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -345,9 +365,13 @@ require_once('../swad/static/elements/header.php');
             <div class="jv-stats">
                 <?php if ($isHost): ?>
                     <div class="jv-note">Вы организатор джема — голосовать нельзя, результаты видны.</div>
-                <?php elseif (!$votingOpen): ?>
+                <?php elseif (!$canVote): ?>
                     <div class="jv-note"><?= $votingOver ? 'Голосование завершено.' : 'Голосование ещё не открыто.' ?> Результаты ниже.</div>
                 <?php else: ?>
+                    <?php if (!$votingOpen && $expertWindow): ?>
+                        <?php /* Общее голосование закрыто, но у жюри свой срок. */ ?>
+                        <div class="jv-note warn">Общее голосование завершено. Вам как эксперту оценки доступны до <?= date('d.m.Y H:i', $eEnd) ?>.</div>
+                    <?php endif; ?>
                     <div class="jv-stat">
                         <span class="jv-stat-label">Осталось баллов</span>
                         <span class="jv-stat-value"><b id="remaining"><?= $remaining ?></b> из <?= $budget ?><?= $iAmExpert ? ' · эксперт' : '' ?></span>
