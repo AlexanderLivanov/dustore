@@ -18,6 +18,494 @@ mobile_redirect_if_needed();
     <?php require_once('swad/controllers/ymcounter.php'); ?>
 </head>
 
+<!-- ===== HELLFIRE BACKGROUND ===== -->
+<style>
+.hellfire-bg {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 65vh;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  display: none;
+  /* пламя реагирует на курсор, поэтому слой должен перерисовываться
+     синхронно с движением мыши, но сам события не перехватывает */
+}
+
+body.madness-theme .hellfire-bg {
+  display: block;
+}
+
+/* тёплое свечение по низу экрана — то, что «идёт» от огня */
+.hellfire-bg::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16vh;
+  background: linear-gradient(to top,
+              rgba(255, 70, 10, 0.16) 0%,
+              rgba(255, 40, 0, 0.06) 40%,
+              transparent 100%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  animation: hellAmbient 4.2s ease-in-out infinite;
+}
+
+@keyframes hellAmbient {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+
+.hellfire-bg__inner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  will-change: transform;
+  /* начальная позиция: огонь спрятан почти целиком, торчат только кончики */
+  transform: translateY(var(--fire-shift, 92%));
+}
+
+.hellfire-bg__inner canvas {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* мягкий ореол вокруг самого пламени — не «шар», а свет, что даёт огонь */
+.hellfire-bg__halo {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  bottom: -4%;
+  height: 70%;
+  background: radial-gradient(ellipse 65% 60% at 50% 100%,
+              rgba(255, 90, 20, 0.28) 0%,
+              rgba(255, 40, 0, 0.10) 45%,
+              transparent 78%);
+  pointer-events: none;
+  animation: hellHalo 3.2s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes hellHalo {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+
+/* Поднимаем основной контент над фоном. Плавающие элементы
+   (header, vote-banner, quick-access, Дасти) уже имеют z-index
+   выше 2, поэтому их трогать не нужно. */
+main, .footer {
+  position: relative;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hellfire-bg::after,
+  .hellfire-bg__halo { animation: none; }
+}
+</style>
+
+<div class="hellfire-bg" aria-hidden="true">
+  <div class="hellfire-bg__inner" id="hellfireBgInner">
+    <div class="hellfire-bg__halo"></div>
+    <canvas id="hellfireBgCanvas" width="240" height="120"></canvas>
+  </div>
+</div>
+
+<script>
+(function () {
+  const W = 240, H = 120;
+  const canvas = document.getElementById('hellfireBgCanvas');
+  const inner  = document.getElementById('hellfireBgInner');
+  if (!canvas || !inner) return;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // ---- Палитра огня: 64 ступени от прозрачного к белому ----
+  const PAL = new Uint8Array(64 * 4);
+  (function buildPalette() {
+    for (let i = 0; i < 64; i++) {
+      const t = i / 63;
+      let r, g, b, a;
+      if (t < 0.05) { r = 0; g = 0; b = 0; a = 0; }
+      else if (t < 0.20) {
+        const k = (t - 0.05) / 0.15;
+        r = Math.round(70 * k); g = Math.round(8 * k); b = 0; a = Math.round(255 * k);
+      } else if (t < 0.40) {
+        const k = (t - 0.20) / 0.20;
+        r = Math.round(70 + 155 * k); g = Math.round(8 + 32 * k); b = 0; a = 255;
+      } else if (t < 0.62) {
+        const k = (t - 0.40) / 0.22;
+        r = 255; g = Math.round(40 + 140 * k); b = 0; a = 255;
+      } else if (t < 0.82) {
+        const k = (t - 0.62) / 0.20;
+        r = 255; g = Math.round(180 + 60 * k); b = Math.round(20 * k); a = 255;
+      } else {
+        const k = (t - 0.82) / 0.18;
+        r = 255; g = Math.round(240 + 15 * k); b = Math.round(20 + 235 * k); a = 255;
+      }
+      PAL[i * 4]     = r;
+      PAL[i * 4 + 1] = g;
+      PAL[i * 4 + 2] = b;
+      PAL[i * 4 + 3] = a;
+    }
+  })();
+
+  // ---- Профиль основания: три языка пламени ----
+  // Каждый — гауссов бугор. Сумма даёт три «горячих точки» на нижней строке,
+  // из которых вырастают отдельные языки. Значения подобраны так, чтобы
+  // языки не слипались в один костёр и между ними были видны «проталины».
+  const SPOTS = [
+    { cx: W * 0.20, w: W * 0.14, amp: 1.00 },
+    { cx: W * 0.50, w: W * 0.17, amp: 1.15 },
+    { cx: W * 0.80, w: W * 0.14, amp: 0.95 }
+  ];
+  function baseDensity(x) {
+    let sum = 0;
+    for (let i = 0; i < SPOTS.length; i++) {
+      const s = SPOTS[i];
+      const d = (x - s.cx) / s.w;
+      sum += s.amp * Math.exp(-d * d);
+    }
+    return sum > 1 ? 1 : sum;
+  }
+
+  const fire = new Float32Array(W * H);
+  const img = ctx.createImageData(W, H);
+  const data = img.data;
+
+  const embers = [];
+  const sparks = [];
+
+  // ---- Мышь: позиция в координатах канваса ----
+  let mouseX = -9999;
+  let mouseY = -9999;
+  let mouseIn = false;
+
+  function updateMouseFromEvent(clientX, clientY) {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const cx = (clientX - r.left) / r.width * W;
+    const cy = (clientY - r.top) / r.height * H;
+    // считаем «внутри», если курсор не слишком далеко от канваса —
+    // так пламя начинает реагировать ещё до того, как мышь войдёт в него
+    if (cx > -40 && cx < W + 40 && cy > -40 && cy < H + 40) {
+      mouseX = cx;
+      mouseY = cy;
+      mouseIn = true;
+    } else {
+      mouseIn = false;
+    }
+  }
+
+  window.addEventListener('mousemove', function (e) {
+    updateMouseFromEvent(e.clientX, e.clientY);
+  }, { passive: true });
+
+  window.addEventListener('mouseleave', function () {
+    mouseIn = false;
+  });
+
+  window.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches[0]) {
+      updateMouseFromEvent(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', function () {
+    mouseIn = false;
+  });
+
+  // ---- Частицы ----
+  // Угольки: большинство — серый пепел разной степени выгорания.
+  // Часть — «бродяги», которые долго кружат по нижней части экрана.
+  function spawnEmber() {
+    const spot = SPOTS[Math.floor(Math.random() * SPOTS.length)];
+    const cx = spot.cx + (Math.random() - 0.5) * W * 0.08;
+    const y  = H - 1 - Math.random() * 10;
+
+    // ~14% — «бродяги», летают долго и по сторонам
+    const isWanderer = Math.random() < 0.14;
+
+    if (isWanderer) {
+      embers.push({
+        x: cx, y: y,
+        vx: (Math.random() - 0.5) * 22,
+        vy: -8 - Math.random() * 18,
+        life: 4.5 + Math.random() * 3.5,
+        age: 0,
+        size: Math.random() < 0.35 ? 2 : 1,
+        phase: Math.random() * Math.PI * 2,
+        flick: 2 + Math.random() * 3.5,
+        wander: true,
+        shade: Math.random()   // 0..1 — разброс яркости серого
+      });
+    } else {
+      embers.push({
+        x: cx, y: y,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -22 - Math.random() * 42,
+        life: 1.6 + Math.random() * 2.6,
+        age: 0,
+        size: Math.random() < 0.22 ? 2 : 1,
+        phase: Math.random() * Math.PI * 2,
+        flick: 4 + Math.random() * 7,
+        wander: false,
+        shade: Math.random()
+      });
+    }
+  }
+
+  function spawnSpark() {
+    const spot = SPOTS[Math.floor(Math.random() * SPOTS.length)];
+    const cx = spot.cx + (Math.random() - 0.5) * W * 0.07;
+    const y  = H - 1 - Math.random() * 5;
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.15;
+    const sp = 30 + Math.random() * 110;
+    sparks.push({
+      x: cx, y: y,
+      vx: Math.cos(ang) * sp,
+      vy: Math.sin(ang) * sp,
+      life: 0.22 + Math.random() * 0.6,
+      age: 0
+    });
+  }
+
+function updateParticles(dt) {
+    for (let i = embers.length - 1; i >= 0; i--) {
+      const e = embers[i];
+      e.age += dt;
+      e.phase += dt * e.flick;
+
+      if (e.wander) {
+        // «бродяги»: почти не набирают высоту, качаются по сторонам,
+        // мягко отскакивают от краёв канваса вместо того, чтобы улетать
+        e.vy -= 3 * dt;
+        e.x += (e.vx + Math.sin(e.phase * 0.8) * 26) * dt;
+        e.y += e.vy * dt;
+
+        if (e.x < 3 && e.vx < 0) e.vx = -e.vx * 0.85;
+        if (e.x > W - 3 && e.vx > 0) e.vx = -e.vx * 0.85;
+        if (e.y < 3 && e.vy < 0) e.vy = -e.vy * 0.7;
+      } else {
+        // обычный пепел: поднимается вверх, слегка колеблется
+        e.vy -= 7 * dt;
+        e.x += (e.vx + Math.sin(e.phase) * 8) * dt;
+        e.y += e.vy * dt;
+      }
+
+      if (e.age >= e.life || e.y < -3) embers.splice(i, 1);
+    }
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.age += dt;
+      s.vy += 80 * dt;
+      s.vx *= 0.955;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      if (s.age >= s.life) sparks.splice(i, 1);
+    }
+  }
+
+
+  function drawParticles() {
+    for (const e of embers) {
+      const t = 1 - e.age / e.life;   // 1 = свежий, 0 = угасающий
+      const flick = 0.62 + 0.38 * Math.sin(e.phase * 2.1);
+      const a = Math.max(0, t * t * flick);
+
+      // Серый тон: свежий уголь светлый, к концу — тёмный пепел.
+      // shade даёт разброс ±15% яркости, чтобы не было одинаковых точек.
+      let base = t > 0.7
+        ? 200 + 45 * ((t - 0.7) / 0.3)      // 200 → 245, свежий светлый
+        : 55 + 145 * (t / 0.7);             //  55 → 200, угасающий тёмный
+      base *= 0.85 + 0.3 * e.shade;
+      if (base > 255) base = 255;
+      if (base < 25)  base = 25;
+
+      // Пока уголь ещё горячий (t>0.6) — лёгкая тёплая примесь,
+      // к концу уходит в чистый холодный серый.
+      const warm = Math.max(0, (t - 0.6) / 0.4);
+      const r = Math.min(255, Math.round(base + warm * 75));
+      const g = Math.min(255, Math.round(base + warm * 108));
+      const b = Math.max(0, Math.round(base - warm * 1002));
+
+      ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + a.toFixed(3) + ')';
+      ctx.fillRect(e.x | 0, e.y | 0, e.size, e.size);
+    }
+
+    // Искры — оставляем тёплыми: это именно огоньки, а не пепел
+    for (const s of sparks) {
+      const t = 1 - s.age / s.life;
+      const a = t * t;
+      const g = Math.round(190 + 65 * t);
+      const b = Math.round(140 * t);
+      ctx.fillStyle = 'rgba(255,' + g + ',' + b + ',' + a.toFixed(3) + ')';
+      ctx.fillRect(s.x | 0, s.y | 0, 1, 1);
+    }
+  }
+
+  // ---- Сам огонь ----
+  function updateFire(t) {
+    const breathe = 0.85 + 0.15 * Math.sin(t * 2.1) + 0.05 * Math.sin(t * 7.3);
+
+    // Нижняя строка — три гауссовых источника + лёгкий шум.
+    // Шум нужен, чтобы пламя «дышало» и не выглядело нарисованным.
+    const bottom = (H - 1) * W;
+    for (let x = 0; x < W; x++) {
+      const d = baseDensity(x);
+      fire[bottom + x] = d * (200 + 55 * Math.random()) * breathe;
+    }
+
+    // Реакция на мышь: считаем заранее, где курсор и активен ли он.
+    // Сила влияния гасится квадратом расстояния — по краям огня мышь
+    // не ощущается вообще.
+    const mx = mouseIn ? mouseX : -9999;
+    const my = mouseIn ? mouseY : -9999;
+    const INFLUENCE_R = 42;
+    const INFLUENCE_R2 = INFLUENCE_R * INFLUENCE_R;
+
+    for (let y = 0; y < H - 1; y++) {
+      const row = y * W;
+      const below = (y + 1) * W;
+      // покачивание: у каждого ряда своя фаза, поэтому язык не «единый
+      // столб», а живой, слегка изгибающийся вверх
+      const sway = Math.sin(t * 1.35 + y * 0.24) * 1.7;
+      // боковое охлаждение — держит пламя узким, сужает кверху
+      const lateralK = 0.018;
+
+      for (let x = 0; x < W; x++) {
+        let localX = x + sway;
+
+        // отталкивание от курсора: каждая ячейка «убегает» от мыши по
+        // горизонтали. Знак подбираем так, чтобы пламя именно отклонялось
+        // в сторону от курсора, а не тянулось к нему.
+        if (mouseIn) {
+          const dmx = x - mx;
+          const dmy = y - my;
+          const dist2 = dmx * dmx + dmy * dmy * 0.55;
+          if (dist2 < INFLUENCE_R2) {
+            const k = 1 - dist2 / INFLUENCE_R2;   // 1 в центре, 0 на краю
+            const strength = k * k * 5.5;         // квадрат — резче в центре
+            // знак dmx: если мышь слева, dmx > 0, толкаем вправо (+)
+            localX -= Math.sign(dmx) * strength;
+          }
+        }
+
+        let sx = Math.round(localX);
+        if (sx < 0) sx = 0; else if (sx > W - 1) sx = W - 1;
+
+        const vMid = fire[below + sx];
+        const vL = fire[below + (sx > 0 ? sx - 1 : 0)];
+        const vR = fire[below + (sx < W - 1 ? sx + 1 : W - 1)];
+
+        // классическое усреднение 3-в-1 + остывание
+        let v = (vMid * 3 + vL + vR) * 0.2;
+        v -= 2.6 + Math.random() * 7.4;
+
+        // боковое сужение
+        const dxn = (x - W / 2) / (W / 2);
+        v -= dxn * dxn * lateralK * 240;
+
+        fire[row + x] = v > 0 ? v : 0;
+      }
+    }
+  }
+
+  function renderFire() {
+    const total = W * H;
+    for (let i = 0; i < total; i++) {
+      let v = fire[i];
+      if (v < 0) v = 0; else if (v > 255) v = 255;
+      const idx = (v | 0) >> 2;
+      const p = idx * 4;
+      const o = i * 4;
+      data[o]     = PAL[p];
+      data[o + 1] = PAL[p + 1];
+      data[o + 2] = PAL[p + 2];
+      data[o + 3] = PAL[p + 3];
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // ---- Параллакс по скроллу ----
+  // Верх страницы: пламя спрятано почти целиком (92% вниз).
+  // Низ страницы: пламя поднимается до 0% и раскрывается полностью.
+  // progress считается по общему скроллу документа, поэтому высота
+  // страницы на позицию не влияет.
+  let targetShift = 92;
+  let currentShift = 92;
+
+  function computeShift() {
+    const doc = document.documentElement;
+    const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+    let p = window.scrollY / maxScroll;
+    if (p < 0) p = 0; else if (p > 1) p = 1;
+    // лёгкая кривая: сначала пламя поднимается медленнее, ближе к низу
+    // страницы — быстрее, чтобы раскрыться заметно и «вовремя»
+    const eased = p * p * 0.35 + p * 0.65;
+    targetShift = 92 * (1 - eased);
+  }
+
+  window.addEventListener('scroll', computeShift, { passive: true });
+  window.addEventListener('resize', computeShift, { passive: true });
+  computeShift();
+
+  // ---- Главный цикл ----
+  let last = performance.now();
+  let emberAcc = 0, sparkAcc = 0;
+  const EMBER_RATE = 60;
+  const SPARK_RATE = 15;
+
+  function frame(now) {
+    let dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.05) dt = 0.05;
+
+    if (!document.body.classList.contains('madness-theme')) {
+        requestAnimationFrame(frame);
+        return;
+    }
+
+    // параллакс: сглаживаем рывки, чтобы даже при быстром скролле
+    // огонь поднимался плавно, а не дёргался по кадрам
+    currentShift += (targetShift - currentShift) * 0.14;
+    inner.style.setProperty('--fire-shift', currentShift.toFixed(2) + '%');
+
+    const t = now / 1000;
+
+    updateFire(t);
+    renderFire();
+
+    emberAcc += dt * EMBER_RATE;
+    while (emberAcc >= 1) { spawnEmber(); emberAcc -= 1; }
+    sparkAcc += dt * SPARK_RATE;
+    while (sparkAcc >= 1) { spawnSpark(); sparkAcc -= 1; }
+
+    updateParticles(dt);
+    drawParticles();
+
+    requestAnimationFrame(frame);
+  }
+
+  last = performance.now();
+  requestAnimationFrame(frame);
+})();
+</script>
+<!-- ===== /HELLFIRE BACKGROUND ===== -->
+
 <body>
 
 
@@ -29,7 +517,7 @@ mobile_redirect_if_needed();
             </div>
             <div class="container">
                 <div class="hero-content">
-                    <h1 class="pixel-title">DUSTORE — открытая open-source платформа для игр и джемов</h1>
+                    <h1 class="pixel-title">DUSTORE — свободная open-source платформа для игр и джемов</h1>
                     <p style="font-weight: 300; opacity: 0.8;">
     Мы верим, что творчество не зависит от того, где вы находитесь и кто вы есть. Здесь можно создавать, делиться и находить единомышленников.
 </p>
@@ -69,7 +557,7 @@ mobile_redirect_if_needed();
                             <h2>Джем DUSTORE X К.О.Н.Т.У.Р</h2>
                             <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 15 августа по 15 сентября.</p>
                             <a href="https://t.me/+T5CajyXvgvpmMjRi" target="_blank" class="btn">Группа для участников джема</a>
-                            <a href="https://dustore.ru/jams/vote" target="_blank" class="btn">Оценить игры</a>
+                            <a href="https://dustore.ru/jams/vote" target="_blank" class="btn">Посмотреть игры</a>
                         </div>
                     </div>
 
@@ -793,10 +1281,10 @@ mobile_redirect_if_needed();
 
 <div id="vote-banner" data-collapsed="false">
     <button id="vote-toggle-btn" class="vote-toggle" aria-label="Свернуть">✕</button>
-    <div class="vote-label">Идёт голосование:</div>
+    <div class="vote-label">Голосование завершено/проверка результатов:</div>
     <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
     <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
-    <a href="/jams/vote" class="vote-btn pixel-title">Оценить билды</a>
+    <a href="/jams/vote?id=12" class="vote-btn pixel-title">Посмотреть оценки</a>
 </div>
 
 <script>
@@ -1402,7 +1890,7 @@ body.moonlight-theme .quick-access-container {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: var(--primary, #c32178);
+    background: rgba(0, 0, 0, 0.4);
     border: none;
     cursor: pointer;
     display: flex;
@@ -1428,8 +1916,8 @@ body.moonlight-theme .quick-access-container {
 }
 
 body.moonlight-theme .quick-menu-toggle {
-    border: 3px solid rgba(255, 255, 255, 0.08);
-    background: #3e7ad900;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 body.moonlight-theme .quick-menu-toggle:hover {

@@ -221,13 +221,51 @@ $stmt->execute([
 </head>
 
 <body>
-    <?php
-    $u_data   = $_SESSION['USERDATA'] ?? [];
-    $u_auth   = !empty($u_data['id']);
-    $u_name   = $u_auth ? $u_data['username'] : 'Войти';
-    $u_avatar = $u_data['profile_picture'] ?? '';
 
-    ?>
+<!-- Штора перехода между страницами. См. комментарий в header.css. -->
+<div id="pageTransition" class="page-transition" aria-hidden="true"></div>
+<script>
+  // Если пришли сюда после клика по ссылке — ставим штору в полное состояние
+  // ДО первой отрисовки. Иначе браузер успеет мигнуть новой страницей.
+  (function () {
+    try {
+      var ts = sessionStorage.getItem('dustore_page_transition_ts');
+      // Флаг живёт 5 секунд: если что-то пошло не так и страница не
+      // открылась, при следующем заходе штра не выскочит из ниоткуда.
+      if (!ts || Date.now() - parseInt(ts, 10) > 5000) return;
+      sessionStorage.removeItem('dustore_page_transition_ts');
+
+      var ov = document.getElementById('pageTransition');
+      if (!ov) return;
+
+      // Мгновенно — полное состояние. Никакой анимации, никакой вспышки.
+      ov.classList.add('is-instant', 'is-active');
+      void ov.offsetWidth; // форсируем reflow, чтобы состояние зафиксировалось
+
+      // На DOMContentLoaded начинаем растворение.
+      document.addEventListener('DOMContentLoaded', function () {
+        ov.classList.remove('is-instant');
+        ov.classList.add('is-revealing');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            ov.classList.remove('is-active');
+            // Убираем is-revealing после завершения, чтобы не висел зря
+            setTimeout(function () {
+              ov.classList.remove('is-revealing');
+            }, 300);
+          });
+        });
+      }, { once: true });
+    } catch (e) {}
+  })();
+</script>
+    <!-- Кастомное контекстное меню удалено.
+         Оно перехватывало правый клик на ВСЕЙ странице через
+         document.addEventListener('contextmenu', e => e.preventDefault()),
+         то есть отбирало у человека копирование, «открыть в новой вкладке»,
+         проверку орфографии и вставку в поля ввода — взамен предлагая
+         три пункта, из которых работал не каждый. Подменять базовое
+         поведение браузера на весь документ нельзя. -->
     <div class="header-wrapper">
         <div class="header">
             <!-- Единая поверхность хедера: фон + backdrop-filter + силуэт (clip-path). -->
@@ -305,6 +343,7 @@ $stmt->execute([
                 </div>
             </div>
             <div class="section right-section">
+<<<<<<< HEAD
                 <button id="userChip" class="user-chip" type="button"
                     aria-haspopup="true" aria-expanded="false" aria-label="Меню профиля">
                     <span class="user-chip__ava">
@@ -323,6 +362,10 @@ $stmt->execute([
                             stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </button>
+=======
+                <!-- Бейдж версии (чуть левее от кнопок) -->
+                <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.0.0-beta</span>
+>>>>>>> ba3303ee84ac39b297fa0b2ab160fa8c0c84a319
                 <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
@@ -350,20 +393,43 @@ $stmt->execute([
                     -->
 
 
-                    <!-- Кнопка переключения темы (Appollo / Moonlight) -->
-                    <button class="button" style="padding: 6px;" id="themeToggleBtn">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </button>
+    <!-- Переключатель темы: PinkSparkle / Moonlight / Madness -->
+    <div class="theme-dropdown" id="themeDropdown">
+        <button class="button" style="padding: 6px;" id="themeToggleBtn"
+                aria-haspopup="true" aria-expanded="false" aria-label="Выбор темы">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+        <ul class="theme-dropdown__menu" role="menu">
+            <li>
+                <a class="theme-dropdown__item" href="#" data-theme="pinksparkle" role="menuitem">
+                    <span class="theme-dropdown__swatch" data-theme="pinksparkle"></span>
+                    PinkSparkle
+                </a>
+            </li>
+            <li>
+                <a class="theme-dropdown__item" href="#" data-theme="moonlight" role="menuitem">
+                    <span class="theme-dropdown__swatch" data-theme="moonlight"></span>
+                    Moonlight
+                </a>
+            </li>
+            <li>
+                <a class="theme-dropdown__item" style="display: none;" href="#" data-theme="madness" role="menuitem">
+                    <span class="theme-dropdown__swatch" data-theme="madness"></span>
+                    Madness
+                </a>
+            </li>
+        </ul>
+    </div>
                     <button class="button" style="padding: 6px;" id="modeBtn">
                         <svg xmlns="http://www.w3.org/2000/svg"
                             width="24"
@@ -637,42 +703,53 @@ $stmt->execute([
             });
 
             (function() {
-                const headerButtons = document.querySelectorAll('.header .button');
-                if (!headerButtons.length) return;
+                // Добавляем .version-badge в список
+                const items = document.querySelectorAll('.header .button, .version-badge');
+                if (!items.length) return;
 
-                function resetTilt(btn) {
-                    btn.style.transform = '';
+                function resetTilt(el) {
+                    el.style.transform = '';
+                    el.style.removeProperty('--dx');
                 }
 
                 function handleMouseMove(e) {
-                    const btn = e.currentTarget;
-                    const rect = btn.getBoundingClientRect();
+                    const el = e.currentTarget;
+                    const rect = el.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-
 
                     const nx = (x / rect.width) * 2 - 1;
                     const ny = (y / rect.height) * 2 - 1;
 
-                    const maxAngle = 15; // мягкий наклон
+                    const maxAngle = 15;
                     const rotateY = maxAngle * nx;
                     const rotateX = -maxAngle * ny;
 
-
-                    const translateY = -3; // в пикселях
+                    const translateY = -3;
                     const scale = 1.1;
 
+                    el.style.transform =
+                        `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
 
-                    btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
+                    // Для блика (--dx)
+                    el.style.setProperty('--dx', (nx * 50) + '%');
                 }
 
                 function handleMouseLeave(e) {
                     resetTilt(e.currentTarget);
                 }
 
-                headerButtons.forEach(btn => {
-                    btn.addEventListener('mousemove', handleMouseMove);
-                    btn.addEventListener('mouseleave', handleMouseLeave);
+                items.forEach(el => {
+                    el.addEventListener('mousemove', handleMouseMove);
+                    el.addEventListener('mouseleave', handleMouseLeave);
+                    // Добавляем класс is-tilting при наведении (для активации блика)
+                    el.addEventListener('mouseenter', function() {
+                        this.classList.add('is-tilting');
+                    });
+                    // Убираем класс при уходе
+                    el.addEventListener('mouseleave', function() {
+                        this.classList.remove('is-tilting');
+                    });
                 });
             })();
 
@@ -1572,64 +1649,115 @@ $stmt->execute([
             })();
         </script>
 
-        <script>
-            // Тоггл темы (иконка солнце/луна + localStorage + логотип)
-            (function() {
-                const themeBtn = document.getElementById('themeToggleBtn');
-                const logoImg = document.querySelector('.image img');
-                if (!themeBtn) return;
+<script>
+    // Переключение темы: PinkSparkle / Moonlight / Madness
+    // Хранится в localStorage под ключом dustore_theme.
+    //   - 'pinksparkle' → без классов (это дефолт)
+    //   - 'moonlight'   → body.moonlight-theme
+    //   - 'madness'     → body.moonlight-theme + body.madness-theme
+    //                     (madness переиспользует хедер от moonlight,
+    //                      но фон и hellfire у него собственные)
+    (function() {
+        const themeBtn = document.getElementById('themeToggleBtn');
+        const themeDropdown = document.getElementById('themeDropdown');
+        const logoImg = document.querySelector('.image img');
+        if (!themeBtn || !themeDropdown) return;
 
-                // Пути к логотипам
-                const logoAppollo = '/swad/static/img/LogoV3-Appolo_mini.png';
-                const logoMoonlight = '/swad/static/img/LogoV3-Moonlight_mini.png';
+            const logos = {
+                pinksparkle: '/swad/static/img/LogoV3-Appolo_mini.png',
+                moonlight:   '/swad/static/img/LogoV3-Moonlight_mini.png',
+                madness:     '/swad/static/img/LogoV3-Madness.png'
+            };
 
-                // Установить иконку и логотип в зависимости от темы
-                function setThemeUI(theme) {
-                    // Меняем иконку кнопки
-                    if (theme === 'moonlight') {
-                        themeBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>`;
-                        // Меняем логотип на лунный
-                        if (logoImg) logoImg.src = logoMoonlight;
-                    } else {
-                        themeBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="5"/>
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                </svg>`;
-                        // Меняем логотип на светлый
-                        if (logoImg) logoImg.src = logoAppollo;
-                    }
-                }
+        const icons = {
+            pinksparkle: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>`,
+            moonlight: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>`,
+            madness: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2c.4 2.8 2.2 4.6 3.9 6.2C17.8 10 19 11.8 19 14a7 7 0 1 1-14 0c0-2.4 1.4-4.4 3.2-6.1C9.9 6.5 11.4 4.6 12 2z"/>
+                <path d="M12 11c.3 1.2 1 2 1.9 2.8.8.7 1.3 1.5 1.3 2.5a3.2 3.2 0 0 1-6.4 0c0-1 .5-1.9 1.4-2.6.8-.7 1.5-1.5 1.8-2.7z" opacity="0.55"/>
+            </svg>`
+        };
 
-                // Загружаем сохранённую тему (по умолчанию 'appollo')
-                const savedTheme = localStorage.getItem('dustore_theme');
-                if (savedTheme === 'moonlight') {
-                    setThemeUI('moonlight');
-                    document.body.classList.add('moonlight-theme');
-                } else {
-                    setThemeUI('appollo');
-                    document.body.classList.remove('moonlight-theme');
-                    if (!savedTheme) localStorage.setItem('dustore_theme', 'appollo');
-                }
+        const VALID = ['pinksparkle', 'moonlight', 'madness'];
 
-                // Клик — переключение
-                themeBtn.addEventListener('click', function() {
-                    const current = localStorage.getItem('dustore_theme');
-                    const newTheme = current === 'moonlight' ? 'appollo' : 'moonlight';
-                    localStorage.setItem('dustore_theme', newTheme);
-                    setThemeUI(newTheme);
-                    document.body.classList.toggle('moonlight-theme', newTheme === 'moonlight');
-                });
-            })();
-        </script>
+        function applyTheme(theme) {
+            document.body.classList.remove('moonlight-theme', 'madness-theme');
+
+            if (theme === 'moonlight') {
+                document.body.classList.add('moonlight-theme');
+            } else if (theme === 'madness') {
+                // madness переиспользует хедер от moonlight — поэтому оба класса
+                document.body.classList.add('moonlight-theme', 'madness-theme');
+            }
+            // pinksparkle = ни одного класса (дефолт)
+
+            if (logoImg && logos[theme]) logoImg.src = logos[theme];
+            themeBtn.innerHTML = icons[theme] || icons.pinksparkle;
+
+            document.querySelectorAll('.theme-dropdown__item').forEach(item => {
+                item.classList.toggle('is-active', item.dataset.theme === theme);
+            });
+
+            // Сообщаем другим модулям на странице (hellfire, parallax и т.п.),
+            // что тема переключилась — им не нужно пересчитывать всё каждый кадр.
+            try {
+                window.dispatchEvent(new CustomEvent('dustore:themechange', {
+                    detail: { theme: theme }
+                }));
+            } catch (e) {}
+        }
+
+        // Миграция со старого ключа 'appollo' → 'pinksparkle'
+        let savedTheme = localStorage.getItem('dustore_theme') || 'pinksparkle';
+        if (savedTheme === 'appollo') savedTheme = 'pinksparkle';
+        if (VALID.indexOf(savedTheme) === -1) savedTheme = 'pinksparkle';
+        localStorage.setItem('dustore_theme', savedTheme);
+
+        applyTheme(savedTheme);
+
+        // Клик по кнопке — на тач-устройствах hover нет, поэтому нужен явный
+        // переключатель. На десктопе это просто дублирующий путь.
+        themeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = themeDropdown.classList.toggle('open');
+            themeBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+
+        // Выбор темы в меню
+        document.querySelectorAll('.theme-dropdown__item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const theme = this.dataset.theme;
+                if (VALID.indexOf(theme) === -1) return;
+                localStorage.setItem('dustore_theme', theme);
+                applyTheme(theme);
+                themeDropdown.classList.remove('open');
+                themeBtn.setAttribute('aria-expanded', 'false');
+            });
+        });
+
+        // Клик вне меню — закрыть
+        document.addEventListener('click', function(e) {
+            if (!themeDropdown.contains(e.target)) {
+                themeDropdown.classList.remove('open');
+                themeBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    })();
+</script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
 
@@ -1808,6 +1936,99 @@ $stmt->execute([
                 }
             })();
         </script>
+
+<script>
+// =============================================================================
+// Перехват навигации → «штора» → плавный переход между страницами (MPA).
+// Ловит и <a href>, и <button onclick="location.href=...">.
+// =============================================================================
+(function () {
+  var overlay = document.getElementById('pageTransition');
+  if (!overlay) return;
+
+  var isTransitioning = false;
+
+  function isSameOrigin(href) {
+    try { return new URL(href, location.href).origin === location.origin; }
+    catch (e) { return false; }
+  }
+
+  function urlFromOnclickAttr(onclick) {
+    var m = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+    return m ? m[1] : null;
+  }
+
+  // Возвращает абсолютный URL цели или null, если перехватывать не надо.
+  function resolveNavTarget(e) {
+    // 1) обычная <a href>
+    var a = e.target.closest('a[href]');
+    if (a) {
+      if (a.target === '_blank') return null;
+      if (a.hasAttribute('download')) return null;
+      if (!isSameOrigin(a.href)) return null;
+      var u = new URL(a.href, location.href);
+      // Тот же путь + query, отличается только hash → не наш случай
+      if (u.pathname === location.pathname && u.search === location.search) return null;
+      return u.href;
+    }
+    // 2) <button onclick="location.href='...'"> и любые [onclick] с href
+    var el = e.target.closest('[onclick]');
+    if (el) {
+      var onclick = el.getAttribute('onclick') || '';
+      var url = urlFromOnclickAttr(onclick);
+      if (!url) return null;
+      if (!isSameOrigin(url)) return null;
+      var abs = new URL(url, location.href).href;
+      if (abs === location.href) return null;
+      return abs;
+    }
+    return null;
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (isTransitioning) return;
+
+    var target = resolveNavTarget(e);
+    if (!target) return;
+
+    // Стоп оригинальной навигации и inline-обработчикам (button onclick=...).
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    isTransitioning = true;
+
+    // 1. Плавно уходим в тёмный блюр.
+    overlay.classList.add('is-active');
+
+    // 2. Параллельно ставим флаг для новой страницы (с меткой времени).
+    try { sessionStorage.setItem('dustore_page_transition_ts', String(Date.now())); } catch (err) {}
+
+    // 3. Когда штора полностью встала — навигируем.
+    var navigated = false;
+    function go() {
+      if (navigated) return;
+      navigated = true;
+      location.href = target;
+    }
+    overlay.addEventListener('transitionend', function onEnd(ev) {
+      if (ev.propertyName !== 'opacity') return;
+      overlay.removeEventListener('transitionend', onEnd);
+      go();
+    });
+    // Страховка: если transitionend не пришёл (например, transition отключён
+    // prefers-reduced-motion-ом или свойством) — не ждём вечно.
+    setTimeout(go, 500);
+  }, { capture: true });
+
+  // Возврат через bfcache — сбрасываем всё в исходное.
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    try { sessionStorage.removeItem('dustore_page_transition_ts'); } catch (err) {}
+    overlay.classList.remove('is-active', 'is-instant', 'is-revealing');
+    isTransitioning = false;
+  });
+})();
+</script>
 
 </body>
 

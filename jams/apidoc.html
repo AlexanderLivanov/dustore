@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Jams API — документация · Dustore</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+        :root {
+            --bg: #0d0414;
+            --surface: rgba(255, 255, 255, .035);
+            --border: rgba(255, 255, 255, .09);
+            --p: #c32178;
+            --pl: #e88fc0;
+            --p-d: #74155d;
+            --t: #e8ddf0;
+            --tm: rgba(255, 255, 255, .45);
+            --ts: rgba(255, 255, 255, .72);
+            --ok: #00d68f;
+            --warn: #fbbf24;
+            --err: #ff5f70;
+            --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 24px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--t);
+            font-family: 'Manrope', system-ui, sans-serif;
+            line-height: 1.6;
+            background-image: radial-gradient(900px 500px at 85% -10%, rgba(116, 21, 93, .35), transparent 60%),
+                radial-gradient(700px 400px at -10% 100%, rgba(195, 33, 120, .18), transparent 60%);
+            background-attachment: fixed;
+        }
+
+        .top {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 28px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13, 4, 20, .82);
+            backdrop-filter: blur(12px);
+        }
+
+        .brand {
+            font-weight: 800;
+            font-size: 17px;
+            letter-spacing: -.01em;
+        }
+
+        .brand span {
+            color: var(--p);
+        }
+
+        .top .ver {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--tm);
+        }
+
+        .layout {
+            max-width: 1180px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 236px 1fr;
+            gap: 44px;
+            padding: 38px 28px 90px;
+        }
+
+        @media(max-width:900px) {
+            .layout {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 24px 18px 60px;
+            }
+        }
+
+        nav {
+            position: sticky;
+            top: 78px;
+            align-self: start;
+            font-size: 13.5px;
+        }
+
+        @media(max-width:900px) {
+            nav {
+                position: static;
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 14px 16px;
+                background: var(--surface);
+            }
+        }
+
+        nav .nav-t {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--tm);
+            margin: 18px 0 8px;
+            font-weight: 700;
+        }
+
+        nav .nav-t:first-child {
+            margin-top: 0;
+        }
+
+        nav a {
+            display: block;
+            color: var(--tm);
+            text-decoration: none;
+            padding: 5px 0 5px 12px;
+            border-left: 2px solid transparent;
+            transition: .15s;
+        }
+
+        nav a:hover {
+            color: var(--t);
+            border-left-color: var(--p-d);
+        }
+
+        nav a.on {
+            color: var(--pl);
+            border-left-color: var(--p);
+        }
+
+        h1 {
+            font-size: clamp(1.9rem, 4vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -.03em;
+            line-height: 1.15;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -.02em;
+            margin: 44px 0 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.02rem;
+            font-weight: 700;
+            margin: 26px 0 10px;
+            color: #fff;
+        }
+
+        p {
+            color: var(--ts);
+            margin-bottom: 12px;
+        }
+
+        .lead {
+            font-size: 1.05rem;
+            color: var(--tm);
+            margin-bottom: 26px;
+            max-width: 70ch;
+        }
+
+        a {
+            color: var(--pl);
+        }
+
+        ul {
+            margin: 0 0 14px 20px;
+            color: var(--ts);
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        code {
+            font-family: var(--mono);
+            font-size: .86em;
+            background: rgba(255, 255, 255, .07);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 1px 6px;
+            color: #f6d9ea;
+        }
+
+        pre {
+            position: relative;
+            background: rgba(0, 0, 0, .45);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        pre code {
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 12.5px;
+            line-height: 1.65;
+            color: #d9c8e6;
+        }
+
+        .copy {
+            position: absolute;
+            top: 9px;
+            right: 9px;
+            background: rgba(255, 255, 255, .07);
+            border: 1px solid var(--border);
+            color: var(--tm);
+            border-radius: 7px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            opacity: 0;
+            transition: .15s;
+        }
+
+        pre:hover .copy {
+            opacity: 1;
+        }
+
+        .copy:hover {
+            background: var(--p);
+            color: #fff;
+            border-color: var(--p);
+        }
+
+        .ep {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 11px 14px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .verb {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(0, 214, 143, .14);
+            border: 1px solid rgba(0, 214, 143, .3);
+            color: var(--ok);
+            border-radius: 6px;
+            padding: 2px 9px;
+        }
+
+        .path {
+            font-family: var(--mono);
+            font-size: 13.5px;
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            font-size: 13.5px;
+        }
+
+        th {
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--tm);
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+        }
+
+        td {
+            padding: 9px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, .05);
+            color: var(--ts);
+            vertical-align: top;
+        }
+
+        td:first-child {
+            white-space: nowrap;
+        }
+
+        td code {
+            white-space: nowrap;
+        }
+
+        .ty {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            color: var(--tm);
+        }
+
+        .note {
+            border-radius: 12px;
+            padding: 13px 16px;
+            margin-bottom: 16px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        .note b {
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .n-info {
+            background: rgba(195, 33, 120, .07);
+            border: 1px solid rgba(195, 33, 120, .24);
+            color: var(--ts);
+        }
+
+        .n-info b {
+            color: var(--pl);
+        }
+
+        .n-warn {
+            background: rgba(251, 191, 36, .06);
+            border: 1px solid rgba(251, 191, 36, .22);
+            color: var(--ts);
+        }
+
+        .n-warn b {
+            color: var(--warn);
+        }
+
+        .pill {
+            display: inline-block;
+            font-size: 11px;
+            font-family: var(--mono);
+            border-radius: 20px;
+            padding: 2px 9px;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid var(--border);
+            color: var(--tm);
+        }
+
+        footer {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 22px 28px 60px;
+            color: var(--tm);
+            font-size: 12.5px;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="top">
+        <div class="brand"><span>Dustore</span> / Jams API</div>
+        <div class="ver">v1.1 · обновлено 17.08.2026</div>
+    </header>
+
+    <div class="layout">
+
+        <nav id="nav">
+            <div class="nav-t">Начало</div>
+            <a href="#intro">Обзор</a>
+            <a href="#quick">Быстрый старт</a>
+            <a href="#common">Общие правила</a>
+            <div class="nav-t">Эндпоинты</div>
+            <a href="#list">Список джемов</a>
+            <a href="#stats">Статистика джема</a>
+            <div class="nav-t">Секции ответа</div>
+            <a href="#s-overview">overview</a>
+            <a href="#s-builds">builds</a>
+            <a href="#s-timeline">timeline</a>
+            <a href="#s-teams">teams</a>
+            <a href="#s-tech">tech</a>
+            <a href="#s-geo">geo</a>
+            <a href="#s-activity">activity</a>
+            <a href="#s-leaderboard">leaderboard</a>
+            <div class="nav-t">Прочее</div>
+            <a href="#errors">Ошибки</a>
+            <a href="#method">Методология</a>
+            <a href="#limits">Чего в API нет</a>
+        </nav>
+
+        <main>
+
+            <h1 id="intro">Jams API</h1>
+            <p class="lead">Публичная статистика игровых джемов Dustore: участники, команды, билды, динамика загрузок,
+                движки, жанры и география. Только агрегаты — без персональных данных. Ключ не нужен.</p>
+
+            <div class="ep"><span class="verb">GET</span><span class="path">https://dustore.ru/jams/api</span></div>
+
+            <h2 id="quick">Быстрый старт</h2>
+            <pre><button class="copy">копировать</button><code># все джемы
+curl -s 'https://dustore.ru/jams/api' | jq
+
+# полная статистика конкретного джема
+curl -s 'https://dustore.ru/jams/api?id=12' | jq
+
+# одна секция
+curl -s 'https://dustore.ru/jams/api?id=12&amp;section=builds' | jq</code></pre>
+
+            <pre><button class="copy">копировать</button><code>const r = await fetch('https://dustore.ru/jams/api?id=12&amp;section=overview');
+const { overview } = await r.json();
+console.log(`${overview.builds} билдов от ${overview.devs_finished} разработчиков`);</code></pre>
+
+            <h2 id="common">Общие правила</h2>
+            <table>
+                <tr>
+                    <th>Что</th>
+                    <th>Как</th>
+                </tr>
+                <tr>
+                    <td>Метод</td>
+                    <td>Только <code>GET</code>. Остальное — <code>405</code>.</td>
+                </tr>
+                <tr>
+                    <td>Формат</td>
+                    <td><code>application/json; charset=utf-8</code>, UTF-8 без экранирования кириллицы.</td>
+                </tr>
+                <tr>
+                    <td>Авторизация</td>
+                    <td>Не требуется. Эндпоинт публичный.</td>
+                </tr>
+                <tr>
+                    <td>CORS</td>
+                    <td><code>Access-Control-Allow-Origin: *</code> — можно дёргать прямо из браузера.</td>
+                </tr>
+                <tr>
+                    <td>Кэш</td>
+                    <td>60 секунд на сервере. Заголовок <code>X-Cache: HIT|MISS</code>, плюс
+                        <code>Cache-Control: public, max-age=60</code>.</td>
+                </tr>
+                <tr>
+                    <td>Время</td>
+                    <td>Все даты — Europe/Moscow. <code>generated_at</code> в ISO 8601.</td>
+                </tr>
+                <tr>
+                    <td>Размеры</td>
+                    <td>Всегда в байтах, целым числом. Форматирование — на стороне клиента.</td>
+                </tr>
+            </table>
+
+            <div class="note n-info"><b>Стабильность полей</b>
+                Новые поля могут добавляться без предупреждения — не полагайтесь на точный состав объекта.
+                Существующие поля не переименовываются в рамках <code>v1</code>.</div>
+
+            <h2 id="list">Список джемов</h2>
+            <div class="ep"><span class="verb">GET</span><span class="path">/jams/api</span><span class="pill">без
+                    параметров</span></div>
+            <p>Возвращает джемы, которые идут, завершены или у которых назначено голосование.</p>
+            <pre><button class="copy">копировать</button><code>{
+  "success": true,
+  "generated_at": "2026-08-17T14:20:03+03:00",
+  "jams": [
+    {
+      "id": 12,
+      "title": "К.О.Н.Т.У.Р.",
+      "status": "ongoing",
+      "jam_start": "2026-07-05 12:01:00",
+      "jam_end": "2026-08-10 23:59:00",
+      "voting_start": "2026-08-14 12:01:00",
+      "voting_end": "2026-09-14 12:00:00",
+      "participants": 571,
+      "builds": 74
+    }
+  ]
+}</code></pre>
+
+            <h2 id="stats">Статистика джема</h2>
+            <div class="ep"><span class="verb">GET</span><span class="path">/jams/api?id=&lt;sprint_id&gt;</span></div>
+            <table>
+                <tr>
+                    <th>Параметр</th>
+                    <th>Тип</th>
+                    <th>Описание</th>
+                </tr>
+                <tr>
+                    <td><code>id</code></td>
+                    <td class="ty">int, обязательный</td>
+                    <td>ID джема (<code>sprints.id</code>). Синоним — <code>sprint_id</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>section</code></td>
+                    <td class="ty">string</td>
+                    <td>Вернуть одну секцию вместо всех: <code>overview</code>, <code>builds</code>,
+                        <code>timeline</code>,
+                        <code>teams</code>, <code>tech</code>, <code>geo</code>, <code>activity</code>,
+                        <code>leaderboard</code>. По умолчанию — всё.
+                    </td>
+                </tr>
+            </table>
+            <p>Ответ всегда содержит <code>success</code>, <code>generated_at</code> и объект <code>sprint</code> с
+                датами этапов,
+                а дальше — запрошенные секции.</p>
+            <pre><button class="copy">копировать</button><code>{
+  "success": true,
+  "generated_at": "2026-08-17T14:20:03+03:00",
+  "sprint": {
+    "id": 12,
+    "title": "К.О.Н.Т.У.Р.",
+    "status": "ongoing",
+    "jam_start": "2026-07-05 12:01:00",
+    "jam_end": "2026-08-10 23:59:00",
+    "voting_start": "2026-08-14 12:01:00",
+    "voting_end": "2026-09-14 12:00:00"
+  },
+  "overview": { "…" : "…" }
+}</code></pre>
+
+            <h3 id="s-overview">section=overview</h3>
+            <table>
+                <tr>
+                    <th>Поле</th>
+                    <th>Тип</th>
+                    <th>Значение</th>
+                </tr>
+                <tr>
+                    <td><code>participants</code></td>
+                    <td class="ty">int</td>
+                    <td>Зарегистрировалось на джем.</td>
+                </tr>
+                <tr>
+                    <td><code>teams_created</code></td>
+                    <td class="ty">int</td>
+                    <td>Команд создано, включая пустые и из одного человека.</td>
+                </tr>
+                <tr>
+                    <td><code>projects</code></td>
+                    <td class="ty">int</td>
+                    <td>Проектов заведено на площадке (карточка есть, файла может не быть).</td>
+                </tr>
+                <tr>
+                    <td><code>builds</code></td>
+                    <td class="ty">int</td>
+                    <td>Проектов с реально загруженным билдом.</td>
+                </tr>
+                <tr>
+                    <td><code>builds_approved</code></td>
+                    <td class="ty">int</td>
+                    <td>Из них прошли модерацию и допущены к голосованию.</td>
+                </tr>
+                <tr>
+                    <td><code>solo</code> / <code>by_teams</code></td>
+                    <td class="ty">int</td>
+                    <td>Билды в одиночку / командами. В сумме дают <code>builds</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>devs_finished</code></td>
+                    <td class="ty">int</td>
+                    <td>Людей за сданными билдами: соло-авторы плюс все члены команд.</td>
+                </tr>
+            </table>
+            <pre><button class="copy">копировать</button><code>"overview": {
+  "participants": 571,
+  "teams_created": 118,
+  "projects": 85,
+  "builds": 81,
+  "builds_approved": 74,
+  "solo": 44,
+  "by_teams": 37,
+  "devs_finished": 173
+}</code></pre>
+
+            <h3 id="s-builds">section=builds</h3>
+            <p>Вес билдов. Учитываются вместе zip-архивы и deplex-сборки, по последней версии каждого проекта.</p>
+            <pre><button class="copy">копировать</button><code>"builds": {
+  "count": 81,
+  "by_kind": { "zip": 76, "deplex": 5 },
+  "bytes_total":  47587189188,
+  "bytes_min":       20994563,
+  "bytes_max":    13397341394,
+  "bytes_median":   194892218,
+  "buckets": {
+    "lt_100mb":  27,
+    "100_300mb": 22,
+    "300mb_1gb": 23,
+    "gt_1gb":     9
+  }
+}</code></pre>
+            <div class="note n-warn"><b>Гигабайты бывают разные</b>
+                <code>bytes_total: 47587189188</code> — это 44,3 ГиБ (делите на 1024³) или 47,6 ГБ в десятичных.
+                В карточках статистики Dustore используется первый вариант.
+            </div>
+
+            <h3 id="s-timeline">section=timeline</h3>
+            <table>
+                <tr>
+                    <th>Поле</th>
+                    <th>Тип</th>
+                    <th>Значение</th>
+                </tr>
+                <tr>
+                    <td><code>uploads_by_day</code></td>
+                    <td class="ty">{"YYYY-MM-DD": int}</td>
+                    <td>Финальные загрузки билдов по дням.</td>
+                </tr>
+                <tr>
+                    <td><code>uploads_by_hour</code></td>
+                    <td class="ty">{"0".."23": int}</td>
+                    <td>Те же загрузки по часам суток, МСК.</td>
+                </tr>
+                <tr>
+                    <td><code>registrations_by_day</code></td>
+                    <td class="ty">{"YYYY-MM-DD": int}</td>
+                    <td>Регистрации участников по дням.</td>
+                </tr>
+            </table>
+            <pre><button class="copy">копировать</button><code>"timeline": {
+  "uploads_by_day": {
+    "2026-08-04": 8,  "2026-08-05": 11, "2026-08-06": 38,
+    "2026-08-07": 17, "2026-08-09": 2,  "2026-08-10": 4
+  },
+  "uploads_by_hour": { "0": 10, "18": 7, "21": 7, "23": 19 },
+  "registrations_by_day": { "2026-06-20": 58, "2026-06-21": 104 },
+  "note": "момент загрузки zip = запуск антивирус-скана; deplex = последний committed-билд"
+}</code></pre>
+
+            <h3 id="s-teams">section=teams</h3>
+            <pre><button class="copy">копировать</button><code>"teams": {
+  "with_build": 37,
+  "size_histogram": { "2": 14, "3": 11, "4": 4, "5": 3, "6": 2, "7": 2, "11": 1 },
+  "avg_size": 3.49,
+  "max_size": 11
+}</code></pre>
+            <p><code>size_histogram</code> — ключ это размер команды в людях, значение — сколько таких команд сдали
+                билд.</p>
+
+            <h3 id="s-tech">section=tech</h3>
+            <p>Движки и жанры, отсортированы по убыванию. Похожие названия движков схлопнуты
+                (<code>Unreal Engine 4/5</code> → <code>Unreal Engine</code>).</p>
+            <pre><button class="copy">копировать</button><code>"tech": {
+  "engines": { "Unity": 45, "Godot": 26, "Unreal Engine": 18, "GDevelop": 2 },
+  "genres":  { "Хоррор": 57, "Симулятор": 8, "Другое": 6, "Стратегия": 5 },
+  "note": "движки — самодекларация из анкеты прогресса"
+}</code></pre>
+
+            <h3 id="s-geo">section=geo</h3>
+            <pre><button class="copy">копировать</button><code>"geo": {
+  "cities_total": 133,
+  "answers": 434,
+  "top": { "Москва": 99, "Санкт-Петербург": 60, "Новосибирск": 13, "Екатеринбург": 12 },
+  "note": "город — свободный ввод, написания и транслит объединены"
+}</code></pre>
+            <p><code>answers</code> — сколько участников вообще заполнили поле города; остальные не учитываются в
+                процентах.</p>
+
+            <h3 id="s-activity">section=activity</h3>
+            <p>Динамика голосования и скачиваний по дням. Без разбивки по играм — по этой секции нельзя
+                восстановить расстановку мест, поэтому она открыта и во время голосования.</p>
+            <table>
+                <tr>
+                    <th>Поле</th>
+                    <th>Тип</th>
+                    <th>Значение</th>
+                </tr>
+                <tr>
+                    <td><code>votes_total</code></td>
+                    <td class="ty">int</td>
+                    <td>Голосов отдано всего.</td>
+                </tr>
+                <tr>
+                    <td><code>voters_total</code></td>
+                    <td class="ty">int</td>
+                    <td>Уникальных голосующих.</td>
+                </tr>
+                <tr>
+                    <td><code>games_with_votes</code></td>
+                    <td class="ty">int</td>
+                    <td>Работ, за которые есть хотя бы один голос.</td>
+                </tr>
+                <tr>
+                    <td><code>downloads_total</code></td>
+                    <td class="ty">int</td>
+                    <td>Скачиваний билдов джема.</td>
+                </tr>
+                <tr>
+                    <td><code>downloaders_total</code></td>
+                    <td class="ty">int</td>
+                    <td>Уникальных скачавших.</td>
+                </tr>
+                <tr>
+                    <td><code>votes_by_day</code></td>
+                    <td class="ty">{"YYYY-MM-DD": {votes, voters}}</td>
+                    <td>Голоса по дням.</td>
+                </tr>
+                <tr>
+                    <td><code>downloads_by_day</code></td>
+                    <td class="ty">{"YYYY-MM-DD": int}</td>
+                    <td>Скачивания по дням.</td>
+                </tr>
+            </table>
+            <pre><button class="copy">копировать</button><code>"activity": {
+  "votes_total": 1284,
+  "voters_total": 312,
+  "games_with_votes": 68,
+  "downloads_total": 1907,
+  "downloaders_total": 349,
+  "votes_by_day": {
+    "2026-08-14": { "votes": 480, "voters": 121 },
+    "2026-08-15": { "votes": 371, "voters":  98 }
+  },
+  "downloads_by_day": { "2026-08-14": 612, "2026-08-15": 455 }
+}</code></pre>
+            <div class="note n-info"><b>Скачивание = право голоса</b>
+                В джеме действует правило play-to-vote: проголосовать за работу можно только после её скачивания.
+                Поэтому <code>downloaders_total</code> — это верхняя граница для <code>voters_total</code>,
+                а разрыв между ними показывает, сколько людей скачали, но не проголосовали.</div>
+
+            <h3 id="s-leaderboard">section=leaderboard</h3>
+            <div class="note n-warn"><b>Закрыт до конца голосования</b>
+                Пока идёт голосование, API отдаёт только объём активности — без очков и мест.
+                Это защита от накрутки: живой рейтинг позволяет целиться в конкретный отрыв.
+                После <code>voting_end</code> секция открывается автоматически.</div>
+            <pre><button class="copy">копировать</button><code>// во время голосования
+"leaderboard": {
+  "available_after": "2026-09-14 12:00:00",
+  "votes_cast": 1284,
+  "voters": 312
+}
+
+// после закрытия
+"leaderboard": {
+  "top": [
+    { "place": 1, "id": 231, "name": "КОНТУР",
+      "points": 418, "points_weighted": 418.00, "votes": 96 }
+  ]
+}</code></pre>
+
+            <h2 id="errors">Ошибки</h2>
+            <table>
+                <tr>
+                    <th>Код</th>
+                    <th>Тело</th>
+                    <th>Когда</th>
+                </tr>
+                <tr>
+                    <td><span class="pill">404</span></td>
+                    <td><code>{"success":false,"error":"Джем не найден"}</code></td>
+                    <td>Нет джема с таким <code>id</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="pill">405</span></td>
+                    <td><code>{"success":false,"error":"Только GET"}</code></td>
+                    <td>POST, PUT и прочее.</td>
+                </tr>
+                <tr>
+                    <td><span class="pill">500</span></td>
+                    <td><code>{"success":false,"error":"БД недоступна"}</code></td>
+                    <td>Проблема на стороне платформы.</td>
+                </tr>
+            </table>
+            <p>Успешный ответ всегда содержит <code>"success": true</code>. Проверяйте именно это поле, а не только
+                HTTP-код.</p>
+
+            <h2 id="method">Методология</h2>
+            <p>Цифры считаются не так, как можно интуитивно ожидать — вот точные определения, чтобы ваши выводы
+                совпадали с нашими.</p>
+            <ul>
+                <li><b>Момент загрузки билда.</b> Отдельного лога загрузок нет. Для zip берётся время запуска
+                    антивирус-скана (он стартует при заливке), для deplex — время последнего
+                    <code>committed</code>-билда.
+                    Следствие: если проект перезаливали, в статистике видна только финальная версия.</li>
+                <li><b>Вес билда.</b> Всегда последняя версия. У deplex-проектов в хранилище может лежать больше данных,
+                    чем весит финальная сборка, — старые чанки не удаляются.</li>
+                <li><b>Соло или команда.</b> По фактическому составу команды на момент запроса, а не по галочке,
+                    которую участник поставил при регистрации: эти данные расходятся примерно у каждого пятого.
+                    Команда из одного человека считается соло.</li>
+                <li><b>Города.</b> Свободный текстовый ввод. Варианты написания, транслит и опечатки объединяются,
+                    мусорные ответы и названия регионов отбрасываются. Сырое число уникальных строк было бы завышено
+                    примерно на треть.</li>
+                <li><b>Движки.</b> Самодекларация из анкеты прогресса, заполняет её меньшая часть участников.
+                    Сумма по движкам не равна числу билдов.</li>
+                <li><b>Скачивания.</b> Считаются на сервере в момент выдачи файла — по zip-загрузкам,
+                    deplex-установщику и запуску веб-билда. Открытие страницы игры скачиванием не считается.</li>
+                <li><b>Очки в лидерборде.</b> <code>points</code> — сырая сумма, <code>points_weighted</code> —
+                    с учётом веса голоса (<code>jam_votes.weight</code>); голоса экспертов могут иметь вес,
+                    отличный от единицы. Сортировка идёт по взвешенным очкам.</li>
+            </ul>
+
+            <h2 id="limits">Чего в API нет и не будет</h2>
+            <ul>
+                <li>Персональных данных: имён, email, телеграмов, ссылок и городов в разрезе конкретных людей.</li>
+                <li>Поимённых голосов и того, кто за что голосовал.</li>
+                <li>Прямых ссылок на файлы билдов — они выдаются только через страницу игры.</li>
+                <li>Контактов разработчиков — это внутренняя информация модерации.</li>
+            </ul>
+            <p>Нужна цифра, которой здесь нет, — напишите, добавим секцию, если её можно отдать обезличенно.</p>
+
+        </main>
+    </div>
+
+    <footer>
+        Jams API v1 · Dustore · Вопросы и заявки на новые секции — <a
+            href="https://t.me/dustore_official">@dustore_official</a>
+    </footer>
+
+    <script>
+        document.querySelectorAll('pre .copy').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var code = b.parentElement.querySelector('code');
+                navigator.clipboard.writeText(code.innerText).then(function () {
+                    var old = b.textContent;
+                    b.textContent = 'скопировано';
+                    setTimeout(function () { b.textContent = old; }, 1400);
+                });
+            });
+        });
+
+        var links = Array.prototype.slice.call(document.querySelectorAll('#nav a'));
+        var targets = links.map(function (a) { return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+        function spy() {
+            var pos = window.scrollY + 120, cur = targets[0];
+            targets.forEach(function (t) { if (t.offsetTop <= pos) cur = t; });
+            links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === '#' + cur.id); });
+        }
+        window.addEventListener('scroll', spy, { passive: true });
+        spy();
+    </script>
+</body>
+
+</html>

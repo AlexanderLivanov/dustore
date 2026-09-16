@@ -17,6 +17,37 @@ $openTo     = (int)($_GET['to'] ?? 0);
 $openStudio = (int)($_GET['studio'] ?? 0);
 $openConv   = (int)($_GET['conversation'] ?? 0);   // из пуш-уведомления
 
+/**
+ * Публичный VAPID-ключ. Он ПУБЛИЧНЫЙ по определению — браузер получает его
+ * при подписке, — но хардкодить его в разметке всё равно не стоит: при
+ * ротации ключей пришлось бы править файл.
+ *
+ * Ищем по очереди: переменная окружения -> /etc/dustore/push.env (тот же
+ * файл, что читает systemd-юнит воркера) -> константа из swad/config.php.
+ * Приватный ключ здесь не нужен и не читается.
+ */
+function vapid_public_key(): string {
+    $v = getenv('VAPID_PUBLIC');
+    if ($v) return trim($v);
+
+    $path = getenv('PUSH_ENV_FILE') ?: '/etc/dustore/push.env';
+    if (is_readable($path)) {
+        // parse_ini_file споткнётся о строки без кавычек со спецсимволами,
+        // поэтому разбираем сами — формат KEY=value
+        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if ($line === '' || $line[0] === '#') continue;
+            [$k, $val] = array_pad(explode('=', $line, 2), 2, '');
+            if (in_array(trim($k), ['VAPID_PUBLIC', 'VAPID_PUBLIC_KEY'], true)) {
+                return trim($val, " \t\"'");
+            }
+        }
+    }
+
+    if (defined('VAPID_PUBLIC_KEY')) return (string)VAPID_PUBLIC_KEY;
+    return '';
+}
+$VAPID_PUBLIC = vapid_public_key();
+
 require __DIR__ . '/../swad/static/elements/header.php';
 ?>
 <!DOCTYPE html>
@@ -137,10 +168,16 @@ function toast(msg, err) {
 
 /* ── Звук и пуш ───────────────────────────────────────────────────────────── */
 let audioCtx = null, prevTotal = null, pushInited = false;
-window.VAPID_PUBLIC = 'CONFIRM';   // подставь публичный VAPID-ключ
+window.VAPID_PUBLIC = <?= json_encode($VAPID_PUBLIC) ?>;
 document.addEventListener('click', () => {
   if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-  if (!pushInited && window.initPush) { pushInited = true; window.initPush(); }
+  if (!pushInited && window.initPush) {
+    pushInited = true;
+    // Без ключа подписка молча падает внутри pushManager.subscribe —
+    // лучше сказать это в консоль, чем гадать, почему пуши не приходят.
+    if (!window.VAPID_PUBLIC) console.warn('[push] VAPID_PUBLIC пуст: ключ не найден ни в окружении, ни в /etc/dustore/push.env');
+    else window.initPush();
+  }
 }, { once: false });
 
 function ping() {
@@ -477,9 +514,24 @@ $('#peerHead').addEventListener('click', async () => {
   $('#profileBody').innerHTML = '<div class="empty">Загрузка…</div>';
   $('#profile').classList.add('open');
   const r = await api('user_profile', { user_id: h.peer_id });
-  if (!r.ok) { $('#profileBody').innerHTML = '<div class="empty">Профиль недоступен</div>'; return; }
+  if (!r.ok) {
+    // Раньше писало просто «Профиль недоступен» — причина терялась
+    console.error('[chat] user_profile:', r.error || 'unknown');
+    const why = r.error === 'not_found' ? 'Пользователь удалён'
+              : r.error === 'bad_id'    ? 'Не удалось определить собеседника'
+              : r.error === 'network'   ? 'Нет соединения'
+              : 'Профиль недоступен';
+    $('#profileBody').innerHTML = '<div class="empty">' + esc(why) + '</div>';
+    return;
+  }
   const p = r.profile, handle = p.handle || '', ls = lastSeen(p.last_seen);
-  const link = handle ? `/@${encodeURIComponent(handle)}` : `/player.php?id=${p.id}`;
+
+  /* Было: `/@${handle}` и `/player.php?id=${p.id}` — обоих маршрутов
+     не существует. player.php вытаскивает ник из адреса регуляркой
+     /\/player\/([a-zA-Z0-9_]+)/ и на всё остальное отвечает 404
+     с текстом «Пользователь не найден». Именно это и вылезало
+     при попытке открыть профиль собеседника. */
+  const link = handle ? `/player/${encodeURIComponent(handle)}` : null;
   $('#profileBody').innerHTML = `
     <div class="big-av">${avatarHTML({ name: p.name, avatar: p.avatar })}</div>
     <div class="p-name">${esc(p.name)}</div>
@@ -490,7 +542,7 @@ $('#peerHead').addEventListener('click', async () => {
       <div class="p-stat"><b>${p.votes_up}</b><span>лайки</span></div>
       <div class="p-stat"><b>${p.views}</b><span>просмотры</span></div>
     </div>
-    <div class="p-links"><a class="primary" href="${esc(link)}">Профиль Dustore</a></div>`;
+    ${link ? `<div class="p-links"><a class="primary" href="${esc(link)}">Профиль Dustore</a></div>` : ''}`;
 });
 $('#profBack').addEventListener('click', () => $('#profile').classList.remove('open'));
 

@@ -13,6 +13,7 @@
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../csrf.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function v_out(array $d, int $code = 200): void {
@@ -25,6 +26,17 @@ $userId = (int)($_SESSION['USERDATA']['id'] ?? 0);
 if (!$userId) v_out(['success' => false, 'message' => 'Нужна авторизация'], 403);
 
 $in        = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+
+/* Проверка происхождения запроса.
+   Без неё голосование подделывается тривиально: строка выше принимает и
+   обычный $_POST, то есть достаточно формы на стороннем сайте с полями
+   sprint_id / game_id / points. Залогиненный посетитель открывает страницу —
+   и его 10 баллов уходят на нужную злоумышленнику работу, молча.
+   JSON-тело тоже обходится через enctype="text/plain", так что «у нас же
+   JSON» защитой не является. */
+if (!csrf_valid($in)) {
+    v_out(['success' => false, 'message' => 'Сессия устарела, обновите страницу'], 403);
+}
 $sprint_id = (int)($in['sprint_id'] ?? 0);
 $game_id   = (int)($in['game_id'] ?? 0);
 $points    = (int)($in['points'] ?? 0);
@@ -36,7 +48,7 @@ $pdo = (new Database())->connect();
 if (!$pdo) v_out(['success' => false, 'message' => 'БД недоступна'], 500);
 
 /* ─────────────── Джем и окно голосования ─────────────── */
-$s = $pdo->prepare("SELECT host_user_id, status, voting_start, voting_end FROM sprints WHERE id = ?");
+$s = $pdo->prepare("SELECT host_user_id, status, voting_start, voting_end, expert_voting_end FROM sprints WHERE id = ?");
 $s->execute([$sprint_id]);
 $sprint = $s->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) v_out(['success' => false, 'message' => 'Джем не найден'], 404);
@@ -49,17 +61,39 @@ $vEnd   = $sprint['voting_end']   ? strtotime($sprint['voting_end'])   : null;
 $forceOpen  = defined('JAM_VOTING_FORCE_OPEN') && JAM_VOTING_FORCE_OPEN;
 $votingOpen = $forceOpen || ((!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd));
 
-if (!$votingOpen) {
+/* ── Продлённое окно для экспертов ─────────────────────────────────────────
+   sprints.expert_voting_end задаётся на каждый джем отдельно. NULL — окно
+   закрывается для всех одновременно, как раньше.
+
+   Проверку эксперта пришлось поднять СЮДА, выше блока бюджета: окно решает,
+   пустить ли вообще, а бюджет — сколько можно. Ниже $isExpert переиспользуется,
+   второй запрос не нужен. */
+$eEnd = !empty($sprint['expert_voting_end']) ? strtotime($sprint['expert_voting_end']) : null;
+
+$ex = $pdo->prepare("SELECT 1 FROM sprint_experts WHERE sprint_id = ? AND user_id = ? LIMIT 1");
+$ex->execute([$sprint_id, $userId]);
+$isExpert = $ex->fetchColumn() ? 1 : 0;
+
+$expertWindow = $isExpert && $eEnd
+             && (!$vStart || $vStart <= $now)
+             && $now <= $eEnd;
+
+if (!$votingOpen && !$expertWindow) {
     $msg = ($vStart && $now < $vStart)
         ? 'Голосование ещё не началось'
         : 'Голосование завершено';
     v_out(['success' => false, 'message' => $msg], 409);
 }
 
-// Организатор джема не голосует.
-// if ((int)$sprint['host_user_id'] === $userId && !$forceOpen) {
-//     v_out(['success' => false, 'message' => 'Организатор джема не может голосовать'], 403);
-// }
+/* Организатор джема не голосует.
+   Проверка была закомментирована — видимо, на время отладки. Страница
+   голосования кнопки ему не показывает, но эндпоинт принимал запрос:
+   организатор мог отдать голоса в собственном джеме прямым вызовом.
+   Раскомментировано. JAM_VOTING_FORCE_OPEN по-прежнему снимает ограничение,
+   если константа включена для отладки. */
+if ((int)$sprint['host_user_id'] === $userId && !$forceOpen) {
+    v_out(['success' => false, 'message' => 'Организатор джема не может голосовать'], 403);
+}
 
 /* ─────────────── Игра должна быть в этом джеме и допущена ─────────────── */
 $g = $pdo->prepare("
@@ -118,10 +152,7 @@ if ($points > 0) {
 /* ─────────────── Бюджет ───────────────
    Игрок  — 10 очков на все игры джема вместе.
    Эксперт — 10 очков на каждую игру (то есть 10 × число допущенных работ). */
-$e = $pdo->prepare("SELECT 1 FROM sprint_experts WHERE sprint_id = ? AND user_id = ? LIMIT 1");
-$e->execute([$sprint_id, $userId]);
-$isExpert = $e->fetchColumn() ? 1 : 0;
-
+/* $isExpert уже определён выше, при проверке окна голосования. */
 if ($isExpert) {
     $gc = $pdo->prepare("SELECT COUNT(*) FROM games
                          WHERE sprint_id = ? AND (moderation_status = 'approved' OR status = 'published')");
@@ -145,6 +176,12 @@ if ((int)$lk->fetchColumn() !== 1) {
 }
 
 $fail = null;
+
+/* try/finally: если INSERT упадёт, GET_LOCK останется висеть до закрытия
+   соединения. Обычно это конец запроса, но при использовании постоянных
+   соединений (PDO::ATTR_PERSISTENT) замок пережил бы запрос и заблокировал
+   этому же пользователю следующий голос. */
+try {
 
 $b = $pdo->prepare("SELECT COALESCE(SUM(points),0) FROM jam_votes
                     WHERE sprint_id = ? AND user_id = ? AND game_id <> ?");
@@ -187,7 +224,9 @@ if ($usedOther + $points > $budget) {
     ]);
 }
 
-$pdo->prepare("SELECT RELEASE_LOCK(?)")->execute([$lockKey]);
+} finally {
+    $pdo->prepare("SELECT RELEASE_LOCK(?)")->execute([$lockKey]);
+}
 
 if ($fail) v_out($fail, 409);
 

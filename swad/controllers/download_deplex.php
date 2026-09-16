@@ -54,6 +54,23 @@ function downloadDeplex(int $game_id, string $os, ?int $user_id): void
     if ($user_id !== null) {
         $curr_user = new User();
         $curr_user->updateUserItems($user_id, $game_id);
+
+        /* Отметка play-to-vote.
+           Право голосовать за работу джема даёт строка в jam_plays, и
+           ставить её должен сервер, отдавший файл. Здесь этого не было:
+           человек скачивал deplex-билд и получал «Сначала скачайте игру,
+           чтобы за неё голосовать». За такие работы не мог проголосовать
+           никто — ровно та же дыра, что была с отзывами. */
+        $sp = $pdo->prepare("SELECT sprint_id FROM games WHERE id = ? LIMIT 1");
+        $sp->execute([$game_id]);
+        $sprint_id = (int)$sp->fetchColumn();
+
+        if ($sprint_id > 0) {
+            // подключаем только функцию, без HTTP-обвязки
+            if (!defined('JAM_PLAY_LIB_ONLY')) define('JAM_PLAY_LIB_ONLY', true);
+            require_once(__DIR__ . '/jams/jam_play.php');
+            jam_play_record($pdo, $sprint_id, $game_id, $user_id, 'download');
+        }
     }
 
     header('Location: ' . DEPLEX_API_BASE . "/v1/games/$game_id/installer?os=" . urlencode($os));

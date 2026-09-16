@@ -221,6 +221,69 @@ function format_last_seen(int $ts): string
         }
         .edit-profile-btn:hover { background:rgba(195,33,120,.75); transform:translateX(-50%) translateY(-2px); }
         .edit-profile-btn svg { flex-shrink:0; }
+        /* ── Кнопка «написать» рядом с кнопкой дружбы ──────────────────── */
+        .friend-msg-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 32px;
+            flex-shrink: 0;
+            border-radius: 15px;
+            background: rgba(195, 33, 120, .16);
+            border: 1px solid #c32178;
+            color: #fff;
+            text-decoration: none;
+            transition: background .16s ease, transform .1s ease;
+            margin-right: 10px;
+        }
+        .friend-msg-btn:hover { background: #c32178; }
+        .friend-msg-btn:active { transform: translateY(1px); }
+        .friend-msg-btn.is-hidden { display: none; }
+        body.moonlight-theme .friend-msg-btn { background: rgba(62,122,217,.2); border-color: #3e7ad9; }
+        body.moonlight-theme .friend-msg-btn:hover { background: #3e7ad9; }
+
+        .friend-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        /* ── Поиск по друзьям ─────────────────────────────────────────── */
+        .friends-head {
+            display: flex; align-items: baseline; justify-content: space-between;
+            gap: 12px; margin-bottom: 12px;
+        }
+        .friends-find {
+            font-size: .84em; color: #e6379a; text-decoration: none;
+            border-bottom: 1px dashed rgba(230, 55, 154, .5);
+        }
+        .friends-find:hover { color: #fff; border-bottom-color: #fff; }
+        body.moonlight-theme .friends-find { color: #5690f0; border-bottom-color: rgba(86,144,240,.5); }
+
+        .friends-search {
+            position: relative; display: flex; align-items: center;
+            gap: 8px; margin-bottom: 14px; padding: 0 12px;
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid rgba(255, 255, 255, .1);
+            border-radius: 10px;
+            transition: border-color .16s ease;
+        }
+        .friends-search:focus-within { border-color: #c32178; }
+        body.moonlight-theme .friends-search:focus-within { border-color: #3e7ad9; }
+        .friends-search .fs-ico { color: #888; display: flex; flex-shrink: 0; }
+        .friends-search input {
+            flex: 1; min-width: 0; padding: 10px 0;
+            background: none; border: 0; outline: none;
+            color: #fff; font: inherit; font-size: .92em;
+        }
+        .friends-search input::placeholder { color: #777; }
+        .friends-search .fs-clear {
+            display: none; background: none; border: 0; color: #888;
+            font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px;
+        }
+        .friends-search.has-value .fs-clear { display: block; }
+        .friends-search .fs-clear:hover { color: #fff; }
+
+        .friend-row[hidden] { display: none !important; }
+        .friends-empty { padding: 28px 10px; text-align: center; color: #888; font-size: .92em; }
+        .friends-empty[hidden] { display: none; }
     </style>
 </head>
 <body>
@@ -368,10 +431,26 @@ function format_last_seen(int $ts): string
                         }
                     }
                     ?>
-                    <button id="friendActionBtn" class="<?= $btnClass ?>"
-                            data-user="<?= $user['id'] ?>" data-action="<?= $btnAction ?>" <?= $btnDisabled ?>>
-                        <span id="friendActionBtnText"><?= $btnText ?></span>
-                    </button>
+                    <div class="friend-actions">
+                        <button id="friendActionBtn" class="<?= $btnClass ?>"
+                                data-user="<?= $user['id'] ?>" data-action="<?= $btnAction ?>" <?= $btnDisabled ?>>
+                            <span id="friendActionBtnText"><?= $btnText ?></span>
+                        </button>
+
+                        <?php /* Написать можно только другу: /chat/?to=<id> создаёт
+                                 или открывает личный диалог. Кнопка появляется и
+                                 скрывается вместе со статусом дружбы — за это
+                                 отвечает id, к нему обращается обработчик ниже. */ ?>
+                        <a id="friendMsgBtn"
+                           class="friend-msg-btn<?= ($status && $status['status'] === 'accepted') ? '' : ' is-hidden' ?>"
+                           href="/chat/?to=<?= (int)$user['id'] ?>"
+                           title="Написать сообщение" aria-label="Написать сообщение">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                            </svg>
+                        </a>
+                    </div>
                 <?php endif; ?>
             </div>
 
@@ -621,14 +700,34 @@ function format_last_seen(int $ts): string
             <!-- ── Вкладка "Друзья" ── -->
             <div id="tab-collection" class="tab-content">
                 <div class="profile-card">
-                    <h2 class="section-title">Друзья</h2>
+                    <div class="friends-head">
+                        <h2 class="section-title" style="margin:0;">Друзья<?= !empty($friends) ? ' · ' . count($friends) : '' ?></h2>
+                        <a class="friends-find" href="/users.php">Найти игроков</a>
+                    </div>
+
+                    <?php /* Поиска здесь не было вовсе — при десятке друзей
+                             это терпимо, при сотне список становится
+                             бесполезным. Фильтрует уже отрисованный список:
+                             друзей у человека немного, ходить на сервер незачем. */ ?>
+                    <?php if (!empty($friends)): ?>
+                    <div class="friends-search" id="friendsSearchWrap">
+                        <span class="fs-ico">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </span>
+                        <input type="text" id="friendsSearch" placeholder="Поиск среди друзей…" autocomplete="off">
+                        <button type="button" class="fs-clear" id="friendsSearchClear" aria-label="Очистить">&times;</button>
+                    </div>
+                    <?php endif; ?>
+
                     <?php if (empty($friends)): ?>
                     <div class="empty-state"><p>У пользователя пока нет друзей</p></div>
-                    <button class="empty-state-button" onclick="location.href='/search'">Поиск</button>
+                    <button class="empty-state-button" onclick="location.href='/users.php'">Найти игроков</button>
                     <?php else: ?>
-                    <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div id="friendsList" style="display:flex;flex-direction:column;gap:10px;">
                         <?php foreach ($friends as $friend): ?>
                         <a href="/player/<?= htmlspecialchars($friend['username']) ?>"
+                           class="friend-row"
+                           data-search="<?= htmlspecialchars(mb_strtolower(trim($friend['first_name'].' '.$friend['last_name'].' '.$friend['username'])), ENT_QUOTES) ?>"
                            style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.04);border-radius:12px;padding:12px 16px;text-decoration:none;color:white;transition:background .2s;">
                             <img src="<?= !empty($friend['profile_picture']) ? htmlspecialchars($friend['profile_picture']) : '/swad/static/img/logo.svg' ?>"
                                  style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.1);">
@@ -640,6 +739,7 @@ function format_last_seen(int $ts): string
                         </a>
                         <?php endforeach; ?>
                     </div>
+                    <div class="friends-empty" id="friendsEmpty" hidden>Никого не нашлось</div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -781,8 +881,41 @@ document.getElementById('friendActionBtn')?.addEventListener('click', async func
         const [na, nt, nc] = map[action] || ['send','Добавить в друзья','friend-action-btn'];
         btn.dataset.action = na; text.textContent = nt; btn.className = nc;
         btn.removeAttribute('disabled');
+
+        /* «Написать» доступно только друзьям. Дружба наступает после accept
+           и заканчивается на remove — синхронизируем кнопку, чтобы не
+           требовалось перезагружать страницу. */
+        document.getElementById('friendMsgBtn')
+                ?.classList.toggle('is-hidden', na !== 'remove');
     } catch(err) { alert('Ответ: '+raw.substring(0,300)); btn.removeAttribute('disabled'); }
 });
+
+// ── Поиск по друзьям ────────────────────────────────────────────────────
+(function () {
+    const input = document.getElementById('friendsSearch');
+    const wrap  = document.getElementById('friendsSearchWrap');
+    const clear = document.getElementById('friendsSearchClear');
+    const empty = document.getElementById('friendsEmpty');
+    if (!input) return;
+
+    const rows = Array.from(document.querySelectorAll('#friendsList .friend-row'));
+
+    function apply() {
+        const q = input.value.toLowerCase().trim();
+        let shown = 0;
+        rows.forEach(r => {
+            const hit = !q || (r.dataset.search || '').includes(q);
+            r.hidden = !hit;
+            if (hit) shown++;
+        });
+        wrap.classList.toggle('has-value', q !== '');
+        if (empty) empty.hidden = shown !== 0;
+    }
+
+    input.addEventListener('input', apply);
+    input.addEventListener('keydown', e => { if (e.key === 'Escape') { input.value = ''; apply(); } });
+    clear.addEventListener('click', () => { input.value = ''; apply(); input.focus(); });
+})();
 
 // ── Принять входящую заявку ─────────────────────────────────────────────
 document.querySelectorAll('.acceptFriend').forEach(btn => {
