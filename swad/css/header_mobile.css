@@ -1,0 +1,397 @@
+@media screen and (max-width: 900px) {
+
+    :root {
+        --mh: 64px;
+        /* высота шапки на мобильном — совпадает с header.css */
+    }
+
+    /* ── Каркас ─────────────────────────────────────────────
+       Логотип вынимаем из потока и центрируем по окну, иначе
+       он «плавает»: у левой и правой секции разная ширина,
+       и flex:1 разводит их несимметрично. Абсолютный центр —
+       единственный способ гарантировать, что логотип окажется
+       ровно над вырезом. */
+    .header {
+        height: var(--mh);
+        min-height: var(--mh);
+        padding-left: 8px;
+        padding-right: 8px;
+        position: sticky;
+        /* Не space-between: в шапке есть служебные потомки
+           (.header__bg и т.п.), и любой из них съедает один слот
+           распределения, сдвигая бургер к центру. flex-start плюс
+           margin-left:auto у правой секции прижимает края
+           независимо от того, сколько ещё детей появится. */
+        justify-content: flex-start;
+    }
+
+    .header .section.left-section,
+    .header .section.right-section {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 0;
+        gap: 0;
+    }
+
+    .header .section.right-section {
+        margin-left: auto;
+    }
+
+    .header .section.center-section {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        height: 100%;
+        transform: translateX(-50%);
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        pointer-events: auto;
+    }
+
+    .header .image {
+        display: flex;
+        align-items: center;
+    }
+
+    .header .image img {
+        height: 36px;
+        width: auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* На тач-экранах наведения нет — эффект «увеличения» при
+       hover только мешает, срабатывая после тапа. */
+    .header .image img:hover {
+        height: 36px;
+        filter: none;
+    }
+
+    /* Вырез («монобровь») прижимается к нижней кромке шапки.
+       Ширину не трогаем — она согласована с силуэтом .header__bg. */
+    .center-floating-block {
+        top: var(--mh);
+        margin-top: 0;
+    }
+
+    /* ── Слева: бургер ──────────────────────────────────────── */
+    #burger {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        padding: 0 !important;
+        flex-shrink: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #burger svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* fill прописан инлайном прямо в <path>, поэтому !important */
+    #burger svg path {
+        fill: rgba(255, 255, 255, .78) !important;
+    }
+
+    /* Левое меню — панель под шапкой.
+       В header.css показ висит на классе .active, а скрипт в
+       header.php вешает .mobile-open. Поддерживаем оба, чтобы
+       меню открывалось независимо от того, какой из них жив. */
+    .buttons-left {
+        box-sizing: border-box;
+        display: none;
+        position: fixed;
+        top: var(--mh);
+        left: 0;
+        right: 0;
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        margin: 0;
+        padding: 10px;
+        border-radius: 0;
+        background: rgba(20, 4, 29, .97);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+        border-top: 1px solid rgba(195, 33, 120, .25);
+        border-bottom: 1px solid rgba(195, 33, 120, .25);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, .55);
+        z-index: 999;
+        max-height: calc(100vh - var(--mh));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .buttons-left.active,
+    .buttons-left.mobile-open {
+        display: flex !important;
+    }
+
+    .buttons-left .button {
+        box-sizing: border-box;
+        width: 100%;
+        text-align: left !important;
+        padding: 12px 16px !important;
+        font-size: 15px;
+        border-radius: 10px;
+    }
+
+    /* Дропдаун «Devs» внутри панели раскрывается вниз списком */
+    .buttons-left .nav-dropdown {
+        width: 100%;
+    }
+
+    .buttons-left .nav-dropdown__trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* ── Справа: чип пользователя ───────────────────────────── */
+    .user-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        /* Логотип стоит по центру и занимает ~150px; оставляем ему
+           место, иначе чип наезжает на него на узких экранах. */
+        max-width: calc(50vw - 76px);
+        padding: 5px 10px 5px 5px;
+        border: none;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, .40);
+        box-shadow: inset 1px 1px 1px 1px #00000050;
+        color: #ffffffcc;
+        font-family: "Bahnschrift Light", "Segoe UI", sans-serif;
+        font-size: 14px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background .15s;
+    }
+
+    .user-chip:active {
+        background: rgba(195, 33, 120, .25);
+    }
+
+    .user-chip__ava {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #74155d, #c32178);
+    }
+
+    .user-chip__ava img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .user-chip__letter {
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1;
+    }
+
+    .user-chip__name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .user-chip__arrow {
+        flex: 0 0 10px;
+        opacity: .55;
+        transition: transform .18s;
+    }
+
+    .user-chip[aria-expanded="true"] .user-chip__arrow {
+        transform: rotate(180deg);
+    }
+
+    /* Точка непрочитанных — на аватарке, а не в углу шапки */
+    .user-chip__ava {
+        position: relative;
+    }
+
+    .user-chip__dot {
+        position: absolute;
+        right: -1px;
+        bottom: -1px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #ff3b3b;
+        border: 2px solid #14041d;
+        box-shadow: 0 0 6px rgba(255, 59, 59, .7);
+    }
+
+    /* ── Выпадающая панель профиля ──────────────────────────── */
+    .user-menu {
+        box-sizing: border-box;
+        position: fixed;
+        top: calc(var(--mh) + 6px);
+        right: 8px;
+        left: auto;
+        width: min(240px, calc(100vw - 16px));
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px;
+        border-radius: 14px;
+        background: rgba(20, 4, 29, .97);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(195, 33, 120, .25);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, .55);
+        z-index: 1000;
+        animation: userMenuIn .14s ease both;
+    }
+
+    @keyframes userMenuIn {
+        from {
+            opacity: 0;
+            transform: translateY(-6px) scale(.98);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    /* .buttons-right физически переезжает сюда (см. JS в header.php),
+       поэтому id элементов остаются уникальными и весь старый
+       обработчик тем / бейджей / Дасти продолжает работать. */
+    .header .buttons-right {
+        display: none;
+    }
+
+    .user-menu .buttons-right {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .user-menu .button {
+        box-sizing: border-box;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 11px 12px !important;
+        font-size: 15px;
+        border-radius: 10px;
+        text-align: left;
+        background: rgba(255, 255, 255, .06);
+        box-shadow: none;
+        transform: none !important;
+        /* гасим hover-tilt, привязанный к .header .button */
+    }
+
+    .user-menu .button:active {
+        background: rgba(195, 33, 120, .22);
+    }
+
+    .user-menu .button svg {
+        flex: 0 0 22px;
+    }
+
+    .user-menu .btn-ico {
+        display: block;
+    }
+
+    /* Иконочные кнопки в вертикальном списке без подписи нечитаемы.
+       Подписи добавляем псевдоэлементом — разметку не трогаем, и
+       они переживают перерисовку innerHTML в тумблере темы. */
+    .user-menu #themeToggleBtn::after {
+        content: "Тема";
+    }
+
+    .user-menu #modeBtn::after {
+        content: "Помощник Дасти";
+    }
+
+    .user-menu .button[onclick*="/chat"]::after {
+        content: "Сообщения";
+    }
+
+    /* Бейдж лежит в разметке перед иконкой — в вертикальном
+       списке его место справа, отсюда order. */
+    .user-menu #msgBadge {
+        position: static !important;
+        order: 3;
+        margin-left: auto;
+        border: none !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    :root {
+        --mh: 58px;
+    }
+
+    .header .image img {
+        height: 32px;
+    }
+
+    .user-chip {
+        font-size: 13px;
+        max-width: calc(50vw - 70px);
+        padding-right: 8px;
+    }
+
+    /* На самых узких экранах шеврон только отнимает место */
+    .user-chip__arrow {
+        display: none;
+    }
+
+    .user-chip__ava {
+        width: 28px;
+        height: 28px;
+        flex-basis: 28px;
+    }
+}
+
+/* ── Десктоп: мобильные элементы не существуют ───────────────── */
+@media screen and (min-width: 901px) {
+
+    .user-chip,
+    .user-menu {
+        display: none !important;
+    }
+}
+
+/* Иконка у кнопки профиля нужна только в мобильной панели —
+   на десктопе кнопка остаётся ровно такой, какой была. */
+.btn-ico {
+    display: none;
+}
+
+/* Панель скрыта, пока её не открыли (атрибут hidden) */
+.user-menu[hidden] {
+    display: none !important;
+}
