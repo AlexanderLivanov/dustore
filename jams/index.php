@@ -685,7 +685,7 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
                   <div class="stat-box"><div class="s-lbl">Статус</div><div class="s-val">${(s.badges || [phaseText]).join(' · ')}</div></div>
                     <div class="stat-box"><div class="s-lbl">Регистрация</div><div class="s-val">${s.dates_reg || '—'}</div></div>
                     <div class="stat-box"><div class="s-lbl">Джем</div><div class="s-val">${s.dates_jam || '—'}</div></div>
-                    <a href="/jams/vote" class="btn-vote">Оценить билды</a>
+                    <a href="/jams/vote" class="btn-vote">Посмотреть билды</a>
                 </div>
                ${(() => {
                     const total   = s.current_participants || 0;

@@ -512,7 +512,7 @@ body.moonlight-theme .btn-secondary:hover {
 }
 
 .slider-slide {
-    width: 180vh;
+    width: 170vh;
     height: 100%;
     position: relative;
     background-size: cover;
@@ -614,7 +614,7 @@ body.moonlight-theme .btn-secondary:hover {
     border: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 1000;
     text-align: -webkit-center;
-    max-width: 260px;
+    max-width: 220px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
     transition: opacity 0.2s;
     transition: left 0.2s ease, top 0.2s ease;

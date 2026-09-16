@@ -7,13 +7,7 @@
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/vote.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/vote.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/download_deplex.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/download_deplex.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/jams/add_judge.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/jams/add_judge.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/jams/jam_play.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/jams/jam_play.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/jams/remove_judge.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/jams/remove_judge.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/jams/save_vote.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/jams/save_vote.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/index.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

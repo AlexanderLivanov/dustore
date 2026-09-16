@@ -69,7 +69,7 @@ mobile_redirect_if_needed();
                             <h2>Джем DUSTORE X К.О.Н.Т.У.Р</h2>
                             <p>Регистрация на джем с 20 июня до 5 июля, сроки джема - с 5 июля по 5 августа, оценивание и финал - с 15 августа по 15 сентября.</p>
                             <a href="https://t.me/+T5CajyXvgvpmMjRi" target="_blank" class="btn">Группа для участников джема</a>
-                            <a href="https://dustore.ru/jams/vote" target="_blank" class="btn">Оценить игры</a>
+                            <a href="https://dustore.ru/jams/vote" target="_blank" class="btn">Посмотреть игры</a>
                         </div>
                     </div>
 
@@ -793,10 +793,10 @@ mobile_redirect_if_needed();
 
 <div id="vote-banner" data-collapsed="false">
     <button id="vote-toggle-btn" class="vote-toggle" aria-label="Свернуть">✕</button>
-    <div class="vote-label">Идёт голосование:</div>
+    <div class="vote-label">Голосование завершено/проверка результатов:</div>
     <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
     <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
-    <a href="/jams/vote?id=12" class="vote-btn pixel-title">Оценить билды</a>
+    <a href="/jams/vote?id=12" class="vote-btn pixel-title">Посмотреть оценки</a>
 </div>
 
 <script>
