@@ -400,7 +400,7 @@ $stmt->execute([
                 </a>
             </li>
             <li>
-                <a class="theme-dropdown__item" href="#" data-theme="madness" role="menuitem">
+                <a class="theme-dropdown__item" style="display: none;" href="#" data-theme="madness" role="menuitem">
                     <span class="theme-dropdown__swatch" data-theme="madness"></span>
                     Madness
                 </a>
