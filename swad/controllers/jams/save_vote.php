@@ -48,7 +48,7 @@ $pdo = (new Database())->connect();
 if (!$pdo) v_out(['success' => false, 'message' => 'БД недоступна'], 500);
 
 /* ─────────────── Джем и окно голосования ─────────────── */
-$s = $pdo->prepare("SELECT host_user_id, status, voting_start, voting_end FROM sprints WHERE id = ?");
+$s = $pdo->prepare("SELECT host_user_id, status, voting_start, voting_end, expert_voting_end FROM sprints WHERE id = ?");
 $s->execute([$sprint_id]);
 $sprint = $s->fetch(PDO::FETCH_ASSOC);
 if (!$sprint) v_out(['success' => false, 'message' => 'Джем не найден'], 404);
@@ -61,7 +61,24 @@ $vEnd   = $sprint['voting_end']   ? strtotime($sprint['voting_end'])   : null;
 $forceOpen  = defined('JAM_VOTING_FORCE_OPEN') && JAM_VOTING_FORCE_OPEN;
 $votingOpen = $forceOpen || ((!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd));
 
-if (!$votingOpen) {
+/* ── Продлённое окно для экспертов ─────────────────────────────────────────
+   sprints.expert_voting_end задаётся на каждый джем отдельно. NULL — окно
+   закрывается для всех одновременно, как раньше.
+
+   Проверку эксперта пришлось поднять СЮДА, выше блока бюджета: окно решает,
+   пустить ли вообще, а бюджет — сколько можно. Ниже $isExpert переиспользуется,
+   второй запрос не нужен. */
+$eEnd = !empty($sprint['expert_voting_end']) ? strtotime($sprint['expert_voting_end']) : null;
+
+$ex = $pdo->prepare("SELECT 1 FROM sprint_experts WHERE sprint_id = ? AND user_id = ? LIMIT 1");
+$ex->execute([$sprint_id, $userId]);
+$isExpert = $ex->fetchColumn() ? 1 : 0;
+
+$expertWindow = $isExpert && $eEnd
+             && (!$vStart || $vStart <= $now)
+             && $now <= $eEnd;
+
+if (!$votingOpen && !$expertWindow) {
     $msg = ($vStart && $now < $vStart)
         ? 'Голосование ещё не началось'
         : 'Голосование завершено';
@@ -135,10 +152,7 @@ if ($points > 0) {
 /* ─────────────── Бюджет ───────────────
    Игрок  — 10 очков на все игры джема вместе.
    Эксперт — 10 очков на каждую игру (то есть 10 × число допущенных работ). */
-$e = $pdo->prepare("SELECT 1 FROM sprint_experts WHERE sprint_id = ? AND user_id = ? LIMIT 1");
-$e->execute([$sprint_id, $userId]);
-$isExpert = $e->fetchColumn() ? 1 : 0;
-
+/* $isExpert уже определён выше, при проверке окна голосования. */
 if ($isExpert) {
     $gc = $pdo->prepare("SELECT COUNT(*) FROM games
                          WHERE sprint_id = ? AND (moderation_status = 'approved' OR status = 'published')");
