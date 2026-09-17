@@ -343,7 +343,7 @@ $stmt->execute([
                 </div>
             </div>
             <div class="section right-section">
-<<<<<<< HEAD
+
                 <button id="userChip" class="user-chip" type="button"
                     aria-haspopup="true" aria-expanded="false" aria-label="Меню профиля">
                     <span class="user-chip__ava">
@@ -362,10 +362,10 @@ $stmt->execute([
                             stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </button>
-=======
+
                 <!-- Бейдж версии (чуть левее от кнопок) -->
                 <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.0.0-beta</span>
->>>>>>> ba3303ee84ac39b297fa0b2ab160fa8c0c84a319
+
                 <div class="buttons-right">
                     <?php
                     if (!empty($_SESSION['USERDATA'])) {
