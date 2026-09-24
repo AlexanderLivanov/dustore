@@ -24,19 +24,37 @@
  * лишних vh скролл-разгона под sticky-трюк.
  *
  * v3 — по просьбе Лео: только баннер, без второго текстового экрана и без
- * лишнего пространства под него. Два состояния — «баннер» и «верх главной» —
- * это ДВА scroll-snap пункта (scroll-snap-type:y mandatory на html,
- * scroll-snap-stop:always на обоих), а не собственный расчёт прогресса:
- * лёгкий скролл, не пересёкший половину дистанции между точками, браузер
- * сам пружинит обратно (это и даёт «потряхивание» без in-code подсчёта
- * тиков колеса — тики трекпада и мыши физически разного размера, считать
- * их вручную и есть тот самый anti-pattern из v1). Решительный скролл —
- * в любую сторону — докручивает до соседней точки и не может её
- * проскочить (stop:always). Улёт/возврат карточки — просто отражение
- * того, на какой точке мы осели: IntersectionObserver на пустом
- * сентинеле сразу перед <main> переключает класс .pb-flown. Никакого
- * preventDefault, работает одинаково на мыши/трекпаде/тач — это нативный
- * браузерный механизм, а не эмуляция его через JS.
+ * лишнего пространства под него. Пробовали отдать переключение нативному
+ * CSS scroll-snap (порог = пройденная доля дистанции между точками) — по
+ * ощущениям на реальном железе получилось не то, что описывал Лео: три
+ * чётких попытки, а не «система сама решает». Вернулись к явному счётчику,
+ * но не «считать сырые wheel-события» как в v1 (ломается на трекпаде — там
+ * один свайп = десятки мелких deltaY), а накапливать СУММУ |deltaY| до
+ * порога ~260px (примерно три щелчка колеса мыши). Пока не набрали порог —
+ * страница залочена (html.pb-locked, скролла физически нет), сама попытка
+ * только чуть подталкивает карточку (--pbNudge, пропорционально прогрессу
+ * к порогу — не резкий дискретный «тик 1/тик 2», а плавное нарастание,
+ * одинаково читается что от одного крупного скролла мышью, что от пары
+ * мелких трекпадных). Не набрали и отпустили колесо — прогресс гаснет
+ * через паузу, следующая попытка начинается с нуля (это и даёт «первые
+ * два скролла просто трясут» — они не суммируются в вечный счётчик).
+ * Набрали порог — коммит: карточка улетает существующим CSS-переходом,
+ * И СРАЗУ (без анимации скролла поверх — второй анимации там не нужно)
+ * прыгаем на верх <main>, разлочивая страницу. Обратно у самой границы —
+ * тот же накопитель, только на deltaY<0 и только пока scrollY≈0: слабый
+ * рывок вверх гасится, решительный — перелистывает обратно к баннеру.
+ * Клавиатурный скролл (PageDown/Space/стрелки) через порог не гоняем —
+ * сразу пропускаем, блокировать его ради красивости было бы просто вредно.
+ *
+ * ВАЖНО про прыжок к <main> (баг, на который наткнулись при первом деплое v3):
+ * страница у нас (и, похоже, не только этот файл) не в полном соответствии
+ * со standards mode для скролла — прокручивается фактически <body>, а не
+ * window/<html>. window.scrollTo()/window.scrollY в такой раскладке —
+ * тихий no-op: JS думает, что прыгнул, страница на самом деле стоит на
+ * месте. Поэтому весь скролл здесь идёт через document.scrollingElement
+ * (см. scrollRoot() ниже) — это то же самое, что использует сам браузер
+ * для Home/End/колеса, так что мы гарантированно двигаем ТОТ элемент,
+ * который реально скроллится, а не гадаем между html и body.
  */
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -103,19 +121,13 @@ if ($promo):
     }
 ?>
     <style>
-        /* scroll-snap живёт на html, а не на .pb-wrap: снап-контейнер — это сам
-           скролл страницы, .pb-wrap и #pbMainTopMarker ниже — просто его точки.
-           За пределами этих двух точек (когда пользователь уже читает обычный
-           контент главной) снап ни во что не вмешивается — снаповать больше
-           не к чему, обычный скролл продолжается как ни в чём не бывало.
-           scroll-padding-top ЗДЕСЬ, а не scroll-margin-top на отдельных точках —
-           иначе две точки мерялись бы от разных систем отсчёта относительно
-           sticky-хедера (80px), и браузер на загрузке не мог однозначно решить,
-           какая позиция «нулевая» — реальный баг, из-за которого страница на
-           первом кадре без единого скролла уже оказывалась в улетевшем состоянии. */
-        html {
-            scroll-snap-type: y mandatory;
-            scroll-padding-top: 80px;
+        /* Пока не набран порог накопленного скролла — страница физически залочена.
+           html и body оба на случай браузерных различий в том, какой из них
+           реальный scrolling box. Класс вешается/снимается из JS ниже. */
+        html.pb-locked,
+        html.pb-locked body {
+            overflow: hidden;
+            height: 100%;
         }
 
         .pb-wrap {
@@ -136,10 +148,6 @@ if ($promo):
             perspective: 1700px;
             perspective-origin: 50% 50%;
             padding: 24px;
-            scroll-snap-align: start;
-            /* :always — decisive-скролл не может проскочить точку насквозь за один рывок,
-               а слабый — сам пружинит обратно (это и есть «потряхивание» без ручного счёта). */
-            scroll-snap-stop: always;
             --pb-flyX: 175%;
             --pb-flyY: -4%;
             --pb-flyZ: -380px;
@@ -164,12 +172,12 @@ if ($promo):
             }
         }
 
-        /* Пустой сентинел ровно на границе с <main> — вторая snap-точка. Компенсация
-           под sticky-хедер задана один раз, на контейнере (html { scroll-padding-top }
-           выше) — единая система отсчёта для обеих точек, не per-элементный margin. */
+        /* Пустой маркер ровно на границе с <main> — читаем его позицию в JS
+           (getBoundingClientRect), чтобы прыгнуть туда ровно, без нативного
+           snap: сами решаем момент и точку прыжка, а не полагаемся на то,
+           как конкретный браузер трактует scroll-snap-stop. */
         .pb-main-marker {
-            scroll-snap-align: start;
-            scroll-snap-stop: always;
+            display: block;
         }
 
         .pb-inner {
@@ -194,7 +202,11 @@ if ($promo):
             transform-style: preserve-3d;
             transform-origin: 50% 50%;
             box-shadow: 0 40px 100px -28px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .07) inset;
-            transform: rotateY(var(--tiltY, 0deg)) rotateX(var(--tiltX, 0deg));
+            /* --pbNudge — плавный "потряхивание": JS двигает его пропорционально
+               накопленному, ещё не докоммиченному скроллу (0 → -14px к порогу),
+               используя уже существующий .12s transition — отдельная @keyframes
+               анимация тут не нужна. */
+            transform: translateY(var(--pbNudge, 0px)) rotateY(var(--tiltY, 0deg)) rotateX(var(--tiltX, 0deg));
             opacity: 1;
             filter: blur(0);
             transition: transform .001s ease-out, opacity .3s ease, filter .3s ease, visibility 0s linear .3s;
@@ -587,32 +599,140 @@ if ($promo):
             var marker = document.getElementById('pbMainTopMarker');
             var mini = document.getElementById('pbMini');
             var miniClose = document.getElementById('pbMiniClose');
+            var html = document.documentElement;
 
             var dismissed = false;
             try {
                 dismissed = sessionStorage.getItem(DISMISS_KEY) === '1';
             } catch (e) {}
 
-            // ── Состояние теперь не считается из позиции скролла вручную — им управляет
-            // сам scroll-snap (см. CSS): страница может осесть ровно на .pb-wrap («баннер»)
-            // или ровно на #pbMainTopMarker («верх главной»), третьего не дано. Здесь только
-            // отражаем, на какой из двух точек осели — через IntersectionObserver на маркере,
-            // а не пересчётом rect на каждый кадр скролла, как раньше. rootMargin сверху -80px —
-            // тот же отступ под sticky-хедер, что и scroll-margin-top у маркера в CSS: без него
-            // класс переключался бы чуть раньше физического приземления точки. ──
+            // ── Явный накопитель вместо нативного scroll-snap (см. докблок вверху файла —
+            // там же объяснение, почему не сырой подсчёт wheel-событий, как в самой первой
+            // версии). THRESHOLD подобран так, чтобы три обычных щелчка колеса мыши гарантированно
+            // коммитили, а один случайный шевеление трекпада — нет. ──
+            var THRESHOLD = 260;
+            var DECAY_MS = 260;
             var flown = false;
-            if (marker && 'IntersectionObserver' in window) {
-                var io = new IntersectionObserver(function(entries) {
-                    var entry = entries[entries.length - 1];
-                    flown = entry.isIntersecting;
-                    card.classList.toggle('pb-flown', flown);
-                    if (!dismissed) mini.classList.toggle('pb-visible', flown);
-                }, {
-                    threshold: 0,
-                    rootMargin: '-80px 0px 0px 0px'
-                });
-                io.observe(marker);
+            var accum = 0;
+            var decayTimer = null;
+
+            function scrollRoot() {
+                return document.scrollingElement || document.documentElement;
             }
+
+            function markerDocTop() {
+                return marker.getBoundingClientRect().top + scrollRoot().scrollTop;
+            }
+
+            function setNudge(px) {
+                card.style.setProperty('--pbNudge', px.toFixed(1) + 'px');
+            }
+
+            function scheduleDecay() {
+                clearTimeout(decayTimer);
+                decayTimer = setTimeout(function() {
+                    accum = 0;
+                    setNudge(0);
+                }, DECAY_MS);
+            }
+
+            function commitDown() {
+                html.classList.remove('pb-locked');
+                scrollRoot().scrollTop = markerDocTop();
+                flown = true;
+                accum = 0;
+                setNudge(0);
+                card.classList.add('pb-flown');
+                if (!dismissed) mini.classList.add('pb-visible');
+            }
+
+            function commitUp() {
+                scrollRoot().scrollTop = 0;
+                html.classList.add('pb-locked');
+                flown = false;
+                accum = 0;
+                card.classList.remove('pb-flown');
+                mini.classList.remove('pb-visible');
+            }
+
+            function onWheel(e) {
+                if (e.ctrlKey) return; // pinch-zoom/ctrl+колесо — не наше дело
+                if (!flown) {
+                    if (e.deltaY <= 0) return; // скролл вверх, когда и так на баннере — игнор
+                    e.preventDefault();
+                    accum += Math.abs(e.deltaY);
+                    if (accum >= THRESHOLD) {
+                        commitDown();
+                    } else {
+                        setNudge(-14 * (accum / THRESHOLD));
+                        scheduleDecay();
+                    }
+                    return;
+                }
+                // На главной гейтим только у самой верхней границы и только скролл вверх —
+                // это и есть «сопротивление»: чуть ниже по странице колесо работает как обычно.
+                if (scrollRoot().scrollTop > 4 || e.deltaY >= 0) return;
+                e.preventDefault();
+                accum += Math.abs(e.deltaY);
+                if (accum >= THRESHOLD) commitUp();
+                else scheduleDecay();
+            }
+            window.addEventListener('wheel', onWheel, {
+                passive: false
+            });
+
+            // ── Тач: тот же накопитель, по вертикальному свайпу ──
+            var touchStartY = null;
+            window.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+            }, {
+                passive: true
+            });
+            window.addEventListener('touchmove', function(e) {
+                if (touchStartY === null) return;
+                var dy = touchStartY - e.touches[0].clientY; // >0 — свайп вверх (скролл вниз)
+                if (!flown) {
+                    if (dy <= 0) return;
+                    e.preventDefault();
+                    accum = dy;
+                    if (accum >= THRESHOLD) {
+                        commitDown();
+                        touchStartY = null;
+                    } else {
+                        setNudge(-14 * (accum / THRESHOLD));
+                    }
+                    return;
+                }
+                if (scrollRoot().scrollTop > 4 || dy >= 0) return;
+                e.preventDefault();
+                accum = -dy;
+                if (accum >= THRESHOLD) {
+                    commitUp();
+                    touchStartY = null;
+                }
+            }, {
+                passive: false
+            });
+            window.addEventListener('touchend', function() {
+                touchStartY = null;
+                accum = 0;
+                scheduleDecay();
+            }, {
+                passive: true
+            });
+
+            // ── Клавиатура намеренно НЕ гейтим накопителем — Page Down/Space/стрелки
+            // сразу пропускают вниз. Ловить три отдельных keydown ради красивого
+            // потряхивания того не стоит: это чужой, некликовый способ навигации,
+            // и держать его взаперти было бы просто вредно для доступности. ──
+            window.addEventListener('keydown', function(e) {
+                if (flown) return;
+                if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
+                    commitDown();
+                }
+            });
+
+            html.classList.add('pb-locked');
 
             if (miniClose) {
                 miniClose.addEventListener('click', function() {
