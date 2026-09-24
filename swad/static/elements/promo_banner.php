@@ -19,64 +19,6 @@
  *   - в CSS используем `body.pb-flown main`, а не `body.pb-flown > main`;
  *   - все движения main/wrap идут inline-стилями из JS.
  *
-<<<<<<< HEAD
- * ИСТОРИЯ АНИМАЦИИ (v6, текущая):
- * v1 — перехват wheel (preventDefault) и ручная стейт-машина: классический
- * scroll-jacking, ломался на трекпадах, на тач просто отключали.
- * v2 — «pin & progress»: sticky-подставка + прогресс 0..1 в --p, но давал
- * побочный текстовый блок (.pb-title) на месте улетевшей карточки.
- * v3/v4 — только баннер, явный накопитель СУММЫ |deltaY| до порога (не сырые
- * wheel-события — ломается на трекпаде), но коммит был мгновенным прыжком
- * scrollTop — на реальном железе не читался как эффект, инерция жеста
- * докручивала мимо точки стыковки.
- *
- * v5/v6 — Лео переписал механику коммита с нуля на «pull-to-refresh»,
- * без единого scrollTop-прыжка вообще. Идея: вниз с баннера карточка
- * улетает своим 3D-переходом (.pb-flying/.pb-flown), а сразу за этим wrap
- * «паркуется» (position:fixed, обрезан по высоте 220px, translateY(-100%) —
- * полностью за кадром сверху) — подмена происходит, когда карточка уже
- * невидима, так что её физически не видно. <main> в момент подмены УЖЕ
- * в кадре без единого пикселя скролла — сам факт «страницы» не сдвигается,
- * сдвигается только состояние DOM.
- *
- * Обратно вверх — тот же самый накопитель |deltaY|, но работает только пока
- * scrollTop ≈ 0 (UP_GATE), и вместо «отдельного эффекта» тянет ЖИВУЮ пару
- * переменных --pb-pull/--pb-tension (@property, интерполируемые): main
- * едет вниз на --pb-pull, запаркованный wrap выезжает из-под кромки на ту
- * же величину — визуально это одно резиновое движение на двух половинах.
- * Не дотянули — пружинный отскок (.pb-springing, cubic-bezier с
- * перехлёстом). Дотянули до THRESHOLD_UP — commitUp(): pull уже физически
- * доехал до высоты wrap (peekHeight(), см. ниже) точно в момент коммита,
- * то есть полоска УЖЕ раскрыта вплотную, без щели. Дальше — микро-кроссфейд
- * (~650ms: 170ms гасим, меняем DOM-состояние в темноте, 480ms проявляем
- * с лёгким pop через cubic-bezier с перехлёстом): так подмена «обрезанная
- * полоска 220px, fixed» → «полная сцена 100vh, в потоке» не требует
- * анимировать сам box-model (transition на height/position — дорого и
- * дёргано), а выглядит как единый вдох-выдох, а не хлопок.
- *
- * v6 добавил: (1) main теперь не просто едет вниз на pull — вместе с этим
- * чуть уменьшается и темнеет (--pb-tension driven scale+filter), иначе на
- * фоне статичной страницы 180px сдвига читались слабо; (2) датчик натяжения
- * (#pbTension) — кольцевой индикатор с стрелкой, показывает прогресс к
- * порогу и направление в обе стороны (для «вниз» — с учётом того, что
- * коммит не с первой попытки, а с третьей: прогресс = (attemptsDown +
- * accum/THRESHOLD_DOWN) / ATTEMPTS_NEEDED, честно показывает «ещё 2
- * попытки»); (3) .pb-wrap.pb-parked .pb-inner получил явную высоту вместо
- * height:auto — с единственным абсолютно спозиционированным ребёнком внутри
- * (.pb-card{position:absolute;inset:0}) auto-высота считается пустой (абсолютные
- * дети не участвуют в auto-высоте родителя), так что раньше пик мог
- * схлопываться в 0 — теперь высота явно равна высоте самого wrap.
- *
- * ВАЖНО про прыжок к <main> (баг, на который наткнулись при первом деплое v3):
- * страница у нас (и, похоже, не только этот файл) не в полном соответствии
- * со standards mode для скролла — прокручивается фактически <body>, а не
- * window/<html>. window.scrollTo()/window.scrollY в такой раскладке —
- * тихий no-op: JS думает, что прыгнул, страница на самом деле стоит на
- * месте. Поэтому весь скролл здесь идёт через document.scrollingElement
- * (см. scrollRoot() ниже) — это то же самое, что использует сам браузер
- * для Home/End/колеса, так что мы гарантированно двигаем ТОТ элемент,
- * который реально скроллится, а не гадаем между html и body.
-=======
  * Прокрутка: у нас фактически скроллится document.scrollingElement (обычно
  * body), а не window/html. window.scrollTo()/scrollY — тихий no-op, поэтому
  * весь скролл идёт через scrollRoot().
@@ -90,7 +32,6 @@
  * у верхней границы main — commitUp возвращает его как обычно.
  * sessionStorage (не localStorage) — потому что сценарий «первый раз»,
  * а не «навсегда»: новая вкладка = снова первый раз.
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
  */
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -203,243 +144,6 @@ if ($promo):
             transform: translateY(var(--pbNudge, 0px));
             transition: transform .001s;
             will-change: transform;
-<<<<<<< HEAD
-        }
-
-        .pb-inner.pb-decaying {
-            transition: transform .5s cubic-bezier(.34, 1.56, .64, 1);
-        }
-
-
-.pb-card {
-    position: absolute;
-    inset: 0;
-    border-radius: 22px;
-    overflow: hidden;
-    transform-style: preserve-3d;
-    transform-origin: 50% 50%;
-    box-shadow: 0 40px 100px -28px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .07) inset;
-    transform: rotateY(var(--tiltY, 0deg)) rotateX(var(--tiltX, 0deg));
-    opacity: 1;
-    filter: blur(0);
-    transition: transform .001s, opacity .3s ease, filter .3s ease;
-    will-change: transform, opacity, filter;
-}
-
-.pb-card.pb-flying {
-    transition:
-        transform .55s cubic-bezier(.22, .61, .36, 1),
-        opacity .45s ease,
-        filter .45s ease;
-}
-
-.pb-card.pb-flown {
-    transform:
-        translate3d(var(--pb-flyX), var(--pb-flyY), var(--pb-flyZ))
-        rotateY(var(--pb-rotY)) rotateX(var(--pb-rotX)) rotateZ(var(--pb-rotZ))
-        scale(var(--pb-scaleEnd));
-    opacity: 0;
-    filter: blur(6px);
-    pointer-events: none;
-}
-
-/* Тряска — резкая, 380мс, с первым тяжёлым ударом (12px за 50мс). */
-@keyframes pbShake {
-    0%   { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)); }
-    14%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-12px, 4px, 0) rotateZ(-2.2deg) scale(.972); }
-    32%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d( 12px, 4px, 0) rotateZ( 2.2deg) scale(.972); }
-    52%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-7px,  0,   0) rotateZ(-1.3deg) scale(1.010); }
-    70%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d( 7px,  0,   0) rotateZ( 1.3deg) scale(1.010); }
-    86%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-2px,  0,   0) rotateZ(-0.4deg) scale(1); }
-    100% { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)); }
-}
-.pb-card.pb-shake {
-    animation: pbShake .38s cubic-bezier(.36, .07, .19, .97) both;
-}
-
-/* Появление главной снизу — с лёгким расфокусом, чтобы шва вообще не читалось. */
-@keyframes pbMainEnter {
-    from { transform: translateY(80px); opacity: 0; filter: blur(8px); }
-    to   { transform: translateY(0);    opacity: 1; filter: blur(0);   }
-}
-
-main.pb-main-enter {
-    animation: pbMainEnter .62s cubic-bezier(.22, .61, .36, 1);
-}
-
-/* ── Анимируемые переменные натяжения ──────────────────────────────────
-   @property делает их интерполируемыми. --pb-pull — основная (сколько main
-   съехал вниз / сколько wrap выехало сверху), --pb-tension — 0..1 для
-   градиента и кромки (обновляется пропорционально pull). */
-@property --pb-tension {
-    syntax: '<number>';
-    inherits: true;
-    initial-value: 0;
-}
-@property --pb-pull {
-    syntax: '<length>';
-    inherits: true;
-    initial-value: 0px;
-}
-
-main {
-    /* ВАЖНО: это НЕ body > main. header.php оборачивает и хедер, и
-       промо-баннер, и main, и футер в один сквозной .header-wrapper —
-       так что <main> на самом деле body > .header-wrapper > main, а не
-       прямой ребёнок body. Строгий дочерний комбинатор (>) здесь молча
-       НЕ СРАБАТЫВАЛ вообще никогда: main никогда не двигался, не тускнел,
-       кромка-свечение никогда не загоралась — это и была настоящая причина
-       «нет ощущения натяжения» (main физически не мог отреагировать, а не
-       просто слабо реагировал). Везде ниже — просто `main` / `body.pb-flown
-       main` (потомок, без >), без привязки к глубине вложенности. */
-    position: relative;
-    will-change: transform, filter;
-    transform-origin: 50% 0;
-}
-
-/* ── Pull-to-refresh: main сдвигается вниз ────────────────────────────
-   Пока --pb-pull = 0, ничего не меняется. Когда юзер тянет вверх,
-   --pb-pull растёт → main уезжает вниз, все его элементы едут вместе
-   с ним (это одна box-модель, не десять отдельных элементов). */
-body.pb-flown main {
-    z-index: 2;
-    /* Раньше был только translateY(pull) — на статичной странице 180px сдвига
-       читались слабо, «как будто ничего не тянется». Добавили лёгкое сжатие
-       и затемнение, оба от --pb-tension (0..1, растёт нелинейно тем же
-       Math.pow(p,.75), что и сам pull) — вместе с кромкой-свечением
-       (main::after ниже, тоже на --pb-tension) это уже читается однозначно
-       как «страницу тянут», а не «страница чуть дрогнула». */
-    transform: translateY(var(--pb-pull, 0px)) scale(calc(1 - var(--pb-tension, 0) * 0.035));
-    filter: brightness(calc(1 - var(--pb-tension, 0) * 0.22)) saturate(calc(1 - var(--pb-tension, 0) * 0.3));
-    transition: transform .08s linear, filter .08s linear;
-}
-body.pb-flown main.pb-springing,
-html.pb-springing body.pb-flown main {
-    transition: transform .55s cubic-bezier(.34, 1.56, .64, 1), filter .55s ease;
-}
-
-/* ── Припаркованный баннер ────────────────────────────────────────────
-   Пока мы «на главной», wrap сидит fixed в потоке z-index 1 (под main,
-   у main z-index 2), вырезан по высоте, и весь сдвинут за верхнюю кромку
-   через translateY(-100%). При --pb-pull > 0 он выезжает вниз — и в
-   открывшуюся сверху щель видно ВЕРХНЮЮ часть карточки. Это симметрично
-   тому, как main уезжает вниз: две половины одного движения.
-
-   Высота 220px = ровно тот же predел, что peekHeight() считает в JS —
-   при полном натяжении (--pb-pull == высота wrap) полоска раскрывается
-   ВПЛОТНУЮ, без остаточной щели: момент коммита застаёт её уже раскрытой. */
-.pb-wrap.pb-parked {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: min(220px, 40vh);
-    z-index: 1;
-    padding: 0;
-    align-items: flex-start;
-    overflow: hidden;
-    pointer-events: none;
-    transform: translateY(calc(-100% + var(--pb-pull, 0px)));
-    transition: transform .08s linear;
-    will-change: transform;
-    perspective: none;
-}
-html.pb-springing .pb-wrap.pb-parked {
-    transition: transform .55s cubic-bezier(.34, 1.56, .64, 1);
-}
-/* Внутри припаркованного wrap карточка больше не центрируется и не
-   растягивается на 100vh — она просто лежит сверху своей обычной высоты,
-   а обрезка идёт по wrap-у. height:auto тут был бы багом: единственный
-   ребёнок (.pb-card) position:absolute, а абсолютные дети не участвуют
-   в подсчёте auto-высоты родителя — родитель посчитал бы себя пустым, и
-   пик мог схлопнуться в 0. Поэтому высота явно = высоте самого wrap. */
-.pb-wrap.pb-parked .pb-inner {
-    height: min(220px, 40vh);
-    min-height: 0;
-    flex-shrink: 0;
-}
-
-/* ── Кроссфейд-подмена в commitUp() ──────────────────────────────────
-   Вместо анимации height/position (дорого, дёргано при смене box-модели)
-   wrap на мгновение гасится, DOM-состояние меняется «в темноте», и тут же
-   проявляется обратно с лёгким pop — единый вдох-выдох вместо хлопка. */
-.pb-wrap.pb-swap-out {
-    transition: opacity .16s ease, filter .16s ease;
-    opacity: 0;
-    filter: blur(10px);
-}
-.pb-wrap.pb-swap-in {
-    animation: pbWrapSwapIn .48s cubic-bezier(.22, .9, .32, 1.24) both;
-}
-@keyframes pbWrapSwapIn {
-    from { opacity: 0; filter: blur(10px); transform: scale(.96); }
-    to   { opacity: 1; filter: blur(0);     transform: scale(1); }
-}
-
-/* ── Градиент в щели ─────────────────────────────────────────────────
-   Косметика поверх открывшейся полосы. Не обязателен — но пусть будет,
-   он делает шов мягче. */
-body.pb-flown::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 1;
-    background: linear-gradient(180deg,
-        rgba(0, 0, 0, 1) 0%,
-        rgba(20, 4, 29, 0.9) 5%,
-        rgba(60, 10, 80, 0.55) 15%,
-        rgba(120, 20, 130, 0.28) 28%,
-        transparent 50%);
-    opacity: calc(var(--pb-tension, 0) * 1.4);
-    transition: opacity .08s linear;
-}
-
-/* Светящаяся кромка по верху main: горит, когда main отъехал. */
-body.pb-flown main::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    pointer-events: none;
-    z-index: 100;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(255, 90, 170, calc(var(--pb-tension, 0) * 1)) 50%,
-        transparent 100%);
-    box-shadow:
-        0 0 calc(var(--pb-tension, 0) * 50px) rgba(230, 46, 138, calc(var(--pb-tension, 0) * 1)),
-        0 0 calc(var(--pb-tension, 0) * 120px) rgba(195, 33, 120, calc(var(--pb-tension, 0) * 0.5));
-}
-
-body.pb-flown main {
-    box-shadow: 0 calc(var(--pb-tension, 0) * -36px) calc(var(--pb-tension, 0) * 70px) rgba(0, 0, 0, calc(var(--pb-tension, 0) * 0.85));
-}
-
-/* Луна — холодный акцент. */
-body.moonlight-theme.pb-flown::before {
-    background: linear-gradient(180deg,
-        rgba(0, 0, 0, 1) 0%,
-        rgba(4, 8, 20, 0.9) 5%,
-        rgba(12, 30, 60, 0.55) 15%,
-        rgba(30, 80, 150, 0.28) 28%,
-        transparent 50%);
-}
-body.moonlight-theme.pb-flown main::after {
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(140, 190, 255, calc(var(--pb-tension, 0) * 1)) 50%,
-        transparent 100%);
-    box-shadow:
-        0 0 calc(var(--pb-tension, 0) * 50px) rgba(80, 130, 220, calc(var(--pb-tension, 0) * 1)),
-        0 0 calc(var(--pb-tension, 0) * 120px) rgba(80, 130, 220, calc(var(--pb-tension, 0) * 0.5));
-}
-=======
             animation: pbIntro .7s ease-out both;
         }
 
@@ -618,7 +322,6 @@ body.moonlight-theme.pb-flown main::after {
                 rgba(86, 144, 240, 0) 100%);
             box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension-down, 0) * 0.7));
         }
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
         .pb-bg {
             position: absolute;
@@ -878,94 +581,6 @@ body.moonlight-theme.pb-flown main::after {
             background: rgba(255, 255, 255, .18);
             color: #f8f9fa;
         }
-
-        /* ── Датчик натяжения ─────────────────────────────────────────────
-           Минималистичный: кольцо-прогресс + стрелка направления, всегда
-           внизу по центру (независимо от того, тянем к главной или обратно
-           к баннеру — так он не спорит за место с .pb-mini у хедера). Для
-           «вниз» прогресс честно учитывает ATTEMPTS_NEEDED — не «набрали
-           240px», а «это третья попытка», ровно как просил Лео. */
-        .pb-tension {
-            position: fixed;
-            left: 50%;
-            bottom: 30px;
-            z-index: 6;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #f8f9fa;
-            opacity: 0;
-            pointer-events: none;
-            transform: translate(-50%, 6px) scale(.85);
-            transition: opacity .18s ease, transform .18s ease;
-        }
-
-        .pb-tension.pb-tension-visible {
-            opacity: 1;
-            transform: translate(-50%, 0) scale(1);
-        }
-
-        .pb-tension-ring {
-            position: absolute;
-            inset: 0;
-            transform: rotate(-90deg);
-        }
-
-        .pb-tension-ring-bg {
-            fill: rgba(20, 4, 29, .6);
-            stroke: rgba(255, 255, 255, .18);
-            stroke-width: 2.5;
-        }
-
-        .pb-tension-ring-fg {
-            fill: none;
-            stroke: #e62e8a;
-            stroke-width: 2.5;
-            stroke-linecap: round;
-            stroke-dasharray: 113.1;
-            stroke-dashoffset: 113.1;
-            transition: stroke-dashoffset .05s linear, stroke .2s ease;
-        }
-
-        .pb-tension.pb-tension-ready .pb-tension-ring-fg {
-            stroke: #35d07f;
-        }
-
-        .pb-tension-arrow {
-            position: relative;
-            z-index: 1;
-            transition: transform .18s ease;
-        }
-
-        .pb-tension.pb-tension-up .pb-tension-arrow {
-            transform: rotate(180deg);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .pb-tension.pb-tension-ready .pb-tension-arrow {
-                animation: none;
-            }
-        }
-
-        .pb-tension.pb-tension-ready .pb-tension-arrow {
-            animation: pbTensionPulse .5s ease-in-out infinite;
-        }
-
-        @keyframes pbTensionPulse {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-2px); }
-        }
-
-        .pb-tension.pb-tension-up.pb-tension-ready .pb-tension-arrow {
-            animation: pbTensionPulseUp .5s ease-in-out infinite;
-        }
-
-        @keyframes pbTensionPulseUp {
-            0%, 100% { transform: rotate(180deg) translateY(0); }
-            50%      { transform: rotate(180deg) translateY(-2px); }
-        }
     </style>
 
     <div class="pb-wrap" id="pbWrap">
@@ -1051,16 +666,6 @@ body.moonlight-theme.pb-flown main::after {
         </div>
     </div>
 
-    <div class="pb-tension" id="pbTension" aria-hidden="true">
-        <svg class="pb-tension-ring" width="44" height="44" viewBox="0 0 44 44">
-            <circle class="pb-tension-ring-bg" cx="22" cy="22" r="18" />
-            <circle class="pb-tension-ring-fg" id="pbTensionRing" cx="22" cy="22" r="18" />
-        </svg>
-        <svg class="pb-tension-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14M6 13l6 6 6-6" />
-        </svg>
-    </div>
-
     <script src="/swad/js/analytics.js"></script>
 <script>
 (function () {
@@ -1068,54 +673,6 @@ body.moonlight-theme.pb-flown main::after {
     var GAME_ID = <?= (int)$promo['game_id'] ?>;
     var DISMISS_KEY = 'pbMiniDismissed:' + PROMO_ID;
 
-<<<<<<< HEAD
-    var wrap = document.getElementById('pbWrap');
-    var inner = document.getElementById('pbInner');
-    var card = document.getElementById('pbCard');
-    var mini = document.getElementById('pbMini');
-    var miniClose = document.getElementById('pbMiniClose');
-    var tensionEl = document.getElementById('pbTension');
-    var tensionRing = document.getElementById('pbTensionRing');
-    var html = document.documentElement;
-
-    /* mainEl НЕ кэшируем на старте: promo_banner.php инклюдится ВЫШЕ <main>,
-       и в момент выполнения скрипта элемента в DOM ещё нет. Тянем лениво.
-       Селектор — просто 'main', НЕ 'body > main': header.php оборачивает
-       весь хедер+баннер+main+футер в сквозной .header-wrapper, так что
-       <main> на деле не прямой ребёнок body. С 'body > main' этот querySelector
-       молча возвращал null всегда — вся реакция main на натяжение (translate/
-       scale/filter/glow) была мертва с самого начала, это и была настоящая
-       причина «страница не реагирует». На странице ровно один <main>, так
-       что голый элементный селектор безопасен. */
-    var mainEl = null;
-    function getMainEl() {
-        if (!mainEl) mainEl = document.querySelector('main');
-        return mainEl;
-    }
-    if (document.readyState !== 'loading') getMainEl();
-    else document.addEventListener('DOMContentLoaded', getMainEl, { once: true });
-
-    var dismissed = false;
-    try { dismissed = sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
-
-    /* ── Параметры ──────────────────────────────────────────────────────
-       THRESHOLD_UP = 420: чтобы на трекпаде один tick (~300) не улетал
-       сразу в коммит — нужно минимум 3-4 события. MAX_DELTA_PER_TICK
-       ограничивает вклад одного события, чтобы «жирный» tick не проглотил
-       весь порог одним махом. Предел самого натяжения — не константа
-       здесь, а peekHeight() (см. ниже): высота запаркованного wrap. */
-    var THRESHOLD_DOWN = 240;
-    var THRESHOLD_UP   = 420;
-    var MAX_DELTA_PER_TICK = 140;
-    var ATTEMPTS_NEEDED = 3;
-    var DECAY_MS  = 220;
-    var MIN_ATTEMPT = 40;
-    var UP_GATE   = 40;
-    var RING_CIRC = 113.1; // 2*PI*18, радиус кольца датчика
-
-    var flown = false;
-    var attemptsDown = 0;
-=======
     /* Флаг «баннер уже был показан в этой сессии». Ставится при первом
        commitDown — когда пользователь впервые прорвался с баннера на
        главную. При последующих заходах на главную баннер сразу уходит
@@ -1153,7 +710,6 @@ body.moonlight-theme.pb-flown main::after {
     var SPRING_MS = 550;
 
     var flown = false;
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     var accum = 0;
     var decayTimer = null;
     var animating = false;
@@ -1163,61 +719,10 @@ body.moonlight-theme.pb-flown main::after {
         return document.scrollingElement || document.documentElement;
     }
 
-<<<<<<< HEAD
-    /* Предел --pb-pull = реальная высота запаркованного wrap (та же формула,
-       что в CSS: min(220px, 40vh)). Раньше это была отдельная константа
-       MAIN_PULL=180, из-за чего натяжение упиралось в потолок РАНЬШЕ, чем
-       полоска раскрывалась вплотную — оставался «недотянутый» зазор 40px
-       даже на максимуме. Теперь предел один и тот же для CSS и JS: полное
-       натяжение = полоска раскрыта вплотную, без остатка. */
-    function peekHeight() {
-        return Math.min(220, window.innerHeight * 0.4);
-    }
-
-    /* ── Датчик натяжения ─────────────────────────────────────────────── */
-    function showTension(direction, progress) {
-        if (!tensionEl) return;
-        var p = Math.max(0, Math.min(progress, 1));
-        tensionEl.classList.add('pb-tension-visible');
-        tensionEl.classList.toggle('pb-tension-up', direction === 'up');
-        tensionEl.classList.toggle('pb-tension-ready', p >= 0.92);
-        if (tensionRing) tensionRing.style.strokeDashoffset = (RING_CIRC * (1 - p)).toFixed(1);
-    }
-    function hideTension() {
-        if (!tensionEl) return;
-        tensionEl.classList.remove('pb-tension-visible', 'pb-tension-ready', 'pb-tension-up');
-    }
-
-    /* ── Пружина баннера (вниз) ──────────────────────────────────────── */
-=======
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     function setNudge(px) {
         inner.style.setProperty('--pbNudge', px.toFixed(1) + 'px');
     }
 
-<<<<<<< HEAD
-    /* ── Пружина main (вверх) ──────────────────────────────────────────
-       Пишем --pb-pull на :root. По ней одновременно:
-       - main едет вниз (CSS body.pb-flown main),
-       - припаркованный wrap выезжает сверху (CSS .pb-wrap.pb-parked).
-       Никаких inline transform — только одна переменная, которую читают
-       оба элемента. Так они физически не могут разъехаться. */
-    function setMainNudge(px, live) {
-        var m = getMainEl();
-        if (!m) return;
-        var p = Math.min(Math.abs(px) / peekHeight(), 1);
-
-        html.style.setProperty('--pb-tension', p.toFixed(3));
-        html.style.setProperty('--pb-pull', px.toFixed(1) + 'px');
-
-        if (!live) {
-            /* Отбой. Медленный переход вешаем классом pb-springing — и на
-               main, и на wrap.pb-parked. По нему CSS даёт bounce. */
-            html.classList.add('pb-springing');
-            html.style.setProperty('--pb-pull', '0px');
-            html.style.setProperty('--pb-tension', '0');
-            setTimeout(function () { html.classList.remove('pb-springing'); }, 620);
-=======
     function updateTensionDown() {
         var p = Math.min(accum / THRESHOLD_DOWN, 1);
         html.style.setProperty('--pb-tension-down', p.toFixed(3));
@@ -1255,17 +760,13 @@ body.moonlight-theme.pb-flown main::after {
                 m.style.filter = '';
                 wrap.style.transition = '';
             }, SPRING_MS + 80);
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
         }
     }
 
     function springBackBanner() {
         inner.classList.add('pb-decaying');
         setNudge(0);
-<<<<<<< HEAD
-=======
         clearTensionDown();
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
         setTimeout(function () { inner.classList.remove('pb-decaying'); }, 560);
     }
 
@@ -1280,129 +781,21 @@ body.moonlight-theme.pb-flown main::after {
         clearTimeout(decayTimer);
         decayTimer = setTimeout(function () {
             if (!flown) {
-<<<<<<< HEAD
-                if (accum > MIN_ATTEMPT) attemptsDown++;
-=======
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
                 springBackBanner();
             } else {
                 setMainNudge(0, false);
             }
             accum = 0;
             shookThisGesture = false;
-<<<<<<< HEAD
-            hideTension();
         }, DECAY_MS);
     }
 
-    /* ── Полёт карточки ──────────────────────────────────────────────── */
-=======
-        }, DECAY_MS);
-    }
-
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     function flyCardOut() {
         card.classList.add('pb-flying');
         void card.offsetWidth;
         card.classList.add('pb-flown');
         setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
     }
-<<<<<<< HEAD
-    function flyCardIn() {
-        card.classList.add('pb-flying');
-        void card.offsetWidth;
-        card.classList.remove('pb-flown');
-        setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
-    }
-
-    /* ── Коммит ВНИЗ ─────────────────────────────────────────────────── */
-    function commitDown() {
-        if (animating) return;
-        animating = true;
-        clearTimeout(decayTimer);
-        hideTension();
-
-        inner.classList.remove('pb-decaying');
-        setNudge(0);
-        attemptsDown = 0;
-        accum = 0;
-        shookThisGesture = false;
-
-        flyCardOut();
-        if (!dismissed) setTimeout(function () { mini.classList.add('pb-visible'); }, 380);
-
-        setTimeout(function () {
-            /* Натяг обнуляем до подмены. */
-            html.style.setProperty('--pb-pull', '0px');
-            html.style.setProperty('--pb-tension', '0');
-
-            /* Паркуем wrap: уходит из потока, садится fixed сверху за кадр.
-               main сам собой оказывается в кадре — не нужно скроллить. */
-            wrap.classList.add('pb-parked');
-
-            /* Карточка уже улетела, но при натяжении вверх нам нужна
-               нормальная — сбрасываем «улёт» за кадром. Пользователь не
-               увидит, потому что wrap сейчас полностью за верхней кромкой. */
-            card.classList.remove('pb-flown', 'pb-flying', 'pb-shake');
-
-            requestAnimationFrame(function () { scrollRoot().scrollTop = 0; });
-            html.classList.remove('pb-locked');
-            document.body.classList.add('pb-flown');
-            flown = true;
-
-            var m = getMainEl();
-            if (m) m.classList.add('pb-main-enter');
-        }, 420);
-
-        setTimeout(function () {
-            var m = getMainEl();
-            if (m) {
-                m.classList.remove('pb-main-enter');
-                /* Защита: если @keyframes-анимация pb-main-enter по какой-то
-                   причине не «отпустила» transform у main сама (висящий Animation
-                   в getAnimations() — по-хорошему после снятия класса быть не
-                   должно, но конкретно на этом стенде transform main иногда
-                   оставался «заморожен» на identity даже под inline !important,
-                   пока анимация formально не была явно cancel()-нута), сносим
-                   ЛЮБЫЕ анимации на main руками, чтобы --pb-pull/--pb-tension
-                   transform ниже точно ничем не перебивался. */
-                if (m.getAnimations) {
-                    m.getAnimations().forEach(function (a) { a.cancel(); });
-                }
-            }
-            animating = false;
-        }, 420 + 640);
-    }
-
-    /* ── Коммит ВВЕРХ ────────────────────────────────────────────────── */
-    function commitUp() {
-        if (animating) return;
-        animating = true;
-        clearTimeout(decayTimer);
-        hideTension();
-
-        /* В момент коммита --pb-pull уже физически доехал до peekHeight()
-           (полоска раскрыта вплотную, без щели — см. докблок вверху), так
-           что резкого рывка тут нет. Резкий был ДАЛЬШЕ: сама подмена
-           «обрезанная полоска 220px, fixed» → «полная сцена 100vh, в
-           потоке» раньше происходила мгновенно, одним кадром — это и
-           читалось как «баннер появляется резко». Теперь — микро-кроссфейд:
-           гасим (170ms), меняем DOM-состояние пока wrap невидим, проявляем
-           обратно с лёгким pop (480ms, pb-swap-in). */
-        html.classList.remove('pb-springing');
-        wrap.classList.add('pb-swap-out');
-
-        attemptsDown = 0;
-        accum = 0;
-        shookThisGesture = false;
-
-        setTimeout(function () {
-            html.style.setProperty('--pb-pull', '0px');
-            html.style.setProperty('--pb-tension', '0');
-
-            /* Снять парковку: wrap снова в потоке, main уходит под него. */
-            wrap.classList.remove('pb-parked', 'pb-swap-out');
-=======
 
     function commitDown() {
         if (animating) return;
@@ -1491,26 +884,9 @@ body.moonlight-theme.pb-flown main::after {
             wrap.style.transition = '';
 
             wrap.classList.remove('pb-parked');
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
-            requestAnimationFrame(function () { scrollRoot().scrollTop = 0; });
             html.classList.add('pb-locked');
             document.body.classList.remove('pb-flown');
-<<<<<<< HEAD
-            mini.classList.remove('pb-visible');
-
-            wrap.classList.add('pb-swap-in');
-            setTimeout(function () { wrap.classList.remove('pb-swap-in'); }, 480);
-        }, 170);
-
-        setTimeout(function () {
-            flown = false;
-            animating = false;
-        }, 170 + 480);
-    }
-
-    /* ── Колесо ──────────────────────────────────────────────────────── */
-=======
 
             scrollRoot().scrollTop = 0;
 
@@ -1523,33 +899,20 @@ body.moonlight-theme.pb-flown main::after {
         setTimeout(function () { card.classList.remove('pb-entering'); }, SPRING_MS + 700);
     }
 
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     function onWheel(e) {
         if (e.ctrlKey) return;
         if (animating) { e.preventDefault(); return; }
 
         if (!flown) {
-<<<<<<< HEAD
-            /* ─── ВНИЗ С БАННЕРА ─── */
-            if (e.deltaY <= 0) return;
-            e.preventDefault();
-            accum += Math.abs(e.deltaY);
-=======
             if (e.deltaY <= 0) return;
             e.preventDefault();
             accum += Math.min(Math.abs(e.deltaY), MAX_DELTA_PER_TICK);
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
             if (!shookThisGesture && accum > MIN_ATTEMPT) {
                 shookThisGesture = true;
                 triggerShake();
             }
 
-<<<<<<< HEAD
-            if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
-                commitDown();
-                return;
-=======
             updateTensionDown();
 
             if (accum >= THRESHOLD_DOWN) {
@@ -1606,75 +969,8 @@ body.moonlight-theme.pb-flown main::after {
             if (!shookThisGesture && accum > MIN_ATTEMPT) {
                 shookThisGesture = true;
                 triggerShake();
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             }
-            setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
-            /* Честный прогресс: не «набрали 240px», а «это N-я попытка из 3» —
-               ровно то, что Лео описывал словами («первые две — трясут»). */
-            showTension('down', (attemptsDown + accum / THRESHOLD_DOWN) / ATTEMPTS_NEEDED);
-            scheduleDecay();
-            return;
-        }
 
-<<<<<<< HEAD
-        /* ─── ВВЕРХ С ГЛАВНОЙ ─── */
-        if (e.deltaY >= 0) {
-            if (accum > 0) {
-                accum = 0;
-                setMainNudge(0, false);
-                hideTension();
-            }
-            return;
-        }
-
-        var s = scrollRoot();
-        if (s.scrollTop > UP_GATE) {
-            accum = 0;
-            return;
-        }
-
-        e.preventDefault();
-        accum += Math.min(Math.abs(e.deltaY), MAX_DELTA_PER_TICK);
-
-        if (accum >= THRESHOLD_UP) {
-            commitUp();
-            return;
-        }
-
-        var p = Math.min(accum / THRESHOLD_UP, 1);
-        var eased = Math.pow(p, 0.75);
-        setMainNudge(peekHeight() * eased, true);
-        showTension('up', p);
-        scheduleDecay();
-    }
-    window.addEventListener('wheel', onWheel, { passive: false });
-
-    /* ── Тач ─────────────────────────────────────────────────────────── */
-    var touchStartY = null;
-    window.addEventListener('touchstart', function (e) {
-        touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    window.addEventListener('touchmove', function (e) {
-        if (touchStartY === null || animating) return;
-        var dy = touchStartY - e.touches[0].clientY;
-
-        if (!flown) {
-            if (dy <= 0) return;
-            e.preventDefault();
-            accum = dy;
-            if (!shookThisGesture && accum > MIN_ATTEMPT) {
-                shookThisGesture = true;
-                triggerShake();
-            }
-            if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
-                commitDown();
-                touchStartY = null;
-                return;
-            }
-            setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
-            showTension('down', (attemptsDown + accum / THRESHOLD_DOWN) / ATTEMPTS_NEEDED);
-=======
             updateTensionDown();
 
             if (accum >= THRESHOLD_DOWN) {
@@ -1683,16 +979,11 @@ body.moonlight-theme.pb-flown main::after {
                 return;
             }
             setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             return;
         }
 
         if (dy >= 0) {
-<<<<<<< HEAD
-            if (accum > 0) { accum = 0; setMainNudge(0, false); hideTension(); }
-=======
             if (accum > 0) { accum = 0; setMainNudge(0, false); }
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             return;
         }
 
@@ -1707,36 +998,20 @@ body.moonlight-theme.pb-flown main::after {
             return;
         }
         var p = Math.min(accum / THRESHOLD_UP, 1);
-<<<<<<< HEAD
-        setMainNudge(peekHeight() * Math.pow(p, 0.75), true);
-        showTension('up', p);
-=======
         setMainNudge(MAIN_PULL * Math.pow(p, 0.75), true);
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     }, { passive: false });
 
     window.addEventListener('touchend', function () {
         touchStartY = null;
         if (!flown) {
-<<<<<<< HEAD
-            if (accum > MIN_ATTEMPT) attemptsDown++;
-=======
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             springBackBanner();
         } else {
             setMainNudge(0, false);
         }
         accum = 0;
         shookThisGesture = false;
-<<<<<<< HEAD
-        hideTension();
     }, { passive: true });
 
-    /* ── Клавиатура ──────────────────────────────────────────────────── */
-=======
-    }, { passive: true });
-
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     window.addEventListener('keydown', function (e) {
         if (animating || flown) return;
         if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
@@ -1744,11 +1019,6 @@ body.moonlight-theme.pb-flown main::after {
         }
     });
 
-<<<<<<< HEAD
-    /* ── Стартовое состояние ─────────────────────────────────────────── */
-    scrollRoot().scrollTop = 0;
-    html.classList.add('pb-locked');
-=======
     /* ── Инициализация ────────────────────────────────────────────────
        Развилка:
          - bannerAlreadyShown = true  → wrap сразу паркуется за верхнюю
@@ -1778,7 +1048,6 @@ body.moonlight-theme.pb-flown main::after {
         scrollRoot().scrollTop = 0;
         html.classList.add('pb-locked');
     }
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
     if (miniClose) {
         miniClose.addEventListener('click', function () {
@@ -1788,10 +1057,6 @@ body.moonlight-theme.pb-flown main::after {
         });
     }
 
-<<<<<<< HEAD
-    /* ── Параллакс от мыши ───────────────────────────────────────────── */
-=======
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         var pbRaf = null;
         wrap.addEventListener('mousemove', function (e) {
@@ -1812,10 +1077,6 @@ body.moonlight-theme.pb-flown main::after {
         });
     }
 
-<<<<<<< HEAD
-    /* ── Аналитика ───────────────────────────────────────────────────── */
-=======
->>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     if (window.DustoreAnalytics) {
         DustoreAnalytics.observeView(card, 'promotion', PROMO_ID);
         var clicked = false;
