@@ -10,6 +10,7 @@ $gameController = new Game();
 const EXPLORE_PAGE = 48;
 
 $adultSection  = isset($_GET['adult']) && $_GET['adult'] == 1;
+$webSection    = isset($_GET['web'])   && $_GET['web']   == 1;
 $selectedGenre = isset($_GET['genre']) ? trim(urldecode($_GET['genre'])) : null;
 
 /* Первая порция считается в SQL — ровно тем же запросом, которым потом
@@ -20,6 +21,7 @@ $selectedGenre = isset($_GET['genre']) ? trim(urldecode($_GET['genre'])) : null;
 $page = $gameController->queryGames([
     'genre'  => $selectedGenre,
     'adult'  => $adultSection,
+    'web'    => $webSection,
     'sort'   => 'popularity',
     'dir'    => 'desc',
     'limit'  => EXPLORE_PAGE,
@@ -32,8 +34,9 @@ $hasMore    = count($games) < $gamesTotal;
 
 /* Список жанров строится по всему разделу, а не по загруженной порции:
    иначе после первой страницы фильтр показывал бы жанры только сорока
-   восьми игр. */
-$allGenres = $gameController->collectGenres($adultSection);
+   восьми игр. С $webSection — свой набор жанров для веб-игр (см.
+   комментарий в Game::collectGenres), а не общий список каталога. */
+$allGenres = $gameController->collectGenres($adultSection, $webSection);
 
 /* Заглушка обложки. Раньше здесь был via.placeholder.com — сервис закрыт
    в 2024-м, поэтому у каждой игры без обложки висела битая картинка. */
@@ -89,6 +92,27 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     Внимание! Данный раздел содержит игры, предназначенные только для пользователей старше 18 лет
                     в соответствии с законодательством РФ.
                 </div>
+
+                <?php /* Отдельный крупный переключатель, а не ещё один чип в общем списке
+                         жанров слева — веб-игры это отдельный режим просмотра («играть сейчас,
+                         без скачивания»), а не жанр. У него свой набор жанров-чипов ниже,
+                         который пересчитывается под выбранный режим (см. Game::collectGenres). */ ?>
+                <a href="#" id="webGamesTile" class="web-tile<?= $webSection ? ' active' : '' ?>">
+                    <span class="web-tile-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2.4"/>
+                            <line x1="2" y1="8.5" x2="22" y2="8.5"/>
+                            <circle cx="5.2" cy="6.4" r="0.6" fill="currentColor" stroke="none"/>
+                            <circle cx="7.4" cy="6.4" r="0.6" fill="currentColor" stroke="none"/>
+                            <path d="M10.5 12.3v5.2l4.4-2.6z" fill="currentColor" stroke="none"/>
+                        </svg>
+                    </span>
+                    <span class="web-tile-text">
+                        <span class="web-tile-title">Веб-игры</span>
+                        <span class="web-tile-sub">Играть прямо в браузере — без скачивания</span>
+                    </span>
+                    <span class="web-tile-check" aria-hidden="true"></span>
+                </a>
 
                 <div class="search-wrapper">
                     <div class="sort-buttons" id="sortButtons">
@@ -179,6 +203,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                                     if ($descShort === '') $descShort = trim(strip_tags((string)($game['description'] ?? '')));
                                     $descShort = mb_substr($descShort, 0, 220);
                                     $isBlur  = $adultSection && (int)($game['age_rating'] ?? 0) >= 18;
+                                    $isWebGame = in_array('Web', array_map('trim', explode(',', (string)($game['platforms'] ?? ''))), true);
                                 ?>
                                 <a class="game-card"
                                    href="/g/<?= (int)$game['id'] ?>"
@@ -197,6 +222,9 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                                             <span class="game-badge soon">Скоро</span>
                                         <?php elseif ($isNew): ?>
                                             <span class="game-badge">Новинка</span>
+                                        <?php endif; ?>
+                                        <?php if ($isWebGame): ?>
+                                            <span class="game-badge web" title="Играется в браузере">▶ Веб</span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="game-info">
@@ -293,11 +321,14 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         const SERVER_TOTAL = <?= (int)$gamesTotal ?>;
         const sentinel = document.getElementById('gridSentinel');
 
-        const DEFAULTS = { adult: 0, genre: null, sort: 'popularity', dir: 'desc', priceType: 'all', priceMax: 5000, q: '', offset: 0 };
+        const DEFAULTS = { adult: 0, web: 0, genre: null, sort: 'popularity', dir: 'desc', priceType: 'all', priceMax: 5000, q: '', offset: 0 };
         const state = Object.assign({}, DEFAULTS, {
             genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
-            adult: <?= $adultSection ? 1 : 0 ?>
+            adult: <?= $adultSection ? 1 : 0 ?>,
+            web: <?= $webSection ? 1 : 0 ?>
         });
+
+        const webTile = document.getElementById('webGamesTile');
 
         try {
             const s = JSON.parse(localStorage.getItem('explore_filter') || '{}');
@@ -326,6 +357,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         async function fetchGames() {
             const p = new URLSearchParams();
             p.set('adult', state.adult);
+            if (state.web) p.set('web', 1);
             if (state.genre) p.set('genre', state.genre);
             p.set('sort', state.sort);
             p.set('dir', state.dir);
@@ -351,6 +383,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             const blur   = state.adult && game.age_rating >= 18 ? ' blur-adult' : '';
             const badge  = isSoon ? '<span class="game-badge soon">Скоро</span>'
                          : isNew  ? '<span class="game-badge">Новинка</span>' : '';
+            const webBadge = game.is_web ? '<span class="game-badge web" title="Играется в браузере">▶ Веб</span>' : '';
 
             const shots  = Array.isArray(game.screenshots) ? game.screenshots : [];
             const rating = (game.avg_rating !== null && game.avg_rating !== undefined)
@@ -372,6 +405,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                  +          ' alt="' + esc(game.name) + '" loading="lazy" decoding="async">'
                  +     '<div class="gc-shots" aria-hidden="true"></div>'
                  +     badge
+                 +     webBadge
                  +   '</div>'
                  +   '<div class="game-info">'
                  +     '<h3 class="game-title">' + esc(game.name) + '</h3>'
@@ -435,7 +469,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             resultsCount.textContent = total + ' ' + plural(total)
                 + (loaded < total ? ' · показано ' + loaded : '');
 
-            const dirty = state.genre || state.adult
+            const dirty = state.genre || state.adult || state.web
                 || state.priceType !== DEFAULTS.priceType
                 || state.q !== '';
             resetBtn.style.display = dirty ? '' : 'none';
@@ -531,6 +565,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     : !data.has_more;
 
                 adultWarning.classList.toggle('visible', !!state.adult);
+                webTile.classList.toggle('active', !!state.web);
 
                 localStorage.setItem('explore_sort', JSON.stringify({ sort: state.sort, dir: state.dir }));
                 localStorage.setItem('explore_filter', JSON.stringify({ priceType: state.priceType, priceMax: state.priceMax }));
@@ -585,12 +620,25 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             const url = new URL(window.location);
             state.genre ? url.searchParams.set('genre', state.genre) : url.searchParams.delete('genre');
             state.adult ? url.searchParams.set('adult', '1')         : url.searchParams.delete('adult');
+            state.web   ? url.searchParams.set('web', '1')           : url.searchParams.delete('web');
             state.q     ? url.searchParams.set('q', state.q)         : url.searchParams.delete('q');
             /* replaceState, а не pushState: каждый клик по фильтру добавлял
                запись в историю, и кнопка «назад» вместо возврата на прошлую
                страницу отматывала фильтры по одному. */
             window.history.replaceState({}, '', url);
         }
+
+        /* ── Веб-игры — отдельный крупный переключатель ─────────────────────
+           Сбрасывает жанр по той же причине, что и переключение 18+ ниже:
+           набор жанров у веб-игр свой (см. Game::collectGenres), старый
+           выбранный жанр может просто не существовать в новом режиме. */
+        webTile.addEventListener('click', async e => {
+            e.preventDefault();
+            state.web = state.web ? 0 : 1;
+            state.genre = null;
+            updateURL();
+            await updateUI();
+        });
 
         /* ── Фильтры по жанру и 18+ ──────────────────────────────────────── */
         filterPanel.addEventListener('click', async e => {
@@ -606,13 +654,14 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                 state.adult = state.adult ? 0 : 1;
                 state.genre = null;
             } else if (target.dataset.genre === '') {
-                /* «Все игры» сбрасывает и жанр, И раздел 18+.
+                /* «Все игры» сбрасывает жанр, раздел 18+ И режим веб-игр.
                    Раньше сбрасывался только жанр, adult оставался включённым —
                    и список жанров продолжал показывать лишь те, что есть у
                    игр 18+. Со стороны это выглядело так, будто жанры пропали
                    навсегда и вернуть их можно только повторным кликом по 18+. */
                 state.genre = null;
                 state.adult = 0;
+                state.web = 0;
             } else {
                 state.genre = target.dataset.genre || null;
             }
@@ -699,6 +748,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         resetBtn.addEventListener('click', async () => {
             state.genre = null;
             state.adult = 0;
+            state.web = 0;
             state.priceType = DEFAULTS.priceType;
             state.priceMax = DEFAULTS.priceMax;
             searchInput.value = '';
@@ -713,6 +763,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
             const p = new URLSearchParams(window.location.search);
             state.genre = p.get('genre') || null;
             state.adult = p.get('adult') === '1' ? 1 : 0;
+            state.web = p.get('web') === '1' ? 1 : 0;
             await updateUI();
             updateSortButtonsUI();
         });

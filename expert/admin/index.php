@@ -131,6 +131,7 @@ $active_page = 'index';
         <div class="quick">
             <?php if ($isAdmin): ?>
             <a href="expert-requests" class="quick-link"><div class="ql-icon ql-green">👤</div><div><h3>Заявки экспертов</h3><p>Одобрение и отклонение новых заявок</p></div></a>
+            <a href="games" class="quick-link"><div class="ql-icon ql-green">🗂️</div><div><h3>Все игры</h3><p>Поиск, фильтры и редактирование параметров</p></div></a>
             <?php endif; ?>
             <a href="moderation" class="quick-link"><div class="ql-icon ql-blue">🎮</div><div><h3>Модерация игр</h3><p>Проверка игр, ожидающих оценки</p></div></a>
             <a href="all-reviews" class="quick-link"><div class="ql-icon ql-pink">📊</div><div><h3>Все оценки</h3><p>Аналитика по рецензиям и вердиктам</p></div></a>

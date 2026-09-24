@@ -99,6 +99,22 @@ body {
     box-shadow: inset 1px 1px 1px 2px #00000050;
 }
 
+/* Маленькая круглая аватарка на кнопке профиля — чтобы кнопку было видно
+   сразу как «это профиль», а не читать подпись. Стоит на месте прежней
+   svg-иконки-человечка (та остаётся запасным вариантом, если у юзера нет
+   фото — см. header.php), поэтому тот же размер и та же вертикальная
+   привязка, чтобы текст рядом не прыгал. */
+.header-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 2px;
+    display: inline-block;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .25);
+}
+
 .button {
     padding: 10px 25px 10px 25px;
     background-color: #ffffff1a;

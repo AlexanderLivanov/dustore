@@ -37,6 +37,7 @@ $sb_active   = $active_page ?? '';
     <a href="/expert/admin/expert-requests" class="ea-nav <?= $sb_active === 'experts' ? 'active' : '' ?>">
         👤 Заявки экспертов <?php if ($sb_pExperts > 0): ?><span class="ea-badge"><?= $sb_pExperts ?></span><?php endif; ?>
     </a>
+    <a href="/expert/admin/games" class="ea-nav <?= $sb_active === 'games' ? 'active' : '' ?>">🗂️ Все игры</a>
     <?php endif; ?>
     <a href="/expert/admin/moderation" class="ea-nav <?= $sb_active === 'moderation' ? 'active' : '' ?>">
         🎮 Модерация игр <?php if ($sb_pGames > 0): ?><span class="ea-badge"><?= $sb_pGames ?></span><?php endif; ?>

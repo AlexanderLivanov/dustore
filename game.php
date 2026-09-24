@@ -180,26 +180,31 @@ if ($jamInfo) {
 
 $platformsNorm = array_map(fn($p) => strtolower(trim($p)), $platforms);
 $isWeb      = in_array('web', $platformsNorm) && count(array_filter($platformsNorm, fn($p) => $p !== 'web')) === 0;
+/* $hasWeb — тег "web" среди прочих (не обязательно единственный). Отдельно
+   от $isWeb: тот завязан на доступ к отзывам ($userCanReview ниже) и его
+   семантику («чисто веб-игра») трогать не стали. $hasWeb решает только,
+   какую кнопку показать основной в карточке покупки — если тег веб есть
+   вообще, играть в браузере можно, даже если игра ещё и на Windows. */
+$hasWeb     = in_array('web', $platformsNorm);
 $hasAndroid = in_array('android', $platformsNorm);
 $onlyAndroid = count($platforms) === 1 && $hasAndroid;
 
 /* Review access: logged in AND (owns game OR web-only) */
 $userCanReview = !empty($_SESSION['USERDATA']['id']) && ($isWeb || $userHasGame);
 
-/* Wishlist */
+/* Вишлист / лайк. Раньше считался только для анонсов — теперь общий
+   механизм для всех игр: $showWishlist решает лишь какую обвязку рисовать
+   (большую карточку анонса с датой или маленькое сердечко у кнопки покупки),
+   но обе используют одну и ту же таблицу wishlists и toggle-эндпоинт. */
 $isInWishlist  = false;
-$wishlistCount = 0;
 $showWishlist  = !empty($game['announce_enabled']);
-if ($showWishlist) {
-    $wlc = $pdo->prepare("SELECT COUNT(*) FROM wishlists WHERE game_id = ?");
-    $wlc->execute([$game_id]);
-    $wishlistCount = (int)$wlc->fetchColumn();
-
-    if (!empty($_SESSION['USERDATA']['id'])) {
-        $wlu = $pdo->prepare("SELECT id FROM wishlists WHERE user_id = ? AND game_id = ?");
-        $wlu->execute([$_SESSION['USERDATA']['id'], $game_id]);
-        $isInWishlist = (bool)$wlu->fetch();
-    }
+$wlc = $pdo->prepare("SELECT COUNT(*) FROM wishlists WHERE game_id = ?");
+$wlc->execute([$game_id]);
+$wishlistCount = (int)$wlc->fetchColumn();
+if (!empty($_SESSION['USERDATA']['id'])) {
+    $wlu = $pdo->prepare("SELECT id FROM wishlists WHERE user_id = ? AND game_id = ?");
+    $wlu->execute([$_SESSION['USERDATA']['id'], $game_id]);
+    $isInWishlist = (bool)$wlu->fetch();
 }
 
 function formatFileSize($bytes) {
@@ -213,6 +218,14 @@ $platformLabels = ['windows'=>'Windows','linux'=>'Linux','macos'=>'macOS','andro
 $platformStr = implode(', ', array_map(fn($p) => $platformLabels[$p] ?? ucfirst($p), $platformsNorm));
 
 $isPaid = ($game['price'] ?? 0) > 0;
+
+/* embed=1 — страница грузится в <iframe> (сейчас: правая панель «Моей
+   коллекции», library.php). Логика владения/скачивания/цены та же самая —
+   меняется только то, что НЕ дублируем сайтовый хедер/футер внутри чужого
+   хедера. Специально сделано так, а не отдельным шаблоном: что бы сюда ни
+   добавили позже (новое поле, кнопка, виджет) — в библиотеке оно появится
+   само, без второй копии для синхронизации. */
+$isEmbed = !empty($_GET['embed']);
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -258,6 +271,17 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .gp-stat{text-align:center;}
         .gp-stat-val{font-size:1.05rem;font-weight:700;color:#fff;line-height:1;}
         .gp-stat-lbl{font-size:.72rem;color:var(--muted);margin-top:3px;}
+
+        /* Нудж «оставить оценку» под кнопкой скачивания — показывается JS-ом после клика по скачиванию/запуску. */
+        .gp-review-nudge{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;
+            border-radius:10px;background:rgba(195,33,120,.1);border:1px solid rgba(195,33,120,.28);
+            font-size:.82rem;color:#e5d9e0;animation:gpNudgeIn .35s ease both;}
+        .gp-review-nudge[hidden]{display:none;}
+        @keyframes gpNudgeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+        .gp-review-nudge .rev-stars{display:flex;gap:2px;}
+        .gp-review-nudge .rev-stars span{font-size:18px;color:rgba(255,255,255,.25);cursor:pointer;transition:color .15s;}
+        .gp-review-nudge .rev-stars span.highlighted,.gp-review-nudge .rev-stars span:hover{color:#fbbf24;}
+        .gp-review-nudge-link{margin-left:auto;color:#e88fc0;text-decoration:none;font-weight:600;white-space:nowrap;}
         @media(max-width:540px){.gp-header{flex-direction:column;align-items:flex-start;padding-top:16px;}
             .gp-cover{width:90px;height:90px;}}
         /* ── MAIN ── */
@@ -317,7 +341,10 @@ $isPaid = ($game['price'] ?? 0) > 0;
             display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;}
         .review-dev-meta{font-weight:500;color:var(--muted);}
         .review-form{background:var(--surface);border:1px solid var(--border);
-            border-radius:var(--radius);padding:20px;margin-top:20px;}
+            border-radius:var(--radius);padding:20px;margin-top:20px;
+            scroll-margin-top:100px;} /* иначе якорь #review-form-wrap (баннер на
+            главной, gp-review-nudge) приземляет форму прямо под sticky-хедер —
+            верх формы оказывается перекрыт */
         .review-form h3{margin:0 0 14px;font-size:1rem;color:#fff;}
         .review-form textarea{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);
             border-radius:10px;color:#fff;padding:10px 12px;font-size:.9rem;resize:vertical;
@@ -338,6 +365,7 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .gp-side-inner{position:sticky;top:20px;z-index:5;display:flex;flex-direction:column;gap:14px;}
         @media(max-width:900px){.gp-side-inner{position:static;}}
         .gp-buy-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;}
+        .gp-buy-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;}
         .gp-price-tag{font-size:2rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:14px;}
         .gp-price-free{color:var(--success);}
         .gp-owned-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
@@ -412,6 +440,22 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .gp-android-icon{font-size:1.6rem;flex-shrink:0;}
         .gp-android-title{font-weight:700;font-size:.9rem;color:#5eed9f;}
         .gp-android-sub{font-size:.75rem;color:var(--muted);margin-top:1px;}
+        /* ── LIKE (компактный вишлист) ── */
+        .gp-like-btn{flex-shrink:0;width:40px;height:40px;border-radius:50%;display:flex;
+            align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);
+            color:rgba(255,255,255,.5);font-size:1.15rem;line-height:1;cursor:pointer;text-decoration:none;
+            transition:background .2s,border-color .2s,color .2s,transform .15s;}
+        .gp-like-btn:hover{border-color:#ffaa00;color:#ffaa00;}
+        .gp-like-btn:active{transform:scale(.9);}
+        .gp-like-btn-active{background:rgba(255,170,0,.15);border-color:rgba(255,170,0,.5);color:#ffaa00;}
+        /* ── ПЛАТФОРМЫ: «также доступна» ── */
+        .gp-plat-row{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px;}
+        .gp-plat-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:100px;
+            background:rgba(255,255,255,.04);border:1px solid var(--border);color:rgba(255,255,255,.6);
+            font-size:.76rem;font-weight:600;cursor:pointer;text-decoration:none;
+            transition:background .15s,border-color .15s,color .15s;}
+        .gp-plat-chip:hover{background:var(--surface);border-color:rgba(255,255,255,.25);color:#fff;}
+        .gp-plat-chip-icon{font-size:.9rem;}
         /* ── WISHLIST ── */
         .gp-wishlist-card{background:rgba(255,170,0,.06);border:1px solid rgba(255,170,0,.2);
             border-radius:18px;padding:16px 20px;display:flex;flex-direction:column;gap:10px;}
@@ -457,8 +501,10 @@ $isPaid = ($game['price'] ?? 0) > 0;
         .offer-content p{font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:4px;}
     </style>
 </head>
-<body>
-    <?php require_once('swad/static/elements/header.php'); ?>
+<body<?= $isEmbed ? ' class="gp-embed"' : '' ?>>
+    <?php if (!$isEmbed): ?>
+        <?php require_once('swad/static/elements/header.php'); ?>
+    <?php endif; ?>
     <?php if (!empty($isPreviewMode)): ?>
     <div style="background:#c32178;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;">
         👁 Предпросмотр — игра <?= $isHidden ? 'скрыта из магазина' : 'ещё не опубликована' ?>. Видна только вам и по временной ссылке.
@@ -505,10 +551,6 @@ $isPaid = ($game['price'] ?? 0) > 0;
                     <?php endif; ?>
                     <div class="gp-stats">
                         <div class="gp-stat">
-                            <div class="gp-stat-val"><?= htmlspecialchars($game['GQI']) ?>/100</div>
-                            <div class="gp-stat-lbl">GQI</div>
-                        </div>
-                        <div class="gp-stat">
                             <div class="gp-stat-val"><?= date('d.m.Y', strtotime($game['release_date'])) ?></div>
                             <div class="gp-stat-lbl">Релиз</div>
                         </div>
@@ -531,8 +573,19 @@ $isPaid = ($game['price'] ?? 0) > 0;
 
                     <!-- Purchase card -->
                     <div class="gp-buy-card">
+                        <?php
+                        /* Сердечко «сохранить в коллекцию без скачивания» — компактный
+                           вариант вишлиста для обычных (не анонсных) игр. Для анонсов
+                           уже есть отдельная крупная карточка ниже (gp-wishlist-card,
+                           с датой выхода) — второе сердечко рядом с ней было бы дублем,
+                           поэтому здесь скрываем. Обе UI используют один toggle. */
+                        $showLikeBtn = !$showWishlist;
+                        ?>
                         <?php if ($isPaid && !$isOwned): ?>
-                            <div class="gp-price-tag"><?= number_format($game['price'], 0, ',', ' ') ?> ₽</div>
+                            <div class="gp-buy-head">
+                                <div class="gp-price-tag" style="margin-bottom:0;"><?= number_format($game['price'], 0, ',', ' ') ?> ₽</div>
+                                <?php if ($showLikeBtn): ?><?php include(__DIR__ . '/swad/static/elements/gp_like_button.php'); ?><?php endif; ?>
+                            </div>
                             <button class="gp-btn gp-btn-primary" onclick="openPaymentModal()">
                                 Купить за <?= number_format($game['price'], 0, ',', ' ') ?> ₽
                             </button>
@@ -540,11 +593,14 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 <p class="gp-subscription-note">✔ Включена в подписку</p>
                             <?php endif; ?>
                         <?php else: ?>
-                            <?php if ($isOwned): ?>
-                                <div class="gp-owned-badge">✔ В библиотеке<?= $purchasedDate ? ' c ' . htmlspecialchars($purchasedDate) : '' ?></div>
-                            <?php else: ?>
-                                <div class="gp-price-tag gp-price-free">Бесплатно</div>
-                            <?php endif; ?>
+                            <div class="gp-buy-head">
+                                <?php if ($isOwned): ?>
+                                    <div class="gp-owned-badge" style="margin-bottom:0;">✔ В библиотеке<?= $purchasedDate ? ' c ' . htmlspecialchars($purchasedDate) : '' ?></div>
+                                <?php else: ?>
+                                    <div class="gp-price-tag gp-price-free" style="margin-bottom:0;">Бесплатно</div>
+                                <?php endif; ?>
+                                <?php if ($showLikeBtn): ?><?php include(__DIR__ . '/swad/static/elements/gp_like_button.php'); ?><?php endif; ?>
+                            </div>
 
                             <?php
                             /* OS для загрузчика. Android-UA тоже содержит "Linux",
@@ -558,6 +614,17 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 $dpxOs = 'linux';
                             }
                             $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game);
+                            $osLabels = ['windows' => 'Windows', 'macos' => 'macOS', 'linux' => 'Linux'];
+                            $osIcons  = ['windows' => '🪟', 'macos' => '🍎', 'linux' => '🐧'];
+                            /* Другие заявленные десктоп-теги игры, кроме той ОС, что
+                               уже определена основной кнопкой — под них выводим мелкие
+                               "также доступна" чипы (только у deplex: там os= реально
+                               переключает установщик под конкретную ОС; у обычного zip
+                               файл один на всех, отдельных сборок под каждую ОС нет). */
+                            $otherDesktopOs = array_filter(
+                                ['windows', 'macos', 'linux'],
+                                fn($os) => $os !== $dpxOs && in_array($os, $platformsNorm, true)
+                            );
                             ?>
                             <?php /* Проверка антивируса поднята ВЫШЕ deplex-ветки.
                                      Раньше deplex перехватывал первым, и ветка
@@ -574,10 +641,32 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                          у бесплатной deplex-игры отзыв не мог оставить
                                          вообще никто. */ ?>
                                 <a class="gp-btn gp-btn-primary" href="#"
-                                    onclick="dpxDownload('/swad/controllers/download_deplex.php?game_id=<?= (int)$game_id ?>&amp;os=<?= $dpxOs ?>');return false;">⬇ Скачать (загрузчик)</a>
+                                    onclick="dpxDownload('/swad/controllers/download_deplex.php?game_id=<?= (int)$game_id ?>&amp;os=<?= $dpxOs ?>');return false;">⬇ Скачать для <?= $osLabels[$dpxOs] ?></a>
+                                <?php if ($otherDesktopOs || ($hasAndroid && !empty($game['game_zip_url']))): ?>
+                                <div class="gp-plat-row">
+                                    <?php foreach ($otherDesktopOs as $os): ?>
+                                        <a class="gp-plat-chip" href="#"
+                                           onclick="dpxDownload('/swad/controllers/download_deplex.php?game_id=<?= (int)$game_id ?>&amp;os=<?= $os ?>');return false;">
+                                            <span class="gp-plat-chip-icon"><?= $osIcons[$os] ?></span>также на <?= $osLabels[$os] ?>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php endif; ?>
+                                <?php /* Android у deplex-игры раньше вообще не показывался —
+                                         эта ветка обрывалась установщиком, не долистывая до
+                                         проверки $hasAndroid. APK при этом качается отдельным,
+                                         не зависящим от deplex контроллером (download_apk.php
+                                         смотрит только на games.game_zip_url), так что если он
+                                         реально загружен — честно показываем и его. */ ?>
+                                <?php if ($hasAndroid && !empty($game['game_zip_url'])): ?>
+                                    <?php include(__DIR__ . '/swad/static/elements/gp_android_secondary.php'); ?>
+                                <?php endif; ?>
                             <?php elseif (!empty($game['game_zip_url'])): ?>
-                                <?php if ($isWeb): ?>
-                                    <button class="gp-btn gp-btn-primary" onclick="location.href='/webplayer?id=<?= $game_id ?>'">▶ Запустить в браузере</button>
+                                <?php if ($hasWeb): ?>
+                                    <button class="gp-btn gp-btn-primary" onclick="location.href='/webplayer?id=<?= $game_id ?>'">▶ Играть в браузере</button>
+                                    <?php if ($hasAndroid): ?>
+                                        <?php include(__DIR__ . '/swad/static/elements/gp_android_secondary.php'); ?>
+                                    <?php endif; ?>
                                 <?php elseif ($onlyAndroid): ?>
                                     <div class="gp-apk-btn-wrap" id="apkBtnWrap">
                                         <a class="gp-btn gp-btn-android" id="apkMainBtn"
@@ -600,33 +689,11 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                         <div class="gp-android-step"><span class="step-n">2</span><span>Проверьте разработчика перед установкой</span></div>
                                     </div>
                                 <?php elseif ($hasAndroid): ?>
-                                    <button class="gp-btn gp-btn-primary" onclick="location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>'">⬇ Скачать для ПК</button>
-                                    <div class="gp-android-card" style="margin-top:8px">
-                                        <div class="gp-android-header">
-                                            <span class="gp-android-icon">🤖</span>
-                                            <div>
-                                                <div class="gp-android-title">Также доступно на Android</div>
-                                                <div class="gp-android-sub">APK · прямая загрузка</div>
-                                            </div>
-                                        </div>
-                                        <div class="gp-apk-btn-wrap">
-                                            <a class="gp-btn gp-btn-android" href="/swad/controllers/download_apk.php?game_id=<?= $game_id ?>" onclick="handleApkClick(event)">
-                                                <span>📲</span><span>Скачать APK<?= !empty($game['game_zip_size']) ? ' (' . formatFileSize((int)$game['game_zip_size']) . ')' : '' ?></span>
-                                            </a>
-                                            <div class="gp-qr-popup">
-                                                <div class="gp-qr-title">Сканируй — и скачаешь прямо на телефон</div>
-                                                <div id="apkQrCode"></div>
-                                                <div class="gp-qr-hint">Открой камеру и наведи на код</div>
-                                            </div>
-                                        </div>
-                                        <div class="gp-apk-progress" id="apkProgress">
-                                            <div class="gp-apk-track"><div class="gp-apk-fill" id="apkFill"></div></div>
-                                            <div class="gp-apk-label" id="apkLabel">Подготовка…</div>
-                                        </div>
-                                    </div>
+                                    <button class="gp-btn gp-btn-primary" onclick="location.href='/swad/controllers/download_game.php?game_id=<?= $game_id ?>';if(typeof gpShowReviewNudge==='function')gpShowReviewNudge();">⬇ Скачать для <?= $osLabels[$dpxOs] ?></button>
+                                    <?php include(__DIR__ . '/swad/static/elements/gp_android_secondary.php'); ?>
                                 <?php else: ?>
                                     <button class="gp-btn gp-btn-primary"
-    onclick="dpxDownload('/swad/controllers/download_game.php?game_id=<?= $game_id ?>')">⬇ Скачать игру</button>
+    onclick="dpxDownload('/swad/controllers/download_game.php?game_id=<?= $game_id ?>')">⬇ Скачать для <?= $osLabels[$dpxOs] ?></button>
                                     <!-- <a href="hidl://install?game_id=123&game_name=TestGame&game_url=https://example.com/game.zip&exe=game.exe">Install</a> -->
                                     <!-- <?php
                                     $hidl_url = "hidl://install?game_id=" . urlencode($game_id)
@@ -640,9 +707,17 @@ $isPaid = ($game['price'] ?? 0) > 0;
                                 <p class="gp-no-file">Файл игры пока не загружен</p>
                             <?php endif; ?>
 
+                            <?php if (!$isPaid || $isOwned): ?>
+                                <div class="gp-review-nudge" id="gpReviewNudge" hidden>
+                                    <span class="gp-review-nudge-q">Как вам игра?</span>
+                                    <div class="rev-stars" id="nudgeStars"></div>
+                                    <a href="#review-form-wrap" class="gp-review-nudge-link">Написать отзыв →</a>
+                                </div>
+                            <?php endif; ?>
+
                             <?php if (!empty($game['game_zip_size'])): ?>
                                 <div class="gp-meta-row">
-                                    <?php if ($isWeb): ?>
+                                    <?php if ($hasWeb): ?>
                                         Веб-игра — скачивание не требуется
                                     <?php else: ?>
                                         Размер: <?= formatFileSize((int)$game['game_zip_size']) ?><br>
@@ -895,7 +970,9 @@ $isPaid = ($game['price'] ?? 0) > 0;
     </div>
     <?php endif; ?>
 
-    <?php require_once('swad/static/elements/footer.php'); ?>
+    <?php if (!$isEmbed): ?>
+        <?php require_once('swad/static/elements/footer.php'); ?>
+    <?php endif; ?>
     <?php if ($isPaid && !$isOwned): ?>
         <?php require_once('finv2/payment_modal.php'); ?>
     <?php endif; ?>
@@ -959,6 +1036,12 @@ fetch('/swad/controllers/jams/jam_play.php', {
         if (e.key === 'ArrowRight') lbMove(1);
         if (e.key === 'Escape')     closeLb();
     });
+
+    // ── Нудж-показ формы отзыва после клика по скачиванию/запуску ──
+    window.gpShowReviewNudge = function () {
+        const el = document.getElementById('gpReviewNudge');
+        if (el) el.hidden = false;
+    };
 
     // ── Reviews (state-driven, без reload) ──
     (function () {
@@ -1121,9 +1204,25 @@ fetch('/swad/controllers/jams/jam_play.php', {
             }
             hl(newRating);
 
+            const nsw = document.getElementById('nudgeStars');
+            if (nsw) {
+                const hlNudge = n => nsw.querySelectorAll('span').forEach((s, i) => s.classList.toggle('highlighted', i < n));
+                for (let i = 1; i <= 10; i++) {
+                    const s = document.createElement('span'); s.textContent = '★';
+                    s.addEventListener('mouseover', () => hlNudge(i));
+                    s.addEventListener('mouseout', () => hlNudge(newRating));
+                    s.addEventListener('click', () => {
+                        newRating = i; hl(i); hlNudge(i);
+                        formWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('review-text')?.focus();
+                    });
+                    nsw.appendChild(s);
+                }
+            }
+
             document.getElementById('submit-review').addEventListener('click', async () => {
                 const text = (document.getElementById('review-text')?.value || '').trim();
-                if (!text) { alert('Введите текст отзыва'); return; }
+                // Текст необязателен — можно отправить только оценку.
                 try {
                     const res = await fetch('/swad/controllers/submit_review.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin', body: `game_id=${gameId}&rating=${newRating}&text=${encodeURIComponent(text)}` });
                     const d = await res.json();
@@ -1162,6 +1261,25 @@ fetch('/swad/controllers/jams/jam_play.php', {
         } finally { btn.disabled=false; }
     }
 
+    // ── Like (компактное сердечко, отдельно от toggleWishlist — та функция
+    //    перерисовывает текст «В вишлисте», тут только иконка и класс) ──
+    async function toggleLike(gameId, btn) {
+        const wasActive = btn.classList.contains('gp-like-btn-active');
+        btn.disabled = true;
+        try {
+            const res  = await fetch('/api/wishlist/toggle.php',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({game_id:gameId})});
+            const data = await res.json();
+            if(!data.ok) throw new Error(data.message||'Ошибка');
+            const added = data.action==='added';
+            btn.textContent = added?'♥':'♡';
+            btn.classList.toggle('gp-like-btn-active', added);
+            btn.title = added?'Убрать из коллекции':'Сохранить в коллекцию без скачивания';
+        } catch(err) {
+            console.error('[like]',err);
+            btn.textContent = wasActive?'♥':'♡';
+        } finally { btn.disabled=false; }
+    }
+
     // ── APK QR ──
     (function(){
         const apkUrl=window.location.origin+'/swad/controllers/download_apk.php?game_id=<?= (int)$game_id ?>';
@@ -1180,7 +1298,7 @@ fetch('/swad/controllers/jams/jam_play.php', {
         let pct=0;
         const iv=setInterval(()=>{
             pct+=Math.random()*10+4;
-            if(pct>=100){pct=100;clearInterval(iv);label.textContent='Готово! Проверьте папку Загрузки.';setTimeout(()=>progress.classList.remove('show'),4000);}
+            if(pct>=100){pct=100;clearInterval(iv);label.textContent='Готово! Проверьте папку Загрузки.';setTimeout(()=>progress.classList.remove('show'),4000);if(typeof gpShowReviewNudge==='function')gpShowReviewNudge();}
             else{label.textContent='Скачивание… '+Math.round(pct)+'%';}
             fill.style.width=pct+'%';
         },200);

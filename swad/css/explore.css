@@ -131,6 +131,72 @@ main { display: block; }
     -webkit-backdrop-filter: blur(14px);
 }
 
+/* ── Веб-игры: отдельный крупный переключатель, не чип в общем списке жанров ── */
+.web-tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    border-radius: var(--ex-radius);
+    background: linear-gradient(120deg, rgba(195, 33, 120, 0.16), rgba(116, 21, 93, 0.10));
+    border: 1px solid var(--ex-chip-line);
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.web-tile:hover, .web-tile:focus-visible {
+    border-color: var(--ex-card-line-hi);
+    outline: none;
+}
+.web-tile.active {
+    border-color: var(--ex-accent);
+    background: linear-gradient(120deg, rgba(195, 33, 120, 0.28), rgba(116, 21, 93, 0.16));
+    box-shadow: 0 0 0 1px var(--ex-accent-soft);
+}
+.web-tile-icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--ex-accent-soft);
+    color: var(--ex-accent-hi);
+}
+.web-tile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.web-tile-title { font-size: 0.98rem; font-weight: 700; color: var(--ex-text); }
+.web-tile-sub { font-size: 0.8rem; color: var(--ex-muted); }
+.web-tile-check {
+    flex: 0 0 auto;
+    margin-left: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ex-chip-line);
+    position: relative;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+.web-tile.active .web-tile-check {
+    border-color: var(--ex-accent);
+    background: var(--ex-accent);
+}
+.web-tile.active .web-tile-check::after {
+    content: '';
+    position: absolute;
+    left: 6px; top: 2px;
+    width: 5px; height: 10px;
+    border: solid var(--ex-text);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
 /* ── Тулбар: сортировка + цена + поиск ────────────────────────────────────── */
 /* Был margin-right:45vh на .price-switch — горизонтальный отступ в единицах
    ВЫСОТЫ окна. На 1080px это 486px пустоты, на низком окне — почти ноль,
@@ -489,6 +555,13 @@ main { display: block; }
     -webkit-backdrop-filter: blur(4px);
 }
 .game-badge.soon { background: rgba(0, 0, 0, 0.62); color: #ffd479; }
+/* top-right, а не top-left как .soon/«Новинка» — игра может быть одновременно
+   и веб, и новинкой, бейджи не должны залезать друг на друга */
+.game-badge.web {
+    left: auto; right: 8px;
+    background: var(--ex-accent);
+    color: var(--ex-text);
+}
 
 /* ── Содержимое, которое появляется только при раскрытии ──────────────── */
 /* Блок появляется через flex-basis: закрыт — нулевая высота, открыт —

@@ -285,7 +285,25 @@ $stmt->execute([
                         </svg></button>
                 </div>
                 <div class="buttons-left">
-                    <button class="button" onclick="location.href='/explore'">Игры</button>
+                    <!-- Dropdown «Игры» — Каталог / Веб / Моя коллекция, ровно тот же
+                         паттерн, что и у «Devs» ниже (тот же .nav-dropdown, общий JS
+                         на hover+клик уже подхватывает любой .nav-dropdown на странице,
+                         отдельно ничего подключать не нужно). Раньше это были три плоских
+                         кнопки подряд — на шести пунктах в ряд хедер начинал разъезжаться
+                         на не самых широких экранах. -->
+                    <div class="nav-dropdown">
+                        <button class="button nav-dropdown__trigger" aria-haspopup="true" aria-expanded="false">
+                            Игры
+                            <svg class="nav-dropdown__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
+                                <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <ul class="nav-dropdown__menu" role="menu">
+                            <li><a class="nav-dropdown__item" href="/explore" role="menuitem">Каталог</a></li>
+                            <li><a class="nav-dropdown__item" href="/explore?web=1" role="menuitem">Веб<span style="font-size:11px; opacity:0.6; margin-left:6px; font-weight:400;">играть в браузере</span></a></li>
+                            <li><a class="nav-dropdown__item" href="<?= !empty($_SESSION['USERDATA']['id']) ? '/library' : '/login?backUrl=/library' ?>" role="menuitem">Моя коллекция</a></li>
+                        </ul>
+                    </div>
 
                     <!-- Кнопка «Джемы» вместо дропдауна -->
                     <button class="button" onclick="location.href='/jams'">Джемы</button>
@@ -458,12 +476,22 @@ $stmt->execute([
                             <span>Войти в аккаунт</span>
                         </button>
                     <?php else: ?>
-                        <button class="button" onclick="location.href='/player/<?= htmlspecialchars($u_data['username']) ?>'">
-                            <svg class="btn-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="8" r="4" />
-                                <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
-                            </svg>
+                        <?php
+                        /* profile_picture лежит прямо в сессии (её пишут и upload_avatar.php,
+                           и me.php при каждом обновлении фото) — отдельный SELECT ради иконки
+                           в хедере не нужен. Без фото — прежняя svg-заглушка человечка. */
+                        $__hdrAvatar = trim((string)($_SESSION['USERDATA']['profile_picture'] ?? ''));
+                        ?>
+                        <button class="button" onclick="location.href='/player/<?= htmlspecialchars($_SESSION['USERDATA']['username']) ?>'">
+                            <?php if ($__hdrAvatar !== ''): ?>
+                                <img class="header-avatar" src="<?= htmlspecialchars($__hdrAvatar) ?>" alt="" width="22" height="22">
+                            <?php else: ?>
+                                <svg class="btn-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="8" r="4" />
+                                    <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+                                </svg>
+                            <?php endif; ?>
                             <span><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></span>
                         </button>
                     <?php endif; ?>

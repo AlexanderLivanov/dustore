@@ -68,5 +68,6 @@ function dpxDownload(url) {
 }
 document.getElementById('dpx-dl-go').addEventListener('click', function () {
     setTimeout(function () { document.getElementById('dpx-dl-gate').style.display = 'none'; }, 150);
+    if (typeof window.gpShowReviewNudge === 'function') window.gpShowReviewNudge();
 });
 </script>

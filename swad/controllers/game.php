@@ -109,6 +109,15 @@ class Game
             $params[] = $f['genre'];
         }
 
+        /* Веб-игры — тот же приём нормализации CSV, применённый к
+           g.platforms. Условие «Web ВХОДИТ в список», а не «единственная
+           платформа» — игра с Windows+Web всё равно играбельна в браузере,
+           и по фильтру должна быть видна. */
+        if (!empty($f['web'])) {
+            $where[] = "CONCAT(',', TRIM(REPLACE(REPLACE(g.platforms, ', ', ','), ' ,', ',')), ',')
+                        LIKE '%,Web,%'";
+        }
+
         // Цена
         if (($f['price_type'] ?? 'all') === 'free') {
             $where[] = "COALESCE(g.price, 0) = 0";
@@ -166,7 +175,7 @@ class Game
                 g.id, g.name, g.description, g.short_description,
                 g.path_to_cover, g.screenshots, g.price, g.status,
                 g.age_rating, g.release_date, g.created_at, g.genre,
-                g.updated_at, g.hidden,
+                g.updated_at, g.hidden, g.platforms,
                 COALESCE(dl.n, 0)       AS downloads,
                 ROUND(rv.avg_rating, 1) AS avg_rating,
                 COALESCE(rv.n, 0)       AS reviews_count,
@@ -185,18 +194,28 @@ class Game
 
     /**
      * Список жанров для панели фильтров.
-     * Считается по всей выдаче раздела (с учётом 18+), но БЕЗ учёта
-     * выбранного жанра — иначе выбор одного жанра стирал бы остальные.
+     * Считается по всей выдаче раздела (с учётом 18+ и, если включён —
+     * веб-раздела), но БЕЗ учёта выбранного жанра — иначе выбор одного
+     * жанра стирал бы остальные.
+     *
+     * $web=true — это и есть «своя система жанров» для веб-игр из задачи:
+     * никакой отдельной таблицы жанров не заводим, список просто считается
+     * по тому же g.genre, но только среди игр, где g.platforms содержит Web.
+     * Если веб-игр с жанром «Хоррор» пока нет — чип «Хоррор» здесь и не
+     * появится, список сам подстраивается под реальные данные.
      */
-    public function collectGenres(bool $adult = false): array
+    public function collectGenres(bool $adult = false, bool $web = false): array
     {
         $db = $this->db->connect();
         $cond = $adult ? "g.age_rating >= 18" : "(g.age_rating IS NULL OR g.age_rating < 18)";
+        $webCond = $web
+            ? "AND CONCAT(',', TRIM(REPLACE(REPLACE(g.platforms, ', ', ','), ' ,', ',')), ',') LIKE '%,Web,%'"
+            : '';
 
         $rows = $db->query("
             SELECT DISTINCT g.genre FROM games g
              WHERE g.status = 'published' AND (g.hidden IS NULL OR g.hidden = 0)
-               AND g.genre IS NOT NULL AND g.genre <> '' AND $cond
+               AND g.genre IS NOT NULL AND g.genre <> '' AND $cond $webCond
         ")->fetchAll(PDO::FETCH_COLUMN);
 
         $out = [];

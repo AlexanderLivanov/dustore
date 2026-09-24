@@ -25,11 +25,13 @@ const EXPLORE_PAGE = 48;
 $gameController = new Game();
 
 $adult  = !empty($_GET['adult']);
+$web    = !empty($_GET['web']);
 $offset = max(0, (int)($_GET['offset'] ?? 0));
 
 $filters = [
     'genre'      => trim((string)($_GET['genre'] ?? '')) ?: null,
     'adult'      => $adult,
+    'web'        => $web,
     'sort'       => (string)($_GET['sort'] ?? 'popularity'),
     'dir'        => (string)($_GET['dir'] ?? 'desc'),
     'price_type' => (string)($_GET['price_type'] ?? 'all'),
@@ -38,6 +40,15 @@ $filters = [
     'limit'      => EXPLORE_PAGE,
     'offset'     => $offset,
 ];
+
+/** Есть ли Web среди платформ игры — используется для бейджа на карточке. */
+function is_web_game($platformsCsv): bool
+{
+    foreach (explode(',', (string)$platformsCsv) as $p) {
+        if (trim($p) === 'Web') return true;
+    }
+    return false;
+}
 
 /**
  * Скриншоты в games.screenshots лежат как JSON: [{"path":"..."}, ...].
@@ -86,6 +97,7 @@ foreach ($page['items'] as $game) {
         'screenshots'   => shot_paths($game['screenshots'] ?? ''),
         'avg_rating'    => $game['avg_rating'] !== null ? (float)$game['avg_rating'] : null,
         'reviews_count' => (int)($game['reviews_count'] ?? 0),
+        'is_web'        => is_web_game($game['platforms'] ?? ''),
     ];
 }
 
@@ -99,6 +111,7 @@ echo json_encode([
         'q'          => $filters['q'],
         'genre'      => $filters['genre'],
         'adult'      => $adult ? 1 : 0,
+        'web'        => $web ? 1 : 0,
         'sort'       => $filters['sort'],
         'dir'        => $filters['dir'],
         'price_type' => $filters['price_type'],
@@ -106,8 +119,9 @@ echo json_encode([
     'games'    => $result,
     /* Список жанров нужен только при первой загрузке страницы фильтра.
        На подгрузке следующей порции он не меняется — не гоняем лишний
-       запрос и не раздуваем ответ. */
-    'genres'   => $offset === 0 ? $gameController->collectGenres($adult) : null,
+       запрос и не раздуваем ответ. Зависит от web: у веб-игр может быть
+       свой набор жанров (см. комментарий в Game::collectGenres). */
+    'genres'   => $offset === 0 ? $gameController->collectGenres($adult, $web) : null,
     'total'    => $page['total'],
     'offset'   => $offset,
     'shown'    => count($result),

@@ -289,6 +289,15 @@ $has_zip         = !empty($game['game_zip_url']);
 $is_chunked      = $has_zip && str_ends_with((string)$game['game_zip_url'], 'manifest.json');
 $only_android    = $platforms_saved === ['Android'];
 
+// Мультиплатформенные билды (game_builds) — своя строка на каждую выбранную платформу.
+// games.game_zip_url/game_zip_size (выше) остаются «текущим активным билдом» для
+// download_game.php/download_apk.php/webplayer.php — см. комментарий в build_upload.php.
+$builds_by_platform = [];
+$gb_stmt = $conn->prepare("SELECT * FROM game_builds WHERE game_id = ?");
+$gb_stmt->execute([$project_id]);
+foreach ($gb_stmt->fetchAll(PDO::FETCH_ASSOC) as $b) { $builds_by_platform[$b['platform']] = $b; }
+$platforms_list = array_values($platforms_saved);
+
 $wl_count = $conn->prepare("SELECT COUNT(*) FROM wishlists WHERE game_id = ?");
 $wl_count->execute([$project_id]);
 $wl_total = (int)$wl_count->fetchColumn();
@@ -713,41 +722,119 @@ if (in_array($mod_status, ['pending','rejected'])):
             <button type="button" class="btn btn-g dpx-tab" data-tab="deplex" style="padding:6px 14px;font-size:12px;">Через deplex (CLI)</button>
         </div>
         <div class="dpx-pane" data-pane="web">
-        <?php if ($has_zip): ?>
-        <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-            <span class="material-icons" style="font-size:18px;">check_circle</span>
-            <div>
-                <?php if ($is_chunked): ?>
-                    Загружен чанками <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
-                    <span style="font-size:10px;background:rgba(0,214,143,.15);padding:1px 8px;border-radius:4px;margin-left:6px;">manifest.json</span>
-                <?php else: ?>
-                    ZIP загружен <?= !empty($game['game_zip_size']) ? '· ' . round($game['game_zip_size']/1048576,1) . ' МБ' : '' ?>
+        <div style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
+            У каждой платформы — свой файл. Активная для скачивания/веб-плеера — та, что загружена последней
+            <?php if (count($platforms_list) > 1): ?>(на любой вкладке ниже)<?php endif; ?>.
+        </div>
+
+        <div id="platform-empty-hint" style="<?= !empty($platforms_list) ? 'display:none;' : '' ?>font-size:12px;color:var(--tm);padding:12px 0;">
+            Сначала выберите хотя бы одну платформу выше (раздел «Платформы и языки»).
+        </div>
+
+        <div id="platform-tabs" style="<?= empty($platforms_list) ? 'display:none;' : 'display:flex;' ?>flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+            <?php foreach ($platforms_list as $i => $pl): $b = $builds_by_platform[$pl] ?? null; ?>
+            <button type="button" class="btn <?= $i === 0 ? 'btn-p' : 'btn-g' ?> plat-tab" data-plat="<?= htmlspecialchars($pl) ?>"
+                    style="padding:6px 14px;font-size:12px;position:relative;">
+                <?= htmlspecialchars($pl) ?>
+                <?php if (!empty($b['build_url'])): ?><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-left:6px;"></span><?php endif; ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+
+        <div id="platform-panes" style="<?= empty($platforms_list) ? 'display:none;' : '' ?>">
+            <?php foreach ($platforms_list as $i => $pl):
+                $b         = $builds_by_platform[$pl] ?? null;
+                $isMobile  = in_array($pl, ['Android', 'iOS'], true);
+                $hasBuild  = !empty($b['build_url']);
+                $buildSize = !empty($b['build_size']) ? round($b['build_size'] / 1048576, 1) . ' МБ' : '';
+                $buildScr  = $b ? (json_decode($b['screenshots'] ?? '[]', true) ?: []) : [];
+                $acceptExt = $pl === 'Android' ? '.apk' : ($pl === 'iOS' ? '.ipa' : '.zip');
+                $iconClr   = $pl === 'Android' ? '#a4c639' : 'var(--p)';
+                $matIcon   = $pl === 'Android' ? 'android' : ($pl === 'iOS' ? 'phone_iphone' : 'upload_file');
+            ?>
+            <div class="plat-pane" data-plat="<?= htmlspecialchars($pl) ?>" <?= $i === 0 ? '' : 'hidden' ?>>
+
+                <?php if ($pl === 'iOS'): ?>
+                <div style="font-size:11px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
+                    Apple не позволяет ставить .ipa напрямую, без TestFlight/App Store — файл здесь просто хранится
+                    на случай, если он вам нужен для дистрибуции другим путём.
+                </div>
                 <?php endif; ?>
+
+                <?php if ($hasBuild): ?>
+                <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+                    <span class="material-icons" style="font-size:18px;">check_circle</span>
+                    <div>Билд для <?= htmlspecialchars($pl) ?> загружен<?= $buildSize ? " · {$buildSize}" : '' ?></div>
+                </div>
+                <?php endif; ?>
+
+                <div class="plat-drop" data-plat="<?= htmlspecialchars($pl) ?>"
+                     style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
+                     onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
+                    <span class="material-icons" style="font-size:32px;color:<?= $iconClr ?>;display:block;margin-bottom:8px;"><?= $matIcon ?></span>
+                    <span class="plat-drop-label" style="font-size:13px;color:var(--ts);display:block;">
+                        <?= $hasBuild ? 'Заменить билд' : 'Загрузить билд' ?> для <?= htmlspecialchars($pl) ?>
+                    </span>
+                    <span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
+                        <?= $acceptExt ?> · любой размер — собираем в один файл на S3
+                    </span>
+                </div>
+                <input type="file" class="plat-input" data-plat="<?= htmlspecialchars($pl) ?>" accept="<?= $acceptExt ?>" style="display:none;">
+                <div class="plat-progress" data-plat="<?= htmlspecialchars($pl) ?>" style="display:none;margin-top:14px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                        <span class="plat-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
+                        <span class="plat-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
+                    </div>
+                    <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
+                        <div class="plat-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
+                    </div>
+                </div>
+
+                <?php if ($isMobile): ?>
+                <div style="margin-top:20px;padding-top:16px;border-top:1px solid #2a3347;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:10px;">
+                        Специфично для <?= htmlspecialchars($pl) ?>
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <div class="plat-icon-wrap" data-plat="<?= htmlspecialchars($pl) ?>" style="<?= empty($b['icon_url']) ? 'display:none;' : '' ?>flex-shrink:0;">
+                            <img class="plat-icon-img" src="<?= htmlspecialchars($b['icon_url'] ?? '') ?>" style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid #2a3347;">
+                        </div>
+                        <label style="flex:1;display:block;border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">
+                            <span class="material-icons" style="font-size:18px;color:var(--p);display:block;margin-bottom:2px;">add_photo_alternate</span>
+                            <span style="font-size:11px;color:var(--ts);">Иконка для <?= htmlspecialchars($pl) ?> <span style="color:var(--tm);">· необязательно, иначе общая</span></span>
+                            <input type="file" class="plat-icon-input" data-plat="<?= htmlspecialchars($pl) ?>" accept="image/*" style="display:none;">
+                        </label>
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <div style="font-size:12px;color:var(--ts);margin-bottom:8px;">Вертикальные скриншоты <span style="color:var(--tm);">(9:16)</span></div>
+                        <div class="plat-scr-grid" data-plat="<?= htmlspecialchars($pl) ?>" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:10px;">
+                            <?php foreach ($buildScr as $scr): ?>
+                            <div class="plat-scr-item" data-url="<?= htmlspecialchars($scr['path'] ?? '') ?>" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:9/16;background:var(--elev);">
+                                <img src="<?= htmlspecialchars($scr['path'] ?? '') ?>" style="width:100%;height:100%;object-fit:cover;">
+                                <button type="button" class="plat-scr-del" data-plat="<?= htmlspecialchars($pl) ?>" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;border-radius:5px;color:#fff;cursor:pointer;width:20px;height:20px;font-size:13px;line-height:1;">×</button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="plat-scr-drop" data-plat="<?= htmlspecialchars($pl) ?>" style="border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:11px;color:var(--ts);">
+                            + добавить скриншоты
+                        </div>
+                        <input type="file" class="plat-scr-input" data-plat="<?= htmlspecialchars($pl) ?>" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
+                    </div>
+
+                    <div class="field">
+                        <label style="font-size:12px;">Запрашиваемые разрешения</label>
+                        <textarea class="plat-permissions" data-plat="<?= htmlspecialchars($pl) ?>" rows="3"
+                                  placeholder="По одному на строку: камера, геолокация, микрофон..."
+                                  style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--ts);resize:vertical;"><?= htmlspecialchars($b['permissions'] ?? '') ?></textarea>
+                        <div class="plat-perm-status" data-plat="<?= htmlspecialchars($pl) ?>" style="font-size:10px;color:var(--tm);margin-top:4px;height:12px;"></div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
             </div>
-        </div>
-        <?php endif; ?>
-        <div id="upload-mode-hint" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;"></div>
-        <div id="zip-drop"
-             style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
-             onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-            <span id="drop-icon" class="material-icons" style="font-size:32px;color:var(--p);display:block;margin-bottom:8px;"><?= $only_android ? 'android' : 'upload_file' ?></span>
-            <span id="drop-label" style="font-size:13px;color:var(--ts);display:block;">
-                <?= $has_zip ? ($only_android ? 'Заменить APK' : 'Заменить файл игры') : ($only_android ? 'Загрузить APK' : 'Загрузить ZIP') ?>
-            </span>
-            <span id="drop-hint" style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
-                <?= $only_android ? 'Android APK · до 4 ГБ' : 'Любой размер — собираем в один файл на S3' ?>
-            </span>
-        </div>
-        <input type="file" id="zip-input" accept="<?= $only_android ? '.apk' : '.zip' ?>" style="display:none;" data-android="<?= $only_android ? '1' : '0' ?>">
-        <div id="zip-progress" style="display:none;margin-top:14px;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span id="zip-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
-                <span id="zip-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
-            </div>
-            <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
-                <div id="zip-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
-            </div>
-            <div id="zip-detail" style="font-size:11px;color:var(--tm);margin-top:6px;"></div>
+            <?php endforeach; ?>
         </div>
         </div><!-- /pane web -->
 
@@ -956,56 +1043,184 @@ document.getElementById('ann-tbd').addEventListener('change', function () {
     document.getElementById('ann-date-wrap').style.display = this.checked ? 'none' : '';
 });
 
-// ── Платформы → зона загрузки ─────────────────────────────────────────────
-function syncUploadZone() {
-    var checkboxes  = document.querySelectorAll('input[name="platform[]"]');
-    var selected    = Array.from(checkboxes).filter(function(c){return c.checked;}).map(function(c){return c.value;});
-    var onlyAndroid = selected.length === 1 && selected[0] === 'Android';
-    var input = document.getElementById('zip-input');
-    var icon  = document.getElementById('drop-icon');
-    var label = document.getElementById('drop-label');
-    var hint  = document.getElementById('drop-hint');
-    if (onlyAndroid) {
-        input.accept = '.apk'; input.dataset.android = '1';
-        icon.textContent = 'android'; icon.style.color = '#a4c639';
-        label.textContent = 'Загрузить APK-файл';
-        hint.textContent  = 'Android APK · любой размер';
-    } else {
-        input.accept = '.zip'; input.dataset.android = '0';
-        icon.textContent = 'upload_file'; icon.style.color = 'var(--p)';
-        label.textContent = 'Загрузить ZIP-архив';
-        hint.textContent  = 'Любой размер — собираем в один файл на S3';
+// ── Платформы → вкладки билдов ──────────────────────────────────────────────
+// Вкладки для уже сохранённых платформ отрисованы в PHP (см. #platform-tabs /
+// #platform-panes выше). syncPlatformTabs() держит их в синхроне с чекбоксами
+// ДО сохранения формы — дев ставит галочку и сразу видит вкладку, не дожидаясь
+// перезагрузки страницы. Все клики/дропы/инпуты внутри вкладок — через
+// делегирование на document, поэтому не важно, отрисована вкладка PHP-ом или
+// добавлена этой функцией на лету — обработчики одни и те же.
+var PLATFORM_ORDER   = ['Windows', 'macOS', 'Linux', 'Android', 'iOS', 'Web'];
+var MOBILE_PLATFORMS = ['Android', 'iOS'];
+
+function platIconName(pl) { return pl === 'Android' ? 'android' : (pl === 'iOS' ? 'phone_iphone' : 'upload_file'); }
+function platAccept(pl)   { return pl === 'Android' ? '.apk'    : (pl === 'iOS' ? '.ipa'          : '.zip'); }
+
+function buildPlatMobileBlock(pl) {
+    return '' +
+    '<div style="margin-top:20px;padding-top:16px;border-top:1px solid #2a3347;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:10px;">Специфично для ' + pl + '</div>' +
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
+            '<div class="plat-icon-wrap" data-plat="' + pl + '" style="display:none;flex-shrink:0;"><img class="plat-icon-img" src="" style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid #2a3347;"></div>' +
+            '<label style="flex:1;display:block;border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">' +
+                '<span class="material-icons" style="font-size:18px;color:var(--p);display:block;margin-bottom:2px;">add_photo_alternate</span>' +
+                '<span style="font-size:11px;color:var(--ts);">Иконка для ' + pl + ' <span style="color:var(--tm);">· необязательно, иначе общая</span></span>' +
+                '<input type="file" class="plat-icon-input" data-plat="' + pl + '" accept="image/*" style="display:none;">' +
+            '</label>' +
+        '</div>' +
+        '<div style="margin-bottom:16px;">' +
+            '<div style="font-size:12px;color:var(--ts);margin-bottom:8px;">Вертикальные скриншоты <span style="color:var(--tm);">(9:16)</span></div>' +
+            '<div class="plat-scr-grid" data-plat="' + pl + '" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:10px;"></div>' +
+            '<div class="plat-scr-drop" data-plat="' + pl + '" style="border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:11px;color:var(--ts);">+ добавить скриншоты</div>' +
+            '<input type="file" class="plat-scr-input" data-plat="' + pl + '" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">' +
+        '</div>' +
+        '<div class="field">' +
+            '<label style="font-size:12px;">Запрашиваемые разрешения</label>' +
+            '<textarea class="plat-permissions" data-plat="' + pl + '" rows="3" placeholder="По одному на строку: камера, геолокация, микрофон..." style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--ts);resize:vertical;"></textarea>' +
+            '<div class="plat-perm-status" data-plat="' + pl + '" style="font-size:10px;color:var(--tm);margin-top:4px;height:12px;"></div>' +
+        '</div>' +
+    '</div>';
+}
+
+function buildPlatPane(pl) {
+    var iconColor = pl === 'Android' ? '#a4c639' : 'var(--p)';
+    var html = '' +
+    '<div class="plat-drop" data-plat="' + pl + '" style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;">' +
+        '<span class="material-icons" style="font-size:32px;color:' + iconColor + ';display:block;margin-bottom:8px;">' + platIconName(pl) + '</span>' +
+        '<span class="plat-drop-label" style="font-size:13px;color:var(--ts);display:block;">Загрузить билд для ' + pl + '</span>' +
+        '<span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">' + platAccept(pl) + ' · любой размер — собираем в один файл на S3</span>' +
+    '</div>' +
+    '<input type="file" class="plat-input" data-plat="' + pl + '" accept="' + platAccept(pl) + '" style="display:none;">' +
+    '<div class="plat-progress" data-plat="' + pl + '" style="display:none;margin-top:14px;">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span class="plat-status" style="font-size:12px;color:var(--ts);">Подготовка...</span><span class="plat-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span></div>' +
+        '<div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;"><div class="plat-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div></div>' +
+    '</div>';
+    if (MOBILE_PLATFORMS.indexOf(pl) !== -1) html += buildPlatMobileBlock(pl);
+    return html;
+}
+
+function activatePlatTab(pl) {
+    document.querySelectorAll('#platform-tabs .plat-tab').forEach(function(t){
+        var on = t.dataset.plat === pl;
+        t.classList.toggle('btn-p', on); t.classList.toggle('btn-g', !on);
+    });
+    document.querySelectorAll('#platform-panes .plat-pane').forEach(function(p){
+        p.hidden = p.dataset.plat !== pl;
+    });
+}
+
+function syncPlatformTabs() {
+    var checkboxes = document.querySelectorAll('input[name="platform[]"]');
+    var checked = PLATFORM_ORDER.filter(function(pl){
+        return Array.from(checkboxes).some(function(c){ return c.checked && c.value === pl; });
+    });
+    var tabsWrap  = document.getElementById('platform-tabs');
+    var panesWrap = document.getElementById('platform-panes');
+    var emptyHint = document.getElementById('platform-empty-hint');
+    if (!tabsWrap || !panesWrap) return;
+
+    if (checked.length === 0) {
+        tabsWrap.style.display = 'none';
+        panesWrap.style.display = 'none';
+        if (emptyHint) emptyHint.style.display = '';
+        return;
+    }
+    if (emptyHint) emptyHint.style.display = 'none';
+    tabsWrap.style.display = 'flex';
+    panesWrap.style.display = '';
+
+    tabsWrap.querySelectorAll('.plat-tab').forEach(function(t){
+        if (checked.indexOf(t.dataset.plat) === -1) t.remove();
+    });
+    panesWrap.querySelectorAll('.plat-pane').forEach(function(p){
+        if (checked.indexOf(p.dataset.plat) === -1) p.remove();
+    });
+
+    checked.forEach(function(pl){
+        if (!tabsWrap.querySelector('.plat-tab[data-plat="' + pl + '"]')) {
+            var btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'btn btn-g plat-tab'; btn.dataset.plat = pl;
+            btn.style.cssText = 'padding:6px 14px;font-size:12px;position:relative;';
+            btn.textContent = pl;
+            tabsWrap.appendChild(btn);
+        }
+        if (!panesWrap.querySelector('.plat-pane[data-plat="' + pl + '"]')) {
+            var pane = document.createElement('div');
+            pane.className = 'plat-pane'; pane.dataset.plat = pl; pane.hidden = true;
+            pane.innerHTML = buildPlatPane(pl);
+            panesWrap.appendChild(pane);
+        }
+    });
+
+    var activeTab = tabsWrap.querySelector('.plat-tab.btn-p');
+    if (!activeTab || checked.indexOf(activeTab.dataset.plat) === -1) {
+        activatePlatTab(checked[0]);
     }
 }
+
 document.querySelectorAll('input[name="platform[]"]').forEach(function(cb){
-    cb.addEventListener('change', syncUploadZone);
+    cb.addEventListener('change', syncPlatformTabs);
 });
+
+// ── Делегированные обработчики вкладок/дропзон (работают и для PHP-, и для
+// JS-отрисованных вкладок — обработчик один, элементов может быть сколько угодно) ──
+document.addEventListener('click', function (e) {
+    var tab = e.target.closest('.plat-tab');
+    if (tab) { activatePlatTab(tab.dataset.plat); return; }
+
+    var drop = e.target.closest('.plat-drop');
+    if (drop) {
+        var input = document.querySelector('.plat-input[data-plat="' + drop.dataset.plat + '"]');
+        if (input) input.click();
+        return;
+    }
+
+    var scrDrop = e.target.closest('.plat-scr-drop');
+    if (scrDrop) {
+        var si = document.querySelector('.plat-scr-input[data-plat="' + scrDrop.dataset.plat + '"]');
+        if (si) si.click();
+        return;
+    }
+
+    var del = e.target.closest('.plat-scr-del');
+    if (del) deletePlatformScreenshot(del);
+});
+
+document.addEventListener('change', function (e) {
+    if (e.target.classList.contains('plat-input')) {
+        var file = e.target.files[0];
+        if (file) uploadPlatformBuild(file, e.target.dataset.plat);
+    }
+    if (e.target.classList.contains('plat-icon-input')) {
+        var f2 = e.target.files[0];
+        if (f2) uploadPlatformIcon(f2, e.target.dataset.plat);
+    }
+    if (e.target.classList.contains('plat-scr-input')) {
+        if (e.target.files.length) uploadPlatformScreenshots(e.target.files, e.target.dataset.plat);
+        e.target.value = '';
+    }
+});
+
+// Разрешения — автосохранение по уходу с поля, без отдельной кнопки (та же
+// логика, что и у остальных async-виджетов на этой странице: скриншоты/иконка).
+document.addEventListener('blur', function (e) {
+    if (e.target.classList && e.target.classList.contains('plat-permissions')) {
+        savePlatformPermissions(e.target);
+    }
+}, true);
 
 // ── Загрузка билда (чанки → PHP → один объект в S3, без CORS) ──────────────
-document.getElementById('zip-drop').addEventListener('click', function(){
-    document.getElementById('zip-input').click();
-});
-
-document.getElementById('zip-input').addEventListener('change', function () {
-    var file  = this.files[0];
-    if (!file) return;
-    var isApk = file.name.toLowerCase().endsWith('.apk');
-    var hint  = document.getElementById('upload-mode-hint');
-    hint.style.display = 'block';
-    hint.style.cssText = 'display:block;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(195,33,120,.08);border:1px solid rgba(195,33,120,.2);color:var(--pl);';
-    hint.textContent = (isApk ? '🤖 APK · ' : '📦 ') + (file.size/1048576).toFixed(1) + ' МБ';
-    uploadFile(file, isApk);
-});
-
-async function uploadFile(file, isApk) {
+async function uploadPlatformBuild(file, platform) {
     var CHUNK = 5 * 1024 * 1024;               // 5 МБ на чанк
     var total = Math.ceil(file.size / CHUNK) || 1;
-    var prog  = document.getElementById('zip-progress');
-    var bar   = document.getElementById('zip-bar');
-    var pct   = document.getElementById('zip-pct');
-    var stat  = document.getElementById('zip-status');
+    var pane  = document.querySelector('.plat-pane[data-plat="' + platform + '"]');
+    if (!pane) return;
+    var prog = pane.querySelector('.plat-progress');
+    var bar  = pane.querySelector('.plat-bar');
+    var pct  = pane.querySelector('.plat-pct');
+    var stat = pane.querySelector('.plat-status');
     prog.style.display   = 'block';
-    bar.style.background = isApk ? '#a4c639' : 'var(--p)';
+    bar.style.background = platform === 'Android' ? '#a4c639' : 'var(--p)';
     stat.style.color     = '';
 
     for (var i = 0; i < total; i++) {
@@ -1016,16 +1231,17 @@ async function uploadFile(file, isApk) {
         fd.append('file_name',    file.name);
         fd.append('file_size',    file.size);
         fd.append('project_id',   PID);
+        fd.append('platform',     platform);
         var data;
         try {
             var res  = await fetch('/devs/build_upload.php', { method: 'POST', body: fd, credentials: 'include' });
             var text = await res.text();
             data = JSON.parse(text);
         } catch (e) {
-            setErr('Сервер вернул не-JSON: ' + String(e).substring(0, 160));
+            platErr(bar, stat, 'Сервер вернул не-JSON: ' + String(e).substring(0, 160));
             return;
         }
-        if (!data.success) { setErr(data.message || 'Ошибка сервера'); return; }
+        if (!data.success) { platErr(bar, stat, data.message || 'Ошибка сервера'); return; }
         if (data.done) {
             bar.style.width = '100%'; pct.textContent = '100%';
             bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
@@ -1039,10 +1255,87 @@ async function uploadFile(file, isApk) {
     }
 }
 
-function setErr(msg) {
-    document.getElementById('zip-bar').style.background = 'var(--err)';
-    var s = document.getElementById('zip-status');
-    s.textContent = '✗ ' + msg; s.style.color = 'var(--err)';
+function platErr(bar, stat, msg) {
+    bar.style.background = 'var(--err)';
+    stat.textContent = '✗ ' + msg; stat.style.color = 'var(--err)';
+}
+
+async function uploadPlatformIcon(file, platform) {
+    var pane = document.querySelector('.plat-pane[data-plat="' + platform + '"]');
+    if (!pane) return;
+    var wrap = pane.querySelector('.plat-icon-wrap');
+    var img  = pane.querySelector('.plat-icon-img');
+    var fd = new FormData();
+    fd.append('project_id', PID);
+    fd.append('platform', platform);
+    fd.append('type', 'build_icon');
+    fd.append('file', file);
+    try {
+        var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
+        var data = await res.json();
+        if (data.success) { img.src = data.url; wrap.style.display = ''; }
+        else alert(data.message || 'Ошибка загрузки иконки');
+    } catch (e) { alert('Сетевая ошибка'); }
+}
+
+async function uploadPlatformScreenshots(files, platform) {
+    for (var i = 0; i < files.length; i++) {
+        var fd = new FormData();
+        fd.append('project_id', PID);
+        fd.append('platform', platform);
+        fd.append('type', 'build_screenshot');
+        fd.append('file', files[i]);
+        try {
+            var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
+            var data = await res.json();
+            if (data.success) renderPlatformScreenshots(platform, data.screenshots);
+            else alert(data.message || 'Ошибка загрузки скриншота');
+        } catch (e) { alert('Сетевая ошибка'); }
+    }
+}
+
+function renderPlatformScreenshots(platform, list) {
+    var grid = document.querySelector('.plat-scr-grid[data-plat="' + platform + '"]');
+    if (!grid) return;
+    grid.innerHTML = list.map(function (s) {
+        return '<div class="plat-scr-item" data-url="' + s.path + '" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:9/16;background:var(--elev);"><img src="' + s.path + '" style="width:100%;height:100%;object-fit:cover;"><button type="button" class="plat-scr-del" data-plat="' + platform + '" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;border-radius:5px;color:#fff;cursor:pointer;width:20px;height:20px;font-size:13px;line-height:1;">×</button></div>';
+    }).join('');
+}
+
+async function deletePlatformScreenshot(btn) {
+    var item = btn.closest('.plat-scr-item');
+    var url  = item.dataset.url;
+    var platform = btn.dataset.plat;
+    if (!confirm('Удалить этот скриншот?')) return;
+    item.style.opacity = '.4';
+    var fd = new FormData();
+    fd.append('project_id', PID);
+    fd.append('platform', platform);
+    fd.append('type', 'delete_build_screenshot');
+    fd.append('url', url);
+    try {
+        var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
+        var data = await res.json();
+        if (data.success) renderPlatformScreenshots(platform, data.screenshots);
+        else { item.style.opacity = '1'; alert(data.message || 'Ошибка удаления'); }
+    } catch (e) { item.style.opacity = '1'; alert('Сетевая ошибка'); }
+}
+
+async function savePlatformPermissions(textarea) {
+    var platform = textarea.dataset.plat;
+    var status = document.querySelector('.plat-perm-status[data-plat="' + platform + '"]');
+    var fd = new FormData();
+    fd.append('project_id', PID);
+    fd.append('platform', platform);
+    fd.append('type', 'permissions');
+    fd.append('text', textarea.value);
+    if (status) status.textContent = 'Сохранение...';
+    try {
+        var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
+        var data = await res.json();
+        if (status) status.textContent = data.success ? '✓ Сохранено' : ('✗ ' + (data.message || 'Ошибка'));
+    } catch (e) { if (status) status.textContent = '✗ Сетевая ошибка'; }
+    setTimeout(function () { if (status) status.textContent = ''; }, 2000);
 }
 
 // ── Cover preview ─────────────────────────────────────────────────────────
@@ -1189,9 +1482,12 @@ if (IS_LOCKED) {
         if (f && f.querySelector('input[name="action"][value="cancel_moderation"]')) return; // кнопку отмены оставляем
         el.disabled = true; el.style.pointerEvents = 'none';
     });
-    ['zip-drop', 'scr-drop'].forEach(function (id) {
+    ['scr-drop'].forEach(function (id) {
         var e = document.getElementById(id);
         if (e) { e.style.pointerEvents = 'none'; e.style.opacity = '.5'; }
+    });
+    document.querySelectorAll('.plat-drop, .plat-scr-drop, .plat-tab').forEach(function (e) {
+        e.style.pointerEvents = 'none'; e.style.opacity = '.5';
     });
 }
 </script>

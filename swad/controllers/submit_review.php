@@ -15,7 +15,7 @@ $gameId = $_POST['game_id'] ?? 0;
 $rating = $_POST['rating'] ?? 0;
 $text = trim($_POST['text'] ?? '');
 
-if (!$gameId || !$rating || !$text) {
+if (!$gameId || !$rating) {
     echo json_encode(['success' => false, 'error' => 'Неверные данные']);
     exit();
 }
