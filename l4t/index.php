@@ -23,6 +23,7 @@ require_once __DIR__ . '/lib/feed.php';
 require_once __DIR__ . '/lib/icons.php';
 require_once __DIR__ . '/lib/extras.php';
 require_once __DIR__ . '/lib/match.php';
+require_once __DIR__ . '/lib/market.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -103,6 +104,18 @@ if ($isOwner) {
     $forYou        = (new L4TMatch($X, $pdo))->forYou($me, $uSkills, (string)($userdata['l4t_role'] ?? ''));
 }
 
+/* ── Рынок: спрос × предложение ───────────────────────────────────────── */
+$MK = new L4TMarket($X, $pdo);
+$marketOn = $MK->ready();
+$quotes = $marketOn ? $MK->quotes() : [];
+$tape = $marketOn ? $MK->tape() : [];
+$mkSum = $marketOn ? $MK->summary() : ['needs' => 0, 'offers' => 0, 'deals7' => 0];
+$myMatches = ($isOwner && $marketOn) ? $MK->matchesFor($me) : [];
+$myOffers  = ($isOwner && $marketOn) ? $MK->myOffers($me) : [];
+$pendingMatches = count(array_filter($myMatches, fn($m) => !$m['deal'] && $m['mine'] === 'new'));
+$profileOffers = ($hasProfile && $marketOn)
+    ? array_values(array_filter($MK->offers(), fn($o) => $o['user_id'] === (int)$userdata['id'])) : [];
+
 /* ── Джем-режим ───────────────────────────────────────────────────────── */
 $action  = (string)($_GET['action'] ?? '');
 $jamData = null;
@@ -118,9 +131,9 @@ $jamBid = $jamData && $action === 'create_bid';
 $tabs = [];
 if ($hasProfile) $tabs['profile'] = ['Профиль', 'user'];
 if ($isOwner)    $tabs['foryou']  = ['Для тебя', 'flame'];
-$tabs['market'] = ['Биржа', 'grid'];
+$tabs['market'] = ['Рынок', 'chart'];
 if ($isOwner) {
-    $tabs['bids']      = ['Мои заявки', 'briefcase'];
+    $tabs['bids']      = ['Мои позиции', 'briefcase'];
     $tabs['responses'] = ['Отклики', 'inbox'];
     $tabs['network']   = ['Связи', 'users'];
 }
@@ -303,8 +316,8 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
         <header class="l4x-intro">
             <div>
                 <div class="l4x-eyebrow">Dustore · L4T</div>
-                <h1>Найди людей<br>для своей игры</h1>
-                <p>Биржа команд: заявки от разработчиков и студий, отклики, сборка команд на джемы.</p>
+                <h1>Рынок задач,<br>специалистов и команд</h1>
+                <p>Команды выставляют спрос, специалисты — свою работу. L4T сводит стороны в реальном времени: от разовой задачи до команды на джем.</p>
             </div>
             <a class="l4x-btn l4x-btn--acc" href="/login?backUrl=/l4t/"><?= l4x_icon('user') ?>Войти и создать профиль</a>
         </header>
@@ -332,7 +345,8 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
             <button class="l4x-tab <?= $k === $tab ? 'is-on' : '' ?>" data-tab="<?= $k ?>" role="tab">
                 <?= l4x_icon($ic) ?><?= $h($label) ?>
                 <?php if ($k === 'responses' && $incoming): ?><span class="l4x-badge"><?= count($incoming) ?></span><?php endif; ?>
-                <?php if ($k === 'bids' && $myBids): ?><span class="l4x-badge l4x-badge--mute"><?= count($myBids) ?></span><?php endif; ?>
+                <?php if ($k === 'bids' && $pendingMatches): ?><span class="l4x-badge" title="Совпадения ждут ответа"><?= $pendingMatches ?></span>
+                <?php elseif ($k === 'bids' && ($myBids || $myOffers)): ?><span class="l4x-badge l4x-badge--mute"><?= count($myBids) + count($myOffers) ?></span><?php endif; ?>
             </button>
         <?php endforeach; ?>
     </nav>
@@ -447,6 +461,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                     </div>
                 </div>
 
+                <?php if ($profileOffers || ($isOwner && $marketOn)) require __DIR__ . '/views/profile_offers.php'; ?>
                 <?php require __DIR__ . '/views/profile_blocks.php'; ?>
 
                 <div class="l4x-card pix">
@@ -591,6 +606,10 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
 
     <?php /* ═════════════════════════ БИРЖА ═════════════════════════ */ ?>
     <section class="l4x-view <?= $tab === 'market' ? 'is-on' : '' ?>" data-view="market">
+        <?php if ($marketOn): ?>
+            <?php require __DIR__ . '/views/market_book.php'; ?>
+        <?php endif; ?>
+        <div id="mkFeedPane" <?= $marketOn ? 'hidden' : '' ?>>
         <div class="l4x-toolbar">
             <label class="l4x-search pix"><?= l4x_icon('search') ?><input type="search" id="feedQ" placeholder="Роль, движок, условия…" autocomplete="off"></label>
             <div class="l4x-seg" id="feedKind">
@@ -621,6 +640,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
             <?php foreach ($feed['rows'] as $bid) require __DIR__ . '/_bid_card.php'; ?>
         </div>
         <div class="l4x-more"><button class="l4x-btn l4x-btn--ghost" id="feedMore" <?= count($feed['rows']) < $feed['total'] ? '' : 'hidden' ?>>Показать ещё</button></div>
+        </div>
     </section>
 
     <?php /* ═════════════════════════ МОИ ЗАЯВКИ ═════════════════════════ */ ?>
@@ -629,7 +649,17 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
         $jamText = $jamBid ? "Собираю команду для участия в джеме «{$jamData['title']}».\n\nТребуются:\n- \n\nСсылка на джем: https://dustore.ru/jams/{$jamData['id']}" : '';
     ?>
     <section class="l4x-view <?= $tab === 'bids' ? 'is-on' : '' ?>" data-view="bids">
-        <div class="l4x-grid l4x-grid--form">
+        <?php $posPane = $jamBid ? 'need' : ((string)($_GET['pane'] ?? '') ?: ($pendingMatches ? 'matches' : 'need')); ?>
+        <?php if ($marketOn): ?>
+        <div class="l4x-seg mk-panes" id="posPanes">
+            <button data-pane="matches" class="<?= $posPane === 'matches' ? 'is-on' : '' ?>"><?= l4x_icon('users') ?>Совпадения<?= $pendingMatches ? ' <b class="l4x-badge">' . $pendingMatches . '</b>' : '' ?></button>
+            <button data-pane="need" class="<?= $posPane === 'need' ? 'is-on' : '' ?>"><?= l4x_icon('search') ?>Мне нужно <span class="l4x-muted"><?= count($myBids) ?></span></button>
+            <button data-pane="offer" class="<?= $posPane === 'offer' ? 'is-on' : '' ?>"><?= l4x_icon('briefcase') ?>Я могу <span class="l4x-muted"><?= count($myOffers) ?></span></button>
+        </div>
+        <div class="mk-pane" data-pane="matches" <?= $posPane === 'matches' ? '' : 'hidden' ?>><?php require __DIR__ . '/views/positions_matches.php'; ?></div>
+        <div class="mk-pane" data-pane="offer" <?= $posPane === 'offer' ? '' : 'hidden' ?>><?php require __DIR__ . '/views/positions_offers.php'; ?></div>
+        <?php endif; ?>
+        <div class="mk-pane l4x-grid l4x-grid--form" data-pane="need" <?= !$marketOn || $posPane === 'need' ? '' : 'hidden' ?>>
             <form class="l4x-card pix l4x-form" id="bidForm" action="/swad/controllers/l4t/upsert_bid.php" method="POST">
                 <div class="l4x-card__head">
                     <h2 id="bidFormTitle"><?= l4x_icon('plus') ?><?= $jamBid ? 'Заявка на джем' : 'Новая заявка' ?></h2>
@@ -662,8 +692,31 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                     <label class="l4x-field"><span class="l4x-field__label">Условия</span>
                         <input class="l4x-input" name="cond" id="f_cond" maxlength="100" placeholder="Удалёнка, доля, оплата за результат…"></label>
                 </div>
+                <?php if ($marketOn): ?>
+                    <input type="hidden" name="goal" id="f_goal" value="Разовая работа">
+                    <div class="l4x-form__grid">
+                        <label class="l4x-field"><span class="l4x-field__label">Что за работа</span>
+                            <select class="l4x-input" name="kind" id="f_kind">
+                                <?php foreach (L4TMarket::KINDS as $k => $kl): ?><option value="<?= $k ?>" <?= $jamBid && $k === 'jam' ? 'selected' : '' ?>><?= $h($kl) ?></option><?php endforeach; ?>
+                            </select></label>
+                        <label class="l4x-field"><span class="l4x-field__label">Срок, дней</span>
+                            <input class="l4x-input" name="duration_days" id="f_days" type="number" min="1" max="365" placeholder="7"></label>
+                    </div>
+                    <div class="l4x-field">
+                        <span class="l4x-field__label">Оплата — по ней заявка встаёт в стакан</span>
+                        <div class="l4x-seg l4x-seg--form" id="f_pay">
+                            <?php foreach (L4TMarket::PAY as $k => $pl): ?><label><input type="radio" name="pay_type" value="<?= $k ?>" <?= ($jamBid ? 'free' : 'money') === $k ? 'checked' : '' ?>><span><?= $h($pl) ?></span></label><?php endforeach; ?>
+                        </div>
+                        <div class="l4x-row mk-price" id="f_budget">
+                            <input class="l4x-input" name="budget_min" id="f_bmin" inputmode="numeric" placeholder="от, ₽">
+                            <span class="l4x-muted">—</span>
+                            <input class="l4x-input" name="budget_max" id="f_bmax" inputmode="numeric" placeholder="до, ₽">
+                        </div>
+                    </div>
+                <?php else: ?>
                 <label class="l4x-field"><span class="l4x-field__label">Цель</span>
                     <select class="l4x-input" name="goal" id="f_goal"><option>Найти человека в команду</option><option>Консультация</option><option>Разовая работа</option></select></label>
+                <?php endif; ?>
                 <?php if ($skillsAll): ?>
                 <div class="l4x-field">
                     <span class="l4x-field__label">Навыки (до 8) — по ним заявку увидят в «Для тебя»</span>
@@ -694,7 +747,8 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                         <div class="l4x-my pix">
                             <div class="l4x-my__main">
                                 <b><?= $h($b['search_role']) ?></b>
-                                <span class="l4x-muted"><?= date('d.m.Y', strtotime((string)$b['created_at'])) ?> · <?= $b['stage'] === 'active' ? 'активна' : $h($b['stage']) ?></span>
+                                <span class="l4x-muted"><?= date('d.m.Y', strtotime((string)$b['created_at'])) ?> · <?= $b['stage'] === 'active' ? 'на рынке' : 'снята' ?><?php
+                                    if ($marketOn): ?> · <?= $h(L4TMarket::priceLabel(['side' => 'need', 'pay' => $b['pay_type'] ?: 'money', 'lo' => $b['budget_min'] !== null ? (int)$b['budget_min'] : null, 'hi' => $b['budget_max'] !== null ? (int)$b['budget_max'] : null])) ?><?php endif; ?></span>
                             </div>
                             <span class="l4x-my__stat"><?= l4x_icon('eye') ?><?= (int)($b['views'] ?? 0) ?></span>
                             <span class="l4x-my__stat"><?= l4x_icon('inbox') ?><?= (int)($b['responses'] ?? 0) ?></span>
@@ -703,7 +757,13 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                                 'exp' => $b['experience'] ?? '', 'cond' => $b['conditions'] ?? '', 'goal' => $b['goal'] ?? '',
                                 'details' => $b['details'] ?? '', 'owner_type' => $b['owner_type'] ?? 'user', 'owner_id' => (int)($b['owner_id'] ?? 0),
                                 'skills' => $myBidSkills[(int)$b['id']] ?? [],
+                                'kind' => $b['kind'] ?? 'task', 'pay_type' => $b['pay_type'] ?? 'money',
+                                'budget_min' => $b['budget_min'] ?? '', 'budget_max' => $b['budget_max'] ?? '', 'duration_days' => $b['duration_days'] ?? '',
                             ], JSON_UNESCAPED_UNICODE)) ?>"><?= l4x_icon('edit') ?></button>
+                            <?php if ($marketOn): ?>
+                                <button class="l4x-link" data-act="need-stage" data-id="<?= (int)$b['id'] ?>" data-stage="<?= $b['stage'] === 'active' ? 'closed' : 'active' ?>"
+                                        title="<?= $b['stage'] === 'active' ? 'Снять с рынка' : 'Вернуть на рынок' ?>"><?= l4x_icon($b['stage'] === 'active' ? 'close' : 'arrow') ?></button>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -868,9 +928,13 @@ window.L4X = <?= json_encode([
     'uSkills'   => (object)$uSkills,
     'studios'   => $P ? array_map(fn($s) => ['id' => (int)$s['id'], 'name' => $s['name']], $P->studios) : [],
     'statuses'  => L4TX::RESP_STATUSES,
+    'market'    => $marketOn ? ['quotes' => $quotes, 'tape' => $tape, 'summary' => $mkSum,
+                                'kinds' => L4TMarket::KINDS, 'pay' => L4TMarket::PAY,
+                                'offers' => $myOffers] : null,
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
 </script>
 <script src="<?= asset_url('/l4t/js/l4x.js') ?>" defer></script>
 <script src="<?= asset_url('/l4t/js/l4x-more.js') ?>" defer></script>
+<script src="<?= asset_url('/l4t/js/l4x-market.js') ?>" defer></script>
 
 <?php require_once __DIR__ . '/../swad/static/elements/footer.php'; ?>

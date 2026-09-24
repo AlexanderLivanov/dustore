@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../swad/config.php';
 require_once __DIR__ . '/../../swad/controllers/l4t/_csrf.php';
 require_once __DIR__ . '/../lib/extras.php';
 require_once __DIR__ . '/../lib/match.php';
+require_once __DIR__ . '/../lib/market.php';
 
 function out(array $d, int $code = 200): void
 {
@@ -33,7 +34,7 @@ $isGet   = $_SERVER['REQUEST_METHOD'] === 'GET';
 $in      = $isGet ? $_GET : (json_decode((string)file_get_contents('php://input'), true) ?: $_POST);
 $op      = (string)($in['op'] ?? '');
 
-$public = ['people'];                                         // доступно гостям
+$public = ['people', 'quotes', 'book', 'offer_view'];                                         // доступно гостям
 if (!$uid && !in_array($op, $public, true)) out(['ok' => false, 'error' => 'Нужно войти в аккаунт'], 401);
 if (!$isGet) csrf_guard_json($in);
 
@@ -44,6 +45,7 @@ foreach ([$main, $l4t] as $c) $c->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_E
 
 $x = new L4TX($main, $l4t);
 $m = new L4TMatch($x, $main);
+$mk = new L4TMarket($x, $main);
 $i = fn(string $k) => (int)($in[$k] ?? 0);
 $s = fn(string $k) => (string)($in[$k] ?? '');
 
@@ -61,6 +63,48 @@ try {
             $sp = $x->row($main, "SELECT host_user_id FROM sprints WHERE id = ?", [$i('sprint_id')]);
             if (!$sp || (!$isAdmin && (int)$sp['host_user_id'] !== $uid)) out(['ok' => false, 'error' => 'Нет доступа'], 403);
             out(['ok' => true, 'items' => $m->queue($i('sprint_id'))]);
+
+        /* ── рынок: чтение (публично) ────────────────────────────── */
+        case 'quotes':
+            out(['ok' => true, 'quotes' => $mk->quotes(), 'tape' => $mk->tape(), 'summary' => $mk->summary()]);
+
+        case 'book':
+            $slug = $s('skill');
+            if (!isset($x->skills()[$slug])) out(['ok' => false, 'error' => 'Нет такого навыка'], 404);
+            out(['ok' => true, 'book' => $mk->book($slug, $uid)]);
+
+        case 'offer_view':                       // просмотр предложения из стакана: раз в сессию
+            $oid = $i('id');
+            if ($oid > 0 && empty($_SESSION['l4t_ov'][$oid])) {
+                $_SESSION['l4t_ov'][$oid] = 1;
+                $l4t->prepare("UPDATE offers SET views = views + 1 WHERE id = ? AND user_id <> ?")->execute([$oid, $uid]);
+            }
+            out(['ok' => true]);
+
+        case 'my_orders':                        // для «Предложить задачу» / «Предложить себя»
+            $needs = array_values(array_filter($mk->needs(), fn($n) => $n['user_id'] === $uid));
+            $offs  = array_values(array_filter($mk->myOffers($uid), fn($o) => $o['stage'] === 'active'));
+            out(['ok' => true, 'needs' => array_map(fn($n) => ['id' => $n['id'], 'title' => $n['title']], $needs),
+                 'offers' => array_map(fn($o) => ['id' => $o['id'], 'title' => $o['title']], $offs)]);
+
+        /* ── рынок: запись ──────────────────────────────────────── */
+        case 'offer_save':
+            $id = $mk->saveOffer($uid, $in, $i('id'));
+            out(['ok' => true, 'id' => $id]);
+
+        case 'offer_stage':
+            $mk->setOfferStage($uid, $i('id'), $s('stage'));
+            out(['ok' => true]);
+
+        case 'need_stage':
+            $mk->setNeedStage($uid, $i('id'), $s('stage'));
+            out(['ok' => true]);
+
+        case 'match_answer':
+            out(['ok' => true] + $mk->answer($uid, $i('id'), !empty($in['yes'])));
+
+        case 'propose':
+            out(['ok' => true] + $mk->propose($uid, $i('bid_id'), $i('offer_id')));
 
         /* ── навыки и профиль ───────────────────────────────────── */
         case 'skills_save':

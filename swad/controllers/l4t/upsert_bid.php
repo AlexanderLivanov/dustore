@@ -86,15 +86,26 @@ function user_owns_studio(PDO $main, int $userId, int $studioId): bool {
     return (bool)$s->fetchColumn();
 }
 
-/** Навыки заявки из формы (skills[]). Без них лента «Для тебя» угадывает по тексту. */
+/**
+ * Навыки и рыночные поля заявки (бюджет, формат, срок) + запуск сведения
+ * с предложениями. Без навыков заявку не видно в стакане и «Для тебя».
+ */
 function save_bid_skills(PDO $l4t, PDO $main, int $bidId): bool {
-    if (!isset($_POST['skills']) || !is_array($_POST['skills'])) return false;
-    require_once __DIR__ . '/../../../l4t/lib/extras.php';
+    require_once __DIR__ . '/../../../l4t/lib/market.php';
     try {
-        (new L4TX($main, $l4t))->saveBidSkills($bidId, array_map('strval', $_POST['skills']));
-        return true;
+        $x = new L4TX($main, $l4t);
+        $touched = false;
+        if (isset($_POST['skills']) && is_array($_POST['skills'])) {
+            $x->saveBidSkills($bidId, array_map('strval', $_POST['skills']));
+            $touched = true;
+        }
+        if (isset($_POST['pay_type'])) {
+            (new L4TMarket($x, $main))->saveNeedMarket($bidId, $_POST);
+            $touched = true;
+        }
+        return $touched;
     } catch (Throwable $e) {
-        error_log('[l4t/upsert_bid] skills: ' . $e->getMessage());
+        error_log('[l4t/upsert_bid] market: ' . $e->getMessage());
         return false;
     }
 }
@@ -125,13 +136,28 @@ try {
        по stage='active') и на них нельзя было откликнуться. */
     $jamId = (int)($_POST['jam_id'] ?? 0) ?: null;
 
-    $st = $pdo->prepare("
-        INSERT INTO bids
-            (bidder_id, owner_type, owner_id, jam_id, search_role, search_spec,
-             experience, conditions, goal, details, stage, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())");
-    $st->execute([$userId, $ownerType, $ownerId, $jamId,
-                  $role, $spec, $exp, $cond, $goal, $details]);
+    /* Колонки берём из реальной схемы, а не из предположений: в боевой bids
+       нет owner_id — и этот INSERT падал с 1054 на каждой новой заявке.
+       Необязательные поля пишем, только если такая колонка есть. */
+    $have = array_flip($pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bids'")->fetchAll(PDO::FETCH_COLUMN));
+    $row = [
+        'bidder_id'   => $userId,
+        'search_role' => $role,
+        'search_spec' => $spec,
+        'experience'  => $exp,
+        'conditions'  => $cond,
+        'goal'        => $goal,
+        'details'     => $details,
+        'stage'       => 'active',
+    ];
+    foreach (['owner_type' => $ownerType, 'owner_id' => $ownerId, 'jam_id' => $jamId] as $col => $val) {
+        if (isset($have[$col])) $row[$col] = $val;
+    }
+    $cols = array_keys($row);
+    $st = $pdo->prepare("INSERT INTO bids (" . implode(', ', $cols) . ", created_at)
+                         VALUES (" . implode(', ', array_fill(0, count($cols), '?')) . ", NOW())");
+    $st->execute(array_values($row));
     save_bid_skills($pdo, $main, (int)$pdo->lastInsertId());
 
     back('my', 'created');
