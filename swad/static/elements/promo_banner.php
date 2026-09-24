@@ -39,12 +39,22 @@
  * через паузу, следующая попытка начинается с нуля (это и даёт «первые
  * два скролла просто трясут» — они не суммируются в вечный счётчик).
  * Набрали порог — коммит: карточка улетает существующим CSS-переходом,
- * И СРАЗУ (без анимации скролла поверх — второй анимации там не нужно)
- * прыгаем на верх <main>, разлочивая страницу. Обратно у самой границы —
- * тот же накопитель, только на deltaY<0 и только пока scrollY≈0: слабый
- * рывок вверх гасится, решительный — перелистывает обратно к баннеру.
- * Клавиатурный скролл (PageDown/Space/стрелки) через порог не гоняем —
- * сразу пропускаем, блокировать его ради красивости было бы просто вредно.
+ * И СИНХРОННО с ним страницу САМУ ПРОНОСИТ вниз, на верх <main> (rAF,
+ * ~550ms, тот же тайминг, что transform у карточки — animateScrollTo()
+ * ниже). Первая версия коммита прыгала на scrollTop мгновенно — на
+ * реальном железе Лео это ощущалось как рандомный скачок без эффекта
+ * (сам полёт карточки просто не успевал быть увиденным, а инерция того
+ * же жеста колеса/трекпада докручивала ПОСЛЕ прыжка мимо точки стыковки —
+ * оттуда и «не доставить чётко, выровняться сложно»). Теперь на время
+ * carry-анимации `busy=true`: весь wheel/touch глотается без исключений,
+ * так что докатывается ровно один раз, без дребезга от хвоста жеста;
+ * html.pb-locked остаётся включён все ~550ms и снимается только когда
+ * анимация реально доехала. Обратно у самой границы — тот же накопитель,
+ * только на deltaY<0 и только пока scrollY≈0: слабый рывок вверх гасится,
+ * решительный — тот же carry в обратную сторону, карточка проявляется
+ * тем же переходом задом наперёд. Клавиатурный скролл (PageDown/Space/
+ * стрелки) через порог не гоняем — сразу пропускаем, блокировать его
+ * ради красивости было бы просто вредно.
  *
  * ВАЖНО про прыжок к <main> (баг, на который наткнулись при первом деплое v3):
  * страница у нас (и, похоже, не только этот файл) не в полном соответствии
@@ -186,14 +196,16 @@ if ($promo):
             height: min(72vh, 620px);
             min-height: 360px;
             transform-style: preserve-3d;
+            transform: translateY(var(--pbNudge, 0px));
+            transition: transform .001s;
+            will-change: transform;
         }
 
-        /* Раньше transform считался непрерывно из calc(var(--p,0) * ...) на каждый
-           кадр скролла — отсюда и «наполовину открыта», и хитбокс кнопки внутри,
-           плывущий вместе с 3D-трансформом на промежуточных значениях --p.
-           Теперь ровно два состояния: пристыкована (ниже, без трансформа —
-           только наклон от мыши) и .pb-flown (готовая конечная поза, один
-           CSS-переход). Никакого читаемого пользователем промежуточного кадра. */
+        .pb-inner.pb-decaying {
+            transition: transform .5s cubic-bezier(.34, 1.56, .64, 1);
+        }
+
+
         .pb-card {
             position: absolute;
             inset: 0;
@@ -202,24 +214,64 @@ if ($promo):
             transform-style: preserve-3d;
             transform-origin: 50% 50%;
             box-shadow: 0 40px 100px -28px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .07) inset;
-            /* --pbNudge — плавный "потряхивание": JS двигает его пропорционально
-               накопленному, ещё не докоммиченному скроллу (0 → -14px к порогу),
-               используя уже существующий .12s transition — отдельная @keyframes
-               анимация тут не нужна. */
-            transform: translateY(var(--pbNudge, 0px)) rotateY(var(--tiltY, 0deg)) rotateX(var(--tiltX, 0deg));
+            transform: rotateY(var(--tiltY, 0deg)) rotateX(var(--tiltX, 0deg));
             opacity: 1;
             filter: blur(0);
-            transition: transform .001s ease-out, opacity .3s ease, filter .3s ease, visibility 0s linear .3s;
+            transition: transform .001s, opacity .3s ease, filter .3s ease;
+            will-change: transform, opacity, filter;
+        }
+
+        .pb-card.pb-flying {
+            transition:
+                transform .55s cubic-bezier(.22, .61, .36, 1),
+                opacity .45s ease,
+                filter .45s ease;
         }
 
         .pb-card.pb-flown {
             transform:
-                translate3d(var(--pb-flyX), var(--pb-flyY), var(--pb-flyZ)) rotateY(var(--pb-rotY)) rotateX(var(--pb-rotX)) rotateZ(var(--pb-rotZ)) scale(var(--pb-scaleEnd));
+                translate3d(var(--pb-flyX), var(--pb-flyY), var(--pb-flyZ))
+                rotateY(var(--pb-rotY)) rotateX(var(--pb-rotX)) rotateZ(var(--pb-rotZ))
+                scale(var(--pb-scaleEnd));
             opacity: 0;
             filter: blur(6px);
             pointer-events: none;
-            visibility: hidden;
-            transition: transform .55s cubic-bezier(.22, .61, .36, 1), opacity .4s ease, filter .4s ease, visibility 0s linear .5s;
+        }
+
+        /* ── Тряска при неудачной попытке пробить вниз ───────────────────── */
+        @keyframes pbShake {
+            0%   { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(0,0,0) rotateZ(0) scale(1); }
+            12%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-10px, 3px, 0) rotateZ(-1.8deg) scale(.982); }
+            27%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(10px, 3px, 0) rotateZ(1.8deg) scale(.982); }
+            42%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-7px, 0, 0) rotateZ(-1.1deg) scale(1.006); }
+            57%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(7px, 0, 0) rotateZ(1.1deg) scale(1.006); }
+            74%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-3px, 0, 0) rotateZ(-0.5deg) scale(1); }
+            100% { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(0,0,0) rotateZ(0) scale(1); }
+        }
+        .pb-card.pb-shake {
+            animation: pbShake .5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        /* ── Появление главной снизу после вылета баннера ───────────────── */
+        @keyframes pbMainEnter {
+            from {
+                transform: translateY(90px);
+                opacity: 0;
+                filter: blur(10px);
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+                filter: blur(0);
+            }
+        }
+
+        main.pb-main-enter {
+            animation: pbMainEnter .6s cubic-bezier(.22, .61, .36, 1) both;
+        }
+
+        body > main {
+            will-change: transform, opacity, filter;
         }
 
         .pb-bg {
@@ -502,7 +554,7 @@ if ($promo):
     </style>
 
     <div class="pb-wrap" id="pbWrap">
-        <div class="pb-inner">
+        <div class="pb-inner" id="pbInner">
 
             <div class="pb-card" id="pbCard">
                 <div class="pb-bg"></div>
@@ -588,198 +640,337 @@ if ($promo):
     </div>
 
     <script src="/swad/js/analytics.js"></script>
-    <script>
-        (function() {
-            var PROMO_ID = <?= (int)$promo['promo_id'] ?>;
-            var GAME_ID = <?= (int)$promo['game_id'] ?>;
-            var DISMISS_KEY = 'pbMiniDismissed:' + PROMO_ID;
+<script>
+(function () {
+    var PROMO_ID = <?= (int)$promo['promo_id'] ?>;
+    var GAME_ID = <?= (int)$promo['game_id'] ?>;
+    var DISMISS_KEY = 'pbMiniDismissed:' + PROMO_ID;
 
-            var wrap = document.getElementById('pbWrap');
-            var card = document.getElementById('pbCard');
-            var marker = document.getElementById('pbMainTopMarker');
-            var mini = document.getElementById('pbMini');
-            var miniClose = document.getElementById('pbMiniClose');
-            var html = document.documentElement;
+    var wrap = document.getElementById('pbWrap');
+    var inner = document.getElementById('pbInner');
+    var card = document.getElementById('pbCard');
+    var mini = document.getElementById('pbMini');
+    var miniClose = document.getElementById('pbMiniClose');
+    var mainEl = document.querySelector('body > main');
+    var html = document.documentElement;
 
-            var dismissed = false;
-            try {
-                dismissed = sessionStorage.getItem(DISMISS_KEY) === '1';
-            } catch (e) {}
+    var dismissed = false;
+    try { dismissed = sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
 
-            // ── Явный накопитель вместо нативного scroll-snap (см. докблок вверху файла —
-            // там же объяснение, почему не сырой подсчёт wheel-событий, как в самой первой
-            // версии). THRESHOLD подобран так, чтобы три обычных щелчка колеса мыши гарантированно
-            // коммитили, а один случайный шевеление трекпада — нет. ──
-            var THRESHOLD = 260;
-            var DECAY_MS = 260;
-            var flown = false;
-            var accum = 0;
-            var decayTimer = null;
+    /* ── Параметры жеста ──────────────────────────────────────────── */
+    var THRESHOLD_DOWN = 240;    /* сила для коммита вниз            */
+    var THRESHOLD_UP   = 260;    /* сила для коммита вверх           */
+    var ATTEMPTS_NEEDED = 3;     /* попыток до права коммитить       */
+    var DECAY_MS  = 340;         /* пауза после wheel = конец жеста  */
+    var MIN_ATTEMPT = 40;        /* мин. вес, чтобы жест засчитался  */
+    var UP_GATE   = 12;          /* окно от верх. границы main для up*/
+    var MAIN_PULL = 60;          /* макс. натяг main вниз, px        */
 
-            function scrollRoot() {
-                return document.scrollingElement || document.documentElement;
+    var flown = false;
+    var attemptsDown = 0;
+    var attemptsUp = 0;
+    var accum = 0;
+    var decayTimer = null;
+    var animating = false;
+
+    function scrollRoot() {
+        return document.scrollingElement || document.documentElement;
+    }
+
+    /* ── Пружины ──────────────────────────────────────────────────── */
+    function setNudge(px) {
+        inner.style.setProperty('--pbNudge', px.toFixed(1) + 'px');
+    }
+
+    /* live=true → мгновенный отклик (тянет пользователь)
+       live=false → пружинный откат через transition */
+    function setMainNudge(px, live) {
+        if (!mainEl) return;
+        if (live) {
+            mainEl.style.transition = 'transform .09s linear';
+            mainEl.style.transform = px ? 'translateY(' + px.toFixed(1) + 'px)' : '';
+        } else {
+            mainEl.style.transition = 'transform .5s cubic-bezier(.34, 1.56, .64, 1)';
+            mainEl.style.transform = '';
+            setTimeout(function () { mainEl.style.transition = ''; }, 560);
+        }
+    }
+
+    function springBackBanner() {
+        inner.classList.add('pb-decaying');
+        setNudge(0);
+        setTimeout(function () { inner.classList.remove('pb-decaying'); }, 560);
+    }
+
+    function triggerShake() {
+        card.classList.remove('pb-shake');
+        void card.offsetWidth;
+        card.classList.add('pb-shake');
+        setTimeout(function () { card.classList.remove('pb-shake'); }, 20);
+    }
+
+    function scheduleDecay() {
+        clearTimeout(decayTimer);
+        decayTimer = setTimeout(function () {
+            /* Считаем попытку, если жест был осмысленным. */
+            if (!flown) {
+                if (accum > MIN_ATTEMPT) attemptsDown++;
+                springBackBanner();
+                if (accum > MIN_ATTEMPT) triggerShake();
+            } else {
+                if (accum > MIN_ATTEMPT) attemptsUp++;
+                setMainNudge(0, false);
             }
+            accum = 0;
+        }, DECAY_MS);
+    }
 
-            function markerDocTop() {
-                return marker.getBoundingClientRect().top + scrollRoot().scrollTop;
-            }
+    /* ── Полёт карточки ──────────────────────────────────────────── */
+    function flyCardOut() {
+        card.classList.add('pb-flying');
+        void card.offsetWidth;
+        card.classList.add('pb-flown');
+        setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
+    }
+    function flyCardIn() {
+        card.classList.add('pb-flying');
+        void card.offsetWidth;
+        card.classList.remove('pb-flown');
+        setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
+    }
 
-            function setNudge(px) {
-                card.style.setProperty('--pbNudge', px.toFixed(1) + 'px');
-            }
+    /* ── Коммит ВНИЗ ─────────────────────────────────────────────── */
+    function commitDown() {
+        if (animating) return;
+        animating = true;
 
-            function scheduleDecay() {
-                clearTimeout(decayTimer);
-                decayTimer = setTimeout(function() {
-                    accum = 0;
-                    setNudge(0);
-                }, DECAY_MS);
-            }
+        inner.classList.remove('pb-decaying');
+        setNudge(0);
+        attemptsDown = 0;
+        attemptsUp = 0;
+        accum = 0;
 
-            function commitDown() {
-                html.classList.remove('pb-locked');
-                scrollRoot().scrollTop = markerDocTop();
-                flown = true;
-                accum = 0;
-                setNudge(0);
-                card.classList.add('pb-flown');
-                if (!dismissed) mini.classList.add('pb-visible');
-            }
+        flyCardOut();
+        if (!dismissed) setTimeout(function () { mini.classList.add('pb-visible'); }, 380);
 
-            function commitUp() {
+        /* Скрываем wrap за 420мс — к этому моменту opacity карточки уже ~0,
+           глазу подмена не видна. */
+        setTimeout(function () {
+            wrap.style.display = 'none';
+            requestAnimationFrame(function () {
                 scrollRoot().scrollTop = 0;
-                html.classList.add('pb-locked');
-                flown = false;
+            });
+            html.classList.remove('pb-locked');
+            flown = true;
+
+            /* Появление главной снизу. Класс убираем после анимации,
+               чтобы inline-трансформ от nudge потом снова работал. */
+            mainEl.classList.add('pb-main-enter');
+            setTimeout(function () {
+                mainEl.classList.remove('pb-main-enter');
+                animating = false;
+            }, 620);
+        }, 420);
+    }
+
+    /* ── Коммит ВВЕРХ ────────────────────────────────────────────── */
+    function commitUp() {
+        if (animating) return;
+        animating = true;
+
+        /* Сбрасываем натяг main без transition — main всё равно сейчас
+           прыгнет вниз из-за возврата wrap, анимацию не увидим. */
+        if (mainEl) {
+            mainEl.style.transition = 'none';
+            mainEl.style.transform = '';
+            void mainEl.offsetWidth;
+            mainEl.style.transition = '';
+        }
+
+        wrap.style.display = '';
+        requestAnimationFrame(function () {
+            scrollRoot().scrollTop = 0;
+        });
+        html.classList.add('pb-locked');
+
+        flyCardIn();
+        mini.classList.remove('pb-visible');
+
+        attemptsDown = 0;
+        attemptsUp = 0;
+        accum = 0;
+
+        setTimeout(function () {
+            flown = false;
+            animating = false;
+        }, 620);
+    }
+
+    /* ── Колесо ──────────────────────────────────────────────────── */
+    function onWheel(e) {
+        if (e.ctrlKey) return;
+        if (animating) { e.preventDefault(); return; }
+
+        if (!flown) {
+            /* ── ВНИЗ с баннера ── */
+            if (e.deltaY <= 0) return;
+            e.preventDefault();
+            accum += Math.abs(e.deltaY);
+
+            if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
+                commitDown();
+                return;
+            }
+            setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
+            scheduleDecay();
+            return;
+        }
+
+        /* ── ВВЕРХ с главной ── */
+        if (e.deltaY >= 0) {
+            /* Скролл вниз по главной — просто сбрасываем накопленное
+               «вверх», чтобы счётчик не жил вечно. */
+            if (attemptsUp > 0 || accum > 0) {
+                attemptsUp = 0;
                 accum = 0;
-                card.classList.remove('pb-flown');
-                mini.classList.remove('pb-visible');
+                setMainNudge(0, false);
             }
+            return;
+        }
 
-            function onWheel(e) {
-                if (e.ctrlKey) return; // pinch-zoom/ctrl+колесо — не наше дело
-                if (!flown) {
-                    if (e.deltaY <= 0) return; // скролл вверх, когда и так на баннере — игнор
-                    e.preventDefault();
-                    accum += Math.abs(e.deltaY);
-                    if (accum >= THRESHOLD) {
-                        commitDown();
-                    } else {
-                        setNudge(-14 * (accum / THRESHOLD));
-                        scheduleDecay();
-                    }
-                    return;
-                }
-                // На главной гейтим только у самой верхней границы и только скролл вверх —
-                // это и есть «сопротивление»: чуть ниже по странице колесо работает как обычно.
-                if (scrollRoot().scrollTop > 4 || e.deltaY >= 0) return;
-                e.preventDefault();
-                accum += Math.abs(e.deltaY);
-                if (accum >= THRESHOLD) commitUp();
-                else scheduleDecay();
-            }
-            window.addEventListener('wheel', onWheel, {
-                passive: false
-            });
+        var s = scrollRoot();
+        if (s.scrollTop > UP_GATE) {
+            /* ещё не упёрлись в верх главной — отдаём скролл браузеру */
+            attemptsUp = 0;
+            accum = 0;
+            return;
+        }
 
-            // ── Тач: тот же накопитель, по вертикальному свайпу ──
-            var touchStartY = null;
-            window.addEventListener('touchstart', function(e) {
-                touchStartY = e.touches[0].clientY;
-            }, {
-                passive: true
-            });
-            window.addEventListener('touchmove', function(e) {
-                if (touchStartY === null) return;
-                var dy = touchStartY - e.touches[0].clientY; // >0 — свайп вверх (скролл вниз)
-                if (!flown) {
-                    if (dy <= 0) return;
-                    e.preventDefault();
-                    accum = dy;
-                    if (accum >= THRESHOLD) {
-                        commitDown();
-                        touchStartY = null;
-                    } else {
-                        setNudge(-14 * (accum / THRESHOLD));
-                    }
-                    return;
-                }
-                if (scrollRoot().scrollTop > 4 || dy >= 0) return;
-                e.preventDefault();
-                accum = -dy;
-                if (accum >= THRESHOLD) {
-                    commitUp();
-                    touchStartY = null;
-                }
-            }, {
-                passive: false
-            });
-            window.addEventListener('touchend', function() {
+        e.preventDefault();
+        accum += Math.abs(e.deltaY);
+
+        if (accum >= THRESHOLD_UP && attemptsUp >= ATTEMPTS_NEEDED - 1) {
+            commitUp();
+            return;
+        }
+        /* Натяг: main тянется вниз, будто освобождает дорогу баннеру. */
+        setMainNudge(MAIN_PULL * Math.min(accum / THRESHOLD_UP, 1), true);
+        scheduleDecay();
+    }
+    window.addEventListener('wheel', onWheel, { passive: false });
+
+    /* ── Тач ─────────────────────────────────────────────────────── */
+    var touchStartY = null;
+    window.addEventListener('touchstart', function (e) {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function (e) {
+        if (touchStartY === null || animating) return;
+        var dy = touchStartY - e.touches[0].clientY;   /* >0 — свайп вверх */
+
+        if (!flown) {
+            if (dy <= 0) return;
+            e.preventDefault();
+            accum = dy;
+            if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
+                commitDown();
                 touchStartY = null;
+                return;
+            }
+            setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
+            return;
+        }
+
+        if (dy >= 0) {
+            if (attemptsUp > 0 || accum > 0) {
+                attemptsUp = 0;
                 accum = 0;
-                scheduleDecay();
-            }, {
-                passive: true
+                setMainNudge(0, false);
+            }
+            return;
+        }
+
+        var s = scrollRoot();
+        if (s.scrollTop > UP_GATE) { attemptsUp = 0; accum = 0; return; }
+
+        e.preventDefault();
+        accum = -dy;
+        if (accum >= THRESHOLD_UP && attemptsUp >= ATTEMPTS_NEEDED - 1) {
+            commitUp();
+            touchStartY = null;
+            return;
+        }
+        setMainNudge(MAIN_PULL * Math.min(accum / THRESHOLD_UP, 1), true);
+    }, { passive: false });
+
+    window.addEventListener('touchend', function () {
+        touchStartY = null;
+        if (!flown) {
+            if (accum > MIN_ATTEMPT) { attemptsDown++; triggerShake(); }
+            springBackBanner();
+        } else {
+            if (accum > MIN_ATTEMPT) attemptsUp++;
+            setMainNudge(0, false);
+        }
+        accum = 0;
+    }, { passive: true });
+
+    /* ── Клавиатура: PageDown/Space/End вниз с баннера — коммит ──── */
+    window.addEventListener('keydown', function (e) {
+        if (animating || flown) return;
+        if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
+            commitDown();
+        }
+    });
+
+    /* ── Стартовое состояние ─────────────────────────────────────── */
+    scrollRoot().scrollTop = 0;
+    html.classList.add('pb-locked');
+
+    if (miniClose) {
+        miniClose.addEventListener('click', function () {
+            dismissed = true;
+            mini.classList.remove('pb-visible');
+            try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch (e) {}
+        });
+    }
+
+    /* ── Параллакс от мыши ───────────────────────────────────────── */
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        var pbRaf = null;
+        wrap.addEventListener('mousemove', function (e) {
+            if (pbRaf) return;
+            pbRaf = requestAnimationFrame(function () {
+                pbRaf = null;
+                if (flown || animating) return;
+                var r = wrap.getBoundingClientRect();
+                var mx = (e.clientX - r.left) / r.width - 0.5;
+                var my = (e.clientY - r.top) / r.height - 0.5;
+                card.style.setProperty('--tiltX', (-my * 6).toFixed(2) + 'deg');
+                card.style.setProperty('--tiltY', (mx * 8).toFixed(2) + 'deg');
             });
+        });
+        wrap.addEventListener('mouseleave', function () {
+            card.style.setProperty('--tiltX', '0deg');
+            card.style.setProperty('--tiltY', '0deg');
+        });
+    }
 
-            // ── Клавиатура намеренно НЕ гейтим накопителем — Page Down/Space/стрелки
-            // сразу пропускают вниз. Ловить три отдельных keydown ради красивого
-            // потряхивания того не стоит: это чужой, некликовый способ навигации,
-            // и держать его взаперти было бы просто вредно для доступности. ──
-            window.addEventListener('keydown', function(e) {
-                if (flown) return;
-                if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
-                    commitDown();
-                }
-            });
-
-            html.classList.add('pb-locked');
-
-            if (miniClose) {
-                miniClose.addEventListener('click', function() {
-                    dismissed = true;
-                    mini.classList.remove('pb-visible');
-                    try {
-                        sessionStorage.setItem(DISMISS_KEY, '1');
-                    } catch (e) {}
-                });
-            }
-
-            // ── 3D-параллакс от мыши — только пока карточка стоит на месте ──
-            if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-                var pbRaf = null;
-                wrap.addEventListener('mousemove', function(e) {
-                    if (pbRaf) return;
-                    pbRaf = requestAnimationFrame(function() {
-                        pbRaf = null;
-                        if (flown) return; // не мешаем параллаксом, когда карточка уже летит
-                        var r = wrap.getBoundingClientRect();
-                        var mx = (e.clientX - r.left) / r.width - 0.5;
-                        var my = (e.clientY - r.top) / r.height - 0.5;
-                        card.style.setProperty('--tiltX', (-my * 6).toFixed(2) + 'deg');
-                        card.style.setProperty('--tiltY', (mx * 8).toFixed(2) + 'deg');
-                    });
-                });
-                wrap.addEventListener('mouseleave', function() {
-                    card.style.setProperty('--tiltX', '0deg');
-                    card.style.setProperty('--tiltY', '0deg');
-                });
-            }
-
-            // ── Аналитика ──
-            if (window.DustoreAnalytics) {
-                DustoreAnalytics.observeView(card, 'promotion', PROMO_ID);
-                var clicked = false;
-
-                function trackClick() {
-                    if (clicked) return;
-                    clicked = true;
-                    DustoreAnalytics.track('promotion', PROMO_ID, 'click');
-                }
-                ['pbPlayBtn', 'pbBgLink', 'pbMiniBtn', 'pbReviewCta'].forEach(function(id) {
-                    var el = document.getElementById(id);
-                    if (el) el.addEventListener('click', trackClick);
-                });
-            }
-        })();
-    </script>
+    /* ── Аналитика ───────────────────────────────────────────────── */
+    if (window.DustoreAnalytics) {
+        DustoreAnalytics.observeView(card, 'promotion', PROMO_ID);
+        var clicked = false;
+        function trackClick() {
+            if (clicked) return;
+            clicked = true;
+            DustoreAnalytics.track('promotion', PROMO_ID, 'click');
+        }
+        ['pbPlayBtn', 'pbBgLink', 'pbMiniBtn', 'pbReviewCta'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('click', trackClick);
+        });
+    }
+})();
+</script>
 <?php endif; ?>
