@@ -21,6 +21,8 @@ require_once __DIR__ . '/../swad/controllers/analytics.php';
 require_once __DIR__ . '/lib/profile.php';
 require_once __DIR__ . '/lib/feed.php';
 require_once __DIR__ . '/lib/icons.php';
+require_once __DIR__ . '/lib/extras.php';
+require_once __DIR__ . '/lib/match.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -58,6 +60,49 @@ if ($hasProfile) {
     $P = (new L4TProfile($pdo, $l4tdb, $userdata, $isOwner))->load();
 }
 
+/* ── Вторая волна: навыки, опыт, титры, рекомендации, связи ───────────── */
+$X = new L4TX($pdo, $l4tdb);
+$skillsAll = $X->skills();
+$uSkills = $workExp = $credits = $recs = $toRec = $pendingVer = $suggestExp = $attended = [];
+$again = null; $respSpeed = null; $isContact = false;
+$viaQr = ($_GET['via'] ?? '') === 'qr';
+if ($hasProfile) {
+    $pid = (int)$userdata['id'];
+    /* Титры собираем не чаще раза в час на профиль — это INSERT IGNORE по
+       нескольким таблицам, на каждый просмотр гонять незачем. */
+    $syncKey = 'l4t_sync_' . $pid;
+    if ($isOwner || empty($_SESSION[$syncKey]) || time() - (int)$_SESSION[$syncKey] > 3600) {
+        $X->syncCredits($pid, (string)($userdata['l4t_role'] ?? ''));
+        $_SESSION[$syncKey] = time();
+    }
+    $uSkills   = $X->userSkills($pid);
+    $workExp   = $X->experience($pid, $isOwner);
+    $credits   = $X->credits($pid, $isOwner);
+    $recs      = $X->recommendations($pid, $isOwner);
+    $again     = $X->againScore($pid);
+    $attended  = $X->attended($pid);
+    $respSpeed = $X->responseSpeed($pid);
+    if ($isOwner) {
+        $toRec      = $X->toRecommend($me);
+        $pendingVer = $X->pendingVerifications($me);
+        $suggestExp = $X->suggestExperience($me);
+    } elseif ($me) {
+        $isContact  = $X->isContact($me, $pid);
+        $canRecommend = isset($X->coworkers($me)[$pid]);
+    }
+}
+$canRecommend = $canRecommend ?? false;
+
+/* Связи и «Для тебя» — только владельцу. */
+$contacts = $shareLinks = $savedSearches = $hostEvents = $forYou = [];
+if ($isOwner) {
+    $contacts      = $X->contacts($me);
+    $shareLinks    = $X->shareLinks($me);
+    $savedSearches = $X->savedSearches($me);
+    $hostEvents    = $X->hostEvents($me);
+    $forYou        = (new L4TMatch($X, $pdo))->forYou($me, $uSkills, (string)($userdata['l4t_role'] ?? ''));
+}
+
 /* ── Джем-режим ───────────────────────────────────────────────────────── */
 $action  = (string)($_GET['action'] ?? '');
 $jamData = null;
@@ -72,10 +117,12 @@ $jamBid = $jamData && $action === 'create_bid';
 /* ── Вкладки ──────────────────────────────────────────────────────────── */
 $tabs = [];
 if ($hasProfile) $tabs['profile'] = ['Профиль', 'user'];
+if ($isOwner)    $tabs['foryou']  = ['Для тебя', 'flame'];
 $tabs['market'] = ['Биржа', 'grid'];
 if ($isOwner) {
     $tabs['bids']      = ['Мои заявки', 'briefcase'];
     $tabs['responses'] = ['Отклики', 'inbox'];
+    $tabs['network']   = ['Связи', 'users'];
 }
 $tab = (string)($_GET['tab'] ?? '');
 if ($tab === 'my') $tab = 'bids';                          // upsert_bid.php редиректит на tab=my
@@ -131,11 +178,14 @@ if ($isOwner && $l4tdb) {
     }
 }
 
+$myBidSkills = $X->bidSkills(array_column($myBids, 'id'));
+
 $authors = l4x_authors($pdo, array_merge(
     array_column($feed['rows'], 'bidder_id'),
     array_column($myResponds, 'bidder_id'),
     array_column($incoming, 'user_id'),
-    $P ? array_column($P->userBids, 'bidder_id') : []
+    $P ? array_column($P->userBids, 'bidder_id') : [],
+    array_map(fn($it) => $it['bid']['bidder_id'] ?? 0, $forYou)
 ));
 
 /* Контакты откликнувшихся: telegram_username + роль, одним запросом. */
@@ -167,6 +217,8 @@ $spark = function (array $v): string {
     return '<svg class="l4x-spark" viewBox="0 0 100 28" preserveAspectRatio="none"><path d="' . $d . '"/></svg>';
 };
 
+$host        = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'dustore.ru');
+$handleOf    = $hasProfile ? (string)($userdata['username'] ?: $userdata['telegram_username']) : '';
 $displayName = $hasProfile ? ($userdata['username'] ?: '@' . $userdata['telegram_username']) : '';
 $accent      = $P ? $P->profile['accent'] : L4TProfile::ACCENTS[0];
 $pageTitle   = $hasProfile ? "$displayName — L4T" : 'L4T — биржа команд Dustore';
@@ -241,6 +293,8 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                     <?php elseif (!empty($userdata['telegram_username'])): ?>
                         <a class="l4x-btn l4x-btn--acc" href="https://t.me/<?= $h($userdata['telegram_username']) ?>" target="_blank" rel="noopener"><?= l4x_icon('telegram') ?>Написать</a>
                     <?php endif; ?>
+                    <button class="l4x-btn l4x-btn--ghost" data-act="qr" data-mode="<?= $isOwner ? 'card' : 'url' ?>" data-url="<?= $h($host . '/l4t/' . $handleOf . '?via=qr') ?>" data-label="<?= $h($displayName) ?>" title="QR-визитка"><?= l4x_icon('qr') ?></button>
+                    <?php if (!$isOwner): ?><a class="l4x-btn l4x-btn--ghost" href="/l4t/<?= $h($handleOf) ?>/cv" title="Резюме одной страницей"><?= l4x_icon('file') ?></a><?php endif; ?>
                     <button class="l4x-btn l4x-btn--ghost" data-act="share" data-url="https://<?= $h($_SERVER['HTTP_HOST'] ?? 'dustore.ru') ?>/l4t/<?= $h($userdata['username'] ?: $userdata['telegram_username']) ?>" title="Скопировать ссылку"><?= l4x_icon('share') ?></button>
                 </div>
             </div>
@@ -254,6 +308,22 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
             </div>
             <a class="l4x-btn l4x-btn--acc" href="/login?backUrl=/l4t/"><?= l4x_icon('user') ?>Войти и создать профиль</a>
         </header>
+    <?php endif; ?>
+
+    <?php if ($hasProfile && $viaQr && !$isOwner && $X->has('contacts')): ?>
+        <div class="l4x-qrbar pix">
+            <?= l4x_icon('users') ?>
+            <?php if (!$me): ?>
+                <span>Вы открыли визитку <b><?= $h($displayName) ?></b>. Войдите, чтобы сохранить знакомство.</span>
+                <a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="/login?backUrl=<?= $h(rawurlencode('/l4t/' . $handleOf . '?via=qr')) ?>">Войти</a>
+            <?php elseif ($isContact): ?>
+                <span><b><?= $h($displayName) ?></b> уже в ваших знакомствах.</span>
+                <a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/l4t/?tab=network">Открыть</a>
+            <?php else: ?>
+                <span>Вы отсканировали визитку <b><?= $h($displayName) ?></b>.</span>
+                <button class="l4x-btn l4x-btn--acc l4x-btn--sm" data-act="contact-add" data-id="<?= (int)$userdata['id'] ?>">Добавить в знакомства</button>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 
     <?php /* ═════════════════════════ ВКЛАДКИ ═════════════════════════ */ ?>
@@ -357,7 +427,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                     <?php if (mb_strlen($about) > 420): ?><button class="l4x-link" data-act="about-more">Читать полностью</button><?php endif; ?>
 
                     <div class="l4x-sub">
-                        <div class="l4x-sub__head"><h3>Опыт</h3><?php if ($isOwner): ?><button class="l4x-link" data-act="exp"><?= l4x_icon('edit') ?>Изменить</button><?php endif; ?></div>
+                        <div class="l4x-sub__head"><h3>Стаж по направлениям</h3><?php if ($isOwner): ?><button class="l4x-link" data-act="exp"><?= l4x_icon('edit') ?>Изменить</button><?php endif; ?></div>
                         <div class="l4x-exp" id="expList">
                             <?php if (!$exp): ?><span class="l4x-muted">Не указан</span><?php endif; ?>
                             <?php foreach ($exp as $e): ?>
@@ -376,6 +446,8 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                         </div>
                     </div>
                 </div>
+
+                <?php require __DIR__ . '/views/profile_blocks.php'; ?>
 
                 <div class="l4x-card pix">
                     <div class="l4x-card__head">
@@ -405,6 +477,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
             </div>
 
             <aside class="l4x-col l4x-col--side">
+                <?php require __DIR__ . '/views/profile_aside.php'; ?>
 
                 <?php if ($isOwner && $P->completeness['pct'] < 100): $C = $P->completeness; ?>
                 <div class="l4x-card pix">
@@ -514,16 +587,26 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
     </section>
     <?php endif; ?>
 
+    <?php if ($isOwner) require __DIR__ . '/views/foryou.php'; ?>
+
     <?php /* ═════════════════════════ БИРЖА ═════════════════════════ */ ?>
     <section class="l4x-view <?= $tab === 'market' ? 'is-on' : '' ?>" data-view="market">
         <div class="l4x-toolbar">
             <label class="l4x-search pix"><?= l4x_icon('search') ?><input type="search" id="feedQ" placeholder="Роль, движок, условия…" autocomplete="off"></label>
             <div class="l4x-seg" id="feedKind">
                 <button class="is-on" data-kind="">Все</button>
-                <button data-kind="user">Люди</button>
-                <button data-kind="studio">Студии</button>
+                <button data-kind="user">От людей</button>
+                <button data-kind="studio">От студий</button>
                 <button data-kind="jam">Джемы</button>
+                <?php if ($X->has('user_skills')): ?><button data-kind="people">Специалисты</button><?php endif; ?>
             </div>
+            <?php if ($X->has('user_skills')): ?>
+                <select class="l4x-input l4x-input--inline" id="peopleSkill" hidden>
+                    <option value="">Любой навык</option>
+                    <?php foreach ($skillsAll as $sk): ?><option value="<?= $h($sk['slug']) ?>"><?= $h($sk['name']) ?></option><?php endforeach; ?>
+                </select>
+                <?php if ($me): ?><button class="l4x-btn l4x-btn--ghost l4x-btn--sm" id="peopleSave" hidden><?= l4x_icon('bookmark') ?>Сохранить поиск</button><?php endif; ?>
+            <?php endif; ?>
             <span class="l4x-muted l4x-toolbar__count" id="feedCount"><?= $num($feed['total']) ?></span>
         </div>
         <?php if ($feedTags): ?>
@@ -532,6 +615,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
             </div>
         <?php endif; ?>
 
+        <div class="l4x-feed" id="people" hidden></div>
         <div class="l4x-feed" id="feed">
             <?php if (!$feed['rows']): ?><div class="l4x-empty">Активных заявок пока нет. <?= $isOwner ? 'Создайте первую во вкладке «Мои заявки».' : '' ?></div><?php endif; ?>
             <?php foreach ($feed['rows'] as $bid) require __DIR__ . '/_bid_card.php'; ?>
@@ -580,6 +664,20 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                 </div>
                 <label class="l4x-field"><span class="l4x-field__label">Цель</span>
                     <select class="l4x-input" name="goal" id="f_goal"><option>Найти человека в команду</option><option>Консультация</option><option>Разовая работа</option></select></label>
+                <?php if ($skillsAll): ?>
+                <div class="l4x-field">
+                    <span class="l4x-field__label">Навыки (до 8) — по ним заявку увидят в «Для тебя»</span>
+                    <div class="l4x-pick" id="f_skills">
+                        <?php foreach (L4TX::GROUPS as $g => $gLabel): ?>
+                            <div class="l4x-pick__grp"><span><?= $h($gLabel) ?></span>
+                                <?php foreach ($skillsAll as $sk): if ($sk['grp'] !== $g) continue; ?>
+                                    <label><input type="checkbox" name="skills[]" value="<?= $h($sk['slug']) ?>"><span><?= $h($sk['name']) ?></span></label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <label class="l4x-field"><span class="l4x-field__label">Подробности</span>
                     <textarea class="l4x-input" name="details" id="f_details" rows="7" maxlength="5000" placeholder="О проекте, задачах и о том, почему к вам стоит прийти"><?= $h($jamText) ?></textarea></label>
                 <div class="l4x-form__foot">
@@ -604,6 +702,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                                 'id' => (int)$b['id'], 'role' => $b['search_role'], 'spec' => $b['search_spec'] ?? '',
                                 'exp' => $b['experience'] ?? '', 'cond' => $b['conditions'] ?? '', 'goal' => $b['goal'] ?? '',
                                 'details' => $b['details'] ?? '', 'owner_type' => $b['owner_type'] ?? 'user', 'owner_id' => (int)($b['owner_id'] ?? 0),
+                                'skills' => $myBidSkills[(int)$b['id']] ?? [],
                             ], JSON_UNESCAPED_UNICODE)) ?>"><?= l4x_icon('edit') ?></button>
                         </div>
                     <?php endforeach; ?>
@@ -626,6 +725,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                             'kind' => $kind, 'role' => $r['search_role'] ?? '—', 'spec' => $r['search_spec'] ?? '', 'cond' => $r['conditions'] ?? '',
                             'date' => date('d.m.Y H:i', strtotime((string)$r['created_at'])), 'status' => $r['status'] ?? '',
                             'message' => $r['message'] ?? '', 'who' => $who, 'tg' => $ct['telegram_username'] ?? '', 'l4trole' => $ct['l4t_role'] ?? '',
+                            'id' => (int)$r['id'],
                         ];
                     ?>
                         <button class="l4x-resp pix" data-resp="<?= $h(json_encode($payload, JSON_UNESCAPED_UNICODE)) ?>">
@@ -642,6 +742,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
             <?php endforeach; ?>
         </div>
     </section>
+    <?php require __DIR__ . '/views/network.php'; ?>
     <?php endif; ?>
 
 <?php endif; /* notFound */ ?>
@@ -759,8 +860,17 @@ window.L4X = <?= json_encode([
     'availability' => array_map(fn($a) => ['label' => $a[0], 'cls' => $a[1]], L4TProfile::AVAILABILITY),
     'jam'       => $jamData,
     'jamAction' => $action,
+    'host'      => $host,
+    'handle'    => $handleOf,
+    'skills'    => array_map(fn($z) => ['name' => $z['name'], 'grp' => $z['grp'], 'kind' => $z['kind']], $skillsAll),
+    'groups'    => L4TX::GROUPS,
+    'workModes' => L4TX::WORK_MODES,
+    'uSkills'   => (object)$uSkills,
+    'studios'   => $P ? array_map(fn($s) => ['id' => (int)$s['id'], 'name' => $s['name']], $P->studios) : [],
+    'statuses'  => L4TX::RESP_STATUSES,
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
 </script>
 <script src="<?= asset_url('/l4t/js/l4x.js') ?>" defer></script>
+<script src="<?= asset_url('/l4t/js/l4x-more.js') ?>" defer></script>
 
 <?php require_once __DIR__ . '/../swad/static/elements/footer.php'; ?>

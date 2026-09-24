@@ -21,7 +21,7 @@ RewriteRule (^|/)\. - [F,L]
 #    не превратится молча в поиск пользователя с таким ником.
 # ─────────────────────────────────────────────────────────────────────────────
 # lib/ и партиалы с подчёркиванием — только для include, не для HTTP.
-RewriteRule ^(lib/|_) - [F,L]
+RewriteRule ^(lib/|views/|_) - [F,L]
 RewriteRule ^(core|api|css|js|img|uploads)(/|$) - [L]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +31,10 @@ RewriteRule ^(core|api|css|js|img|uploads)(/|$) - [L]
 # попадало вообще всё, включая строки с %00, кавычками и точками, и уезжало
 # в SQL-параметр. Запрос параметризован, но пропускать в него мусор незачем.
 # ─────────────────────────────────────────────────────────────────────────────
+# 4. Резюме: /l4t/cv/<token> (именная ссылка) и /l4t/<username>/cv (публичное).
+RewriteRule ^cv/([0-9a-f]{16})/?$ cv.php?t=$1 [L,QSA]
+RewriteRule ^([A-Za-z0-9_.@-]{1,64})/cv/?$ cv.php?username=$1 [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([A-Za-z0-9_.@-]{1,64})/?$ index.php?username=$1 [L,QSA]

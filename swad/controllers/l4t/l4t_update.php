@@ -189,6 +189,16 @@ try {
                            ON DUPLICATE KEY UPDATE " . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $cols)))
                 ->execute(array_merge([$userId], array_values($row)));
 
+            /* Статус «ищу» живёт 30 дней с последнего сохранения — иначе биржа
+               зарастает профилями, которые «открыты» с прошлого года. */
+            require_once __DIR__ . '/../../../l4t/lib/extras.php';
+            $x = new L4TX($pdo, $l4t);
+            if ($x->has('profiles', 'avail_until')) {
+                $l4t->prepare("UPDATE profiles SET avail_until = IF(availability IS NULL, NULL, CURDATE() + INTERVAL 30 DAY) WHERE user_id = ?")
+                    ->execute([$userId]);
+            }
+            $x->matchSavedSearches($userId);
+
             reply(['success' => true, 'data' => $row]);
         }
 

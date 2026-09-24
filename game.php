@@ -793,6 +793,8 @@ $isEmbed = !empty($_GET['embed']);
                         <div class="gp-info-row"><span class="gp-info-label">Возраст</span><span class="gp-info-val"><?= htmlspecialchars($game['age_rating']) ?></span></div>
                     </div>
 
+                    <?php require __DIR__ . '/l4t/views/game_credits.php'; ?>
+
                     <?php if (!empty($achievements)): ?>
                     <div class="gp-info-card">
                         <h3>Достижения</h3>
