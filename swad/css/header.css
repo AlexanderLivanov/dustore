@@ -126,6 +126,8 @@ body {
     font-family:"Bahnschrift Light";
     font-size: 13pt;
     transition: all .2s;
+    width: auto;
+    height: 40px;
 }
 
 .buttons-left .button {

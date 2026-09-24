@@ -2,48 +2,41 @@
 declare(strict_types=1);
 
 /**
- * swad/controllers/csrf.php — общий CSRF-хелпер платформы.
+ * swad/controllers/l4t/_csrf.php — CSRF для контроллеров L4T.
  *
- * Токен один на сессию. Он не уходит в URL и не попадает в Referer,
- * поэтому переживать его ротацию на каждый запрос смысла нет.
+ * БЫЛО: файл был копией swad/controllers/csrf.php, а контроллеры L4T
+ * вызывали csrf_check() и csrf_guard_json(), которых в нём нет.
+ * Итог — Fatal error «Call to undefined function» на КАЖДОЙ записи:
+ * создание заявки, отклик, сохранение профиля. Клиент получал HTML
+ * вместо JSON и молча показывал «не сохранилось».
  *
- * Сравнение через hash_equals: обычный === выходит на первом несовпавшем
- * байте, и по времени ответа токен подбирается посимвольно.
+ * СТАЛО: базовые функции берём из общего хелпера (одна точка правды),
+ * здесь только две обёртки, которые ждут контроллеры.
  */
 
-if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../csrf.php';
 
-if (!function_exists('csrf_token')) {
-    function csrf_token(): string
+if (!function_exists('csrf_check')) {
+    /** Для обычных форм (upsert_bid.php): токен в $_POST['csrf'] или заголовке. */
+    function csrf_check(): bool
     {
-        if (empty($_SESSION['csrf'])) {
-            $_SESSION['csrf'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf'];
+        return csrf_valid();
     }
 }
 
-if (!function_exists('csrf_field')) {
-    /** Готовое скрытое поле для формы. */
-    function csrf_field(): string
-    {
-        return '<input type="hidden" name="csrf" value="'
-             . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
-    }
-}
-
-if (!function_exists('csrf_valid')) {
+if (!function_exists('csrf_guard_json')) {
     /**
-     * Токен ищем в POST-поле, заголовке X-CSRF-Token и в JSON-теле —
-     * чтобы годилось и для обычных форм, и для fetch.
+     * Для fetch-эндпоинтов. Токен ищем в заголовке X-CSRF-Token и в теле.
+     * Не прошёл — отвечаем JSON'ом 403 и выходим: клиент делает r.json(),
+     * и HTML-ошибка сломала бы ему разбор.
      */
-    function csrf_valid(?array $jsonBody = null): bool
+    function csrf_guard_json(?array $body): void
     {
-        $sent = $_POST['csrf']
-            ?? $_SERVER['HTTP_X_CSRF_TOKEN']
-            ?? ($jsonBody['csrf'] ?? '');
-
-        $have = $_SESSION['csrf'] ?? '';
-        return $have !== '' && is_string($sent) && hash_equals($have, $sent);
+        if (csrf_valid($body ?? [])) return;
+        http_response_code(403);
+        if (!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'msg' => 'csrf', 'message' => 'Сессия устарела, обновите страницу'],
+            JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }

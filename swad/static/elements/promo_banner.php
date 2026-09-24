@@ -10,61 +10,28 @@
  *     <?php require_once('swad/static/elements/promo_banner.php'); ?>
  *     <main> ... ваш текущий контент ... </main>
  *
- * Файл самодостаточен: сам ищет активный слот, сам решает — рисовать себя или нет.
- * Если на сейчас нет оплаченного слота — выводит пустую строку и не задевает
- * остальную вёрстку главной вообще никак.
+ * ВАЖНО (из-за этого не работало натяжение):
+ * header.php заканчивается тегами </body></html> — то есть после его инклюда
+ * <body> уже закрыт. <main> из index.php оказывается вне <body> в глазах
+ * HTML-парсера (потом его перекидывает, но document.querySelector('body > main')
+ * в момент выполнения скрипта возвращает null). Поэтому:
+ *   - main ищем через querySelector('main') БЕЗ обёртки по body;
+ *   - в CSS используем `body.pb-flown main`, а не `body.pb-flown > main`;
+ *   - все движения main/wrap идут inline-стилями из JS.
  *
- * ИСТОРИЯ АНИМАЦИИ (v3, текущая):
- * v1 держалась на перехвате wheel (preventDefault) и ручной стейт-машине —
- * классический scroll-jacking: ломался на трекпадах (разный deltaY на тик),
- * на тач-устройствах эффект просто отключали, блокировал нативный скролл.
- * v2 — паттерн "pin & progress": sticky-подставка + непрерывный прогресс
- * 0..1 в CSS-переменную --p. Чинил v1, но давал побочный текстовый блок
- * (.pb-title), который проявлялся на месте улетевшей карточки, и требовал
- * лишних vh скролл-разгона под sticky-трюк.
+ * Прокрутка: у нас фактически скроллится document.scrollingElement (обычно
+ * body), а не window/html. window.scrollTo()/scrollY — тихий no-op, поэтому
+ * весь скролл идёт через scrollRoot().
  *
- * v3 — по просьбе Лео: только баннер, без второго текстового экрана и без
- * лишнего пространства под него. Пробовали отдать переключение нативному
- * CSS scroll-snap (порог = пройденная доля дистанции между точками) — по
- * ощущениям на реальном железе получилось не то, что описывал Лео: три
- * чётких попытки, а не «система сама решает». Вернулись к явному счётчику,
- * но не «считать сырые wheel-события» как в v1 (ломается на трекпаде — там
- * один свайп = десятки мелких deltaY), а накапливать СУММУ |deltaY| до
- * порога ~260px (примерно три щелчка колеса мыши). Пока не набрали порог —
- * страница залочена (html.pb-locked, скролла физически нет), сама попытка
- * только чуть подталкивает карточку (--pbNudge, пропорционально прогрессу
- * к порогу — не резкий дискретный «тик 1/тик 2», а плавное нарастание,
- * одинаково читается что от одного крупного скролла мышью, что от пары
- * мелких трекпадных). Не набрали и отпустили колесо — прогресс гаснет
- * через паузу, следующая попытка начинается с нуля (это и даёт «первые
- * два скролла просто трясут» — они не суммируются в вечный счётчик).
- * Набрали порог — коммит: карточка улетает существующим CSS-переходом,
- * И СИНХРОННО с ним страницу САМУ ПРОНОСИТ вниз, на верх <main> (rAF,
- * ~550ms, тот же тайминг, что transform у карточки — animateScrollTo()
- * ниже). Первая версия коммита прыгала на scrollTop мгновенно — на
- * реальном железе Лео это ощущалось как рандомный скачок без эффекта
- * (сам полёт карточки просто не успевал быть увиденным, а инерция того
- * же жеста колеса/трекпада докручивала ПОСЛЕ прыжка мимо точки стыковки —
- * оттуда и «не доставить чётко, выровняться сложно»). Теперь на время
- * carry-анимации `busy=true`: весь wheel/touch глотается без исключений,
- * так что докатывается ровно один раз, без дребезга от хвоста жеста;
- * html.pb-locked остаётся включён все ~550ms и снимается только когда
- * анимация реально доехала. Обратно у самой границы — тот же накопитель,
- * только на deltaY<0 и только пока scrollY≈0: слабый рывок вверх гасится,
- * решительный — тот же carry в обратную сторону, карточка проявляется
- * тем же переходом задом наперёд. Клавиатурный скролл (PageDown/Space/
- * стрелки) через порог не гоняем — сразу пропускаем, блокировать его
- * ради красивости было бы просто вредно.
- *
- * ВАЖНО про прыжок к <main> (баг, на который наткнулись при первом деплое v3):
- * страница у нас (и, похоже, не только этот файл) не в полном соответствии
- * со standards mode для скролла — прокручивается фактически <body>, а не
- * window/<html>. window.scrollTo()/window.scrollY в такой раскладке —
- * тихий no-op: JS думает, что прыгнул, страница на самом деле стоит на
- * месте. Поэтому весь скролл здесь идёт через document.scrollingElement
- * (см. scrollRoot() ниже) — это то же самое, что использует сам браузер
- * для Home/End/колеса, так что мы гарантированно двигаем ТОТ элемент,
- * который реально скроллится, а не гадаем между html и body.
+ * ФЛАГ «БАННЕР УЖЕ ПОКАЗЫВАЛСЯ» (sessionStorage):
+ * Ключ pbBannerShown:<PROMO_ID> ставится при первом commitDown — то есть
+ * когда пользователь первый раз прорвался с баннера вниз на главную. При
+ * следующих заходах на главную в этой же сессии баннер не показывается
+ * с нуля: wrap сразу паркуется за верхнюю кромку, pb-locked не ставится,
+ * main рендерится сразу. Баннер остаётся доступен через натяжение вверх
+ * у верхней границы main — commitUp возвращает его как обычно.
+ * sessionStorage (не localStorage) — потому что сценарий «первый раз»,
+ * а не «навсегда»: новая вкладка = снова первый раз.
  */
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -73,8 +40,6 @@ require_once(__DIR__ . '/../../controllers/analytics.php');
 
 $__pb_conn = (new Database())->connect();
 
-/* + рейтинг (game_reviews) — тот же JOIN-паттерн, что в Game::queryGames()
-   и на самой странице игры: 10-балльная шкала, 5 звёзд в разметке. */
 $__pb_stmt = $__pb_conn->prepare("
     SELECT gp.id AS promo_id, g.id AS game_id, g.name, g.short_description, g.description,
            g.path_to_cover, g.banner_url, g.icon_url, g.downloads, g.platforms,
@@ -92,15 +57,9 @@ $__pb_stmt->execute();
 $promo = $__pb_stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($promo):
-    // Показ считаем на сервере: рендер баннера в разметке = гарантированный impression,
-    // в отличие от JS-события, которое можно потерять (блокировщики, медленный JS).
-    // trackOncePerSession — иначе каждый F5 страницы плодит новый показ в одной и той же сессии.
     $__pb_analytics = new Analytics($__pb_conn);
     $__pb_analytics->trackOncePerSession('promotion', (int)$promo['promo_id'], 'impression');
 
-    // Запуски — из общего модуля аналитики (event_type=launch), не из games.downloads:
-    // это отдельная метрика («сколько раз игру ЗАПУСТИЛИ», актуально для веб-игр и
-    // для игр, скачанных раньше), которую и просили вынести отдельно от скачиваний.
     $__pb_launches = $__pb_analytics->summarize('game', (int)$promo['game_id'])['launch']['count'] ?? 0;
 
     $pbImage = $promo['banner_url'] ?: $promo['path_to_cover'] ?: '';
@@ -111,12 +70,6 @@ if ($promo):
     $pbRating = $promo['avg_rating'] !== null ? (float)$promo['avg_rating'] : null;
     $pbStars  = $pbRating !== null ? max(0, min(5, (int)round($pbRating / 2))) : 0;
 
-    /* Можно ли отсюда позвать оставить отзыв — та же логика, что $userCanReview
-       в game.php (иначе кнопка вела бы на анкор #review-form-wrap, которого
-       для этого посетителя там просто не будет: форма отзыва на странице игры
-       рендерится только при владении игрой или для чисто веб-игр). Дублируем
-       проверку тут же, а не выносим в общую функцию — она в три строки и
-       больше нигде, кроме этих двух файлов, не нужна. */
     $pbCanReview = false;
     if (!empty($_SESSION['USERDATA']['id'])) {
         $__pb_platforms = array_map(fn($p) => strtolower(trim($p)), explode(',', (string)($promo['platforms'] ?? '')));
@@ -131,9 +84,6 @@ if ($promo):
     }
 ?>
     <style>
-        /* Пока не набран порог накопленного скролла — страница физически залочена.
-           html и body оба на случай браузерных различий в том, какой из них
-           реальный scrolling box. Класс вешается/снимается из JS ниже. */
         html.pb-locked,
         html.pb-locked body {
             overflow: hidden;
@@ -142,14 +92,7 @@ if ($promo):
 
         .pb-wrap {
             position: relative;
-            background: #14041d;
-            /* Ровно один вьюпорт, без max/min-height кэпов: это snap-секция, и маркер
-               #pbMainTopMarker сразу после неё обязан начинаться НИЖЕ первого экрана —
-               иначе на высоких вьюпортах (там, где раньше 880px-кэп срабатывал раньше,
-               чем кончался вьюпорт) IntersectionObserver видел маркер уже на первом
-               кадре, и баннер оказывался «улетевшим» без единого скролла. Карточка
-               внутри (.pb-inner) сама ограничена по размеру и просто центрируется —
-               визуально она не станет больше, даже когда секция выше её на 4K-мониторе. */
+            background: #0f0a20;
             height: 100vh;
             overflow: hidden;
             display: flex;
@@ -167,10 +110,11 @@ if ($promo):
             --pb-scaleEnd: 0.78;
         }
 
-        @media (max-width:640px) {
+        body.moonlight-theme .pb-wrap {
+            background: transparent;
+        }
 
-            /* Мобильный: та же механика, но без полного 3D-кувырка — короче дистанция
-       скролла и мягче углы, иначе на слабых телефонах будет дёргаться. */
+        @media (max-width:640px) {
             .pb-wrap {
                 --pb-flyX: 40%;
                 --pb-flyY: 6%;
@@ -182,12 +126,13 @@ if ($promo):
             }
         }
 
-        /* Пустой маркер ровно на границе с <main> — читаем его позицию в JS
-           (getBoundingClientRect), чтобы прыгнуть туда ровно, без нативного
-           snap: сами решаем момент и точку прыжка, а не полагаемся на то,
-           как конкретный браузер трактует scroll-snap-stop. */
         .pb-main-marker {
             display: block;
+        }
+
+        @keyframes pbIntro {
+            from { opacity: 0; filter: blur(20px); }
+            to   { opacity: 1; filter: blur(0); }
         }
 
         .pb-inner {
@@ -199,12 +144,12 @@ if ($promo):
             transform: translateY(var(--pbNudge, 0px));
             transition: transform .001s;
             will-change: transform;
+            animation: pbIntro .7s ease-out both;
         }
 
         .pb-inner.pb-decaying {
             transition: transform .5s cubic-bezier(.34, 1.56, .64, 1);
         }
-
 
         .pb-card {
             position: absolute;
@@ -238,40 +183,144 @@ if ($promo):
             pointer-events: none;
         }
 
-        /* ── Тряска при неудачной попытке пробить вниз ───────────────────── */
+        @keyframes pbCardEnter {
+            from { transform: translateY(-20vh); opacity: 0; filter: blur(8px); }
+            to   { transform: translateY(0);     opacity: 1; filter: blur(0);   }
+        }
+
+        .pb-card.pb-entering {
+            animation: pbCardEnter .62s cubic-bezier(.22, .61, .36, 1) both;
+        }
+
         @keyframes pbShake {
-            0%   { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(0,0,0) rotateZ(0) scale(1); }
-            12%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-10px, 3px, 0) rotateZ(-1.8deg) scale(.982); }
-            27%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(10px, 3px, 0) rotateZ(1.8deg) scale(.982); }
-            42%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-7px, 0, 0) rotateZ(-1.1deg) scale(1.006); }
-            57%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(7px, 0, 0) rotateZ(1.1deg) scale(1.006); }
-            74%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-3px, 0, 0) rotateZ(-0.5deg) scale(1); }
-            100% { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(0,0,0) rotateZ(0) scale(1); }
+            0%   { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)); }
+            14%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-12px, 4px, 0) rotateZ(-2.2deg) scale(.972); }
+            32%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d( 12px, 4px, 0) rotateZ( 2.2deg) scale(.972); }
+            52%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-7px,  0,   0) rotateZ(-1.3deg) scale(1.010); }
+            70%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d( 7px,  0,   0) rotateZ( 1.3deg) scale(1.010); }
+            86%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-2px,  0,   0) rotateZ(-0.4deg) scale(1); }
+            100% { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)); }
         }
         .pb-card.pb-shake {
-            animation: pbShake .5s cubic-bezier(.36, .07, .19, .97) both;
+            animation: pbShake .38s cubic-bezier(.36, .07, .19, .97) both;
         }
 
-        /* ── Появление главной снизу после вылета баннера ───────────────── */
         @keyframes pbMainEnter {
-            from {
-                transform: translateY(90px);
-                opacity: 0;
-                filter: blur(10px);
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-                filter: blur(0);
-            }
+            from { transform: translateY(80px); opacity: 0; filter: blur(8px); }
+            to   { transform: translateY(0);    opacity: 1; filter: blur(0);   }
         }
-
         main.pb-main-enter {
-            animation: pbMainEnter .6s cubic-bezier(.22, .61, .36, 1) both;
+            animation: pbMainEnter .62s cubic-bezier(.22, .61, .36, 1);
         }
 
-        body > main {
-            will-change: transform, opacity, filter;
+        .pb-wrap.pb-parked {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            z-index: 1;
+            padding: 24px;
+            align-items: flex-start;
+            overflow: hidden;
+            pointer-events: none;
+            transform: translateY(-100%);
+            will-change: transform;
+            perspective: none;
+        }
+
+        .pb-wrap.pb-parked .pb-inner {
+            height: auto;
+            min-height: 0;
+            flex-shrink: 0;
+        }
+
+        main {
+            position: relative;
+            z-index: 2;
+            transform-origin: 50% 0;
+        }
+
+        @property --pb-tension {
+            syntax: '<number>';
+            inherits: true;
+            initial-value: 0;
+        }
+        @property --pb-tension-down {
+            syntax: '<number>';
+            inherits: true;
+            initial-value: 0;
+        }
+
+        body.pb-flown::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+            background: #0f0a20;
+            opacity: calc(var(--pb-tension, 0) * 0.95);
+            transition: opacity .1s linear;
+        }
+
+        body.moonlight-theme.pb-flown::before {
+            background: #050a14;
+        }
+
+        body.pb-flown main::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            height: 2px;
+            width: calc(var(--pb-tension, 0) * 100%);
+            max-width: 100%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 100;
+            background: linear-gradient(90deg,
+                rgba(230, 46, 138, 0) 0%,
+                rgba(230, 46, 138, 0.95) 50%,
+                rgba(230, 46, 138, 0) 100%);
+            box-shadow: 0 0 12px rgba(230, 46, 138, calc(var(--pb-tension, 0) * 0.7));
+        }
+
+        body.moonlight-theme.pb-flown main::after {
+            background: linear-gradient(90deg,
+                rgba(86, 144, 240, 0) 0%,
+                rgba(86, 144, 240, 0.95) 50%,
+                rgba(86, 144, 240, 0) 100%);
+            box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension, 0) * 0.7));
+        }
+
+        body:not(.pb-flown) .pb-card::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            height: 2px;
+            width: calc(var(--pb-tension-down, 0) * 100%);
+            max-width: 100%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 10;
+            background: linear-gradient(90deg,
+                rgba(230, 46, 138, 0) 0%,
+                rgba(230, 46, 138, 0.95) 50%,
+                rgba(230, 46, 138, 0) 100%);
+            box-shadow: 0 0 12px rgba(230, 46, 138, calc(var(--pb-tension-down, 0) * 0.7));
+            transition: width .05s linear;
+        }
+
+        body.moonlight-theme:not(.pb-flown) .pb-card::before {
+            background: linear-gradient(90deg,
+                rgba(86, 144, 240, 0) 0%,
+                rgba(86, 144, 240, 0.95) 50%,
+                rgba(86, 144, 240, 0) 100%);
+            box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension-down, 0) * 0.7));
         }
 
         .pb-bg {
@@ -281,16 +330,10 @@ if ($promo):
                 <?php if ($pbImage): ?> linear-gradient(to top, rgba(20, 4, 29, .94) 0%, rgba(20, 4, 29, .55) 40%, rgba(20, 4, 29, .15) 68%, transparent 82%),
                 url('<?= htmlspecialchars($pbImage) ?>') center/cover no-repeat;
             <?php else: ?>
-            /* Фирменный градиент Dustore (--gradient2 из pages.css), без цветных орбов —
-           баннер должен выглядеть частью платформы, а не отдельным неоновым виджетом. */
             linear-gradient(160deg, #14041d 0%, #400c4a 45%, #74155d 78%, #c32178 100%);
             <?php endif; ?>
         }
 
-        /* Вся пустая площадь карточки — тоже ссылка на игру, поверх .pb-bg,
-           но под содержимым (.pb-content) и инфо-ссылкой: у них свой href,
-           вложенные <a> в HTML невалидны, поэтому это отдельный слой снизу,
-           а не обёртка вокруг остального. */
         .pb-bg-link {
             position: absolute;
             inset: 0;
@@ -332,7 +375,6 @@ if ($promo):
             flex: none;
         }
 
-        /* Бейдж — фирменный розовый (var(--primary)), без неонового свечения. */
         .pb-eyebrow {
             display: inline-flex;
             align-items: center;
@@ -383,7 +425,6 @@ if ($promo):
             color: #e5d9e0;
         }
 
-        /* Кнопка — тот же .btn, что везде на платформе (pages.css), только с флексом под иконку. */
         .pb-btn {
             display: inline-flex;
             align-items: center;
@@ -427,10 +468,6 @@ if ($promo):
             background: #35d07f;
         }
 
-        /* Маленькая кнопка «оставить отзыв» — акцентный розовый с подчёркиванием,
-           внутри строки статистики: так это читается как «вот рейтинг игры —
-           а вот тут можно на него повлиять», а не как отдельный большой CTA,
-           спорящий с play-кнопкой. */
         .pb-review-cta {
             color: #e88fc0;
             text-decoration: none;
@@ -444,13 +481,6 @@ if ($promo):
             border-color: rgba(255, 111, 184, .7);
         }
 
-        /* ── Мини-баннер, появляется, когда карточка уже «улетела» ──
-           Раньше top:76px и z-index:90 — при высоте хедера ~80px плашка
-           наезжала на его нижний край и по z-index была ВЫШЕ хедера (10),
-           поэтому клик по переключателю темы попадал в неё, а не в кнопку —
-           открывшееся меню темы тут же теряло клик и схлопывалось.
-           Теперь: ниже хедера с запасом и z-index ниже хедера, а не выше —
-           плашка больше физически не может перекрыть ничего в хедере. */
         .pb-mini {
             position: fixed;
             top: 96px;
@@ -618,9 +648,6 @@ if ($promo):
         </div>
     </div>
 
-    <!-- Вторая snap-точка: пустой маркер строго на границе с <main>, который index.php
-         подключает сразу после этого файла (см. докблок вверху). Сам по себе невидим —
-         IntersectionObserver в JS ниже следит именно за ним, а не считает пиксели скролла. -->
     <div class="pb-main-marker" id="pbMainTopMarker" aria-hidden="true"></div>
 
     <div class="pb-mini" id="pbMini">
@@ -646,59 +673,100 @@ if ($promo):
     var GAME_ID = <?= (int)$promo['game_id'] ?>;
     var DISMISS_KEY = 'pbMiniDismissed:' + PROMO_ID;
 
+    /* Флаг «баннер уже был показан в этой сессии». Ставится при первом
+       commitDown — когда пользователь впервые прорвался с баннера на
+       главную. При последующих заходах на главную баннер сразу уходит
+       за верхнюю кромку, main рендерится без блокировки, pb-locked не
+       ставится. Баннер по-прежнему доступен через натяжение вверх. */
+    var BANNER_SHOWN_KEY = 'pbBannerShown:' + PROMO_ID;
+    var bannerAlreadyShown = false;
+    try { bannerAlreadyShown = sessionStorage.getItem(BANNER_SHOWN_KEY) === '1'; } catch (e) {}
+
     var wrap = document.getElementById('pbWrap');
     var inner = document.getElementById('pbInner');
     var card = document.getElementById('pbCard');
     var mini = document.getElementById('pbMini');
     var miniClose = document.getElementById('pbMiniClose');
-    var mainEl = document.querySelector('body > main');
     var html = document.documentElement;
+
+    var mainEl = null;
+    function getMainEl() {
+        if (!mainEl) mainEl = document.querySelector('main');
+        return mainEl;
+    }
+    if (document.readyState !== 'loading') getMainEl();
+    else document.addEventListener('DOMContentLoaded', getMainEl, { once: true });
 
     var dismissed = false;
     try { dismissed = sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
 
-    /* ── Параметры жеста ──────────────────────────────────────────── */
-    var THRESHOLD_DOWN = 240;    /* сила для коммита вниз            */
-    var THRESHOLD_UP   = 260;    /* сила для коммита вверх           */
-    var ATTEMPTS_NEEDED = 3;     /* попыток до права коммитить       */
-    var DECAY_MS  = 340;         /* пауза после wheel = конец жеста  */
-    var MIN_ATTEMPT = 40;        /* мин. вес, чтобы жест засчитался  */
-    var UP_GATE   = 12;          /* окно от верх. границы main для up*/
-    var MAIN_PULL = 60;          /* макс. натяг main вниз, px        */
+    var THRESHOLD_DOWN = 580;
+    var THRESHOLD_UP   = 580;
+    var MAX_DELTA_PER_TICK = 100;
+    var DECAY_MS  = 250;
+    var MIN_ATTEMPT = 40;
+    var UP_GATE   = 60;
+    var MAIN_PULL = 180;
+    var SPRING_MS = 550;
 
     var flown = false;
-    var attemptsDown = 0;
-    var attemptsUp = 0;
     var accum = 0;
     var decayTimer = null;
     var animating = false;
+    var shookThisGesture = false;
 
     function scrollRoot() {
         return document.scrollingElement || document.documentElement;
     }
 
-    /* ── Пружины ──────────────────────────────────────────────────── */
     function setNudge(px) {
         inner.style.setProperty('--pbNudge', px.toFixed(1) + 'px');
     }
 
-    /* live=true → мгновенный отклик (тянет пользователь)
-       live=false → пружинный откат через transition */
+    function updateTensionDown() {
+        var p = Math.min(accum / THRESHOLD_DOWN, 1);
+        html.style.setProperty('--pb-tension-down', p.toFixed(3));
+    }
+    function clearTensionDown() {
+        html.style.setProperty('--pb-tension-down', '0');
+    }
+
     function setMainNudge(px, live) {
-        if (!mainEl) return;
+        var m = getMainEl();
+        if (!m) return;
+        var p = Math.min(Math.abs(px) / MAIN_PULL, 1);
+
+        html.style.setProperty('--pb-tension', p.toFixed(3));
+
         if (live) {
-            mainEl.style.transition = 'transform .09s linear';
-            mainEl.style.transform = px ? 'translateY(' + px.toFixed(1) + 'px)' : '';
+            m.style.transition = 'transform .07s linear, filter .07s linear';
+            m.style.transform = 'translateY(' + px.toFixed(1) + 'px)';
+            m.style.filter = px > 1 ? 'blur(' + (p * 1.6).toFixed(2) + 'px)' : '';
+
+            wrap.style.transition = 'transform .07s linear';
+            wrap.style.transform = 'translateY(calc(-100% + ' + px.toFixed(1) + 'px))';
         } else {
-            mainEl.style.transition = 'transform .5s cubic-bezier(.34, 1.56, .64, 1)';
-            mainEl.style.transform = '';
-            setTimeout(function () { mainEl.style.transition = ''; }, 560);
+            m.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1), filter ' + SPRING_MS + 'ms ease';
+            m.style.transform = '';
+            m.style.filter = '';
+
+            wrap.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1)';
+            wrap.style.transform = 'translateY(-100%)';
+
+            html.style.setProperty('--pb-tension', '0');
+
+            setTimeout(function () {
+                m.style.transition = '';
+                m.style.filter = '';
+                wrap.style.transition = '';
+            }, SPRING_MS + 80);
         }
     }
 
     function springBackBanner() {
         inner.classList.add('pb-decaying');
         setNudge(0);
+        clearTensionDown();
         setTimeout(function () { inner.classList.remove('pb-decaying'); }, 560);
     }
 
@@ -706,118 +774,148 @@ if ($promo):
         card.classList.remove('pb-shake');
         void card.offsetWidth;
         card.classList.add('pb-shake');
-        setTimeout(function () { card.classList.remove('pb-shake'); }, 20);
+        setTimeout(function () { card.classList.remove('pb-shake'); }, 400);
     }
 
     function scheduleDecay() {
         clearTimeout(decayTimer);
         decayTimer = setTimeout(function () {
-            /* Считаем попытку, если жест был осмысленным. */
             if (!flown) {
-                if (accum > MIN_ATTEMPT) attemptsDown++;
                 springBackBanner();
-                if (accum > MIN_ATTEMPT) triggerShake();
             } else {
-                if (accum > MIN_ATTEMPT) attemptsUp++;
                 setMainNudge(0, false);
             }
             accum = 0;
+            shookThisGesture = false;
         }, DECAY_MS);
     }
 
-    /* ── Полёт карточки ──────────────────────────────────────────── */
     function flyCardOut() {
         card.classList.add('pb-flying');
         void card.offsetWidth;
         card.classList.add('pb-flown');
         setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
     }
-    function flyCardIn() {
-        card.classList.add('pb-flying');
-        void card.offsetWidth;
-        card.classList.remove('pb-flown');
-        setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
-    }
 
-    /* ── Коммит ВНИЗ ─────────────────────────────────────────────── */
     function commitDown() {
         if (animating) return;
         animating = true;
+        clearTimeout(decayTimer);
+
+        /* Помечаем баннер как «уже показанный» — при следующих заходах
+           на главную в этой сессии он не будет показываться с нуля. */
+        try { sessionStorage.setItem(BANNER_SHOWN_KEY, '1'); } catch (e) {}
 
         inner.classList.remove('pb-decaying');
         setNudge(0);
-        attemptsDown = 0;
-        attemptsUp = 0;
+        clearTensionDown();
         accum = 0;
+        shookThisGesture = false;
 
         flyCardOut();
         if (!dismissed) setTimeout(function () { mini.classList.add('pb-visible'); }, 380);
 
-        /* Скрываем wrap за 420мс — к этому моменту opacity карточки уже ~0,
-           глазу подмена не видна. */
         setTimeout(function () {
-            wrap.style.display = 'none';
-            requestAnimationFrame(function () {
-                scrollRoot().scrollTop = 0;
-            });
+            html.style.setProperty('--pb-tension', '0');
+            clearTensionDown();
+
+            wrap.classList.add('pb-parked');
+            wrap.style.transition = 'none';
+            wrap.style.transform = 'translateY(-100%)';
+            void wrap.offsetWidth;
+            wrap.style.transition = '';
+
+            card.classList.remove('pb-flown', 'pb-flying', 'pb-shake', 'pb-entering');
+
+            requestAnimationFrame(function () { scrollRoot().scrollTop = 0; });
             html.classList.remove('pb-locked');
+            document.body.classList.add('pb-flown');
             flown = true;
 
-            /* Появление главной снизу. Класс убираем после анимации,
-               чтобы inline-трансформ от nudge потом снова работал. */
-            mainEl.classList.add('pb-main-enter');
-            setTimeout(function () {
-                mainEl.classList.remove('pb-main-enter');
-                animating = false;
-            }, 620);
+            var m = getMainEl();
+            if (m) m.classList.add('pb-main-enter');
         }, 420);
+
+        setTimeout(function () {
+            var m = getMainEl();
+            if (m) m.classList.remove('pb-main-enter');
+            animating = false;
+        }, 420 + 640);
     }
 
-    /* ── Коммит ВВЕРХ ────────────────────────────────────────────── */
     function commitUp() {
         if (animating) return;
         animating = true;
+        clearTimeout(decayTimer);
 
-        /* Сбрасываем натяг main без transition — main всё равно сейчас
-           прыгнет вниз из-за возврата wrap, анимацию не увидим. */
-        if (mainEl) {
-            mainEl.style.transition = 'none';
-            mainEl.style.transform = '';
-            void mainEl.offsetWidth;
-            mainEl.style.transition = '';
+        var m = getMainEl();
+
+        wrap.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1)';
+        if (m) {
+            m.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1), filter ' + SPRING_MS + 'ms ease';
         }
 
-        wrap.style.display = '';
-        requestAnimationFrame(function () {
-            scrollRoot().scrollTop = 0;
-        });
-        html.classList.add('pb-locked');
+        void wrap.offsetWidth;
 
-        flyCardIn();
+        wrap.style.transform = 'translateY(0)';
+        if (m) {
+            m.style.transform = 'translateY(100vh)';
+            m.style.filter = '';
+        }
+
+        card.classList.remove('pb-entering');
+        void card.offsetWidth;
+        card.classList.add('pb-entering');
+
+        html.style.setProperty('--pb-tension', '0');
         mini.classList.remove('pb-visible');
 
-        attemptsDown = 0;
-        attemptsUp = 0;
-        accum = 0;
-
         setTimeout(function () {
+            if (m) {
+                m.style.transition = 'none';
+                m.style.transform = '';
+                m.style.filter = '';
+                void m.offsetWidth;
+                m.style.transition = '';
+            }
+            wrap.style.transition = 'none';
+            wrap.style.transform = '';
+            void wrap.offsetWidth;
+            wrap.style.transition = '';
+
+            wrap.classList.remove('pb-parked');
+
+            html.classList.add('pb-locked');
+            document.body.classList.remove('pb-flown');
+
+            scrollRoot().scrollTop = 0;
+
             flown = false;
             animating = false;
-        }, 620);
+            accum = 0;
+            shookThisGesture = false;
+        }, SPRING_MS + 30);
+
+        setTimeout(function () { card.classList.remove('pb-entering'); }, SPRING_MS + 700);
     }
 
-    /* ── Колесо ──────────────────────────────────────────────────── */
     function onWheel(e) {
         if (e.ctrlKey) return;
         if (animating) { e.preventDefault(); return; }
 
         if (!flown) {
-            /* ── ВНИЗ с баннера ── */
             if (e.deltaY <= 0) return;
             e.preventDefault();
-            accum += Math.abs(e.deltaY);
+            accum += Math.min(Math.abs(e.deltaY), MAX_DELTA_PER_TICK);
 
-            if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
+            if (!shookThisGesture && accum > MIN_ATTEMPT) {
+                shookThisGesture = true;
+                triggerShake();
+            }
+
+            updateTensionDown();
+
+            if (accum >= THRESHOLD_DOWN) {
                 commitDown();
                 return;
             }
@@ -826,12 +924,8 @@ if ($promo):
             return;
         }
 
-        /* ── ВВЕРХ с главной ── */
         if (e.deltaY >= 0) {
-            /* Скролл вниз по главной — просто сбрасываем накопленное
-               «вверх», чтобы счётчик не жил вечно. */
-            if (attemptsUp > 0 || accum > 0) {
-                attemptsUp = 0;
+            if (accum > 0) {
                 accum = 0;
                 setMainNudge(0, false);
             }
@@ -840,26 +934,25 @@ if ($promo):
 
         var s = scrollRoot();
         if (s.scrollTop > UP_GATE) {
-            /* ещё не упёрлись в верх главной — отдаём скролл браузеру */
-            attemptsUp = 0;
             accum = 0;
             return;
         }
 
         e.preventDefault();
-        accum += Math.abs(e.deltaY);
+        accum += Math.min(Math.abs(e.deltaY), MAX_DELTA_PER_TICK);
 
-        if (accum >= THRESHOLD_UP && attemptsUp >= ATTEMPTS_NEEDED - 1) {
+        if (accum >= THRESHOLD_UP) {
             commitUp();
             return;
         }
-        /* Натяг: main тянется вниз, будто освобождает дорогу баннеру. */
-        setMainNudge(MAIN_PULL * Math.min(accum / THRESHOLD_UP, 1), true);
+
+        var p = Math.min(accum / THRESHOLD_UP, 1);
+        var eased = Math.pow(p, 0.75);
+        setMainNudge(MAIN_PULL * eased, true);
         scheduleDecay();
     }
     window.addEventListener('wheel', onWheel, { passive: false });
 
-    /* ── Тач ─────────────────────────────────────────────────────── */
     var touchStartY = null;
     window.addEventListener('touchstart', function (e) {
         touchStartY = e.touches[0].clientY;
@@ -867,13 +960,20 @@ if ($promo):
 
     window.addEventListener('touchmove', function (e) {
         if (touchStartY === null || animating) return;
-        var dy = touchStartY - e.touches[0].clientY;   /* >0 — свайп вверх */
+        var dy = touchStartY - e.touches[0].clientY;
 
         if (!flown) {
             if (dy <= 0) return;
             e.preventDefault();
             accum = dy;
-            if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
+            if (!shookThisGesture && accum > MIN_ATTEMPT) {
+                shookThisGesture = true;
+                triggerShake();
+            }
+
+            updateTensionDown();
+
+            if (accum >= THRESHOLD_DOWN) {
                 commitDown();
                 touchStartY = null;
                 return;
@@ -883,40 +983,35 @@ if ($promo):
         }
 
         if (dy >= 0) {
-            if (attemptsUp > 0 || accum > 0) {
-                attemptsUp = 0;
-                accum = 0;
-                setMainNudge(0, false);
-            }
+            if (accum > 0) { accum = 0; setMainNudge(0, false); }
             return;
         }
 
         var s = scrollRoot();
-        if (s.scrollTop > UP_GATE) { attemptsUp = 0; accum = 0; return; }
+        if (s.scrollTop > UP_GATE) { accum = 0; return; }
 
         e.preventDefault();
         accum = -dy;
-        if (accum >= THRESHOLD_UP && attemptsUp >= ATTEMPTS_NEEDED - 1) {
+        if (accum >= THRESHOLD_UP) {
             commitUp();
             touchStartY = null;
             return;
         }
-        setMainNudge(MAIN_PULL * Math.min(accum / THRESHOLD_UP, 1), true);
+        var p = Math.min(accum / THRESHOLD_UP, 1);
+        setMainNudge(MAIN_PULL * Math.pow(p, 0.75), true);
     }, { passive: false });
 
     window.addEventListener('touchend', function () {
         touchStartY = null;
         if (!flown) {
-            if (accum > MIN_ATTEMPT) { attemptsDown++; triggerShake(); }
             springBackBanner();
         } else {
-            if (accum > MIN_ATTEMPT) attemptsUp++;
             setMainNudge(0, false);
         }
         accum = 0;
+        shookThisGesture = false;
     }, { passive: true });
 
-    /* ── Клавиатура: PageDown/Space/End вниз с баннера — коммит ──── */
     window.addEventListener('keydown', function (e) {
         if (animating || flown) return;
         if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
@@ -924,9 +1019,35 @@ if ($promo):
         }
     });
 
-    /* ── Стартовое состояние ─────────────────────────────────────── */
-    scrollRoot().scrollTop = 0;
-    html.classList.add('pb-locked');
+    /* ── Инициализация ────────────────────────────────────────────────
+       Развилка:
+         - bannerAlreadyShown = true  → wrap сразу паркуется за верхнюю
+           кромку, main рендерится сразу, pb-locked НЕ ставится. Баннер
+           доступен через натяжение вверх у верха главной.
+         - bannerAlreadyShown = false → старое поведение: wrap в потоке
+           на первом экране, pb-locked стоит, пока не прорвёмся вниз. */
+    if (bannerAlreadyShown) {
+        /* Мгновенно, без анимации — до того как браузер отрисует первый
+           кадр. Скрипт исполняется до того, как в DOM появится <main>
+           из index.php, так что подмена контекста не видна. */
+        wrap.classList.add('pb-parked');
+        wrap.style.transition = 'none';
+        wrap.style.transform = 'translateY(-100%)';
+        void wrap.offsetWidth;
+        wrap.style.transition = '';
+
+        /* Карточка — нормальная, без pb-flown. */
+        card.classList.remove('pb-flown', 'pb-flying', 'pb-shake');
+
+        /* main доступен — блокировку не ставим. */
+        document.body.classList.add('pb-flown');
+        flown = true;
+
+        if (!dismissed) mini.classList.add('pb-visible');
+    } else {
+        scrollRoot().scrollTop = 0;
+        html.classList.add('pb-locked');
+    }
 
     if (miniClose) {
         miniClose.addEventListener('click', function () {
@@ -936,7 +1057,6 @@ if ($promo):
         });
     }
 
-    /* ── Параллакс от мыши ───────────────────────────────────────── */
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         var pbRaf = null;
         wrap.addEventListener('mousemove', function (e) {
@@ -957,7 +1077,6 @@ if ($promo):
         });
     }
 
-    /* ── Аналитика ───────────────────────────────────────────────── */
     if (window.DustoreAnalytics) {
         DustoreAnalytics.observeView(card, 'promotion', PROMO_ID);
         var clicked = false;

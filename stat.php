@@ -212,6 +212,21 @@ $PAYLOAD = [
     ],
 ];
 
+/* =========================================================================
+ * GAME PLATFORM INDEX. Считается в swad/controllers/gpi.php, кэш 10 минут.
+ * Любой сбой индекса не должен ронять страницу статистики.
+ * =======================================================================*/
+require_once('swad/controllers/gpi.php');
+$GPI = null;
+try {
+    $l4tPdo = null;
+    try { $l4tPdo = $db->connect('desl4t') ?: null; } catch (Throwable $e) { $l4tPdo = null; }
+    $GPI = GPI::snapshot($pdo, $l4tPdo);
+} catch (Throwable $e) {
+    error_log('[stat/gpi] ' . $e->getMessage());
+}
+$GPI_ADMIN = ((int)($_SESSION['USERDATA']['global_role'] ?? 0)) === -1;
+
 /* Карточки метрик: значение + дельта + спарклайн одним описанием. */
 $CARDS = [
     ['Пользователей',   $users_total,     $s_users,    true],
@@ -756,6 +771,8 @@ $CARDS = [
         </div>
         <div class="dst-st__live"><span class="dst-st__dot"></span> обновлено <?= date('d.m.Y H:i') ?></div>
     </header>
+
+    <?php if ($GPI) require('swad/static/elements/gpi_block.php'); ?>
 
     <!-- ===================== МЕТРИКИ ===================== -->
     <div class="dst-st__cards">

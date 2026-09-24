@@ -54,6 +54,7 @@ try {
     $stmt = $pdo->prepare("UPDATE users SET last_activity = NOW() WHERE id = :user_id");
     $stmt->bindParam(':user_id', $userID, PDO::PARAM_INT);
     if ($stmt->execute()) {
+        track_daily_activity($pdo, (int)$userID);
         $currentTime = date('Y-m-d H:i:s');   // для ответа/сессии, часы уже общие
         $_SESSION['USERDATA']['last_activity'] = $currentTime;
 
@@ -64,6 +65,34 @@ try {
 } catch (PDOException $e) {
     echo ("Error updating user activity: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Database error']);
+}
+
+/**
+ * День присутствия пользователя — основа DAU/WAU/MAU, retention и сессий в GPI.
+ *
+ * Порядок присваиваний в ON DUPLICATE KEY UPDATE важен: MySQL применяет их
+ * слева направо, и каждое следующее видит уже НОВЫЕ значения. Поэтому
+ * sessions считаем ДО того, как перезапишем last_seen, — иначе разрыв
+ * всегда был бы нулевым и сессия никогда бы не начиналась заново.
+ *
+ * Best-effort: если таблицы ещё нет (миграция не накатана), хартбит
+ * не должен ронять сайт — он дёргается с каждой страницы.
+ */
+function track_daily_activity(PDO $pdo, int $userId): void
+{
+    try {
+        $pdo->prepare("
+            INSERT INTO user_daily_activity (user_id, day, hits, sessions, first_seen, last_seen)
+            VALUES (?, CURDATE(), 1, 1, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE
+                sessions  = sessions + (last_seen < NOW() - INTERVAL 30 MINUTE),
+                hits      = hits + 1,
+                last_seen = NOW(),
+                source    = 'live'
+        ")->execute([$userId]);
+    } catch (Throwable $e) {
+        error_log('[activity] daily: ' . $e->getMessage());
+    }
 }
 
 function updateDailyStats($pdo)
