@@ -39,12 +39,22 @@
  * через паузу, следующая попытка начинается с нуля (это и даёт «первые
  * два скролла просто трясут» — они не суммируются в вечный счётчик).
  * Набрали порог — коммит: карточка улетает существующим CSS-переходом,
- * И СРАЗУ (без анимации скролла поверх — второй анимации там не нужно)
- * прыгаем на верх <main>, разлочивая страницу. Обратно у самой границы —
- * тот же накопитель, только на deltaY<0 и только пока scrollY≈0: слабый
- * рывок вверх гасится, решительный — перелистывает обратно к баннеру.
- * Клавиатурный скролл (PageDown/Space/стрелки) через порог не гоняем —
- * сразу пропускаем, блокировать его ради красивости было бы просто вредно.
+ * И СИНХРОННО с ним страницу САМУ ПРОНОСИТ вниз, на верх <main> (rAF,
+ * ~550ms, тот же тайминг, что transform у карточки — animateScrollTo()
+ * ниже). Первая версия коммита прыгала на scrollTop мгновенно — на
+ * реальном железе Лео это ощущалось как рандомный скачок без эффекта
+ * (сам полёт карточки просто не успевал быть увиденным, а инерция того
+ * же жеста колеса/трекпада докручивала ПОСЛЕ прыжка мимо точки стыковки —
+ * оттуда и «не доставить чётко, выровняться сложно»). Теперь на время
+ * carry-анимации `busy=true`: весь wheel/touch глотается без исключений,
+ * так что докатывается ровно один раз, без дребезга от хвоста жеста;
+ * html.pb-locked остаётся включён все ~550ms и снимается только когда
+ * анимация реально доехала. Обратно у самой границы — тот же накопитель,
+ * только на deltaY<0 и только пока scrollY≈0: слабый рывок вверх гасится,
+ * решительный — тот же carry в обратную сторону, карточка проявляется
+ * тем же переходом задом наперёд. Клавиатурный скролл (PageDown/Space/
+ * стрелки) через порог не гоняем — сразу пропускаем, блокировать его
+ * ради красивости было бы просто вредно.
  *
  * ВАЖНО про прыжок к <main> (баг, на который наткнулись при первом деплое v3):
  * страница у нас (и, похоже, не только этот файл) не в полном соответствии
@@ -612,7 +622,9 @@ if ($promo):
             // коммитили, а один случайный шевеление трекпада — нет. ──
             var THRESHOLD = 260;
             var DECAY_MS = 260;
+            var CARRY_MS = 550; // держим в шаге с .pb-card.pb-flown transform .55s ниже в CSS
             var flown = false;
+            var busy = false; // идёт carry-анимация — весь ввод глотаем, не трогаем accum
             var accum = 0;
             var decayTimer = null;
 
@@ -636,27 +648,71 @@ if ($promo):
                 }, DECAY_MS);
             }
 
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+
+            // Скролл едет сам, рукой (rAF), синхронно с CSS-переходом карточки —
+            // это и есть «нас проносит вниз/наверх», а не невидимый мгновенный прыжок.
+            // Пока едет — html.pb-locked остаётся включён весь клип, так что инерция
+            // трекпада/колеса от того же жеста не проскакивает мимо точки стыковки.
+            function animateScrollTo(target, onDone) {
+                var root = scrollRoot();
+                var start = root.scrollTop;
+                var dist = target - start;
+                var t0 = null;
+                function step(ts) {
+                    if (t0 === null) t0 = ts;
+                    var t = Math.min(1, (ts - t0) / CARRY_MS);
+                    root.scrollTop = start + dist * easeOutCubic(t);
+                    if (t < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        root.scrollTop = target;
+                        onDone();
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
             function commitDown() {
-                html.classList.remove('pb-locked');
-                scrollRoot().scrollTop = markerDocTop();
-                flown = true;
+                busy = true;
                 accum = 0;
                 setNudge(0);
-                card.classList.add('pb-flown');
+                // Снимаем замок ДО анимации, не после: пока html.pb-locked висит
+                // (overflow:hidden), у элемента физически нет скроллируемой области,
+                // и scrollTop, который дальше двигает animateScrollTo, тупо клэмпится
+                // к 0 — страница «едет» только в переменных JS, а не на экране.
+                // Реальная защита от инерции жеста — не overflow:hidden, а сам busy
+                // (см. onWheel/touchmove: пока busy — событие проглатывается целиком).
+                html.classList.remove('pb-locked');
+                card.classList.add('pb-flown'); // карточка улетает существующим CSS-переходом
                 if (!dismissed) mini.classList.add('pb-visible');
+                var target = markerDocTop();
+                animateScrollTo(target, function() {
+                    flown = true;
+                    busy = false;
+                });
             }
 
             function commitUp() {
-                scrollRoot().scrollTop = 0;
-                html.classList.add('pb-locked');
-                flown = false;
+                busy = true;
                 accum = 0;
-                card.classList.remove('pb-flown');
+                card.classList.remove('pb-flown'); // карточка появляется тем же переходом, в обратную сторону
                 mini.classList.remove('pb-visible');
+                animateScrollTo(0, function() {
+                    html.classList.add('pb-locked'); // запираем обратно только когда реально доехали до баннера
+                    flown = false;
+                    busy = false;
+                });
             }
 
             function onWheel(e) {
                 if (e.ctrlKey) return; // pinch-zoom/ctrl+колесо — не наше дело
+                if (busy) {
+                    e.preventDefault(); // carry уже едет — глотаем хвост того же жеста
+                    return;
+                }
                 if (!flown) {
                     if (e.deltaY <= 0) return; // скролл вверх, когда и так на баннере — игнор
                     e.preventDefault();
@@ -664,7 +720,7 @@ if ($promo):
                     if (accum >= THRESHOLD) {
                         commitDown();
                     } else {
-                        setNudge(-14 * (accum / THRESHOLD));
+                        setNudge(-22 * (accum / THRESHOLD));
                         scheduleDecay();
                     }
                     return;
@@ -690,6 +746,10 @@ if ($promo):
             });
             window.addEventListener('touchmove', function(e) {
                 if (touchStartY === null) return;
+                if (busy) {
+                    e.preventDefault();
+                    return;
+                }
                 var dy = touchStartY - e.touches[0].clientY; // >0 — свайп вверх (скролл вниз)
                 if (!flown) {
                     if (dy <= 0) return;
@@ -699,7 +759,7 @@ if ($promo):
                         commitDown();
                         touchStartY = null;
                     } else {
-                        setNudge(-14 * (accum / THRESHOLD));
+                        setNudge(-22 * (accum / THRESHOLD));
                     }
                     return;
                 }
@@ -726,7 +786,7 @@ if ($promo):
             // потряхивания того не стоит: это чужой, некликовый способ навигации,
             // и держать его взаперти было бы просто вредно для доступности. ──
             window.addEventListener('keydown', function(e) {
-                if (flown) return;
+                if (flown || busy) return;
                 if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
                     commitDown();
                 }
