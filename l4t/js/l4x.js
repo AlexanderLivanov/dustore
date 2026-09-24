@@ -58,6 +58,8 @@
             sv.textContent = opt.saveText || 'Сохранить';
             $('#modalCancel').textContent = onSave ? 'Отмена' : 'Закрыть';
             this.onSave = onSave || null;
+            // wide — просмотр заявки/отклика: боковая панель на 75% экрана, а не окошко в центре
+            this.el.classList.toggle('l4x-modal--side', !!opt.wide);
             this.el.hidden = false;
             var f = $('#modalBody input, #modalBody textarea');
             if (f && !opt.noFocus) setTimeout(function () { f.focus(); }, 30);
@@ -592,7 +594,7 @@
             html += '<div class="l4x-sep"><a class="l4x-btn l4x-btn--acc" href="/login?backUrl=/l4t/">Войдите, чтобы откликнуться</a></div>';
         }
 
-        M.open(d.role || 'Заявка', html, canRespond ? function () { respond(d, card); } : null, { saveText: 'Откликнуться', noFocus: true });
+        M.open(d.role || 'Заявка', html, canRespond ? function () { respond(d, card); } : null, { wide: true, saveText: 'Откликнуться', noFocus: true });
         var ta = $('#mResp');
         if (ta) ta.addEventListener('input', function () { $('#mRespN').textContent = ta.value.length + ' / 1000'; });
     }
@@ -625,7 +627,7 @@
                     return '<button data-s="' + esc(s) + '" class="' + (s === d.status ? 'is-on' : '') + '">' + esc(s) + '</button>';
                 }).join('') + '</div><p class="l4x-hint">«В команде» добавит проект в титры обоим и откроет возможность написать рекомендации.</p></div>';
         }
-        M.open(d.kind === 'incoming' ? 'Отклик: ' + (d.who ? d.who.name : '') : 'Мой отклик', html, null);
+        M.open(d.kind === 'incoming' ? 'Отклик: ' + (d.who ? d.who.name : '') : 'Мой отклик', html, null, { wide: true });
         var seg = $('#respStatus');
         if (seg) seg.addEventListener('click', function (e) {
             var b = e.target.closest('button'); if (!b) return;

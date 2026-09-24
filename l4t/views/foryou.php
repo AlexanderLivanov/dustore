@@ -1,68 +1,57 @@
 <?php
 /**
- * l4t/views/foryou.php — вкладка «Для тебя».
- * Ожидает: $forYou, $uSkills, $h, $authors, $tab, $X.
+ * l4t/views/foryou.php — «Для тебя»: одна карточка за раз.
+ *
+ * Лента из двадцати карточек заставляла сравнивать всё со всем. Колода
+ * задаёт один вопрос: «интересно?» — влево пропустить, вправо откликнуться.
+ * Джемы — отдельной узкой полосой сверху: у них своё действие (очередь/команда).
+ * Колоду рендерит l4x-pos.js из op=deck. Ожидает: $forYou, $uSkills, $h, $tab.
  */
+$jamItems = array_values(array_filter($forYou, fn($it) => $it['type'] !== 'bid'));
 ?>
 <section class="l4x-view <?= $tab === 'foryou' ? 'is-on' : '' ?>" data-view="foryou">
     <?php if (!$uSkills): ?>
-        <div class="l4x-card pix l4x-card--warn" style="margin-bottom:16px">
-            <div class="l4x-card__head"><h2><?= l4x_icon('star') ?>Лента угадывает по роли</h2>
-                <button class="l4x-btn l4x-btn--acc l4x-btn--sm" data-act="skills">Отметить навыки</button></div>
-            <p class="l4x-hint" style="margin:0">Отметьте 3–5 навыков — подбор станет точным, а вас начнут находить через поиск специалистов.</p>
+        <div class="sw-note pix">
+            <?= l4x_icon('star') ?><span>Отметьте 3–5 навыков — подбор станет точным, а вас начнут находить заказчики.</span>
+            <button class="l4x-btn l4x-btn--acc l4x-btn--sm" data-act="skills">Отметить навыки</button>
         </div>
     <?php endif; ?>
 
-    <?php if (!$forYou): ?>
-        <div class="l4x-empty">Пока ничего подходящего. Загляните на биржу или отметьте больше навыков.</div>
+    <?php if ($jamItems): ?>
+        <div class="sw-jams">
+            <?php foreach (array_slice($jamItems, 0, 4) as $it): $j = $it['jam']; ?>
+                <div class="sw-jam pix">
+                    <?= l4x_icon('flame') ?>
+                    <?php if ($it['type'] === 'team'): $t = $it['team']; ?>
+                        <span><b><?= $h($t['team_name']) ?></b> ищет людей · <?= (int)$t['members'] ?>/<?= (int)$t['team_limit'] ?> · джем «<?= $h($j['title']) ?>»</span>
+                        <a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/jams?sprint=<?= (int)$j['id'] ?><?= $it['registered'] ? '#teams' : '' ?>"><?= $it['registered'] ? 'Попроситься' : 'Регистрация' ?></a>
+                    <?php else: ?>
+                        <span>Нет команды на <b>«<?= $h($j['title']) ?>»</b>? Автосборка · <?= (int)$it['in_queue'] ?> в очереди</span>
+                        <?php if (!$it['registered']): ?>
+                            <a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/jams?sprint=<?= (int)$j['id'] ?>">Регистрация</a>
+                        <?php elseif ($it['queued']): ?>
+                            <span class="l4x-verified"><?= l4x_icon('check') ?>в очереди</span>
+                            <button class="l4x-link" data-act="queue-leave" data-sprint="<?= (int)$j['id'] ?>">Выйти</button>
+                        <?php else: ?>
+                            <button class="l4x-btn l4x-btn--acc l4x-btn--sm" data-act="queue-join" data-sprint="<?= (int)$j['id'] ?>" data-title="<?= $h($j['title']) ?>">В очередь</button>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
     <?php endif; ?>
 
-    <div class="l4x-feed">
-        <?php foreach ($forYou as $it):
-            $why = '<div class="l4x-why">' . l4x_icon('check') . 'Совпало: ' . $h(implode(', ', array_slice($it['why'], 0, 3))) . '</div>';
-            if ($it['type'] === 'bid'):
-                $bid = $it['bid']; ?>
-                <div class="l4x-fy">
-                    <?= $why ?>
-                    <?php require __DIR__ . '/../_bid_card.php'; ?>
-                </div>
-            <?php elseif ($it['type'] === 'team'): $t = $it['team']; $j = $it['jam']; ?>
-                <div class="l4x-fy">
-                    <?= $why ?>
-                    <article class="l4x-bid l4x-bid--jam">
-                        <div class="l4x-bid__top"><span class="l4x-chip l4x-chip--acc">команда на джем</span><time><?= (int)$t['members'] ?>/<?= (int)$t['team_limit'] ?></time></div>
-                        <h3 class="l4x-bid__role"><?= $h($t['team_name']) ?></h3>
-                        <div class="l4x-muted" style="font-size:13px">Джем «<?= $h($j['title']) ?>»</div>
-                        <?php if (!empty($t['team_desc'])): ?><p class="l4x-bid__desc"><?= $h(mb_substr((string)$t['team_desc'], 0, 180)) ?></p><?php endif; ?>
-                        <div class="l4x-bid__foot">
-                            <?php if ($it['registered']): ?>
-                                <a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="/jams?sprint=<?= (int)$j['id'] ?>#teams">Попроситься в команду</a>
-                            <?php else: ?>
-                                <a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/jams?sprint=<?= (int)$j['id'] ?>">Сначала регистрация на джем</a>
-                            <?php endif; ?>
-                        </div>
-                    </article>
-                </div>
-            <?php elseif ($it['type'] === 'queue'): $j = $it['jam']; ?>
-                <div class="l4x-fy">
-                    <div class="l4x-why"><?= l4x_icon('flame') ?>Автосборка команд</div>
-                    <article class="l4x-bid l4x-bid--queue">
-                        <div class="l4x-bid__top"><span class="l4x-chip l4x-chip--acc">очередь</span><time><?= (int)$it['in_queue'] ?> в очереди</time></div>
-                        <h3 class="l4x-bid__role">Нет команды на «<?= $h($j['title']) ?>»?</h3>
-                        <p class="l4x-bid__desc">Встаньте в очередь со своей ролью — организатор соберёт сбалансированные команды: код, арт, дизайн и звук вместе, с близкими часовыми поясами.</p>
-                        <div class="l4x-bid__foot">
-                            <?php if (!$it['registered']): ?>
-                                <a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/jams?sprint=<?= (int)$j['id'] ?>">Зарегистрироваться на джем</a>
-                            <?php elseif ($it['queued']): ?>
-                                <span class="l4x-verified"><?= l4x_icon('check') ?>вы в очереди</span>
-                                <button class="l4x-link" data-act="queue-leave" data-sprint="<?= (int)$j['id'] ?>">Выйти</button>
-                            <?php else: ?>
-                                <button class="l4x-btn l4x-btn--acc l4x-btn--sm" data-act="queue-join" data-sprint="<?= (int)$j['id'] ?>" data-title="<?= $h($j['title']) ?>">Встать в очередь</button>
-                            <?php endif; ?>
-                        </div>
-                    </article>
-                </div>
-            <?php endif; ?>
-        <?php endforeach; ?>
+    <div class="sw" id="sw">
+        <div class="sw-stack" id="swStack"><div class="sw-empty l4x-muted">Подбираем заявки…</div></div>
+        <div class="sw-ctl">
+            <button class="sw-btn sw-btn--skip" data-act="sw-skip" title="Пропустить (←)"><?= l4x_icon('close') ?><span>Пропустить</span></button>
+            <button class="sw-btn sw-btn--info" data-act="sw-info" title="Подробнее (↑)"><?= l4x_icon('eye') ?><span>Подробнее</span></button>
+            <button class="sw-btn sw-btn--go" data-act="sw-apply" title="Откликнуться (→)"><?= l4x_icon('check') ?><span>Откликнуться</span></button>
+        </div>
+        <div class="sw-foot">
+            <span class="l4x-muted" id="swLeft"></span>
+            <button class="l4x-link" data-act="sw-undo" id="swUndo" hidden>↶ Вернуть пропущенную</button>
+        </div>
+        <p class="l4x-hint sw-hint">Смахните карточку: влево — не интересно, вправо — откликнуться. На компьютере — стрелки ← →. Если у вас есть предложение «Я могу», отклик уйдёт от него, и при встречном «да» сразу откроются контакты.</p>
     </div>
 </section>

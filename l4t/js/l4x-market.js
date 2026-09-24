@@ -176,7 +176,8 @@
     function openOrder(o) {
         if (!o) return;
         var isNeed = o.side === 'need';
-        if (!isNeed) get('offer_view', { id: o.id });   // GET: без CSRF, считается раз в сессию
+        if (!isNeed) get('offer_view', { id: o.id });
+        var sideSub = isNeed ? 'Спрос · заявка' : 'Предложение · исполнитель';   // GET: без CSRF, считается раз в сессию
         var meta = [
             ['Цена', o.price_label],
             ['Формат', isNeed ? MK.kinds[o.kind] : (o.kind === 'any' ? 'любая работа' : MK.kinds[o.kind])],
@@ -191,15 +192,15 @@
             (o.details ? '<div class="l4x-sep"><div class="l4x-prose">' + esc(o.details) + '</div></div>' : '');
 
         if (o.mine) {
-            M.open(o.title, html + '<div class="l4x-sep l4x-muted">Это ваша позиция. Совпадения по ней — во вкладке «Мои позиции».</div>', null);
+            U.panel.open({ title: o.title, sub: sideSub, html: html + '<div class="l4x-sep l4x-muted">Это ваша позиция. Кандидаты по ней — во вкладке «Мои позиции».</div>' });
             return;
         }
         if (!C.loggedIn) {
-            M.open(o.title, html + '<div class="l4x-sep"><a class="l4x-btn l4x-btn--acc" href="/login?backUrl=/l4t/">Войдите, чтобы договориться</a></div>', null);
+            U.panel.open({ title: o.title, sub: sideSub, html: html + '<div class="l4x-sep"><a class="l4x-btn l4x-btn--acc" href="/login?backUrl=/l4t/">Войдите, чтобы договориться</a></div>' });
             return;
         }
         html += '<div class="l4x-sep" id="mkDeal"><span class="l4x-muted">Загружаем ваши позиции…</span></div>';
-        M.open(o.title, html, null);
+        U.panel.open({ title: o.title, sub: sideSub, html: html });
 
         get('my_orders').then(function (r) {
             var mine = isNeed ? (r.offers || []) : (r.needs || []);
@@ -212,7 +213,7 @@
                     '<p class="l4x-hint" style="margin:0">Ваша сторона сразу скажет «да». Если вторая ответит тем же — сделка, контакты откроются обоим.</p>';
             } else {
                 out += '<p class="l4x-hint" style="margin:0 0 10px">' + (isNeed ? 'Выставьте своё предложение «Я могу» — и сможете предлагать себя в один клик.' : 'Разместите заявку «Мне нужно» — и сможете предлагать задачи исполнителям.') + '</p>' +
-                    '<a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/l4t/?tab=bids&pane=' + (isNeed ? 'offer' : 'need') + '">' + icon('plus') + (isNeed ? 'Я могу' : 'Мне нужно') + '</a>';
+                    '<button class="l4x-btn l4x-btn--ghost l4x-btn--sm" data-act="pos-new-go" data-side="' + (isNeed ? 'offer' : 'need') + '">' + icon('plus') + (isNeed ? 'Я могу' : 'Мне нужно') + '</button>';
             }
             if (isNeed) {
                 out += '<div class="l4x-sep"><label class="l4x-field"><span class="l4x-field__label">…или обычный отклик с сообщением</span>' +
@@ -227,7 +228,7 @@
                 act('propose', isNeed ? { bid_id: o.id, offer_id: mineId } : { bid_id: mineId, offer_id: o.id }).then(function (r) {
                     pb.disabled = false;
                     if (!r.ok) { toast(r.error || 'Не получилось', 'err'); return; }
-                    M.close(); toast(r.deal ? 'Сделка! Контакты — в «Мои позиции»' : 'Предложение отправлено — ждём ответ');
+                    U.panel.close(); toast(r.deal ? 'Сделка! Контакты — в «Мои позиции»' : 'Предложение отправлено — ждём ответ');
                 });
             });
             var rb = $('#mkRespond');
@@ -236,7 +237,7 @@
                 if (!msg) { toast('Напишите пару слов о себе', 'err'); return; }
                 U.api('/swad/controllers/l4t/respond_bid.php', { bid_id: o.id, message: msg }).then(function (r) {
                     if (!r.success) { toast(r.message || 'Не удалось', 'err'); return; }
-                    M.close(); toast('Отклик отправлен');
+                    U.panel.close(); toast('Отклик отправлен');
                 });
             });
         });
@@ -300,12 +301,13 @@
             var d = { id: of.id.value, title: of.title.value, kind: of.kind.value, available_from: of.available_from.value,
                       pay_type: ($('input[name="pay_type"]:checked', of) || {}).value, price_min: of.price_min.value, price_max: of.price_max.value,
                       hours_week: of.hours_week.value, details: of.details.value,
+                      lifetime_days: ($('input[name="lifetime_days"]:checked', of) || {}).value,
                       skills: $$('input[name="skills"]:checked', of).map(function (c) { return c.value; }) };
             var btn = $('button[type="submit"]', of); btn.disabled = true;
             act('offer_save', d).then(function (r) {
                 btn.disabled = false;
                 if (!r.ok) { toast(r.error || 'Не сохранилось', 'err'); return; }
-                toast('Предложение на рынке. Ищем совпадения…'); reload('&pane=offer');
+                toast('Предложение на рынке — подбираем заявки…'); reload('&pos=offer-' + (r.id || d.id));
             });
         });
         $('#offerCancel').addEventListener('click', function () {

@@ -23,8 +23,9 @@ require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/_csrf.php');
 
 /* Все ответы — редирект, поэтому до header() ничего не печатаем. */
-function back(string $tab, string $status): void {
-    header('Location: /l4t/?tab=' . rawurlencode($tab) . '&status=' . rawurlencode($status));
+function back(string $tab, string $status, int $bidId = 0): void {
+    // pos=need-ID — сразу открыть рабочее место заявки с кандидатами
+    header('Location: /l4t/?tab=' . rawurlencode($tab) . '&status=' . rawurlencode($status) . ($bidId ? '&pos=need-' . $bidId : ''));
     exit;
 }
 
@@ -128,7 +129,7 @@ try {
         $mine = $pdo->prepare("SELECT 1 FROM bids WHERE id = ? AND bidder_id = ?");
         $mine->execute([$bidId, $userId]);
         if ($mine->fetchColumn() && save_bid_skills($pdo, $main, $bidId)) $changed = true;
-        back('my', $changed ? 'updated' : 'nothing_changed');
+        back('my', $changed ? 'updated' : 'nothing_changed', $bidId);
     }
 
     /* stage при создании — 'active'. В create_bid.php стояло 'open',
@@ -158,9 +159,10 @@ try {
     $st = $pdo->prepare("INSERT INTO bids (" . implode(', ', $cols) . ", created_at)
                          VALUES (" . implode(', ', array_fill(0, count($cols), '?')) . ", NOW())");
     $st->execute(array_values($row));
-    save_bid_skills($pdo, $main, (int)$pdo->lastInsertId());
+    $newId = (int)$pdo->lastInsertId();
+    save_bid_skills($pdo, $main, $newId);
 
-    back('my', 'created');
+    back('my', 'created', $newId);
 
 } catch (PDOException $e) {
     error_log('[l4t/upsert_bid] ' . $e->getMessage());

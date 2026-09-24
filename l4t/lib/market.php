@@ -36,6 +36,27 @@ final class L4TMarket
     public const PAY   = ['money' => 'За деньги', 'share' => 'За долю', 'free' => 'Бесплатно'];
     private const MIN_SCORE = 50;
     private const TTL_DAYS  = 30;
+    /** Таймер позиции: через сколько дней она сама снимется с рынка. */
+    public const LIFETIMES = [1 => '1 день', 7 => '7 дней', 14 => '14 дней', 30 => 'месяц'];
+
+    public static function lifetime($v): int
+    {
+        $v = (int)$v;
+        return isset(self::LIFETIMES[$v]) ? $v : self::TTL_DAYS;
+    }
+
+    /** SQL-фрагмент «ещё жива»: активна, таймер не истёк, не удалена. */
+    private function aliveSql(string $t): string
+    {
+        return "stage = 'active' AND (expires_at IS NULL OR expires_at > NOW())"
+             . ($this->x->has($t, 'deleted_at') ? ' AND deleted_at IS NULL' : '');
+    }
+
+    /** Колонки таймера и причины есть (миграция 010)? */
+    private function v10(string $t): bool
+    {
+        return $this->x->has($t, 'lifetime_days') && $this->x->has($t, 'close_reason');
+    }
 
     private L4TX $x;
     private PDO $main;
@@ -76,8 +97,10 @@ final class L4TMarket
         $kind = isset(self::KINDS[$post['kind'] ?? '']) ? $post['kind'] : 'task';
         [$pay, $lo, $hi] = self::priceFields($post, 'budget');
         $dur = ($post['duration_days'] ?? '') !== '' ? max(1, min(365, (int)$post['duration_days'])) : null;
+        $life = self::lifetime($post['lifetime_days'] ?? self::TTL_DAYS);
+        $v10 = $this->v10('bids') ? ", lifetime_days = $life, close_reason = NULL" : '';
         $this->db->prepare("UPDATE bids SET kind = ?, pay_type = ?, budget_min = ?, budget_max = ?, duration_days = ?,
-                                     expires_at = CURDATE() + INTERVAL " . self::TTL_DAYS . " DAY WHERE id = ?")
+                                     expires_at = NOW() + INTERVAL $life DAY$v10 WHERE id = ?")
             ->execute([$kind, $pay, $lo, $hi, $dur, $bidId]);
         $this->needsCache = null;
         $this->matchNeed($bidId);
@@ -97,18 +120,21 @@ final class L4TMarket
             ? (string)$d['available_from'] : null;
         $hours = ($d['hours_week'] ?? '') !== '' ? max(1, min(80, (int)$d['hours_week'])) : null;
         $details = mb_substr(trim(strip_tags((string)($d['details'] ?? ''))), 0, 2000) ?: null;
+        $life = self::lifetime($d['lifetime_days'] ?? self::TTL_DAYS);
 
         if ($id) {
             $own = $this->x->val($this->db, "SELECT user_id FROM offers WHERE id = ?", [$id]);
             if ((int)$own !== $uid) throw new InvalidArgumentException('Это не ваше предложение');
             $this->db->prepare("UPDATE offers SET title=?, kind=?, pay_type=?, price_min=?, price_max=?, available_from=?, hours_week=?,
-                                       details=?, stage='active', expires_at = CURDATE() + INTERVAL " . self::TTL_DAYS . " DAY WHERE id=?")
+                                       details=?, stage='active', expires_at = NOW() + INTERVAL $life DAY" .
+                                       ($this->v10('offers') ? ", lifetime_days = $life, close_reason = NULL" : '') . " WHERE id=?")
                 ->execute([$title, $kind, $pay, $lo, $hi, $from, $hours, $details, $id]);
         } else {
-            $n = (int)$this->x->val($this->db, "SELECT COUNT(*) FROM offers WHERE user_id = ? AND stage = 'active'", [$uid]);
+            $n = (int)$this->x->val($this->db, "SELECT COUNT(*) FROM offers WHERE user_id = ? AND " . $this->aliveSql('offers'), [$uid]);
             if ($n >= 5) throw new InvalidArgumentException('Не больше пяти активных предложений — снимите лишнее');
-            $this->db->prepare("INSERT INTO offers (user_id, title, kind, pay_type, price_min, price_max, available_from, hours_week, details, expires_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE() + INTERVAL " . self::TTL_DAYS . " DAY)")
+            $this->db->prepare("INSERT INTO offers (user_id, title, kind, pay_type, price_min, price_max, available_from, hours_week, details, expires_at"
+                                . ($this->v10('offers') ? ', lifetime_days' : '') . ")
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW() + INTERVAL $life DAY" . ($this->v10('offers') ? ", $life" : '') . ")")
                 ->execute([$uid, $title, $kind, $pay, $lo, $hi, $from, $hours, $details]);
             $id = (int)$this->db->lastInsertId();
         }
@@ -126,17 +152,42 @@ final class L4TMarket
     public function setOfferStage(int $uid, int $id, string $stage): void
     {
         if (!in_array($stage, ['active', 'paused', 'closed'], true)) throw new InvalidArgumentException('Неизвестный статус');
-        $extra = $stage === 'active' ? ", expires_at = CURDATE() + INTERVAL " . self::TTL_DAYS . " DAY" : '';
-        $this->db->prepare("UPDATE offers SET stage = ?$extra WHERE id = ? AND user_id = ?")->execute([$stage, $id, $uid]);
+        $this->setStage('offers', 'user_id', $uid, $id, $stage === 'active' ? 'active' : 'closed', null);
         if ($stage === 'active') $this->matchOffer($id);
     }
 
     public function setNeedStage(int $uid, int $id, string $stage): void
     {
         if (!in_array($stage, ['active', 'closed'], true)) throw new InvalidArgumentException('Неизвестный статус');
-        $extra = $stage === 'active' && $this->x->has('bids', 'expires_at') ? ", expires_at = CURDATE() + INTERVAL " . self::TTL_DAYS . " DAY" : '';
-        $this->db->prepare("UPDATE bids SET stage = ?$extra WHERE id = ? AND bidder_id = ?")->execute([$stage, $id, $uid]);
+        $this->setStage('bids', 'bidder_id', $uid, $id, $stage, null);
         if ($stage === 'active') $this->matchNeed($id);
+    }
+
+    /**
+     * Смена состояния позиции. Возврат на рынок перезапускает таймер на тот же
+     * срок, что выбрал автор; снятие запоминает причину («сам снял»).
+     * Модератор снимает чужую позицию — тогда проверки владельца нет.
+     */
+    private function setStage(string $t, string $ownerCol, int $uid, int $id, string $stage, ?int $days, bool $asAdmin = false): void
+    {
+        $v10 = $this->v10($t);
+        $set = ['stage = ?'];
+        $args = [$stage];
+        if ($stage === 'active') {
+            $set[] = $days ? "expires_at = NOW() + INTERVAL " . self::lifetime($days) . " DAY"
+                           : ($v10 ? "expires_at = NOW() + INTERVAL COALESCE(lifetime_days, " . self::TTL_DAYS . ") DAY"
+                                   : "expires_at = NOW() + INTERVAL " . self::TTL_DAYS . " DAY");
+            if ($days && $v10) $set[] = 'lifetime_days = ' . self::lifetime($days);
+            if ($v10) { $set[] = 'close_reason = NULL'; }
+        } elseif ($v10 && !$asAdmin) {
+            $set[] = "close_reason = 'owner'";
+        }
+        $where = 'id = ?' . ($asAdmin ? '' : " AND $ownerCol = ?");
+        $args[] = $id;
+        if (!$asAdmin) $args[] = $uid;
+        $st = $this->db->prepare("UPDATE $t SET " . implode(', ', $set) . " WHERE $where");
+        $st->execute($args);
+        $this->needsCache = $this->offersCache = null;
     }
 
     /* ═════════════════════════════ ЧТЕНИЕ СТОРОН ═════════════════════════════ */
@@ -147,7 +198,7 @@ final class L4TMarket
         if ($this->needsCache !== null) return $this->needsCache;
         $this->needsCache = [];
         if (!$this->ready()) return [];
-        $rows = $this->x->rows($this->db, "SELECT * FROM bids WHERE stage = 'active' AND (expires_at IS NULL OR expires_at >= CURDATE())
+        $rows = $this->x->rows($this->db, "SELECT * FROM bids WHERE " . $this->aliveSql('bids') . "
                                             ORDER BY created_at DESC LIMIT 600");
         $tags = $this->x->bidSkills(array_column($rows, 'id'));
         foreach ($rows as $b) {
@@ -169,6 +220,7 @@ final class L4TMarket
                 'created' => (string)$b['created_at'],
                 'jam'     => !empty($b['jam_id']),
                 'responses' => (int)($b['responses'] ?? 0),
+                'expires' => $b['expires_at'] ?? null,
             ];
         }
         return $this->needsCache;
@@ -179,7 +231,7 @@ final class L4TMarket
         if ($this->offersCache !== null) return $this->offersCache;
         $this->offersCache = [];
         if (!$this->ready()) return [];
-        $rows = $this->x->rows($this->db, "SELECT * FROM offers WHERE stage = 'active' AND (expires_at IS NULL OR expires_at >= CURDATE())
+        $rows = $this->x->rows($this->db, "SELECT * FROM offers WHERE " . $this->aliveSql('offers') . "
                                             ORDER BY created_at DESC LIMIT 600");
         $tags = $this->offerSkills(array_column($rows, 'id'));
         foreach ($rows as $o) $this->offersCache[(int)$o['id']] = $this->normOffer($o, $tags[(int)$o['id']] ?? []);
@@ -480,6 +532,588 @@ final class L4TMarket
         $this->x->notify([$to], $side === 'need' ? 'Вам предлагают задачу' : 'Исполнитель предлагает себя',
             '«' . $need['title'] . '» ↔ «' . $offer['title'] . '»', '/l4t/?tab=bids');
         return ['deal' => false, 'id' => $id];
+    }
+
+    /* ═════════════════════════════ ПОЧЕМУ ПОДХОДИТ ═════════════════════════════ */
+
+    /** Проценты человеку ничего не говорят. Говорим словами. */
+    public static function fitLabel(int $score): array
+    {
+        if ($score >= 85) return ['great', 'Отлично подходит'];
+        if ($score >= 70) return ['good',  'Хорошо подходит'];
+        return ['part', 'Подходит частично'];
+    }
+
+    /**
+     * Разбор пары по пунктам — что совпало, чего не хватает.
+     * @return array<int,array{0:string,1:string}>  [ok|warn|no, текст]
+     */
+    public function explain(array $need, array $offerOrSkills, int $uid): array
+    {
+        $all = $this->x->skills();
+        $name = fn($s) => $all[$s]['name'] ?? $s;
+        $offer = isset($offerOrSkills['side']) ? $offerOrSkills : null;
+        $his = $offer ? $offer['skills'] : $offerOrSkills;
+        $lv = $this->x->userSkills($uid);
+        $out = [];
+
+        $shared = array_values(array_intersect($need['skills'], $his));
+        $missing = array_values(array_diff($need['skills'], $his));
+        if ($shared) {
+            $lvName = [1 => 'базовый', 2 => 'уверенный', 3 => 'эксперт'];
+            $parts = array_map(fn($s) => $name($s) . (isset($lv[$s]) ? ' — ' . ($lvName[$lv[$s]] ?? '') : ''), array_slice($shared, 0, 4));
+            $out[] = ['ok', 'Умеет то, что нужно: ' . implode(', ', $parts)];
+        }
+        if ($missing) $out[] = ['warn', 'В профиле не указано: ' . implode(', ', array_map($name, array_slice($missing, 0, 4)))];
+
+        if ($offer) {
+            if ($need['pay'] !== 'money') {
+                $out[] = $offer['pay'] === 'money' ? ['no', 'Работает только за деньги'] : ['ok', 'Согласен на ' . (self::PAY[$need['pay']] ?? '')];
+            } elseif ($offer['pay'] !== 'money') {
+                $out[] = ['ok', 'Готов работать и без оплаты — за ' . ($offer['pay'] === 'share' ? 'долю' : 'портфолио')];
+            } elseif ($need['hi'] !== null && $offer['lo'] !== null) {
+                $out[] = $need['hi'] >= $offer['lo']
+                    ? ['ok', 'Ваш бюджет покрывает его цену (' . self::priceLabel($offer) . ')']
+                    : ['warn', 'Просит ' . self::priceLabel($offer) . ' — выше вашего бюджета'];
+            } else {
+                $out[] = ['ok', 'Цена: ' . self::priceLabel($offer)];
+            }
+            if ($offer['from'] && strtotime((string)$offer['from']) > time() + 86400) {
+                $out[] = ['warn', 'Освободится ' . date('d.m', strtotime((string)$offer['from']))];
+            } else {
+                $out[] = ['ok', 'Свободен сейчас' . ($offer['hours'] ? ', ' . $offer['hours'] . ' ч в неделю' : '')];
+            }
+        } else {
+            $out[] = ['warn', 'Своё предложение на рынок не выставлял — условия обсудите'];
+        }
+
+        /* Доверие: что о человеке известно, кроме его слов. */
+        $recs = $this->x->has('recommendations') ? (int)$this->x->val($this->db, "SELECT COUNT(*) FROM recommendations WHERE target_id = ? AND hidden = 0", [$uid]) : 0;
+        $deals = $this->ready() ? (int)$this->x->val($this->db, "SELECT COUNT(*) FROM matches m JOIN offers o ON o.id = m.offer_id WHERE o.user_id = ? AND m.dealt_at IS NOT NULL", [$uid]) : 0;
+        $credits = $this->x->has('credits') ? (int)$this->x->val($this->db, "SELECT COUNT(*) FROM credits WHERE user_id = ? AND hidden = 0", [$uid]) : 0;
+        $trust = array_filter([
+            $credits ? $credits . ' ' . self::plural($credits, 'проект', 'проекта', 'проектов') . ' в титрах' : '',
+            $deals ? $deals . ' ' . self::plural($deals, 'сделка', 'сделки', 'сделок') . ' на L4T' : '',
+            $recs ? $recs . ' ' . self::plural($recs, 'рекомендация', 'рекомендации', 'рекомендаций') : '',
+        ]);
+        $out[] = $trust ? ['ok', implode(' · ', $trust)] : ['warn', 'Пока без рекомендаций и завершённых сделок'];
+        return $out;
+    }
+
+    public static function plural(int $n, string $one, string $few, string $many): string
+    {
+        $n = abs($n) % 100; $n1 = $n % 10;
+        if ($n > 10 && $n < 20) return $many;
+        if ($n1 > 1 && $n1 < 5) return $few;
+        return $n1 === 1 ? $one : $many;
+    }
+
+    /* ═════════════════════════════ КАНДИДАТЫ ═════════════════════════════ */
+
+    /**
+     * Всё, что есть под мою заявку, одним списком — сразу после публикации:
+     *   1) предложения с рынка (пары из matches и на лету, если их ещё не сохранили),
+     *   2) люди, которые откликнулись сами,
+     *   3) специалисты с нужными навыками без выставленного предложения — их можно пригласить.
+     * Каждый кандидат приходит с объяснением и состоянием диалога.
+     */
+    public function candidates(int $uid, int $bidId): array
+    {
+        $need = $this->needById($bidId) ?? $this->needAnyState($bidId);
+        if (!$need || $need['user_id'] !== $uid) return [];
+        $users = [];
+        $out = ['market' => [], 'responds' => [], 'people' => []];
+        $seen = [$uid => true];
+
+        /* 1. Рынок. Считаем свежо, а сохранённые пары дают состояние (кто что ответил). */
+        $saved = [];
+        if ($this->ready()) {
+            foreach ($this->x->rows($this->db, "SELECT * FROM matches WHERE bid_id = ?", [$bidId]) as $m) $saved[(int)$m['offer_id']] = $m;
+        }
+        $pool = [];
+        foreach ($this->offers() as $o) {
+            $sc = $this->score($need, $o);
+            if (!$sc && !isset($saved[$o['id']])) continue;
+            if (isset($saved[$o['id']]) && $saved[$o['id']]['need_state'] === 'no') continue;   // я скрыл
+            $pool[] = [$o, $sc ? $sc[0] : (int)($saved[$o['id']]['score'] ?? 40)];
+        }
+        usort($pool, fn($a, $b) => $b[1] <=> $a[1]);
+        foreach (array_slice($pool, 0, 20) as [$o, $score]) {
+            if (isset($seen[$o['user_id']])) continue;          // один человек — одна карточка, лучшее его предложение
+            $seen[$o['user_id']] = true;
+            $m = $saved[$o['id']] ?? null;
+            $state = 'new';
+            if ($m) {
+                if ($m['dealt_at']) $state = 'deal';
+                elseif ($m['need_state'] === 'yes') $state = 'invited';
+                elseif ($m['offer_state'] === 'yes') $state = 'wants';
+                elseif ($m['offer_state'] === 'no') $state = 'declined';
+            }
+            $out['market'][] = ['uid' => $o['user_id'], 'score' => $score, 'fit' => self::fitLabel($score), 'state' => $state,
+                                'match_id' => $m ? (int)$m['id'] : null, 'offer' => $this->card($o), 'why' => $this->explain($need, $o, $o['user_id'])];
+        }
+
+        /* 2. Откликнулись сами. */
+        $resp = $this->x->rows($this->db, "SELECT * FROM responds WHERE bid_id = ? ORDER BY created_at DESC LIMIT 50", [$bidId]);
+        foreach ($resp as $r) {
+            $ru = (int)$r['user_id'];
+            if (isset($seen[$ru])) {
+                // уже есть как предложение с рынка — просто помечаем, что он и сам откликнулся
+                foreach ($out['market'] as &$c) if ($c['uid'] === $ru) $c['respond'] = ['id' => (int)$r['id'], 'message' => (string)$r['message'], 'status' => (string)$r['status']];
+                unset($c);
+                continue;
+            }
+            $seen[$ru] = true;
+            $sk = array_keys($this->x->userSkills($ru));
+            $out['responds'][] = ['uid' => $ru, 'state' => 'responded',
+                                  'respond' => ['id' => (int)$r['id'], 'message' => (string)$r['message'], 'status' => (string)$r['status'], 'ago' => self::ago((string)$r['created_at'])],
+                                  'fit' => $sk ? self::fitLabel($this->skillFit($need, $sk, $ru)) : ['part', 'Навыки не указаны'],
+                                  'why' => $this->explain($need, $sk, $ru)];
+        }
+
+        /* 3. Можно пригласить: навыки совпадают, статус «ищу проект», предложения нет. */
+        $inv = [];
+        if ($this->x->has('invites')) {
+            foreach ($this->x->rows($this->db, "SELECT user_id, state FROM invites WHERE bid_id = ?", [$bidId]) as $i) $inv[(int)$i['user_id']] = $i['state'];
+        }
+        foreach ($this->peopleFor($need, 30) as $pu => $sk) {
+            if (isset($seen[$pu])) continue;
+            $seen[$pu] = true;
+            $fit = $this->skillFit($need, $sk, $pu);
+            if ($fit < 45 && !isset($inv[$pu])) continue;
+            $out['people'][] = ['uid' => $pu, 'fit' => self::fitLabel($fit), 'score' => $fit,
+                                'state' => ['sent' => 'invited', 'accepted' => 'accepted', 'declined' => 'declined'][$inv[$pu] ?? ''] ?? 'new',
+                                'why' => $this->explain($need, $sk, $pu)];
+        }
+        usort($out['people'], fn($a, $b) => $b['score'] <=> $a['score']);
+        $out['people'] = array_slice($out['people'], 0, 12);
+
+        /* Карточки людей одним запросом. */
+        $ids = [];
+        foreach ($out as $list) foreach ($list as $c) $ids[] = $c['uid'];
+        $users = $this->x->users($ids, true);
+        $prof = $this->profilesOf($ids);
+        $tg = [];
+        if ($ids) {
+            $in = implode(',', array_fill(0, count(array_unique($ids)), '?'));
+            foreach ($this->x->rows($this->main, "SELECT id, telegram_username FROM users WHERE id IN ($in)", array_values(array_unique($ids))) as $u) $tg[(int)$u['id']] = (string)$u['telegram_username'];
+        }
+        foreach ($out as &$list) foreach ($list as &$c) {
+            $c['user'] = ($users[$c['uid']] ?? ['name' => 'Пользователь', 'handle' => '', 'avatar' => '', 'role' => '']) + ['id' => $c['uid']]
+                       + ['headline' => $prof[$c['uid']]['headline'] ?? '', 'skills' => array_map(fn($s) => $this->x->skills()[$s]['name'] ?? $s, array_slice(array_keys($this->x->userSkills($c['uid'])), 0, 6))];
+            // контакты открываются только когда обе стороны сказали «да»
+            $open = in_array($c['state'], ['deal', 'accepted'], true) || in_array($c['respond']['status'] ?? '', ['принят', 'в команде'], true);
+            $c['tg'] = $open ? ($tg[$c['uid']] ?? '') : '';
+        }
+        unset($list, $c);
+        return ['need' => $need, 'lists' => $out, 'total' => count($out['market']) + count($out['responds']) + count($out['people'])];
+    }
+
+    /** Под моё предложение: заявки, где я подхожу, и кто меня позвал. */
+    public function offerCandidates(int $uid, int $offerId): array
+    {
+        $offer = $this->offerById($offerId);
+        if (!$offer || $offer['user_id'] !== $uid) return [];
+        $saved = [];
+        if ($this->ready()) foreach ($this->x->rows($this->db, "SELECT * FROM matches WHERE offer_id = ?", [$offerId]) as $m) $saved[(int)$m['bid_id']] = $m;
+        $pool = [];
+        foreach ($this->needs() as $n) {
+            $sc = $this->score($n, $offer);
+            if (!$sc && !isset($saved[$n['id']])) continue;
+            if (isset($saved[$n['id']]) && $saved[$n['id']]['offer_state'] === 'no') continue;
+            $pool[] = [$n, $sc ? $sc[0] : (int)$saved[$n['id']]['score']];
+        }
+        usort($pool, fn($a, $b) => $b[1] <=> $a[1]);
+        $out = [];
+        $users = $this->x->users(array_map(fn($p) => $p[0]['user_id'], $pool), true);
+        foreach (array_slice($pool, 0, 20) as [$n, $score]) {
+            $m = $saved[$n['id']] ?? null;
+            $state = 'new';
+            if ($m) {
+                if ($m['dealt_at']) $state = 'deal';
+                elseif ($m['offer_state'] === 'yes') $state = 'invited';     // я предложил себя
+                elseif ($m['need_state'] === 'yes') $state = 'wants';        // заказчик зовёт меня
+                elseif ($m['need_state'] === 'no') $state = 'declined';
+            }
+            $card = $this->card($n);
+            $out[] = ['uid' => $n['user_id'], 'score' => $score, 'fit' => self::fitLabel($score), 'state' => $state,
+                      'match_id' => $m ? (int)$m['id'] : null, 'need' => $card, 'user' => $card['user'],
+                      'why' => $this->explainForOffer($n, $offer)];
+        }
+        return ['offer' => $offer, 'lists' => ['needs' => $out], 'total' => count($out)];
+    }
+
+    /** То же объяснение, но с точки зрения исполнителя: чем заявка хороша для меня. */
+    private function explainForOffer(array $need, array $offer): array
+    {
+        $all = $this->x->skills();
+        $out = [];
+        $shared = array_values(array_intersect($need['skills'], $offer['skills']));
+        if ($shared) $out[] = ['ok', 'Нужны ваши навыки: ' . implode(', ', array_map(fn($s) => $all[$s]['name'] ?? $s, array_slice($shared, 0, 4)))];
+        $extra = array_diff($need['skills'], $offer['skills']);
+        if ($extra) $out[] = ['warn', 'Ещё хотят: ' . implode(', ', array_map(fn($s) => $all[$s]['name'] ?? $s, array_slice($extra, 0, 3)))];
+        if ($need['pay'] === 'money' && $need['hi'] !== null && $offer['lo'] !== null && $need['hi'] < $offer['lo']) {
+            $out[] = ['warn', 'Бюджет ниже вашей цены'];
+        }
+        $speed = $this->x->responseSpeed($need['user_id']);
+        if ($speed !== null) $out[] = [$speed <= 48 ? 'ok' : 'warn', 'Заказчик отвечает в среднем за ' . ($speed < 24 ? max(1, (int)round($speed)) . ' ч' : (int)round($speed / 24) . ' дн')];
+        return $out;
+    }
+
+    /** Совпадение по навыкам человека без предложения: грубее, чем score(). */
+    private function skillFit(array $need, array $skills, int $uid): int
+    {
+        if (!$need['skills']) return 40;
+        $shared = array_intersect($need['skills'], $skills);
+        if (!$shared) return 0;
+        $lv = $this->x->userSkills($uid);
+        $lvl = 0.0;
+        foreach ($shared as $s) $lvl += ($lv[$s] ?? 1) / 3;
+        $lvl /= count($shared);
+        return (int)round(60 * count($shared) / count($need['skills']) + 25 * $lvl + 15);
+    }
+
+    /** uid => [slug…] — люди с навыками из заявки и открытым статусом. */
+    private function peopleFor(array $need, int $limit): array
+    {
+        if (!$need['skills'] || !$this->x->has('user_skills')) return [];
+        $in = implode(',', array_fill(0, count($need['skills']), '?'));
+        $where = '';
+        if ($this->x->has('profiles')) {
+            $where = " AND us.user_id IN (SELECT user_id FROM profiles WHERE availability IN ('open','hiring')"
+                   . ($this->x->has('profiles', 'avail_until') ? ' AND (avail_until IS NULL OR avail_until >= CURDATE())' : '') . ')';
+        }
+        $rows = $this->x->rows($this->db, "SELECT us.user_id, s.slug FROM user_skills us JOIN skills s ON s.id = us.skill_id
+                                            WHERE us.user_id IN (SELECT us2.user_id FROM user_skills us2 JOIN skills s2 ON s2.id = us2.skill_id WHERE s2.slug IN ($in))
+                                            $where LIMIT 2000", $need['skills']);
+        $out = [];
+        foreach ($rows as $r) $out[(int)$r['user_id']][] = $r['slug'];
+        return array_slice($out, 0, $limit * 3, true);
+    }
+
+    private function profilesOf(array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (!$ids || !$this->x->has('profiles')) return [];
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $out = [];
+        foreach ($this->x->rows($this->db, "SELECT user_id, headline FROM profiles WHERE user_id IN ($in)", $ids) as $p) $out[(int)$p['user_id']] = $p;
+        return $out;
+    }
+
+    /** Заявка в любом состоянии (для владельца: снята, истекла, скрыта модератором). */
+    public function needAnyState(int $id): ?array
+    {
+        $b = $this->x->row($this->db, "SELECT * FROM bids WHERE id = ?" . ($this->x->has('bids', 'deleted_at') ? ' AND deleted_at IS NULL' : ''), [$id]);
+        if (!$b) return null;
+        $tags = $this->x->bidSkills([$id]);
+        $lo = $b['budget_min'] !== null ? (int)$b['budget_min'] : ($b['budget_max'] !== null ? (int)$b['budget_max'] : null);
+        return [
+            'side' => 'need', 'id' => $id, 'user_id' => (int)$b['bidder_id'], 'title' => (string)$b['search_role'],
+            'skills' => $tags[$id] ?? $this->x->inferSkills($b['search_role'] . ' ' . $b['search_spec'] . ' ' . $b['details']),
+            'kind' => ($b['kind'] ?? '') ?: 'task', 'pay' => ($b['pay_type'] ?? '') ?: 'money',
+            'lo' => $lo, 'hi' => $b['budget_max'] !== null ? (int)$b['budget_max'] : $lo,
+            'days' => ($b['duration_days'] ?? null) !== null ? (int)$b['duration_days'] : null,
+            'details' => (string)$b['details'], 'extra' => '', 'created' => (string)$b['created_at'],
+            'jam' => !empty($b['jam_id']), 'responses' => (int)($b['responses'] ?? 0), 'expires' => $b['expires_at'] ?? null,
+        ];
+    }
+
+    /* ═════════════════════════════ ПРИГЛАШЕНИЯ ═════════════════════════════ */
+
+    /** Позвать человека без предложения. Не больше 20 приглашений в сутки — защита от рассылок. */
+    public function invite(int $uid, int $bidId, int $to): void
+    {
+        if (!$this->x->has('invites')) throw new InvalidArgumentException('Приглашения появятся после миграции 010');
+        $need = $this->needById($bidId);
+        if (!$need || $need['user_id'] !== $uid) throw new InvalidArgumentException('Заявка не найдена или уже снята');
+        if ($to === $uid) throw new InvalidArgumentException('Себя пригласить нельзя');
+        $n = (int)$this->x->val($this->db, "SELECT COUNT(*) FROM invites i JOIN bids b ON b.id = i.bid_id WHERE b.bidder_id = ? AND i.created_at >= NOW() - INTERVAL 1 DAY", [$uid]);
+        if ($n >= 20) throw new InvalidArgumentException('На сегодня приглашений достаточно — дождитесь ответов');
+        $st = $this->db->prepare("INSERT IGNORE INTO invites (bid_id, user_id) VALUES (?, ?)");
+        $st->execute([$bidId, $to]);
+        if ($st->rowCount()) {
+            $this->x->notify([$to], 'Вас зовут в проект', $this->x->userName($uid) . ': «' . $need['title'] . '». Посмотрите и ответьте.', '/l4t/?tab=bids&pos=inv-' . $bidId);
+        }
+    }
+
+    /** Мне пришли приглашения. */
+    public function invitesFor(int $uid): array
+    {
+        if (!$this->x->has('invites')) return [];
+        $rows = $this->x->rows($this->db, "SELECT * FROM invites WHERE user_id = ? AND state = 'sent' ORDER BY created_at DESC LIMIT 20", [$uid]);
+        $out = [];
+        foreach ($rows as $r) {
+            $n = $this->needById((int)$r['bid_id']);
+            if (!$n) continue;
+            $card = $this->card($n);
+            $out[] = ['bid_id' => $n['id'], 'need' => $card, 'user' => $card['user'], 'ago' => self::ago((string)$r['created_at']),
+                      'why' => $this->explainForOffer($n, ['skills' => array_keys($this->x->userSkills($uid)), 'lo' => null, 'pay' => 'money'])];
+        }
+        return $out;
+    }
+
+    /** Ответ на приглашение. «Да» = отклик на заявку, и контакты открываются обеим сторонам. */
+    public function answerInvite(int $uid, int $bidId, bool $yes): void
+    {
+        $r = $this->x->row($this->db, "SELECT * FROM invites WHERE bid_id = ? AND user_id = ?", [$bidId, $uid]);
+        if (!$r) throw new InvalidArgumentException('Приглашение не найдено');
+        $this->db->prepare("UPDATE invites SET state = ?, answered_at = NOW() WHERE bid_id = ? AND user_id = ?")->execute([$yes ? 'accepted' : 'declined', $bidId, $uid]);
+        $need = $this->needAnyState($bidId);
+        if (!$need) return;
+        if ($yes) {
+            $this->respond($uid, $bidId, 'Принял(а) ваше приглашение', true);
+            $this->x->notify([$need['user_id']], 'Приглашение принято', $this->x->userName($uid) . ' готов(а): «' . $need['title'] . '». Контакты открыты.', '/l4t/?tab=bids&pos=need-' . $bidId);
+        }
+    }
+
+    /** Отклик на заявку. $accepted — сразу «принят» (по приглашению). */
+    private function respond(int $uid, int $bidId, string $msg, bool $accepted = false): void
+    {
+        if ($this->x->val($this->db, "SELECT 1 FROM responds WHERE bid_id = ? AND user_id = ?", [$bidId, $uid])) {
+            if ($accepted) $this->db->prepare("UPDATE responds SET status = 'принят' WHERE bid_id = ? AND user_id = ?")->execute([$bidId, $uid]);
+            return;
+        }
+        $this->db->prepare("INSERT INTO responds (bid_id, user_id, message, status, created_at) VALUES (?, ?, ?, ?, NOW())")
+            ->execute([$bidId, $uid, mb_substr($msg, 0, 1000), $accepted ? 'принят' : 'ожидает']);
+        if ($this->x->has('bids', 'responses')) $this->db->prepare("UPDATE bids SET responses = responses + 1 WHERE id = ?")->execute([$bidId]);
+    }
+
+    /* ═════════════════════════════ СВАЙПЫ ═════════════════════════════ */
+
+    /**
+     * Колода «Для тебя»: чужие живые заявки, которые я ещё не видел,
+     * отсортированы по тому, насколько я подхожу. Сравниваем с моим лучшим
+     * предложением, а если его нет — с навыками из профиля.
+     */
+    public function deck(int $uid, int $limit = 20): array
+    {
+        $skip = [];
+        if ($this->x->has('swipes')) foreach ($this->x->rows($this->db, "SELECT bid_id FROM swipes WHERE user_id = ?", [$uid]) as $r) $skip[(int)$r['bid_id']] = true;
+        foreach ($this->x->rows($this->db, "SELECT bid_id FROM responds WHERE user_id = ?", [$uid]) as $r) $skip[(int)$r['bid_id']] = true;
+
+        $mine = array_values(array_filter($this->offers(), fn($o) => $o['user_id'] === $uid));
+        $my = array_keys($this->x->userSkills($uid));
+        $pseudo = ['side' => 'offer', 'id' => 0, 'user_id' => $uid, 'title' => '', 'skills' => $my, 'kind' => 'any', 'pay' => 'share',
+                   'lo' => null, 'hi' => null, 'from' => null, 'hours' => null, 'details' => '', 'stage' => 'active', 'created' => date('Y-m-d H:i:s'), 'expires' => null];
+        $cards = [];
+        foreach ($this->needs() as $n) {
+            if ($n['user_id'] === $uid || isset($skip[$n['id']])) continue;
+            $best = null; $bestOffer = null;
+            foreach ($mine as $o) if (($s = $this->score($n, $o)) && (!$best || $s[0] > $best[0])) { $best = $s; $bestOffer = $o; }
+            if (!$best && $my) $best = ($f = $this->skillFit($n, $my, $uid)) ? [$f, []] : null;
+            $score = $best[0] ?? 20;
+            $cards[] = [$n, $score, $bestOffer];
+        }
+        usort($cards, fn($a, $b) => $b[1] <=> $a[1] ?: strcmp($b[0]['created'], $a[0]['created']));
+        $out = [];
+        foreach (array_slice($cards, 0, $limit) as [$n, $score, $o]) {
+            $card = $this->card($n);
+            $out[] = ['bid_id' => $n['id'], 'need' => $card, 'user' => $card['user'], 'fit' => self::fitLabel($score), 'score' => $score,
+                      'offer_id' => $o['id'] ?? null, 'offer_title' => $o['title'] ?? null,
+                      'why' => $this->explainForOffer($n, $o ?: $pseudo), 'expires' => self::left($n['expires'])];
+        }
+        return $out;
+    }
+
+    /** Свайп: влево — больше не показывать, вправо — откликнуться (от предложения, если оно есть). */
+    public function swipe(int $uid, int $bidId, string $dir, string $msg = '', int $offerId = 0): array
+    {
+        if (!in_array($dir, ['skip', 'apply'], true)) throw new InvalidArgumentException('Неизвестное действие');
+        $need = $this->needById($bidId);
+        if (!$need) throw new InvalidArgumentException('Заявка уже снята');
+        if ($need['user_id'] === $uid) throw new InvalidArgumentException('Это ваша заявка');
+        if ($this->x->has('swipes')) {
+            $this->db->prepare("INSERT INTO swipes (user_id, bid_id, dir) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE dir = VALUES(dir), created_at = NOW()")
+                ->execute([$uid, $bidId, $dir]);
+        }
+        if ($dir === 'skip') return ['ok' => true];
+
+        $offer = $offerId ? ($this->offers()[$offerId] ?? null) : null;
+        if ($offer && $offer['user_id'] === $uid) {
+            $r = $this->propose($uid, $bidId, $offerId);
+            if (trim($msg) !== '') $this->respond($uid, $bidId, $msg);
+            return $r;
+        }
+        $this->respond($uid, $bidId, trim($msg) !== '' ? $msg : 'Хочу присоединиться — посмотрите мой профиль');
+        $this->x->notify([$need['user_id']], 'Новый отклик', $this->x->userName($uid) . ' откликнулся на «' . $need['title'] . '»', '/l4t/?tab=bids&pos=need-' . $bidId);
+        return ['ok' => true];
+    }
+
+    /** Вернуть последний пропуск — промахнуться свайпом легко. */
+    public function swipeUndo(int $uid, int $bidId): void
+    {
+        if ($this->x->has('swipes')) $this->db->prepare("DELETE FROM swipes WHERE user_id = ? AND bid_id = ? AND dir = 'skip'")->execute([$uid, $bidId]);
+    }
+
+    /** «Не подходит» по паре заявка × предложение — с моей стороны. Пара больше не всплывёт. */
+    public function hidePair(int $uid, int $bidId, int $offerId): void
+    {
+        if (!$this->ready()) return;
+        $b = (int)$this->x->val($this->db, "SELECT bidder_id FROM bids WHERE id = ?", [$bidId]);
+        $o = (int)$this->x->val($this->db, "SELECT user_id FROM offers WHERE id = ?", [$offerId]);
+        $col = $b === $uid ? 'need_state' : ($o === $uid ? 'offer_state' : null);
+        if (!$col) throw new InvalidArgumentException('Это не ваша позиция');
+        $this->db->prepare("INSERT INTO matches (bid_id, offer_id, score, reasons, initiator, $col) VALUES (?, ?, 0, '', 'engine', 'no')
+                            ON DUPLICATE KEY UPDATE $col = 'no'")->execute([$bidId, $offerId]);
+    }
+
+    /* ═════════════════════════════ ТАЙМЕР И УДАЛЕНИЕ ═════════════════════════════ */
+
+    /** «ещё 3 дн», «ещё 5 ч», «истекла». */
+    public static function left(?string $ts): ?array
+    {
+        if (!$ts) return null;
+        $d = strtotime($ts) - time();
+        if ($d <= 0) return ['expired', 'истекла'];
+        if ($d < 3600) return ['soon', 'ещё ' . max(1, intdiv($d, 60)) . ' мин'];
+        if ($d < 86400) return ['soon', 'ещё ' . intdiv($d, 3600) . ' ч'];
+        $n = intdiv($d, 86400);
+        return [$n <= 2 ? 'soon' : 'ok', 'ещё ' . $n . ' ' . self::plural($n, 'день', 'дня', 'дней')];
+    }
+
+    /**
+     * Снимаем истёкшие позиции и один раз говорим автору: «продлите, если ещё актуально».
+     * Зовётся лениво при открытии страницы — крон не нужен. Дешёво: два UPDATE по индексу.
+     */
+    public function sweep(): int
+    {
+        if (!$this->ready() || !$this->v10('bids')) return 0;
+        $total = 0;
+        foreach (['bids' => ['bidder_id', 'search_role', 'need'], 'offers' => ['user_id', 'title', 'offer']] as $t => [$own, $title, $pfx]) {
+            $rows = $this->x->rows($this->db, "SELECT id, $own uid, $title title FROM $t WHERE stage = 'active' AND expires_at IS NOT NULL AND expires_at <= NOW() LIMIT 200");
+            if (!$rows) continue;
+            $ids = array_map('intval', array_column($rows, 'id'));
+            $this->db->exec("UPDATE $t SET stage = 'closed', close_reason = 'expired' WHERE id IN (" . implode(',', $ids) . ")");
+            foreach ($rows as $r) {
+                $this->x->notify([(int)$r['uid']], 'Позиция снята по таймеру', '«' . $r['title'] . '» — время вышло. Если ещё актуально, продлите одной кнопкой.', '/l4t/?tab=bids&pos=' . $pfx . '-' . $r['id']);
+            }
+            $total += count($ids);
+        }
+        if ($total) $this->needsCache = $this->offersCache = null;
+        return $total;
+    }
+
+    /** Продлить или вернуть на рынок на N дней. */
+    public function extend(int $uid, string $side, int $id, int $days): void
+    {
+        [$t, $own] = $side === 'offer' ? ['offers', 'user_id'] : ['bids', 'bidder_id'];
+        $row = $this->x->row($this->db, "SELECT * FROM $t WHERE id = ? AND $own = ?", [$id, $uid]);
+        if (!$row) throw new InvalidArgumentException('Позиция не найдена');
+        if (($row['close_reason'] ?? '') === 'admin') throw new InvalidArgumentException('Позицию скрыл модератор: ' . ($row['mod_reason'] ?? '') . '. Создайте новую, исправив причину.');
+        $this->setStage($t, $own, $uid, $id, 'active', self::lifetime($days));
+        $side === 'offer' ? $this->matchOffer($id) : $this->matchNeed($id);
+    }
+
+    /** Удаление автором. Мягкое: история сделок и титров не должна ломаться. */
+    public function remove(int $uid, string $side, int $id): void
+    {
+        [$t, $own] = $side === 'offer' ? ['offers', 'user_id'] : ['bids', 'bidder_id'];
+        if (!$this->x->has($t, 'deleted_at')) {
+            $this->setStage($t, $own, $uid, $id, 'closed', null);
+            return;
+        }
+        $this->db->prepare("UPDATE $t SET stage = 'closed', close_reason = 'deleted', deleted_at = NOW() WHERE id = ? AND $own = ?")->execute([$id, $uid]);
+        $this->needsCache = $this->offersCache = null;
+    }
+
+    /* ═════════════════════════════ МОДЕРАЦИЯ ═════════════════════════════ */
+
+    public const MOD_REASONS = ['stale' => 'Неактуально', 'rules' => 'Нарушает правила', 'dup' => 'Дубль', 'spam' => 'Спам'];
+
+    /** hide — снять с рынка (автор увидит причину), delete — убрать совсем. Причина обязательна. */
+    public function moderate(int $admin, string $side, int $id, string $action, string $reason): void
+    {
+        if (!in_array($action, ['hide', 'delete', 'restore'], true)) throw new InvalidArgumentException('Неизвестное действие');
+        $reason = mb_substr(trim(strip_tags($reason)), 0, 300);
+        if ($action !== 'restore' && mb_strlen($reason) < 3) throw new InvalidArgumentException('Напишите причину — автор её увидит');
+        if (!$this->v10('bids')) throw new InvalidArgumentException('Нужна миграция 010');
+        [$t, $own, $title] = $side === 'offer' ? ['offers', 'user_id', 'title'] : ['bids', 'bidder_id', 'search_role'];
+        $row = $this->x->row($this->db, "SELECT $own uid, $title title FROM $t WHERE id = ?", [$id]);
+        if (!$row) throw new InvalidArgumentException('Позиция не найдена');
+
+        if ($action === 'restore') {
+            $this->db->prepare("UPDATE $t SET stage = 'active', close_reason = NULL, mod_reason = NULL, mod_by = ?, mod_at = NOW(), deleted_at = NULL,
+                                expires_at = GREATEST(COALESCE(expires_at, NOW()), NOW() + INTERVAL 1 DAY) WHERE id = ?")->execute([$admin, $id]);
+            $this->x->notify([(int)$row['uid']], 'Позиция возвращена на рынок', '«' . $row['title'] . '»', '/l4t/?tab=bids');
+        } else {
+            $del = $action === 'delete' ? ', deleted_at = NOW()' : '';
+            $this->db->prepare("UPDATE $t SET stage = 'closed', close_reason = ?, mod_reason = ?, mod_by = ?, mod_at = NOW()$del WHERE id = ?")
+                ->execute([$action === 'delete' ? 'deleted' : 'admin', $reason, $admin, $id]);
+            $this->x->notify([(int)$row['uid']], $action === 'delete' ? 'Модератор удалил позицию' : 'Модератор снял позицию с рынка',
+                '«' . $row['title'] . '». Причина: ' . $reason, '/l4t/?tab=bids');
+        }
+        $this->needsCache = $this->offersCache = null;
+    }
+
+    /** Список для модератора. filter: all | old (старше 30 дн) | hidden */
+    public function adminList(string $filter = 'all', string $q = ''): array
+    {
+        if (!$this->ready()) return [];
+        $v10 = $this->v10('bids');
+        $cond = [
+            'all'    => "stage = 'active'",
+            'old'    => "stage = 'active' AND created_at < NOW() - INTERVAL 30 DAY",
+            'hidden' => $v10 ? "close_reason IN ('admin','deleted') AND mod_by IS NOT NULL" : '0',
+        ][$filter] ?? "stage = 'active'";
+        $out = [];
+        foreach (['bids' => ['need', 'bidder_id', 'search_role'], 'offers' => ['offer', 'user_id', 'title']] as $t => [$side, $own, $title]) {
+            $w = $cond . ($filter !== 'hidden' && $this->x->has($t, 'deleted_at') ? ' AND deleted_at IS NULL' : '');
+            $p = [];
+            if ($q !== '') { $w .= " AND $title LIKE ?"; $p[] = '%' . $q . '%'; }
+            $extra = $v10 ? ', close_reason, mod_reason, mod_at, expires_at, deleted_at' : ', expires_at';
+            foreach ($this->x->rows($this->db, "SELECT id, $own uid, $title title, stage, created_at$extra FROM $t WHERE $w ORDER BY created_at ASC LIMIT 150", $p) as $r) {
+                $out[] = ['side' => $side, 'id' => (int)$r['id'], 'uid' => (int)$r['uid'], 'title' => (string)$r['title'], 'stage' => $r['stage'],
+                          'age' => self::ago((string)$r['created_at']), 'created' => $r['created_at'], 'left' => self::left($r['expires_at'] ?? null),
+                          'close_reason' => $r['close_reason'] ?? null, 'mod_reason' => $r['mod_reason'] ?? null, 'deleted' => !empty($r['deleted_at'])];
+            }
+        }
+        usort($out, fn($a, $b) => strcmp((string)$a['created'], (string)$b['created']));
+        $users = $this->x->users(array_column($out, 'uid'));
+        foreach ($out as &$r) $r['user'] = $users[$r['uid']]['name'] ?? '—';
+        return $out;
+    }
+
+    /* ═════════════════════════════ МОИ ПОЗИЦИИ ═════════════════════════════ */
+
+    /**
+     * Левая колонка рабочего места: все мои заявки и предложения
+     * (живые и снятые за последние 60 дней) с таймером и числом кандидатов.
+     */
+    public function myPositions(int $uid): array
+    {
+        $out = [];
+        $v10 = $this->v10('bids');
+        $del = $this->x->has('bids', 'deleted_at') ? ' AND deleted_at IS NULL' : '';
+        $cols = $v10 ? ', close_reason, mod_reason, lifetime_days' : '';
+        $bids = $this->x->rows($this->db, "SELECT id, search_role, stage, created_at, expires_at, responses$cols FROM bids
+                                            WHERE bidder_id = ?$del AND (stage = 'active' OR created_at >= NOW() - INTERVAL 60 DAY)
+                                            ORDER BY stage = 'active' DESC, created_at DESC LIMIT 50", [$uid]);
+        $newCnt = [];
+        if ($this->ready() && $bids) {
+            $in = implode(',', array_map('intval', array_column($bids, 'id')));
+            foreach ($this->x->rows($this->db, "SELECT bid_id, COUNT(*) n, SUM(offer_state = 'yes' AND need_state = 'new') w FROM matches
+                                                 WHERE bid_id IN ($in) AND need_state <> 'no' GROUP BY bid_id") as $r) $newCnt[(int)$r['bid_id']] = $r;
+        }
+        foreach ($bids as $b) {
+            $live = $b['stage'] === 'active' && (!$b['expires_at'] || strtotime($b['expires_at']) > time());
+            $out[] = ['side' => 'need', 'id' => (int)$b['id'], 'title' => (string)$b['search_role'], 'live' => $live,
+                      'left' => $live ? self::left($b['expires_at']) : null, 'reason' => $live ? null : ($b['close_reason'] ?? ($b['stage'] === 'active' ? 'expired' : 'owner')),
+                      'mod_reason' => $b['mod_reason'] ?? null, 'lifetime' => (int)($b['lifetime_days'] ?? 30),
+                      'count' => (int)($newCnt[(int)$b['id']]['n'] ?? 0) + (int)$b['responses'],
+                      'attention' => (int)($newCnt[(int)$b['id']]['w'] ?? 0)];
+        }
+        $delO = $this->x->has('offers', 'deleted_at') ? ' AND deleted_at IS NULL' : '';
+        foreach ($this->x->rows($this->db, "SELECT * FROM offers WHERE user_id = ?$delO AND (stage = 'active' OR created_at >= NOW() - INTERVAL 60 DAY)
+                                             ORDER BY stage = 'active' DESC, created_at DESC LIMIT 20", [$uid]) as $o) {
+            $live = $o['stage'] === 'active' && (!$o['expires_at'] || strtotime($o['expires_at']) > time());
+            $n = $this->ready() ? $this->x->row($this->db, "SELECT COUNT(*) n, SUM(need_state = 'yes' AND offer_state = 'new') w FROM matches WHERE offer_id = ? AND offer_state <> 'no'", [(int)$o['id']]) : null;
+            $out[] = ['side' => 'offer', 'id' => (int)$o['id'], 'title' => (string)$o['title'], 'live' => $live,
+                      'left' => $live ? self::left($o['expires_at']) : null, 'reason' => $live ? null : ($o['close_reason'] ?? ($o['stage'] === 'active' ? 'expired' : 'owner')),
+                      'mod_reason' => $o['mod_reason'] ?? null, 'lifetime' => (int)($o['lifetime_days'] ?? 30),
+                      'count' => (int)($n['n'] ?? 0), 'attention' => (int)($n['w'] ?? 0)];
+        }
+        return $out;
     }
 
     /* ═════════════════════════════ СТАКАН ═════════════════════════════ */
