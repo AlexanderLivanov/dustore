@@ -14,19 +14,29 @@
  * Если на сейчас нет оплаченного слота — выводит пустую строку и не задевает
  * остальную вёрстку главной вообще никак.
  *
- * ЧТО ПОЧИНЕНО ПО СРАВНЕНИЮ С ИСХОДНЫМ HTML:
- * Раньше вся анимация держалась на перехвате wheel (preventDefault) и ручном
- * стейт-машине idle→shaking→flying→done→returning. Это классический
- * scroll-jacking: ломается на трекпадах (разный deltaY на тик), на тач-устройствах
- * его просто выключили (state='done' сразу, юзер эффект вообще не видел),
- * и блокирует нативный скролл — плохо для доступности и просто неприятно.
+ * ИСТОРИЯ АНИМАЦИИ (v3, текущая):
+ * v1 держалась на перехвате wheel (preventDefault) и ручной стейт-машине —
+ * классический scroll-jacking: ломался на трекпадах (разный deltaY на тик),
+ * на тач-устройствах эффект просто отключали, блокировал нативный скролл.
+ * v2 — паттерн "pin & progress": sticky-подставка + непрерывный прогресс
+ * 0..1 в CSS-переменную --p. Чинил v1, но давал побочный текстовый блок
+ * (.pb-title), который проявлялся на месте улетевшей карточки, и требовал
+ * лишних vh скролл-разгона под sticky-трюк.
  *
- * Сделано иначе — паттерн "pin & progress": контейнер выше вьюпорта, карточка
- * внутри держится через position:sticky, а JS на обычном passive-скролле
- * (БЕЗ preventDefault) читает прогресс прохождения контейнера 0..1 и пишет
- * его в CSS-переменную --p. Вся анимация — чистый CSS calc() от --p.
- * Работает одинаково на мыши, трекпаде и тач-скролле, потому что это просто
- * обычный скролл страницы, а не отдельная логика поверх него.
+ * v3 — по просьбе Лео: только баннер, без второго текстового экрана и без
+ * лишнего пространства под него. Два состояния — «баннер» и «верх главной» —
+ * это ДВА scroll-snap пункта (scroll-snap-type:y mandatory на html,
+ * scroll-snap-stop:always на обоих), а не собственный расчёт прогресса:
+ * лёгкий скролл, не пересёкший половину дистанции между точками, браузер
+ * сам пружинит обратно (это и даёт «потряхивание» без in-code подсчёта
+ * тиков колеса — тики трекпада и мыши физически разного размера, считать
+ * их вручную и есть тот самый anti-pattern из v1). Решительный скролл —
+ * в любую сторону — докручивает до соседней точки и не может её
+ * проскочить (stop:always). Улёт/возврат карточки — просто отражение
+ * того, на какой точке мы осели: IntersectionObserver на пустом
+ * сентинеле сразу перед <main> переключает класс .pb-flown. Никакого
+ * preventDefault, работает одинаково на мыши/трекпаде/тач — это нативный
+ * браузерный механизм, а не эмуляция его через JS.
  */
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -93,9 +103,43 @@ if ($promo):
     }
 ?>
     <style>
+        /* scroll-snap живёт на html, а не на .pb-wrap: снап-контейнер — это сам
+           скролл страницы, .pb-wrap и #pbMainTopMarker ниже — просто его точки.
+           За пределами этих двух точек (когда пользователь уже читает обычный
+           контент главной) снап ни во что не вмешивается — снаповать больше
+           не к чему, обычный скролл продолжается как ни в чём не бывало.
+           scroll-padding-top ЗДЕСЬ, а не scroll-margin-top на отдельных точках —
+           иначе две точки мерялись бы от разных систем отсчёта относительно
+           sticky-хедера (80px), и браузер на загрузке не мог однозначно решить,
+           какая позиция «нулевая» — реальный баг, из-за которого страница на
+           первом кадре без единого скролла уже оказывалась в улетевшем состоянии. */
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-padding-top: 80px;
+        }
+
         .pb-wrap {
             position: relative;
             background: #14041d;
+            /* Ровно один вьюпорт, без max/min-height кэпов: это snap-секция, и маркер
+               #pbMainTopMarker сразу после неё обязан начинаться НИЖЕ первого экрана —
+               иначе на высоких вьюпортах (там, где раньше 880px-кэп срабатывал раньше,
+               чем кончался вьюпорт) IntersectionObserver видел маркер уже на первом
+               кадре, и баннер оказывался «улетевшим» без единого скролла. Карточка
+               внутри (.pb-inner) сама ограничена по размеру и просто центрируется —
+               визуально она не станет больше, даже когда секция выше её на 4K-мониторе. */
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1700px;
+            perspective-origin: 50% 50%;
+            padding: 24px;
+            scroll-snap-align: start;
+            /* :always — decisive-скролл не может проскочить точку насквозь за один рывок,
+               а слабый — сам пружинит обратно (это и есть «потряхивание» без ручного счёта). */
+            scroll-snap-stop: always;
             --pb-flyX: 175%;
             --pb-flyY: -4%;
             --pb-flyZ: -380px;
@@ -120,36 +164,12 @@ if ($promo):
             }
         }
 
-        /* Раньше 220vh — под непрерывный scroll-scrub на всю анимацию.
-           Теперь анимация не привязана к позиции скролла напрямую (см. JS):
-           карточка либо стоит на месте, либо улетает по CSS-переходу, как
-           только скролл переваливает за небольшой порог. Запас нужен только
-           на то, чтобы sticky-подставка успела «поймать» карточку — не на
-           саму анимацию. */
-        .pb-outer {
-            position: relative;
-            height: 130vh;
-        }
-
-        @media (max-width:640px) {
-            .pb-outer {
-                height: 118vh;
-            }
-        }
-
-        .pb-stage {
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            max-height: 880px;
-            min-height: 460px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            perspective: 1700px;
-            perspective-origin: 50% 50%;
-            padding: 24px;
+        /* Пустой сентинел ровно на границе с <main> — вторая snap-точка. Компенсация
+           под sticky-хедер задана один раз, на контейнере (html { scroll-padding-top }
+           выше) — единая система отсчёта для обеих точек, не per-элементный margin. */
+        .pb-main-marker {
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
         }
 
         .pb-inner {
@@ -158,76 +178,6 @@ if ($promo):
             height: min(72vh, 620px);
             min-height: 360px;
             transform-style: preserve-3d;
-        }
-
-        .pb-title {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 52%;
-            min-width: 280px;
-            transform: translate(-32px, -50%);
-            opacity: 0;
-            pointer-events: none;
-            text-align: left;
-            transition: transform .4s ease, opacity .4s ease;
-        }
-
-        /* Раньше связано с --p непрерывно; теперь — тот же снэп, что у карточки:
-           текст появляется одним переходом в момент, когда карточка улетела.
-           БАГ (нашли по репорту Лео «баннер и текст под ним не кликабельны»):
-           .pb-title изначально pointer-events:none (пока спрятан под карточкой) —
-           а здесь сбрасывались только transform/opacity, pointer-events никогда
-           не возвращался в auto. Карточка улетает (pointer-events:none у самой
-           себя — тоже по дизайну), а текст, который появляется на её месте,
-           был навсегда мёртв для кликов, включая ссылку «Как это работает?». */
-        .pb-stage.pb-flown .pb-title {
-            transform: translate(0, -50%);
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        @media (max-width:900px) {
-            .pb-title {
-                display: none;
-            }
-        }
-
-        /* на узких экранах текст просто мешает */
-
-        .pb-title h2 {
-            margin: 0 0 14px;
-            font-size: clamp(22px, 3vw, 38px);
-            line-height: 1.1;
-            font-weight: 800;
-            letter-spacing: -.03em;
-            color: #f2f2f8;
-        }
-
-        .pb-title p {
-            margin: 0;
-            max-width: 440px;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #9c9cb6;
-        }
-
-        .pb-howlink {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            margin-top: 16px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #e88fc0;
-            text-decoration: none;
-            border-bottom: 1px solid rgba(232, 143, 192, .4);
-            transition: color .2s, border-color .2s;
-        }
-
-        .pb-howlink:hover {
-            color: #ff6fb8;
-            border-color: rgba(255, 111, 184, .7);
         }
 
         /* Раньше transform считался непрерывно из calc(var(--p,0) * ...) на каждый
@@ -413,10 +363,10 @@ if ($promo):
             background: #35d07f;
         }
 
-        /* Маленькая кнопка «оставить отзыв» — тот же акцентный розовый и то же
-           подчёркивание, что у pb-howlink, только внутри строки статистики:
-           так это читается как «вот рейтинг игры — а вот тут можно на него
-           повлиять», а не как отдельный большой CTA, спорящий с play-кнопкой. */
+        /* Маленькая кнопка «оставить отзыв» — акцентный розовый с подчёркиванием,
+           внутри строки статистики: так это читается как «вот рейтинг игры —
+           а вот тут можно на него повлиять», а не как отдельный большой CTA,
+           спорящий с play-кнопкой. */
         .pb-review-cta {
             color: #e88fc0;
             text-decoration: none;
@@ -539,81 +489,75 @@ if ($promo):
         }
     </style>
 
-    <div class="pb-wrap">
-        <div class="pb-outer" id="pbOuter">
-            <div class="pb-stage" id="pbStage">
-                <div class="pb-inner">
+    <div class="pb-wrap" id="pbWrap">
+        <div class="pb-inner">
 
-                    <div class="pb-title">
-                        <h2>Игры, которые<br>стоит заметить</h2>
-                        <p>Каждые сутки на этом месте — одна игра, которую продвигает её разработчик.
-                            Дальше — обычный каталог Dustore, как всегда.</p>
-                        <a class="pb-howlink" href="/promo">Как это работает? →</a>
-                    </div>
-
-                    <div class="pb-card" id="pbCard">
-                        <div class="pb-bg"></div>
-                        <a class="pb-bg-link" id="pbBgLink" href="/g/<?= (int)$promo['game_id'] ?>" aria-label="Открыть игру «<?= htmlspecialchars($promo['name']) ?>»"></a>
-                        <a class="pb-info-btn" href="/promo" target="_blank" rel="noopener" title="Что такое продвижение на Dustore">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="11" x2="12" y2="16.5" />
-                                <circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none" />
-                            </svg>
-                            промо
-                        </a>
-                        <div class="pb-content">
-                            <div class="pb-eyebrow">Продвигается сейчас</div>
-                            <h1><?= htmlspecialchars($promo['name']) ?></h1>
-                            <?php if ($pbDesc): ?><p class="pb-desc"><?= htmlspecialchars($pbDesc) ?></p><?php endif; ?>
-                            <a class="btn pb-btn" id="pbPlayBtn" href="/g/<?= (int)$promo['game_id'] ?>">
-                                <svg width="13" height="15" viewBox="0 0 14 16" fill="currentColor">
-                                    <path d="M13.5 7.13 1.5.2A1 1 0 0 0 0 1.06v13.88a1 1 0 0 0 1.5.86l12-6.93a1 1 0 0 0 0-1.74Z" />
-                                </svg>
-                                Смотреть игру
-                            </a>
-                            <?php if ($pbRating !== null || $__pb_launches > 0 || !empty($promo['downloads']) || $pbCanReview): ?>
-                                <div class="pb-stats">
-                                    <?php if ($pbRating !== null): ?>
-                                        <span class="pb-stat pb-stat--rating" title="Оценка <?= htmlspecialchars((string)$pbRating) ?> из 10 · <?= (int)$promo['reviews_count'] ?> отзывов">
-                                            <span class="pb-stars" aria-hidden="true">
-                                                <?php for ($i = 0; $i < 5; $i++): ?>
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="<?= $i < $pbStars ? 'currentColor' : 'none' ?>" stroke="currentColor" stroke-width="1.6">
-                                                        <path d="M12 2.5l2.9 6.05 6.6.77-4.85 4.6 1.28 6.58L12 17.3l-5.93 3.2 1.28-6.58-4.85-4.6 6.6-.77z" />
-                                                    </svg>
-                                                <?php endfor; ?>
-                                            </span>
-                                            <?= htmlspecialchars((string)$pbRating) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                    <?php if ($__pb_launches > 0): ?>
-                                        <span class="pb-stat">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M5 3l14 9-14 9V3z" />
-                                            </svg>
-                                            <?= number_format((int)$__pb_launches, 0, ',', ' ') ?> запусков
-                                        </span>
-                                    <?php endif; ?>
-                                    <?php if (!empty($promo['downloads'])): ?>
-                                        <span class="pb-stat"><span class="dot"></span><?= number_format((int)$promo['downloads'], 0, ',', ' ') ?> скачиваний</span>
-                                    <?php endif; ?>
-                                    <?php if ($pbCanReview): ?>
-                                        <a class="pb-stat pb-review-cta" id="pbReviewCta" href="/g/<?= (int)$promo['game_id'] ?>#review-form-wrap">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <div class="pb-card" id="pbCard">
+                <div class="pb-bg"></div>
+                <a class="pb-bg-link" id="pbBgLink" href="/g/<?= (int)$promo['game_id'] ?>" aria-label="Открыть игру «<?= htmlspecialchars($promo['name']) ?>»"></a>
+                <a class="pb-info-btn" href="/promo" target="_blank" rel="noopener" title="Что такое продвижение на Dustore">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="11" x2="12" y2="16.5" />
+                        <circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none" />
+                    </svg>
+                    промо
+                </a>
+                <div class="pb-content">
+                    <div class="pb-eyebrow">Продвигается сейчас</div>
+                    <h1><?= htmlspecialchars($promo['name']) ?></h1>
+                    <?php if ($pbDesc): ?><p class="pb-desc"><?= htmlspecialchars($pbDesc) ?></p><?php endif; ?>
+                    <a class="btn pb-btn" id="pbPlayBtn" href="/g/<?= (int)$promo['game_id'] ?>">
+                        <svg width="13" height="15" viewBox="0 0 14 16" fill="currentColor">
+                            <path d="M13.5 7.13 1.5.2A1 1 0 0 0 0 1.06v13.88a1 1 0 0 0 1.5.86l12-6.93a1 1 0 0 0 0-1.74Z" />
+                        </svg>
+                        Смотреть игру
+                    </a>
+                    <?php if ($pbRating !== null || $__pb_launches > 0 || !empty($promo['downloads']) || $pbCanReview): ?>
+                        <div class="pb-stats">
+                            <?php if ($pbRating !== null): ?>
+                                <span class="pb-stat pb-stat--rating" title="Оценка <?= htmlspecialchars((string)$pbRating) ?> из 10 · <?= (int)$promo['reviews_count'] ?> отзывов">
+                                    <span class="pb-stars" aria-hidden="true">
+                                        <?php for ($i = 0; $i < 5; $i++): ?>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="<?= $i < $pbStars ? 'currentColor' : 'none' ?>" stroke="currentColor" stroke-width="1.6">
                                                 <path d="M12 2.5l2.9 6.05 6.6.77-4.85 4.6 1.28 6.58L12 17.3l-5.93 3.2 1.28-6.58-4.85-4.6 6.6-.77z" />
                                             </svg>
-                                            Оставить отзыв
-                                        </a>
-                                    <?php endif; ?>
-                                </div>
+                                        <?php endfor; ?>
+                                    </span>
+                                    <?= htmlspecialchars((string)$pbRating) ?>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ($__pb_launches > 0): ?>
+                                <span class="pb-stat">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 3l14 9-14 9V3z" />
+                                    </svg>
+                                    <?= number_format((int)$__pb_launches, 0, ',', ' ') ?> запусков
+                                </span>
+                            <?php endif; ?>
+                            <?php if (!empty($promo['downloads'])): ?>
+                                <span class="pb-stat"><span class="dot"></span><?= number_format((int)$promo['downloads'], 0, ',', ' ') ?> скачиваний</span>
+                            <?php endif; ?>
+                            <?php if ($pbCanReview): ?>
+                                <a class="pb-stat pb-review-cta" id="pbReviewCta" href="/g/<?= (int)$promo['game_id'] ?>#review-form-wrap">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path d="M12 2.5l2.9 6.05 6.6.77-4.85 4.6 1.28 6.58L12 17.3l-5.93 3.2 1.28-6.58-4.85-4.6 6.6-.77z" />
+                                    </svg>
+                                    Оставить отзыв
+                                </a>
                             <?php endif; ?>
                         </div>
-                    </div>
-
+                    <?php endif; ?>
                 </div>
             </div>
+
         </div>
     </div>
+
+    <!-- Вторая snap-точка: пустой маркер строго на границе с <main>, который index.php
+         подключает сразу после этого файла (см. докблок вверху). Сам по себе невидим —
+         IntersectionObserver в JS ниже следит именно за ним, а не считает пиксели скролла. -->
+    <div class="pb-main-marker" id="pbMainTopMarker" aria-hidden="true"></div>
 
     <div class="pb-mini" id="pbMini">
         <div class="pb-mini-inner">
@@ -638,9 +582,9 @@ if ($promo):
             var GAME_ID = <?= (int)$promo['game_id'] ?>;
             var DISMISS_KEY = 'pbMiniDismissed:' + PROMO_ID;
 
-            var outer = document.getElementById('pbOuter');
-            var stage = document.getElementById('pbStage');
+            var wrap = document.getElementById('pbWrap');
             var card = document.getElementById('pbCard');
+            var marker = document.getElementById('pbMainTopMarker');
             var mini = document.getElementById('pbMini');
             var miniClose = document.getElementById('pbMiniClose');
 
@@ -649,46 +593,26 @@ if ($promo):
                 dismissed = sessionStorage.getItem(DISMISS_KEY) === '1';
             } catch (e) {}
 
-            // ── Два состояния вместо непрерывного прогресса: «на месте» и «улетела».
-            // Порог низкий и с гистерезисом (ENTER > EXIT) — чтобы карточка улетала
-            // почти сразу же, как начали скроллить (не зависала на полпути), но не
-            // дребезжала туда-обратно, если скролл качнулся ровно на границе. ──
-            var ENTER = 0.10;
-            var EXIT = 0.02;
+            // ── Состояние теперь не считается из позиции скролла вручную — им управляет
+            // сам scroll-snap (см. CSS): страница может осесть ровно на .pb-wrap («баннер»)
+            // или ровно на #pbMainTopMarker («верх главной»), третьего не дано. Здесь только
+            // отражаем, на какой из двух точек осели — через IntersectionObserver на маркере,
+            // а не пересчётом rect на каждый кадр скролла, как раньше. rootMargin сверху -80px —
+            // тот же отступ под sticky-хедер, что и scroll-margin-top у маркера в CSS: без него
+            // класс переключался бы чуть раньше физического приземления точки. ──
             var flown = false;
-            var raf = null;
-
-            function update() {
-                raf = null;
-                var rect = outer.getBoundingClientRect();
-                var travel = outer.offsetHeight - stage.offsetHeight;
-                var scrolled = -rect.top;
-                var p = travel > 0 ? Math.min(1, Math.max(0, scrolled / travel)) : 0;
-
-                if (!flown && p >= ENTER) {
-                    flown = true;
-                } else if (flown && p < EXIT) {
-                    flown = false;
-                } else {
-                    return; // состояние не поменялось — лишний reflow не нужен
-                }
-
-                card.classList.toggle('pb-flown', flown);
-                stage.classList.toggle('pb-flown', flown);
-                if (!dismissed) mini.classList.toggle('pb-visible', flown);
+            if (marker && 'IntersectionObserver' in window) {
+                var io = new IntersectionObserver(function(entries) {
+                    var entry = entries[entries.length - 1];
+                    flown = entry.isIntersecting;
+                    card.classList.toggle('pb-flown', flown);
+                    if (!dismissed) mini.classList.toggle('pb-visible', flown);
+                }, {
+                    threshold: 0,
+                    rootMargin: '-80px 0px 0px 0px'
+                });
+                io.observe(marker);
             }
-
-            function onScroll() {
-                if (raf) return;
-                raf = requestAnimationFrame(update);
-            }
-            window.addEventListener('scroll', onScroll, {
-                passive: true
-            });
-            window.addEventListener('resize', onScroll, {
-                passive: true
-            });
-            update();
 
             if (miniClose) {
                 miniClose.addEventListener('click', function() {
@@ -703,19 +627,19 @@ if ($promo):
             // ── 3D-параллакс от мыши — только пока карточка стоит на месте ──
             if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
                 var pbRaf = null;
-                stage.addEventListener('mousemove', function(e) {
+                wrap.addEventListener('mousemove', function(e) {
                     if (pbRaf) return;
                     pbRaf = requestAnimationFrame(function() {
                         pbRaf = null;
                         if (flown) return; // не мешаем параллаксом, когда карточка уже летит
-                        var r = stage.getBoundingClientRect();
+                        var r = wrap.getBoundingClientRect();
                         var mx = (e.clientX - r.left) / r.width - 0.5;
                         var my = (e.clientY - r.top) / r.height - 0.5;
                         card.style.setProperty('--tiltX', (-my * 6).toFixed(2) + 'deg');
                         card.style.setProperty('--tiltY', (mx * 8).toFixed(2) + 'deg');
                     });
                 });
-                stage.addEventListener('mouseleave', function() {
+                wrap.addEventListener('mouseleave', function() {
                     card.style.setProperty('--tiltX', '0deg');
                     card.style.setProperty('--tiltY', '0deg');
                 });
