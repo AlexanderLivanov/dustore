@@ -1305,6 +1305,73 @@ body.moonlight-theme .version-badge {
     opacity: 1;
 }
 
+/* =============================================================================
+   ПАРЯЩИЙ СЛОЙ НА КНОПКАХ ХЕДЕРА
+   JS (header.php) оборачивает содержимое кнопки в .float-layer. Кнопка —
+   preserve-3d, поэтому слой живёт в её 3D-пространстве: при наведении он
+   поднимается над поверхностью на --float-z, и perspective() из transform
+   кнопки сдвигает его при наклоне сильнее, чем фон, — это и есть параллакс.
+
+   Что ломает эффект: overflow (кроме visible), opacity < 1, filter,
+   clip-path, mask, mix-blend-mode, isolation на самой кнопке —
+   это «группирующие» свойства, они принудительно делают transform-style: flat,
+   и слой схлопывается обратно в плоскость. На детях — можно.
+   ============================================================================= */
+
+.header .button {
+    --float-z: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Не в наклоне — кнопка плавно возвращается на место, а не щёлкает */
+.header .button:not(.is-tilting) {
+    transition: transform .35s cubic-bezier(.2, .8, .2, 1), background-color .2s;
+}
+
+.header .button > .float-layer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+    transform: translateZ(0);
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1), filter .3s;
+}
+
+.header .button.is-tilting > .float-layer {
+    transform: translateZ(var(--float-z));
+    /* Тень падает на поверхность кнопки и уходит от курсора — второй сигнал
+       глубины для глаза, помимо параллакса */
+    filter: drop-shadow(
+        calc(var(--nx, 0) * -3px)
+        calc(3px - var(--ny, 0) * 2px)
+        3px rgba(0, 0, 0, .35)
+    );
+}
+
+/* Бейджи (абсолютные дети) висят ещё выше текста */
+.header .button > .float-badge {
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+
+.header .button.is-tilting > .float-badge {
+    transform: translateZ(calc(var(--float-z) * 1.6));
+}
+
+/* Внутри аватарки отступ задаёт gap слоя */
+.header .button > .float-layer .header-avatar {
+    margin-right: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header .button.is-tilting > .float-layer,
+    .header .button.is-tilting > .float-badge {
+        transform: none;
+        filter: none;
+    }
+}
+
 /* ── Лунная тема ──────────────────────────────────────────────────────────── */
 /* Специфичность выше, чем у .header.scrolled .header__bg — иначе при скролле
    лунная тема проигрывала бы каскаду и получала фон Appollo. */
