@@ -1,0 +1,22 @@
+# Единые переводы строк: в репозитории всегда LF.
+# Без этого редактор на Windows переписывает файлы в CRLF и git
+# показывает весь проект как «изменённый», хотя код не трогали.
+* text=auto eol=lf
+
+# Бинарники не нормализуем
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.zip binary
+*.gz binary
+*.exe binary
+*.dll binary
+*.ipa binary
+*.pdf binary
