@@ -55,8 +55,8 @@ require __DIR__ . '/../swad/static/elements/header.php';
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Эфир · Dustore</title>
-<link rel="stylesheet" href="/swad/css/chat.css">
+<title>Чаты · Dustore</title>
+<link rel="stylesheet" href="/swad/css/chat.css?v=<?= (int)@filemtime(__DIR__ . '/../swad/css/chat.css') ?>">
 </head>
 <body>
 
@@ -64,8 +64,8 @@ require __DIR__ . '/../swad/static/elements/header.php';
   <aside class="panel side">
     <div class="side-head">
       <div class="brand">
-        <span class="glyph">//</span>
-        <div>Эфир<small>dustore comms</small></div>
+        <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5.1A8 8 0 1 1 21 12z"/></svg></span>
+        <div>Чаты<small>личные · студии · уведомления</small></div>
       </div>
       <div class="tabs">
         <button type="button" class="tab active" data-tab="personal">Личные</button>
@@ -75,7 +75,7 @@ require __DIR__ . '/../swad/static/elements/header.php';
 
     <div class="search-top" id="searchWrap">
       <span class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input id="searchInput" placeholder="Поиск или новый эфир…" autocomplete="off">
+      <input id="searchInput" placeholder="Поиск или новый чат…" autocomplete="off">
       <button type="button" id="searchClear" aria-label="Очистить">&times;</button>
     </div>
 
@@ -84,7 +84,22 @@ require __DIR__ . '/../swad/static/elements/header.php';
   </aside>
 
   <section class="panel room" id="room">
-    <div class="room-empty" id="roomEmpty">Выберите диалог слева<br>или найдите собеседника через поиск</div>
+    <div class="room-empty" id="roomEmpty">
+      <div class="re-art" aria-hidden="true">
+        <svg width="132" height="104" viewBox="0 0 132 104" fill="none">
+          <defs><linearGradient id="reG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6379a"/><stop offset="1" stop-color="#74155d"/></linearGradient></defs>
+          <rect x="4" y="10" width="78" height="50" rx="16" fill="url(#reG)" opacity=".9"/>
+          <path d="M22 60v14l14-14" fill="url(#reG)" opacity=".9"/>
+          <rect x="50" y="42" width="78" height="46" rx="16" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.18)"/>
+          <path d="M110 88v12l-12-12" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.18)"/>
+          <circle cx="28" cy="35" r="4" fill="#fff"/><circle cx="43" cy="35" r="4" fill="#fff" opacity=".75"/><circle cx="58" cy="35" r="4" fill="#fff" opacity=".5"/>
+          <rect x="64" y="58" width="44" height="5" rx="2.5" fill="rgba(255,255,255,.35)"/><rect x="64" y="69" width="28" height="5" rx="2.5" fill="rgba(255,255,255,.2)"/>
+        </svg>
+      </div>
+      <div class="re-title">Выберите диалог</div>
+      <div class="re-text">Откройте переписку слева или найдите собеседника через поиск</div>
+      <button type="button" class="re-btn" id="emptyNew">Новый диалог</button>
+    </div>
 
     <div class="room-head" id="roomHead" hidden>
       <button class="back" id="back" aria-label="Назад">‹</button>
@@ -107,7 +122,7 @@ require __DIR__ . '/../swad/static/elements/header.php';
 
     <div class="composer" id="composer" hidden>
       <textarea id="input" rows="1" placeholder="Написать сообщение…"></textarea>
-      <button class="send" id="send" disabled aria-label="Отправить">↑</button>
+      <button class="send" id="send" disabled aria-label="Отправить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </div>
 
     <div class="profile" id="profile">
@@ -143,6 +158,8 @@ const initials = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).
 const avatarHTML = p => p.avatar
   ? `<img src="${esc(p.avatar)}" alt="" data-fb="${esc(initials(p.name))}" onerror="this.outerHTML=this.dataset.fb">`
   : esc(initials(p.name));
+const BELL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
+const avShape = p => p && p.kind === 'system' ? 'sys' : (p && p.kind === 'studio' ? 'sq' : 'round');
 const asDate = ts => new Date(String(ts).replace(' ', 'T'));
 const fmtTime = ts => asDate(ts).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
 const fmtDay  = ts => asDate(ts).toLocaleDateString('ru', { day: 'numeric', month: 'long' });
@@ -202,7 +219,8 @@ const POLL_THREAD = { fast: 3000, slow: 15000 };
 let wsRate = 'fast', ws = null, wsBackoff = 1000;
 
 const state = { tab: 'personal', convId: 0, lastId: 0, firstId: 0, hasMore: false,
-                draft: null, header: null, isSystem: false, listTimer: null, threadTimer: null };
+                draft: null, header: null, isSystem: false, listTimer: null, threadTimer: null,
+                peerLastRead: 0 };
 
 function startListTimer() {
   clearInterval(state.listTimer);
@@ -268,7 +286,7 @@ async function loadList() {
       : (c.last ? (c.last.mine ? '<span class="me">Вы: </span>' : '') + esc(c.last.body) : '<i>нет сообщений</i>');
     return `<button type="button" class="card${cls}${active}" data-id="${c.id}"
               data-peer='${esc(JSON.stringify(c.peer))}' data-studio="${c.type === 'studio' ? 1 : 0}" data-system="${isSys ? 1 : 0}">
-      <div class="av${isSys ? ' sys' : ''}">${isSys ? '!' : avatarHTML(c.peer)}</div>
+      <div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>
       <div class="c-main">
         <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span><span class="c-time">${c.ts ? fmtTime(c.ts) : ''}</span></div>
         <div class="c-last">${last}</div>
@@ -303,25 +321,28 @@ function openConv(id, peer, isStudio, draft, isSystem) {
 
   const th = $('#thread');
   th.innerHTML = ''; th.dataset.lastDay = '';
-  $('#rhAv').innerHTML = isSystem ? '!' : avatarHTML(peer);
+  $('#rhAv').className = 'av ' + avShape(isSystem ? { kind: 'system' } : peer);
+  $('#rhAv').innerHTML = isSystem ? BELL : avatarHTML(peer);
   $('#rhName').textContent = peer.name;
   $('#rhSub').innerHTML = '<span class="live off"></span>загрузка…';
   document.querySelectorAll('.card').forEach(c => c.classList.toggle('active', +c.dataset.id === id));
 
   clearInterval(state.threadTimer);
   if (id > 0) { loadInitial().then(startThreadTimer); }
-  else { th.innerHTML = `<div class="empty">Новый эфир с ${esc(peer.name)}.<br>Напишите первое сообщение ↓</div>`; }
+  else { th.innerHTML = `<div class="empty">Новый чат с ${esc(peer.name)}.<br>Напишите первое сообщение ↓</div>`; }
   $('#input').focus();
 }
 
 function applyHeader(h) {
   state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind };
+  state.peerLastRead = h.peer_last_read_id || 0;
   let sub;
   if (h.kind === 'system') sub = 'системные уведомления';
   else if (h.kind === 'studio') sub = 'официальный канал студии';
-  else sub = h.tag ? ('обращение · ' + h.tag) : (lastSeen(h.last_seen) || 'личный эфир');
+  else sub = h.tag ? ('обращение · ' + h.tag) : (lastSeen(h.last_seen) || 'личный чат');
   const online = h.kind === 'user' && h.last_seen && (Date.now() - asDate(h.last_seen) < 90000);
   $('#rhSub').innerHTML = `<span class="live${online ? '' : ' off'}"></span>${esc(sub)}`;
+  updateReadTicks();
 }
 
 /* Первая загрузка: свежий хвост. Раньше сервер отдавал первые 500 сообщений
@@ -337,6 +358,9 @@ async function loadInitial() {
   th.dataset.lastDay = '';
   if (state.hasMore) th.insertAdjacentHTML('beforeend', '<button type="button" class="more-btn" id="moreBtn">Показать раньше</button>');
   appendMessages(r.messages, 'beforeend');
+  if (!r.messages.length) {
+    th.innerHTML = `<div class="empty">${state.isSystem ? 'Уведомлений пока нет' : 'Сообщений пока нет — напишите первым'}</div>`;
+  }
   th.scrollTop = th.scrollHeight;
   bindMore();
   loadList();
@@ -380,6 +404,7 @@ async function pollThread() {
 function appendMessages(msgs, where) {
   if (!msgs.length) return;
   const th = $('#thread');
+  th.querySelector(':scope > .empty')?.remove();
   if (where === 'older') {
     // вставляем блоком в начало, день пересчитываем локально
     let html = '', lastDay = '';
@@ -407,16 +432,45 @@ function appendMessages(msgs, where) {
   bindDelete();
 }
 
+const TICK_SVG = '<svg viewBox="0 0 16 11" width="15" height="11" fill="none" xmlns="http://www.w3.org/2000/svg">'
+  + '<path class="tick-a" d="M1 5.3L4.2 8.5L9.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+  + '<path class="tick-b" d="M5.5 5.3L8.7 8.5L15 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+  + '</svg>';
+function renderTicks(id) {
+  return `<span class="ticks${state.peerLastRead >= id ? ' read' : ''}" data-mid="${id}">${TICK_SVG}</span>`;
+}
+function updateReadTicks() {
+  document.querySelectorAll('#thread .ticks').forEach(el => {
+    el.classList.toggle('read', state.peerLastRead >= +el.dataset.mid);
+  });
+}
+
+/* Ссылка из уведомления: только http(s) и относительные пути — никаких javascript: */
+function safeLink(u) {
+  u = String(u || '').trim();
+  return (/^https?:\/\//i.test(u) || (u.startsWith('/') && !u.startsWith('//'))) ? u : '';
+}
+function renderNotif(m) {
+  const link = safeLink(m.link);
+  return `<div class="notif${m.unread ? ' unread' : ''}" data-id="${m.id}">
+    <div class="n-ico">${BELL}</div>
+    <div class="n-main">
+      ${m.title ? `<div class="n-title">${esc(m.title)}</div>` : ''}
+      <div class="n-body">${esc(m.body)}</div>
+      <div class="n-foot"><span class="n-time">${fmtDay(m.at)}, ${fmtTime(m.at)}</span>${link ? `<a class="n-link" href="${esc(link)}">Открыть →</a>` : ''}</div>
+    </div>
+  </div>`;
+}
+
 function renderMsg(m) {
-  if (state.isSystem) {
-    return `<div class="sysmsg">${m.deleted ? '<i>удалено</i>' : esc(m.body)}<span class="b-time">${fmtTime(m.at)}</span></div>`;
-  }
+  if (state.isSystem) return renderNotif(m);
   if (m.deleted) {
     return `<div class="msg ${m.mine ? 'mine' : 'them'}" data-id="${m.id}"><div class="bubble gone">сообщение удалено</div></div>`;
   }
   const del = m.mine ? `<button class="del" data-mid="${m.id}" aria-label="Удалить">✕</button>` : '';
+  const ticks = m.mine ? renderTicks(m.id) : '';
   return `<div class="msg ${m.mine ? 'mine' : 'them'}" data-id="${m.id}">
-    <div class="bubble">${del}${esc(m.body)}<span class="b-time">${fmtTime(m.at)}</span></div></div>`;
+    <div class="bubble">${del}${esc(m.body)}<span class="b-time">${fmtTime(m.at)}${ticks}</span></div></div>`;
 }
 
 function bindDelete() {
@@ -575,8 +629,8 @@ function renderResults(users) {
   const box = $('#searchResults');
   if (!users.length) { box.innerHTML = '<div class="empty">Никого не нашлось</div>'; return; }
   box.innerHTML = users.map(u => `<button type="button" class="result" data-u='${esc(JSON.stringify(u))}'>
-      <div class="av">${avatarHTML({ name: u.username, avatar: u.avatar })}</div>
-      <div><div class="r-name">${esc(u.username)}</div><div class="r-sub">личный эфир</div></div>
+      <div class="av round">${avatarHTML({ name: u.username, avatar: u.avatar })}</div>
+      <div><div class="r-name">${esc(u.username)}</div><div class="r-sub">личный чат</div></div>
     </button>`).join('');
   box.querySelectorAll('.result').forEach(el => el.addEventListener('click', () => {
     const u = JSON.parse(el.dataset.u);
@@ -584,6 +638,8 @@ function renderResults(users) {
     openConv(0, { kind: 'user', id: u.id, name: u.username, avatar: u.avatar }, false, { to: u.id }, false);
   }));
 }
+
+$('#emptyNew').addEventListener('click', () => { $('#app').classList.remove('show-room'); $('#searchInput').focus(); });
 
 /* ── Вкладки ──────────────────────────────────────────────────────────────── */
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {

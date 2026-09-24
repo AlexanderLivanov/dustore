@@ -7,6 +7,7 @@ require_once __DIR__ . '/_helpers.php';
 require_once __DIR__ . '/_bridge.php';
 if (is_file(__DIR__ . '/push_helpers.php')) require_once __DIR__ . '/push_helpers.php';
 if (is_file(__DIR__ . '/ws_helpers.php')) require_once __DIR__ . '/ws_helpers.php';
+require_once __DIR__ . '/_crypto.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $db = (new Database())->connect('dustore');
@@ -56,16 +57,19 @@ function ensure_system_conv(PDO $db, int $userId): int {
         return $id;
     } catch (PDOException $e) { $st=$db->prepare("SELECT id FROM conversations WHERE dm_key=? LIMIT 1"); $st->execute([$key]); return (int)$st->fetchColumn(); }
 }
-/** Единый вызов из любого контроллера: положить уведомление юзеру. */
-function send_notification(PDO $db, int $userId, string $text): int {
-    $cid=ensure_system_conv($db,$userId);
-    $db->prepare("INSERT INTO messages(conversation_id,sender_id,body,created_at) VALUES(?,0,?,NOW())")->execute([$cid,$text]);
-    $mid=(int)$db->lastInsertId();
-    $db->prepare("UPDATE conversations SET last_message_id=?, last_message_at=NOW() WHERE id=?")->execute([$mid,$cid]);
-    $db->prepare("UPDATE conversation_participants SET archived=0 WHERE conversation_id=?")->execute([$cid]);
+/**
+ * Единый вызов из любого контроллера: положить уведомление юзеру.
+ * Пишем в ту же таблицу notifications, что и NotificationCenter, —
+ * именно её читает вкладка «Уведомления» в чате и красная точка в хедере.
+ * Раньше писали в messages системной беседы, и эти два мира не пересекались.
+ */
+function send_notification(PDO $db, int $userId, string $text, string $title = 'Dustore', ?string $link = null): int {
+    $db->prepare("INSERT INTO notifications(user_id,title,message,action,status,date) VALUES(?,?,?,?,'unread',NOW())")
+       ->execute([$userId, $title, $text, $link]);
+    $nid=(int)$db->lastInsertId();
     if (function_exists('push_enqueue_user')) push_enqueue_user($db, $userId, 'Уведомление · Dustore', $text);
-    if (function_exists('ws_notify')) ws_notify($cid, [$userId]);
-    return $mid;
+    if (function_exists('ws_notify')) ws_notify(ensure_system_conv($db,$userId), [$userId]);
+    return $nid;
 }
 
 function conv_access(PDO $db, int $convId, int $myId, array $myStudioIds): ?array {
@@ -216,6 +220,8 @@ if ($action === 'list') {
                          'name' => $users[$pid]['username'] ?? ('user#' . $pid),
                          'avatar' => $users[$pid]['avatar'] ?? null];
             }
+            // «Уведомления» живут в таблице notifications, а не в messages
+            if ($r['type'] === 'system') { $cards[] = system_card($db, $cid, $peer, $myId); continue; }
             $cards[] = build_card($r, $peer, $myId, $unreadOf[$cid] ?? 0);
         }
     }
@@ -227,7 +233,7 @@ function build_card(array $r, array $peer, int $myId, int $unread): array {
     $last = null;
     if (!empty($r['last_message_id']) && $r['l_at'] !== null) {
         $last = [
-            'body' => $r['l_del'] ? 'сообщение удалено' : (string)$r['l_body'],
+            'body' => $r['l_del'] ? 'сообщение удалено' : msg_decrypt((string)$r['l_body']),
             'at'   => $r['l_at'],
             'mine' => (int)$r['l_sender'] === $myId,
         ];
@@ -244,10 +250,35 @@ function notif_dto(array $n): array {
         'id'     => (int)$n['id'],
         'title'  => $n['title'] ?? 'Уведомление',
         'body'   => $n['text']  ?? $n['message'] ?? '',
-        'link'   => $n['link']  ?? null,
+        'link'   => $n['link']  ?? $n['action'] ?? null,
         'ts'     => $n['created_at'] ?? $n['date'] ?? null,
         'unread' => (($n['status'] ?? '') === 'unread'),
     ];
+}
+
+/** Карточка «Уведомления» в списке: последнее уведомление + число непрочитанных. */
+function system_card(PDO $db, int $convId, array $peer, int $myId): array {
+    $l = $db->prepare("SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 1");
+    $l->execute([$myId]);
+    $n = $l->fetch(PDO::FETCH_ASSOC);
+    $u = $db->prepare("SELECT COUNT(*) FROM notifications WHERE user_id=? AND status='unread'");
+    $u->execute([$myId]);
+    $last = null; $ts = null;
+    if ($n) {
+        $d = notif_dto($n);
+        $last = ['body' => trim($d['title'] . ' — ' . $d['body'], ' —'), 'at' => $d['ts'], 'mine' => false];
+        $ts = $d['ts'];
+    }
+    return ['id' => $convId, 'type' => 'system', 'peer' => $peer,
+            'last' => $last, 'unread' => (int)$u->fetchColumn(), 'ts' => $ts];
+}
+
+/** Уведомление в формате сообщения треда (фронт рендерит его карточкой). */
+function notif_as_msg(array $n): array {
+    $d = notif_dto($n);
+    return ['id' => $d['id'], 'mine' => false, 'deleted' => false, 'at' => $d['ts'],
+            'sender' => ['id' => 0, 'name' => 'Dustore', 'avatar' => null],
+            'title' => $d['title'], 'body' => $d['body'], 'link' => $d['link'], 'unread' => $d['unread']];
 }
 
 /* =================== ACTION: unread_total =================== */
@@ -315,6 +346,31 @@ if ($action === 'thread') {
     $LIMIT  = 60;
     $hasMore = false;
 
+    /* «Уведомления»: тред собирается из таблицы notifications. Пагинация та же
+       (after_id / before_id), только по notifications.id. Открыл вкладку —
+       всё прочитано, как и на старой странице /notifications. */
+    if ($c['type'] === 'system') {
+        if ($after > 0) {
+            $q = $db->prepare("SELECT * FROM notifications WHERE user_id=? AND id>? ORDER BY id ASC LIMIT 200");
+            $q->execute([$myId, $after]);
+            $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            if ($before > 0) {
+                $q = $db->prepare("SELECT * FROM notifications WHERE user_id=? AND id<? ORDER BY id DESC LIMIT " . ($LIMIT + 1));
+                $q->execute([$myId, $before]);
+            } else {
+                $q = $db->prepare("SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT " . ($LIMIT + 1));
+                $q->execute([$myId]);
+            }
+            $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+            if (count($rows) > $LIMIT) { $hasMore = true; array_pop($rows); }
+            $rows = array_reverse($rows);
+        }
+        $msgs = array_map('notif_as_msg', $rows);
+        $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
+        out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId)]);
+    }
+
     /* Было: WHERE id > 0 ORDER BY id ASC LIMIT 500 — то есть при открытии
        беседы отдавались САМЫЕ СТАРЫЕ 500 сообщений, а свежие догружались
        только следующим поллингом. В длинной переписке человек открывал чат
@@ -346,33 +402,37 @@ if ($action === 'thread') {
         $msgs[]=['id'=>(int)$m['id'],'mine'=>(int)$m['sender_id']===$myId,
             'sender'=>['id'=>(int)$m['sender_id'],'name'=>$smeta[(int)$m['sender_id']]['username'] ?? ('user#'.$m['sender_id']),
                        'avatar'=>$smeta[(int)$m['sender_id']]['avatar'] ?? null],
-            'body'=>$m['deleted_at'] ? null : $m['body'],'deleted'=>(bool)$m['deleted_at'],'at'=>$m['created_at']];
+            'body'=>$m['deleted_at'] ? null : msg_decrypt($m['body']),'deleted'=>(bool)$m['deleted_at'],'at'=>$m['created_at']];
     }
     // ФИКС прочтения: отмечаем по НАСТОЯЩЕМУ последнему id беседы, обе ветки указателя
     $trueMax=(int)$c['last_message_id'];
     if($trueMax>0){
-        if($c['_part']) $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(last_read_message_id,?)
+        if($c['_part']) $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?)
                                        WHERE conversation_id=? AND user_id=?")->execute([$trueMax,$cid,$myId]);
-        if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(studio_last_read_id,?) WHERE id=?")->execute([$trueMax,$cid]);
+        if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$trueMax,$cid]);
     }
     out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId)]);
 }
 function thread_header(PDO $db, array $c, int $myId): array {
-    if($c['type']==='system') return ['kind'=>'system','peer_id'=>0,'studio'=>false,'name'=>'Уведомления','avatar'=>null,'tag'=>null,'last_seen'=>null];
+    if($c['type']==='system') return ['kind'=>'system','peer_id'=>0,'studio'=>false,'name'=>'Уведомления','avatar'=>null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>0];
     if($c['type']==='studio'){
         $s=(get_studios_meta($db,[(int)$c['studio_id']]))[(int)$c['studio_id']] ?? [];
         if($c['_isStudioStaff']){
             $cust=customer_of($db,(int)$c['id']); $u=(get_users_meta($db,[$cust]))[$cust] ?? [];
             $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$cust]); $seen=$la->fetchColumn() ?: null;
-            return ['kind'=>'user','peer_id'=>$cust,'studio'=>true,'name'=>$u['username'] ?? ('user#'.$cust),'avatar'=>$u['avatar'] ?? null,'tag'=>$s['name'] ?? null,'last_seen'=>$seen];
+            $pr=$db->prepare("SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=? AND user_id=?");
+            $pr->execute([(int)$c['id'],$cust]); $peerRead=(int)($pr->fetchColumn() ?: 0);
+            return ['kind'=>'user','peer_id'=>$cust,'studio'=>true,'name'=>$u['username'] ?? ('user#'.$cust),'avatar'=>$u['avatar'] ?? null,'tag'=>$s['name'] ?? null,'last_seen'=>$seen,'peer_last_read_id'=>$peerRead];
         }
-        return ['kind'=>'studio','peer_id'=>(int)$c['studio_id'],'studio'=>true,'name'=>$s['name'] ?? ('studio#'.$c['studio_id']),'avatar'=>$s['logo'] ?? null,'tag'=>null,'last_seen'=>null];
+        return ['kind'=>'studio','peer_id'=>(int)$c['studio_id'],'studio'=>true,'name'=>$s['name'] ?? ('studio#'.$c['studio_id']),'avatar'=>$s['logo'] ?? null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>(int)($c['studio_last_read_id'] ?? 0)];
     }
     $o=$db->prepare("SELECT user_id FROM conversation_participants WHERE conversation_id=? AND user_id<>? LIMIT 1");
     $o->execute([(int)$c['id'],$myId]); $peer=(int)$o->fetchColumn();
     $u=(get_users_meta($db,[$peer]))[$peer] ?? [];
     $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$peer]); $seen=$la->fetchColumn() ?: null;
-    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen];
+    $pr=$db->prepare("SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=? AND user_id=?");
+    $pr->execute([(int)$c['id'],$peer]); $peerRead=(int)($pr->fetchColumn() ?: 0);
+    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$peerRead];
 }
 
 /* =================== ACTION: send =================== */
@@ -394,13 +454,13 @@ if ($action === 'send') {
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
     if($c['type']==='system') out(['ok'=>false,'error'=>'readonly']); // в «Уведомления» не пишем руками
 
-    $db->prepare("INSERT INTO messages(conversation_id,sender_id,body,created_at) VALUES(?,?,?,NOW())")->execute([$cid,$myId,$body]);
+    $db->prepare("INSERT INTO messages(conversation_id,sender_id,body,created_at) VALUES(?,?,?,NOW())")->execute([$cid,$myId,msg_encrypt($body)]);
     $msgId=(int)$db->lastInsertId();
     $db->prepare("UPDATE conversations SET last_message_id=?, last_message_at=NOW() WHERE id=?")->execute([$msgId,$cid]);
     // ФИКС: любое новое сообщение возвращает беседу из архива всем участникам
     $db->prepare("UPDATE conversation_participants SET archived=0 WHERE conversation_id=?")->execute([$cid]);
-    if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(studio_last_read_id,?) WHERE id=?")->execute([$msgId,$cid]);
-    else $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(last_read_message_id,?) WHERE conversation_id=? AND user_id=?")->execute([$msgId,$cid,$myId]);
+    if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$msgId,$cid]);
+    else $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?) WHERE conversation_id=? AND user_id=?")->execute([$msgId,$cid,$myId]);
 
     if(is_file(__DIR__.'/../vk/vk_helpers.php')){ require_once __DIR__.'/../vk/vk_helpers.php';
         if(function_exists('vk_enqueue_for_conversation')) vk_enqueue_for_conversation($db,$cid,$myId,$body); }

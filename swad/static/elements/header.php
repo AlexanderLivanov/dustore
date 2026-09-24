@@ -357,6 +357,13 @@ $stmt->execute([
                 </div>
             </div>
             <div class="section right-section">
+                <?php
+                /* $u_* нужны плашке профиля ниже, но нигде не определялись —
+                   на каждой странице сыпалось «Undefined variable». */
+                $u_auth   = $u_auth   ?? !empty($_SESSION['USERDATA']['id']);
+                $u_name   = $u_name   ?? ($u_auth ? ($_SESSION['USERDATA']['username'] ?? $_SESSION['USERDATA']['first_name'] ?? 'Профиль') : 'Войти');
+                $u_avatar = $u_avatar ?? ($u_auth ? ($_SESSION['USERDATA']['profile_picture'] ?? '') : '');
+                ?>
 
                 <button id="userChip" class="user-chip" type="button"
                     aria-haspopup="true" aria-expanded="false" aria-label="Меню профиля">
