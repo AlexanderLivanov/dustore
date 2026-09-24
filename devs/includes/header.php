@@ -142,13 +142,14 @@ $nav_items = [
     ['id' => 'studio',     'href' => '/devs/mystudio',  'icon' => 'apartment',          'label' => 'Моя студия'],
     ['id' => 'staff',      'href' => '/devs/staff',     'icon' => 'groups',             'label' => 'Сотрудники'],
     ['id' => 'select',     'href' => '/devs/select',    'icon' => 'swap_horiz',         'label' => 'Сменить студию'],
+    ['id' => 'promotion',  'href' => '/devs/promotion', 'icon' => 'campaign',           'label' => 'Продвижение'],
 ];
 
 if ($is_moder) {
     $nav_items[] = ['divider' => true, 'label' => 'Администрирование'];
     $nav_items[] = ['id' => 'recentorgs', 'href' => '/devs/recentorgs', 'icon' => 'domain_add',   'label' => 'Новые организации', 'badge' => $sb['orgs']];
     $nav_items[] = ['id' => 'experts',    'href' => '/devs/experts',    'icon' => 'verified_user', 'label' => 'Эксперты',          'badge' => $sb['experts']];
-    $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => $sb['security']];
+    $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => 'security'];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
     }

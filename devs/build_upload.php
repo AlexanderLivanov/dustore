@@ -1,10 +1,22 @@
 <?php
 // devs/build_upload.php — серверная загрузка билда: браузер шлёт чанки сюда,
 // PHP склеивает их в ОДИН файл и кладёт одним объектом в S3 (без CORS, без manifest).
-// Сохраняет плюсы: один .zip на выходе, лок приёма по джему, постановка VT в очередь.
+// Сохраняет плюсы: один файл на выходе, лок приёма по джему, постановка VT в очередь.
 //
-// POST (multipart): chunk, chunk_index, total_chunks, file_name, file_size, project_id
-// Ответ: { success, done, url?, size_mb?, message? }
+// С мультиплатформенными билдами (game_builds): каждая платформа грузится своим
+// вызовом с platform=Windows|macOS|Linux|Android|iOS|Web и попадает СВОЕЙ строкой
+// в game_builds (по одной на платформу, апсертом). Публичные раздатчики
+// (download_game.php, download_apk.php, webplayer.php) платформы не знают и
+// продолжают читать games.game_zip_url/game_zip_size — поэтому каждый успешный
+// апload ЗЕРКАЛИТСЯ и туда же, как и раньше: последний загруженный билд остаётся
+// «активным» для скачивания/веб-плеера, независимо от того, для какой платформы
+// его загрузили. Раздача разных файлов разным платформам одновременно — отдельная
+// следующая итерация (нужно трогать все три раздатчика + воркер VT-скана).
+//
+// POST (multipart): chunk, chunk_index, total_chunks, file_name, file_size, project_id, platform
+// Ответ: { success, done, url?, size_mb?, platform?, message? }
+
+const BU_PLATFORMS = ['Windows', 'macOS', 'Linux', 'Android', 'iOS', 'Web'];
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once(__DIR__ . '/../swad/config.php');
@@ -36,8 +48,10 @@ $total_chunks = max(1, (int)($_POST['total_chunks'] ?? 1));
 $file_name    = basename((string)($_POST['file_name'] ?? 'game.zip'));
 $file_size    = (int)($_POST['file_size'] ?? 0);
 $studio_id    = (int)($_SESSION['studio_id'] ?? 0);
+$platform     = (string)($_POST['platform'] ?? '');
 
 if (!$project_id)             bu_out(['success' => false, 'message' => 'project_id не передан']);
+if (!in_array($platform, BU_PLATFORMS, true)) bu_out(['success' => false, 'message' => 'Некорректная платформа']);
 if (!isset($_FILES['chunk'])) bu_out(['success' => false, 'message' => 'Чанк не получен']);
 if ($_FILES['chunk']['error'] !== UPLOAD_ERR_OK) {
     $map = [1 => 'Чанк больше upload_max_filesize (увеличь в php.ini до ~10M)', 3 => 'Чанк загружен частично — плохое соединение', 7 => 'Нет прав на запись во временную папку'];
@@ -64,8 +78,9 @@ if ($chunk_index === 0 && !empty($game['sprint_id'])) {
     }
 }
 
-// Временная папка под чанки проекта.
-$dir = __DIR__ . '/uploads/chunks/pid_' . $project_id;
+// Временная папка под чанки проекта — своя на каждую платформу, чтобы параллельная
+// загрузка в соседнюю вкладку (или повтор после обрыва связи) не мешала этой.
+$dir = __DIR__ . '/uploads/chunks/pid_' . $project_id . '_' . strtolower($platform);
 if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
     bu_out(['success' => false, 'message' => "Не удалось создать папку {$dir}"]);
 }
@@ -99,21 +114,34 @@ for ($i = 0; $i < $total_chunks; $i++) {
 fclose($out);
 $real_size = filesize($assembled);
 
-// Один объект в S3.
-$key = 'builds/studio-' . (int)$game['developer'] . '/game-' . (int)$game['id'] . '/build-' . bin2hex(random_bytes(6)) . '.' . $ext;
+// Один объект в S3, путь включает платформу.
+$key = 'builds/studio-' . (int)$game['developer'] . '/game-' . (int)$game['id'] . '/' . strtolower($platform) . '/build-' . bin2hex(random_bytes(6)) . '.' . $ext;
 $s3  = new S3Uploader();
 $url = $s3->uploadFile($assembled, $key);
 bu_rmdir($dir);
 
 if (!$url) bu_out(['success' => false, 'message' => 'S3 не принял файл — проверьте error_log Apache']);
 
-// Старый билд с S3 удалим (если был и отличается).
-$oldUrl = $game['game_zip_url'] ?? '';
-if ($oldUrl && $oldUrl !== $url) {
-    try { $s3->deleteFile($oldUrl); } catch (\Throwable $e) { error_log('old build delete: ' . $e->getMessage()); }
+// Старый билд ЭТОЙ платформы с S3 удалим (если был и отличается).
+$oldBuild = $conn->prepare("SELECT build_url FROM game_builds WHERE game_id = ? AND platform = ? LIMIT 1");
+$oldBuild->execute([$project_id, $platform]);
+$oldPlatformUrl = $oldBuild->fetchColumn();
+if ($oldPlatformUrl && $oldPlatformUrl !== $url) {
+    try { $s3->deleteFile($oldPlatformUrl); } catch (\Throwable $e) { error_log('old build delete: ' . $e->getMessage()); }
 }
 
-// Обновляем проект + ставим VT-скан в очередь.
+// game_builds — своя строка на платформу, апсерт.
+$conn->prepare("
+    INSERT INTO game_builds (game_id, platform, build_url, build_size)
+    VALUES (:gid, :pl, :url, :sz)
+    ON DUPLICATE KEY UPDATE build_url = VALUES(build_url), build_size = VALUES(build_size), updated_at = NOW()
+")->execute(['gid' => $project_id, 'pl' => $platform, 'url' => $url, 'sz' => $real_size]);
+
+// Зеркалим в games — это то, что реально отдают download_game.php / download_apk.php /
+// webplayer.php, они про платформы ничего не знают. Последний загруженный билд (с
+// любой вкладки) становится активным для скачивания — ровно то же поведение, что
+// было и до мультиплатформенности, когда билд был вообще один.
+$oldLegacyUrl = $game['game_zip_url'] ?? '';
 $conn->prepare("
     UPDATE games
     SET game_zip_url = :url, game_zip_size = :sz,
@@ -121,7 +149,8 @@ $conn->prepare("
         updated_at = NOW()
     WHERE id = :id
 ")->execute(['url' => $url, 'sz' => $real_size, 'id' => $project_id]);
+if ($oldLegacyUrl && $oldLegacyUrl !== $url && $oldLegacyUrl !== $oldPlatformUrl) {
+    try { $s3->deleteFile($oldLegacyUrl); } catch (\Throwable $e) { error_log('old legacy build delete: ' . $e->getMessage()); }
+}
 
-$conn->prepare("UPDATE games SET vt_status='queued' WHERE id=?")->execute([$game_id]);
-
-bu_out(['success' => true, 'done' => true, 'url' => $url, 'size_mb' => round($real_size / 1048576, 1)]);
+bu_out(['success' => true, 'done' => true, 'url' => $url, 'platform' => $platform, 'size_mb' => round($real_size / 1048576, 1)]);

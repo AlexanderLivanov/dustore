@@ -27,11 +27,14 @@ if (!$game_id) {
 $db  = new Database();
 $pdo = $db->connect();
 
-// Проверяем что игра существует и анонс включён
-$game = $pdo->prepare("SELECT id FROM games WHERE id = ? AND announce_enabled = 1");
+// Раньше лайк/вишлист был доступен только для анонсов (announce_enabled=1) —
+// теперь это общий механизм «сохранить в коллекцию без покупки/скачивания»
+// для любой игры (используется и большой карточкой анонса на game.php, и
+// компактным сердечком у обычных игр — см. gp_like_button.php).
+$game = $pdo->prepare("SELECT id FROM games WHERE id = ?");
 $game->execute([$game_id]);
 if (!$game->fetch()) {
-    echo json_encode(['ok' => false, 'message' => 'Game not found or announce disabled']);
+    echo json_encode(['ok' => false, 'message' => 'Game not found']);
     exit;
 }
 
