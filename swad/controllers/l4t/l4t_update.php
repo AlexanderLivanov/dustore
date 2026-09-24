@@ -121,7 +121,7 @@ try {
             if ($b64 === '') reply(['success' => false, 'msg' => 'no file']);
 
             // Раньше размер не ограничивался: base64 на 100 МБ клал PHP по памяти.
-            if (strlen($b64) > 8 * 1024 * 1024) reply(['success' => false, 'msg' => 'too_large']);
+            if (strlen($b64) > 11 * 1024 * 1024) reply(['success' => false, 'msg' => 'too_large']);   // ~8 МБ файла в base64
 
             $decoded = base64_decode(preg_replace('#^data:[^;]+;base64,#', '', $b64), true);
             if ($decoded === false || $decoded === '') reply(['success' => false, 'msg' => 'bad base64']);
@@ -145,6 +145,51 @@ try {
             unlink($tmp);
 
             reply(['success' => (bool)$url, 'url' => $url ?: '']);
+        }
+
+        /* ── ВИТРИНА ПРОФИЛЯ (desl4t.profiles) ───────────────────────── */
+        case 'profile': {
+            $in  = (array)($data['data'] ?? []);
+            $str = fn(string $k, int $n) => mb_substr(trim(strip_tags((string)($in[$k] ?? ''))), 0, $n);
+
+            $avail = (string)($in['availability'] ?? '');
+            if (!in_array($avail, ['open', 'hiring', 'busy', 'closed'], true)) $avail = '';
+
+            $accent = strtolower((string)($in['accent'] ?? ''));
+            if (!preg_match('/^#[0-9a-f]{6}$/', $accent)) $accent = '';
+
+            // Обложка — только https: через неё в style="" уезжает url(), и
+            // javascript:/data: там не место.
+            $banner = mb_substr(trim((string)($in['banner_url'] ?? '')), 0, 500);
+            if ($banner !== '' && !preg_match('~^https://[^\s"\'()<>]+$~i', $banner)) $banner = '';
+
+            $codes  = fn($v, int $max) => implode(',', array_slice(array_values(array_unique(array_filter(
+                array_map('strval', (array)$v), fn($c) => (bool)preg_match('/^[a-z0-9_]{1,24}$/', $c)))), 0, $max));
+
+            $hidden = array_values(array_intersect((array)($in['hidden_blocks'] ?? []), ['stats', 'activity', 'platform']));
+
+            $row = [
+                'headline'      => $str('headline', 120),
+                'status_emoji'  => mb_substr(trim((string)($in['status_emoji'] ?? '')), 0, 4),
+                'status_text'   => $str('status_text', 80),
+                'availability'  => $avail,
+                'location'      => $str('location', 80),
+                'banner_url'    => $banner,
+                'accent'        => $accent,
+                'pinned_badges' => $codes($in['pinned_badges'] ?? [], 3),
+                'hidden_blocks' => implode(',', $hidden),
+            ];
+            $row = array_map(fn($v) => $v === '' ? null : $v, $row);
+
+            $l4t = $db->connect('desl4t');
+            $l4t->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $cols = array_keys($row);
+            $l4t->prepare("INSERT INTO profiles (user_id, " . implode(', ', $cols) . ")
+                           VALUES (?, " . implode(', ', array_fill(0, count($cols), '?')) . ")
+                           ON DUPLICATE KEY UPDATE " . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $cols)))
+                ->execute(array_merge([$userId], array_values($row)));
+
+            reply(['success' => true, 'data' => $row]);
         }
 
         default:
