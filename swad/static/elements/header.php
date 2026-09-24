@@ -307,7 +307,7 @@ $stmt->execute([
 
                     <!-- Кнопка «Джемы» вместо дропдауна -->
                     <button class="button" onclick="location.href='/jams'">Джемы</button>
-                    <button class="button" onclick="location.href='/fid'">Фиды</button>
+                    <!-- <button class="button" onclick="location.href='/fid'">Фиды</button> -->
 
                     <!-- Dropdown «Для разработчиков» -->
                     <div class="nav-dropdown">
@@ -326,12 +326,9 @@ $stmt->execute([
                             <li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">Битый Пиксель<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
                             <li><span class="nav-dropdown__item nav-dropdown__item--disabled" role="menuitem">Медиа<span style="font-size:11px; opacity:0.6; margin-left:6px;">в разработке</span></span></li>
                             <li role="separator" style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px;"></li>-->
-
-                            <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
-                            <?php else: ?>
-                                <li>
+<li>
                                     <a class="nav-dropdown__item nav-dropdown__item--accent"
-                                        href="/login?backUrl=/devs/" role="menuitem"
+                                        href="/devs" role="menuitem"
                                         style="color:rgba(255,91,168,.7);font-weight:600;">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -340,10 +337,9 @@ $stmt->execute([
                                             <rect x="2" y="3" width="20" height="14" rx="2" />
                                             <path d="M8 21h8M12 17v4" />
                                         </svg>
-                                        Войти в консоль
+                                        Консоль разработчика
                                     </a>
                                 </li>
-                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
