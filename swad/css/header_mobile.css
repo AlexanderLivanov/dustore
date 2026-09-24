@@ -313,14 +313,11 @@
     }
 
     /* Float3D (float3d.js) в панели не нужен: display: contents возвращает
-       детей прямо во flex кнопки — gap и flex у svg работают как раньше,
-       а копия-тень и блик просто не рисуются */
-    .user-menu .button .f3d-stack,
+       детей прямо во flex кнопки — gap и flex у svg работают как раньше */
     .user-menu .button .f3d-layer {
         display: contents;
     }
 
-    .user-menu .button .f3d-shadow,
     .user-menu .button .f3d-glare {
         display: none;
     }

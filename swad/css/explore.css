@@ -450,7 +450,8 @@ main { display: block; }
     text-decoration: none;
     transition: transform 0.001s ease-out;
 }
-.game-card.is-tilting { will-change: transform; z-index: 2; }
+/* Наклон — Float3D (.f3d-on, пока карточка «живая»): поверх соседей */
+.game-card.f3d-on { z-index: 2; }
 .game-card:focus-visible { outline: 2px solid var(--ex-accent-hi); outline-offset: 2px; }
 .game-card[hidden] { display: none; }
 
@@ -502,30 +503,8 @@ main { display: block; }
 }
 
 
-/* Блик: скользит за курсором через --dx, задаёт tilt-IIFE */
-.gc-inner::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        115deg,
-        transparent 0%,
-        rgba(255,255,255,0.10) 20%,
-        rgba(255,255,255,0.50) 40%,
-        rgba(255,255,255,0.10) 60%,
-        transparent 80%
-    );
-    background-size: 200% 100%;
-    background-position: calc(50% + var(--dx, 0%)) 0;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
-    z-index: 2;
-    mix-blend-mode: overlay;
-    border-radius: inherit;
-}
-.game-card.is-tilting .gc-inner::after,
-.game-card:hover .gc-inner::after { opacity: 1; }
+/* Блик за курсором теперь рисует Float3D (.f3d-glare внутри .gc-inner),
+   его яркость — общая настройка --f3d-glare в swad/css/float3d.css. */
 
 .game-image {
     position: relative;

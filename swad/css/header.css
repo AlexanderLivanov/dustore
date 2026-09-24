@@ -226,11 +226,6 @@ body {
 }
 
 
-.header .button {
-    transform-style: preserve-3d;
-    will-change: transform;
-    transition: transform 0.001s ease-out;
-}
 
 
 /* Контейнеры кнопок (buttons-left/right) */
@@ -1236,10 +1231,6 @@ body.dusty-open {
     user-select: none;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
-    transform-style: preserve-3d;
-    will-change: transform;
-    transition: transform 0.001s ease-out;
 }
 
 /* Moonlight-тема */
@@ -1249,49 +1240,29 @@ body.moonlight-theme .version-badge {
 }
 
 /* =============================================================================
-   FLOAT3D В ХЕДЕРЕ — наклон + парящий контент на кнопках и бейдже версии.
-   Механика: swad/css/float3d.css + swad/js/float3d.js (подключается в header.php).
-   Здесь — только настройки для хедера. Подбирать вживую: Alt+Shift+F на сайте,
-   двигаешь ползунки → «Копировать CSS» → вставляешь значения сюда.
+   FLOAT3D В ХЕДЕРЕ — наклон + парящая надпись на кнопках и бейдже версии.
+   Механика и ВСЕ настройки эффекта — swad/css/float3d.css (блок :root),
+   подключение — Float3D.register(...) в header.php. Здесь только вёрстка
+   самих кнопок; переменные --f3d-* здесь не переопределяем — иначе общие
+   настройки перестали бы действовать на хедер.
    ============================================================================= */
 
+/* Кнопка центрирует содержимое флексом: аватарка и имя встают по центру
+   кнопки, а не по базовой линии шрифта. Слой Float3D повторяет эту раскладку. */
 .header .button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
 }
 
-.header .button.f3d,
-.version-badge.f3d {
-    --f3d-perspective: 320px;
-    --f3d-tilt: 15deg;
-    --f3d-hover-scale: 1.08;
-    --f3d-hover-rise: -3px;
-    --f3d-depth: 26px;
-    --f3d-drift: 2px;
-    --f3d-shadow-offset: 6px;
-    --f3d-shadow-blur: 4px;
-    --f3d-shadow-opacity: .55;
-    --f3d-glare: .2;
-    --f3d-gap: 6px;
-}
-
-/* Маленький бейдж — пониже, иначе цифры версии улетают за его края */
-.version-badge.f3d {
-    --f3d-depth: 14px;
-    --f3d-shadow-offset: 3px;
-    overflow: visible;      /* overflow: hidden схлопнул бы 3D в плоскость */
-}
-
-/* line-height: 1 — аватарка и имя центрируются по боксу строки, а не по базовой линии */
-.header .f3d-layer,
-.header .f3d-shadow {
+/* line-height: 1 — аватарка и имя центрируются по боксу строки */
+.header .button .f3d-layer {
     line-height: 1;
 }
 
-/* Отступ у аватарки теперь задаёт gap слоя */
-.header .f3d-layer .header-avatar,
-.header .f3d-shadow .header-avatar {
+/* Отступ у аватарки задаёт gap кнопки */
+.header .button .header-avatar {
     margin-right: 0;
 }
 

@@ -1241,38 +1241,9 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
         });
     });
 
-    // Tilt вне .grid
-    (function() {
-        const btns = document.querySelectorAll('.btn-primary,.btn-join,.btn-team,.btn-share,.btn-next,.btn-submit,.btn-back,.btn-add,.btn-remove,.filter-btn,.nav-btn,.tab-btn,.btn-close');
-        function reset(b)  { b.style.transform = ''; }
-        function tilt(e) {
-            const b = e.currentTarget; if (b.closest('.grid')) return;
-            const r = b.getBoundingClientRect();
-            const nx = (e.clientX-r.left)/r.width*2-1, ny = (e.clientY-r.top)/r.height*2-1;
-            b.style.transform = `perspective(400px) rotateX(${-15*ny}deg) rotateY(${15*nx}deg) translateY(-3px) scale(1.04)`;
-        }
-        btns.forEach(b => { b.addEventListener('mousemove', tilt); b.addEventListener('mouseleave', e => reset(e.currentTarget)); });
-    })();
-
-    // Tilt внутри .grid (делегирование)
-    (function() {
-        const grid = document.getElementById('grid'); if (!grid) return;
-        let cur = null;
-        const sel = '.btn-primary,.btn-join,.btn-team,.btn-share,.btn-next,.btn-submit,.btn-back,.btn-add,.btn-remove,.filter-btn,.nav-btn,.step-tab,.btn-close';
-        function reset(el) { if (el) el.style.transform = ''; }
-        function tilt(el, e) {
-            const r = el.getBoundingClientRect();
-            const nx = (e.clientX-r.left)/r.width*2-1, ny = (e.clientY-r.top)/r.height*2-1;
-            el.style.transform = `perspective(400px) rotateX(${-15*ny}deg) rotateY(${15*nx}deg) translateY(-3px) scale(1.06)`;
-        }
-        grid.addEventListener('mousemove', e => {
-            const t = e.target.closest(sel);
-            if (!t) { reset(cur); cur = null; return; }
-            if (cur && cur !== t) reset(cur);
-            cur = t; tilt(t, e);
-        });
-        grid.addEventListener('mouseleave', () => { reset(cur); cur = null; });
-    })();
+    // Наклон кнопок (и в .grid, и вне её) — Float3D, общие настройки сайта.
+    // Кнопки внутри .grid, дорисованные позже, подхватываются сами.
+    window.Float3D?.register('.btn-primary, .btn-join, .btn-team, .btn-share, .btn-next, .btn-submit, .btn-back, .btn-add, .btn-remove, .filter-btn, .nav-btn, .tab-btn, .step-tab, .btn-close');
 
     // Анимация поиска
     (function() {

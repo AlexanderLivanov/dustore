@@ -932,20 +932,6 @@ document.querySelectorAll('.acceptFriend').forEach(btn => {
 });
 </script>
 
-<script>
-// ── 3D-наклон вкладок ────────────────────────────────────────────────────
-(function() {
-    document.querySelectorAll('.profile-left .tab-button').forEach(btn => {
-        btn.addEventListener('mousemove', e => {
-            const r = btn.getBoundingClientRect();
-            const nx = ((e.clientX-r.left)/r.width)*2-1;
-            const ny = ((e.clientY-r.top)/r.height)*2-1;
-            btn.style.transform = `perspective(400px) rotateX(${-8*ny}deg) rotateY(${8*nx}deg) translateY(-3px) scale(1.06)`;
-        });
-        btn.addEventListener('mouseleave', () => { btn.style.transform=''; });
-    });
-})();
-</script>
 
 <script>
 // ── Карусель ─────────────────────────────────────────────────────────────
@@ -1012,20 +998,8 @@ document.querySelectorAll('.showcase-tab').forEach(tab => {
 </script>
 
 <script>
-// ── 3D-наклон кнопок ─────────────────────────────────────────────────────
-(function() {
-    ['#friendActionBtn','.showcase-tab','.profile-left .tab-button'].forEach(sel=>{
-        document.querySelectorAll(sel).forEach(btn=>{
-            btn.style.transformStyle='preserve-3d';
-            btn.style.willChange='transform';
-            btn.addEventListener('mousemove',e=>{
-                const r=btn.getBoundingClientRect();
-                btn.style.transform=`perspective(400px) rotateX(${-15*((e.clientY-r.top)/r.height*2-1)}deg) rotateY(${15*((e.clientX-r.left)/r.width*2-1)}deg) translateY(-3px) scale(1.04)`;
-            });
-            btn.addEventListener('mouseleave',()=>{btn.style.transform='';});
-        });
-    });
-})();
+// ── 3D-наклон кнопок и вкладок — Float3D, общие настройки сайта (swad/css/float3d.css)
+window.Float3D?.register('#friendActionBtn, .showcase-tab, .profile-left .tab-button');
 </script>
 </body>
 </html>

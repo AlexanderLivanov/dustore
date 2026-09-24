@@ -565,28 +565,8 @@ body.moonlight-theme {
     transform: translateY(-10px);
     box-shadow: 0 15px 30px rgba(0,0,0,0.3);
 }
-.ac::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: linear-gradient(
-        115deg,
-        transparent 0%,
-        rgba(255,255,255,0.1) 20%,
-        rgba(255,255,255,0.5) 40%,
-        rgba(255,255,255,0.1) 60%,
-        transparent 80%
-    );
-    background-size: 200% 100%;
-    background-position: calc(50% + var(--dx, 0%)) 0;
-    opacity: 0;
-    transition: opacity 0.2s;
-    pointer-events: none;
-    z-index: 2;
-    mix-blend-mode: overlay;
-}
-.ac:hover::after { opacity: 1; }
+/* Блик за курсором рисует Float3D (.f3d-glare), яркость — общая настройка
+   --f3d-glare в swad/css/float3d.css */
 .ac::before {
     content: "";
     position: absolute;
@@ -1273,37 +1253,8 @@ body.moonlight-theme {
             });
         })();
 
-        /* ── 3D tilt on cards ── */
-        (function() {
-            const grid = document.getElementById('assetsGrid');
-            if (!grid) return;
-            let active = null;
-            grid.addEventListener('mousemove', e => {
-                const c = e.target.closest('.ac');
-                if (!c) return;
-                if (active !== c) {
-                    if (active) active.style.transform = '';
-                    active = c;
-                }
-                const r = c.getBoundingClientRect();
-                const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
-                const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
-                c.style.transform = `perspective(700px) rotateX(${-9*ny}deg) rotateY(${9*nx}deg) translateY(-5px) scale(1.018)`;
-            });
-            grid.addEventListener('mouseleave', () => {
-                if (active) {
-                    active.style.transform = '';
-                    active = null;
-                }
-            });
-            grid.addEventListener('mouseout', e => {
-                const c = e.target.closest('.ac');
-                if (c && !c.contains(e.relatedTarget)) {
-                    c.style.transform = '';
-                    if (active === c) active = null;
-                }
-            });
-        })();
+        /* ── Наклон карточек и парящее название — Float3D, общие настройки сайта ── */
+        window.Float3D?.register('.ac', { float: '.ac-name', card: true });
 
         /* ── Cmd+K ── */
         document.addEventListener('keydown', e => {

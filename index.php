@@ -1258,34 +1258,20 @@ mobile_redirect_if_needed();
             // в наклоне навсегда.
             if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
+            /* Кнопки (.btn, .vote-btn) и карточки платформы наклоняет Float3D — общие
+               настройки в swad/css/float3d.css. Здесь остался только перетаскиваемый
+               баннер голосования: его наклон гасится на время драга (см. ниже). */
+            if (window.Float3D) {
+                Float3D.register('.platform-card:not(.in-development)', { float: 'h3', card: true });
+            }
+
             var GROUPS = [
                 /* селектор                                  угол  подъём  масштаб  перспектива */
-                {
-                    sel: '.btn',
-                    a: 15,
-                    lift: -3,
-                    s: 1.10,
-                    p: 400
-                },
-                {
-                    sel: '.vote-btn',
-                    a: 15,
-                    lift: -3,
-                    s: 1.10,
-                    p: 400
-                },
                 {
                     sel: '#vote-banner',
                     a: 6,
                     lift: 0,
                     s: 1.00,
-                    p: 900
-                },
-                {
-                    sel: '.platform-card:not(.in-development)',
-                    a: 8,
-                    lift: -10,
-                    s: 1.02,
                     p: 900
                 }
             ];

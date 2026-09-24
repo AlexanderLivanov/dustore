@@ -735,10 +735,14 @@ $stmt->execute([
                 imageContainer.addEventListener('mouseleave', resetTilt);
             });
 
-            /* Наклон за курсором + контент, парящий над кнопкой: swad/js/float3d.js.
-               Настройки — блок «FLOAT3D В ХЕДЕРЕ» в header.css; подбирать вживую —
-               Alt+Shift+F на любой странице (или ?f3d в адресе). */
-            window.Float3D?.attach('.header .button, .version-badge');
+            /* Float3D — наклон за курсором + парящая надпись (swad/js/float3d.js).
+               Все настройки — блок :root в swad/css/float3d.css, подбирать вживую —
+               Alt+Shift+F на любой странице. Здесь — элементы, общие для всего сайта;
+               кнопки и карточки конкретных страниц подключаются на своих страницах. */
+            if (window.Float3D) {
+                Float3D.register('.header .button, .version-badge');
+                Float3D.register('.btn, .vote-btn');    // общие кнопки из pages.css
+            }
 
 
             window.addEventListener('load', function() {

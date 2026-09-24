@@ -1207,32 +1207,9 @@ require_once('../swad/static/elements/header.php');
     }
 </script>
 
-<!-- Эффект наклона -->
+<!-- Эффект наклона — Float3D, общие настройки сайта (swad/css/float3d.css) -->
 <script>
-(function() {
-    const buttons = document.querySelectorAll('.nav-btn, .btn-primary, .sidebar-item, .btn-team');
-    if (!buttons.length) return;
-    function resetTilt(btn) { btn.style.transform = ''; }
-    function handleMouseMove(e) {
-        const btn = e.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const nx = (x / rect.width) * 2 - 1;
-        const ny = (y / rect.height) * 2 - 1;
-        const maxAngle = 15;
-        const rotateY = maxAngle * nx;
-        const rotateX = -maxAngle * ny;
-        const translateY = -3;
-        const scale = 1.1;
-        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-    }
-    function handleMouseLeave(e) { resetTilt(e.currentTarget); }
-    buttons.forEach(btn => {
-        btn.addEventListener('mousemove', handleMouseMove);
-        btn.addEventListener('mouseleave', handleMouseLeave);
-    });
-})();
+window.Float3D?.register('.nav-btn, .btn-primary, .sidebar-item, .btn-team');
 </script>
 
 </body>

@@ -1,32 +1,28 @@
 /*
- * Float3D — наклон элемента за курсором + контент, парящий над поверхностью.
- * swad/js/float3d.js (стили — swad/css/float3d.css)
+ * Float3D — наклон элемента за курсором + содержимое, парящее над поверхностью.
+ * swad/js/float3d.js (картинка и ВСЕ настройки — swad/css/float3d.css)
+ *
+ * Подключение элементов — одной строкой, в любом месте страницы:
+ *   Float3D.register('.btn');                                   кнопка: парит вся надпись
+ *   Float3D.register('.game-card', { float: '.game-title' });   карточка: парит только название
+ *   Опции: float   — что внутри парит (без неё — всё содержимое);
+ *          surface — видимая поверхность, если это не сам элемент (по ней считается курсор);
+ *          card    — профиль «карточка» (.f3d--card в CSS: свой масштаб и подъём).
+ * Элементы, дорисованные скриптом позже, подхватываются сами: слушатель один на документ,
+ * а элемент «оживает» при первом наведении.
  *
  * Разделение обязанностей:
- *   JS  — только ввод и физика. Курсор → nx/ny ∈ [-1..1], подъём lift ∈ [0..1]
- *         (с перелётом, если пружина «мягкая»). Три числа пишутся в CSS-переменные
- *         --f3d-nx / --f3d-ny / --f3d-lift на элементе, 60 раз в секунду, пока
- *         что-то движется, и ни кадра дольше.
- *   CSS — вся картинка. Из этих трёх чисел и настроек (--f3d-depth и т.п.)
- *         собираются transform поверхности, слоя, тени и блика. Поэтому
- *         крутить эффект можно из CSS, не трогая этот файл.
+ *   JS  — ввод и физика. Курсор → nx/ny ∈ [-1..1], подъём lift ∈ [0..1] (с перелётом),
+ *         три числа пишутся в --f3d-nx / --f3d-ny / --f3d-lift на элементе.
+ *   CSS — вся картинка: transform поверхности, сдвиг и тень парящего слоя, блик.
  *
- * Разметка после attach():
- *   <button class="f3d">
- *     <span class="f3d-glare">              блик-«фонарик» на поверхности (z = 0)
- *     <span class="f3d-stack">              одна ячейка: слой и тень лежат друг на друге
- *       <span class="f3d-layer">…контент…   парит на --f3d-depth над поверхностью
- *       <span class="f3d-shadow">…копия…    тень контента, лежит на поверхности (z = 0)
- *     …абсолютные дети (бейджи) получают .f3d-badge и парят ещё выше
+ * Глубина — эмуляция («2.5D»), а не настоящий preserve-3d. Настоящее 3D ломает любой
+ * overflow/opacity/filter между элементом и парящим слоем (а у карточек они есть всегда).
+ * Эмуляция считает, куда бы сместился слой на высоте d при наклоне на угол φ: d·tan φ
+ * в плоскости поверхности, — и рисует его там, со своей перспективой для «приближения».
+ * После поворота поверхности это ровно та же картинка, но работает внутри чего угодно.
  *
- * Почему тень — отдельная копия, а не drop-shadow на слое: drop-shadow едет
- * вместе со слоем, и между текстом и тенью нет параллакса. А именно по
- * расхождению «предмет ↔ его тень» глаз и понимает, что предмет висит в воздухе.
- *
- * API:
- *   Float3D.attach('.selector' | element | NodeList)
- *   Float3D.panel()       — живая настройка; то же по Alt+Shift+F или ?f3d в адресе
- *   <el data-f3d>         — подключится сам на DOMContentLoaded
+ * API: Float3D.register(selector, opts) · Float3D.panel() (или Alt+Shift+F, или ?f3d в адресе)
  */
 (function () {
     'use strict';
@@ -34,18 +30,24 @@
 
     const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-    const instances = new Map();
-    const STEP = 1 / 240;      // шаг физики: пружина устойчива при любой частоте кадров
+    const STEP = 1 / 240;          // шаг физики: пружина устойчива при любой частоте кадров
 
-    // Любой скролл или ресайз сдвигает элементы под курсором — кэш rect устаревает
+    const registry = [];            // { sel, float, surface, card }
+    let selector = '';
+    const instances = new WeakMap();
+    const active = new Set();
+
+    // Скролл/ресайз сдвигают элементы под курсором — кэш прямоугольников устаревает
     let layoutStamp = 0;
-    const bumpLayout = () => { layoutStamp++; };
-    addEventListener('scroll', bumpLayout, { capture: true, passive: true });
-    addEventListener('resize', bumpLayout, { passive: true });
+    addEventListener('resize', () => { layoutStamp++; }, { passive: true });
+    addEventListener('scroll', (e) => {
+        layoutStamp++;
+        // Прокрутилась страница — элементы уехали из-под неподвижного курсора
+        if (e.target === document || e.target === document.scrollingElement) releaseAll();
+    }, { capture: true, passive: true });
 
     /* Пружина: x тянется к target с жёсткостью k, трение c гасит скорость.
-       Коэффициент затухания ζ = c / (2·√k): < 1 — с перелётом («пружинит»),
-       ≥ 1 — плавно, без перелёта. Полунеявный Эйлер — две строки и стабилен. */
+       Коэффициент затухания ζ = c / (2·√k): < 1 — с перелётом, ≥ 1 — плавно, без него. */
     class Spring {
         constructor() { this.x = 0; this.v = 0; this.target = 0; }
         step(dt, k, c) {
@@ -57,12 +59,8 @@
     }
 
     const clamp = (v) => Math.max(-1, Math.min(1, v));
-
-    function span(cls) {
-        const el = document.createElement('span');
-        el.className = cls;
-        return el;
-    }
+    // Разбить computed-список по запятым, не ломая cubic-bezier(a, b, c, d)
+    const splitList = (s) => s.split(/,(?![^(]*\))/).map((t) => t.trim());
 
     function readConfig(el) {
         const cs = getComputedStyle(el);
@@ -77,142 +75,82 @@
             liftC: num('--f3d-lift-damping', 13),
             press: num('--f3d-press', 0.3),
         };
-        // При «уменьшить движение» — без перелётов
         if (reducedMotion.matches) cfg.liftC = Math.max(cfg.liftC, 2 * Math.sqrt(cfg.liftK));
         return cfg;
     }
 
     class Float {
-        constructor(el) {
+        constructor(el, entry) {
             this.el = el;
+            // Опции можно задать и прямо в разметке: data-f3d-float=".title" data-f3d-card
+            this.entry = entry = Object.assign({}, entry, {
+                float: entry.float || el.dataset.f3dFloat,
+                card: entry.card || el.hasAttribute('data-f3d-card'),
+            });
+            this.surface = (entry.surface && el.querySelector(entry.surface)) || el;
             this.nx = new Spring();
             this.ny = new Spring();
             this.lift = new Spring();
-            this.hover = false;
             this.raf = 0;
             this.stamp = -1;
+            this.on = false;
             this.tick = this.tick.bind(this);
             this.build();
-            this.bind();
+            // Поверхность меняет размер сама (раскрытие карточки) — перемерить при следующем движении
+            if (this.surface !== el && window.ResizeObserver) {
+                new ResizeObserver(() => { this.stamp = -1; }).observe(this.surface);
+            }
         }
 
         build() {
             const el = this.el;
-            const glare = span('f3d-glare');
-            const stack = span('f3d-stack');
-            const layer = span('f3d-layer');
-            const shadow = span('f3d-shadow');
-            glare.setAttribute('aria-hidden', 'true');
-            shadow.setAttribute('aria-hidden', 'true');
-
-            // Абсолютных детей (бейджи) в слой не переносим: слой с transform стал бы
-            // для них containing block, и top/right считались бы уже от него
-            for (const node of Array.from(el.childNodes)) {
-                if (node.nodeType === Node.ELEMENT_NODE && getComputedStyle(node).position === 'absolute') {
-                    node.classList.add('f3d-badge');
-                    continue;
-                }
-                layer.appendChild(node);
-            }
-            // Тень после слоя: querySelector по кнопке находит оригинал, а не копию
-            stack.append(layer, shadow);
-            el.prepend(glare, stack);
             el.classList.add('f3d');
+            if (this.entry.card) el.classList.add('f3d--card');
 
-            this.layer = layer;
-            this.shadow = shadow;
-            this.syncShadow();
-
-            // Сторонний код меняет содержимое (иконка темы, подпись профиля) — тень догоняет сама
-            let queued = false;
-            new MutationObserver(() => {
-                if (queued) return;
-                queued = true;
-                queueMicrotask(() => { queued = false; this.syncShadow(); });
-            }).observe(layer, { childList: true, subtree: true, characterData: true, attributes: true });
-        }
-
-        syncShadow() {
-            const copy = document.createDocumentFragment();
-            this.layer.childNodes.forEach((n) => copy.appendChild(n.cloneNode(true)));
-            copy.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
-            this.shadow.replaceChildren(copy);
-        }
-
-        bind() {
-            const el = this.el;
-            const isTouch = (e) => e.pointerType === 'touch';
-
-            /* Зона наведения — прямоугольник элемента В ПОКОЕ, а не его наклонённая
-               фигура. Иначе у края: край уходит вглубь и выскальзывает из-под курсора →
-               pointerleave → элемент ложится обратно → снова под курсором → enter…
-               и так по кругу, кнопка дрожит. Поэтому pointerleave внутри прямоугольника
-               игнорируем и досматриваем курсор на уровне документа. */
-            const inside = (e) => {
-                const r = this.rect;
-                return !!r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-            };
-            const release = () => {
-                removeEventListener('pointermove', onDocMove);
-                removeEventListener('pointerout', onWindowOut);
-                this.hover = false;
-                this.nx.target = this.ny.target = this.lift.target = 0;
-                this.wake();
-            };
-            const onDocMove = (e) => {
-                if (this.stamp !== layoutStamp) this.measure();
-                if (!inside(e)) { release(); return; }
-                this.aim(e);
-                this.wake();
-            };
-            // Курсор ушёл за пределы окна — документ больше не пришлёт pointermove
-            const onWindowOut = (e) => { if (!e.relatedTarget) release(); };
-
-            el.addEventListener('pointerenter', (e) => {
-                if (isTouch(e)) return;
-                if (!this.hover || this.stamp !== layoutStamp) this.measure();
-                this.hover = true;
-                this.aim(e);
-                this.lift.target = 1;
-                this.wake();
-            });
-            el.addEventListener('pointermove', (e) => {
-                if (isTouch(e) || !this.hover) return;
-                this.aim(e);
-                this.wake();
-            });
-            el.addEventListener('pointerleave', (e) => {
-                if (!this.hover) return;
-                if (!isTouch(e) && this.stamp === layoutStamp && inside(e)) {
-                    addEventListener('pointermove', onDocMove);
-                    addEventListener('pointerout', onWindowOut);
-                    return;
+            if (this.entry.float) {
+                // Карточка: парят только отмеченные элементы, сами по себе — без обёрток,
+                // чтобы не трогать их вёрстку (многоточие, переносы и т.п.)
+                el.querySelectorAll(this.entry.float).forEach((t) => t.classList.add('f3d-float'));
+            } else {
+                // Кнопка: всё содержимое — в один слой (текстовый узел трансформировать нельзя)
+                const layer = document.createElement('span');
+                layer.className = 'f3d-layer f3d-float';
+                // У flex-кнопки слой повторяет её раскладку: gap, выравнивание, направление
+                if (/flex/.test(getComputedStyle(el).display)) layer.classList.add('f3d-layer--flex');
+                for (const node of Array.from(el.childNodes)) {
+                    // Абсолютных детей (бейджи) не переносим: слой с transform стал бы
+                    // для них containing block, и top/right считались бы уже от него
+                    if (node.nodeType === Node.ELEMENT_NODE && getComputedStyle(node).position === 'absolute') {
+                        node.classList.add('f3d-badge');
+                        continue;
+                    }
+                    layer.appendChild(node);
                 }
-                release();
-            });
-            // Нажатие: контент проседает к поверхности, на отпускании — выпрыгивает обратно
-            el.addEventListener('pointerdown', (e) => {
-                if (isTouch(e)) return;
-                this.lift.target = this.cfg.press;
-                this.wake();
-            });
-            el.addEventListener('pointerup', () => {
-                if (!this.hover) return;
-                this.lift.target = 1;
-                this.wake();
-            });
+                el.prepend(layer);
+            }
+
+            const glare = document.createElement('span');
+            glare.className = 'f3d-glare';
+            glare.setAttribute('aria-hidden', 'true');
+            this.surface.appendChild(glare);
         }
 
-        /* Размер и позицию меряем БЕЗ нашего transform: иначе наклон меняет rect,
-           rect меняет наклон — и на краях кнопка дрожит (обратная связь). */
+        /* Прямоугольник поверхности В ПОКОЕ, без нашего transform: иначе наклон меняет
+           rect, rect меняет наклон — и у краёв элемент дрожит (обратная связь). */
         measure() {
             const el = this.el;
             const prev = el.style.transform;
             el.style.transform = 'none';
-            this.rect = el.getBoundingClientRect();
+            this.rect = this.surface.getBoundingClientRect();
             el.style.transform = prev;
             this.stamp = layoutStamp;
             this.cfg = readConfig(el);
+        }
+
+        contains(e) {
+            if (this.stamp !== layoutStamp) this.measure();
+            const r = this.rect;
+            return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
         }
 
         aim(e) {
@@ -221,12 +159,50 @@
             const r = this.rect;
             this.nx.target = clamp(((e.clientX - r.left) / r.width) * 2 - 1);
             this.ny.target = clamp(((e.clientY - r.top) / r.height) * 2 - 1);
+            this.wake();
+        }
+
+        enter(e) {
+            this.measure();
+            this.lift.target = 1;
+            this.aim(e);
+        }
+
+        leave() {
+            this.nx.target = this.ny.target = this.lift.target = 0;
+            this.wake();
+        }
+
+        press(down) {
+            this.lift.target = down ? this.cfg.press : 1;
+            this.wake();
+        }
+
+        /* Если у элемента есть свой transition на transform (у .platform-card — 0.3s),
+           он догонял бы каждый кадр пружины с опозданием — двойное сглаживание.
+           Гасим ТОЛЬКО transform: в конец списка дописываем «transform 0s» —
+           при повторе свойства в transition действует последнее упоминание,
+           а background и прочие переходы продолжают работать как были. */
+        freezeTransition() {
+            const cs = getComputedStyle(this.el);
+            const props = splitList(cs.transitionProperty);
+            const durs = splitList(cs.transitionDuration);
+            const touches = props.some((p, i) => /^(all|transform)$/.test(p) && parseFloat(durs[i % durs.length]) > 0);
+            if (!touches) return;
+            const fns = splitList(cs.transitionTimingFunction);
+            const delays = splitList(cs.transitionDelay);
+            const list = props.map((p, i) => `${p} ${durs[i % durs.length]} ${fns[i % fns.length]} ${delays[i % delays.length]}`);
+            this.prevTransition = this.el.style.transition;
+            this.el.style.transition = list.concat('transform 0s').join(', ');
         }
 
         wake() {
+            if (!this.on) {
+                this.on = true;
+                this.freezeTransition();
+                this.el.classList.add('f3d-on');
+            }
             if (this.raf) return;
-            if (!this.cfg) this.cfg = readConfig(this.el);
-            this.el.classList.add('f3d-on');
             this.last = performance.now();
             this.raf = requestAnimationFrame(this.tick);
         }
@@ -255,48 +231,130 @@
                 return;
             }
             this.raf = 0;
-            // В покое снимаем transform совсем — текст снова растровый и резкий
-            if (!this.hover && this.lift.x === 0) {
+            // Полностью лёг — снимаем transform совсем: без него текст снова растровый и резкий
+            if (this.lift.target === 0) {
+                this.on = false;
                 this.el.classList.remove('f3d-on');
                 s.removeProperty('--f3d-nx');
                 s.removeProperty('--f3d-ny');
                 s.removeProperty('--f3d-lift');
+                if (this.prevTransition !== undefined) {
+                    s.transition = this.prevTransition;
+                    this.prevTransition = undefined;
+                }
             }
         }
     }
 
-    function attach(target) {
-        if (!finePointer.matches) return [];
-        const list = typeof target === 'string' ? document.querySelectorAll(target)
-            : target instanceof Element ? [target] : Array.from(target || []);
-        const created = [];
-        list.forEach((el) => {
-            if (instances.has(el)) return;
-            const f = new Float(el);
-            instances.set(el, f);
-            created.push(f);
-        });
-        return created;
+    function instanceFor(el) {
+        let f = instances.get(el);
+        if (f) return f;
+        // Неактивная кнопка не должна «приглашать» к нажатию
+        if (el.matches(':disabled, [aria-disabled="true"]')) return null;
+        const entry = registry.find((r) => el.matches(r.sel));
+        if (!entry) return null;
+        f = new Float(el, entry);
+        instances.set(el, f);
+        return f;
+    }
+
+    // Все зарегистрированные элементы под курсором — от внутреннего к внешнему
+    // (кнопка внутри карточки: наклоняются обе)
+    function chainAt(target) {
+        const chain = [];
+        let el = target && target.closest ? target.closest(selector) : null;
+        while (el) {
+            const f = instanceFor(el);
+            if (f) chain.push(f);
+            el = el.parentElement ? el.parentElement.closest(selector) : null;
+        }
+        return chain;
+    }
+
+    function releaseAll() {
+        active.forEach((f) => f.leave());
+        active.clear();
+    }
+
+    /* Один слушатель на весь документ. Зона наведения — прямоугольник элемента
+       в покое, а не его наклонённая фигура: у края край уходит вглубь и
+       выскальзывает из-под курсора, и без этого элемент дрожал бы
+       enter/leave/enter… Поэтому «ушёл» = вышел за прямоугольник или
+       оказался над другим, не вложенным, элементом. */
+    function onMove(e) {
+        if (e.pointerType === 'touch' || !selector) return;
+        const chain = chainAt(e.target);
+        for (const f of active) {
+            if (chain.includes(f)) continue;
+            const foreign = chain.some((c) => !c.el.contains(f.el));
+            if (!foreign && f.el.isConnected && f.contains(e)) { f.aim(e); continue; }
+            f.leave();
+            active.delete(f);
+        }
+        for (const f of chain) {
+            if (active.has(f)) f.aim(e);
+            else { active.add(f); f.enter(e); }
+        }
+    }
+
+    // Нажатие: содержимое проседает к поверхности, на отпускании — выпрыгивает обратно.
+    // Проседает только самый внутренний элемент (кнопка, а не карточка под ней).
+    // Берём его по прямоугольникам покоя, а не по e.target: у края наклонённая кнопка
+    // выскальзывает из-под курсора, и target'ом оказалась бы карточка под ней.
+    let pressed = null;
+    function onDown(e) {
+        if (e.pointerType === 'touch' || !selector) return;
+        const hits = [...active].filter((f) => f.el.isConnected && f.contains(e));
+        const f = hits.find((h) => !hits.some((o) => o !== h && h.el.contains(o.el)));
+        if (!f) return;
+        pressed = f;
+        f.press(true);
+    }
+    function onUp() {
+        if (!pressed) return;
+        if (active.has(pressed)) pressed.press(false);
+        pressed = null;
+    }
+
+    let listening = false;
+    function listen() {
+        if (listening || !finePointer.matches) return;
+        listening = true;
+        document.addEventListener('pointermove', onMove, { passive: true });
+        document.addEventListener('pointerdown', onDown, { passive: true });
+        document.addEventListener('pointerup', onUp, { passive: true });
+        // Курсор ушёл за пределы окна — pointermove больше не придёт
+        document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) releaseAll(); });
+    }
+
+    function register(sel, opts) {
+        // Кривой селектор в реестре уронил бы closest() на каждом движении мыши по сайту
+        try { document.querySelector(sel); } catch (e) { console.warn('Float3D: неверный селектор', sel); return; }
+        registry.push(Object.assign({ sel }, opts));
+        selector = registry.map((r) => r.sel).join(', ');
+        listen();
     }
 
     /* ======================================================================
-       ПАНЕЛЬ ЖИВОЙ НАСТРОЙКИ
-       Alt+Shift+F, ?f3d в адресе или Float3D.panel() из консоли.
-       Правки идут поверх CSS через <style id="f3d-live"> и сохраняются
-       в localStorage, но применяются, только пока панель открыта или в адресе
-       есть ?f3d. Источник правды — CSS: «Копировать CSS» и вставить в файл.
-       Панель живёт в Shadow DOM — стили сайта её не задевают, и наоборот.
+       ПАНЕЛЬ ЖИВОЙ НАСТРОЙКИ — Alt+Shift+F, ?f3d в адресе или Float3D.panel()
+       Две вкладки = два уровня каскада: «Все» — :root (общие настройки),
+       «Карточки» — .f3d--card (то, что у карточек своё). Если у карточек
+       параметр переопределён, в «Все» он помечен — двигать его там для
+       карточек бесполезно, и это видно сразу, а не «почему-то не работает».
+       Правки — поверх CSS через <style id="f3d-live">, видны только тебе и
+       только с открытой панелью. В код — кнопкой «Копировать CSS».
+       Панель в Shadow DOM: стили сайта её не задевают, и наоборот.
        ====================================================================== */
-    const STORE = 'f3d:tuning';
+    const STORE = 'f3d:tuning:v2';
     const PARAMS = [
         ['Поверхность', [
-            ['--f3d-perspective', 'Перспектива', 150, 1200, 10, 'px', 'меньше — сильнее «рыбий глаз»'],
+            ['--f3d-perspective', 'Перспектива', 150, 1200, 10, 'px', 'меньше — сильнее перспектива'],
             ['--f3d-tilt', 'Наклон', 0, 35, 0.5, 'deg'],
             ['--f3d-hover-scale', 'Увеличение', 1, 1.25, 0.01, ''],
-            ['--f3d-hover-rise', 'Подъём кнопки', -12, 0, 0.5, 'px'],
+            ['--f3d-hover-rise', 'Подъём', -16, 0, 0.5, 'px'],
         ]],
         ['Парение', [
-            ['--f3d-depth', 'Высота контента', 0, 90, 1, 'px', 'главный рычаг'],
+            ['--f3d-depth', 'Высота парения', 0, 90, 1, 'px', 'главный рычаг'],
             ['--f3d-drift', 'Доп. сдвиг к курсору', 0, 12, 0.5, 'px'],
             ['--f3d-badge-depth', 'Бейджи, × высоты', 1, 3, 0.1, ''],
         ]],
@@ -307,18 +365,24 @@
             ['--f3d-glare', 'Блик', 0, 0.6, 0.01, ''],
         ]],
         ['Физика', [
-            ['--f3d-tilt-stiffness', 'Наклон: жёсткость', 20, 600, 5, ''],
+            ['--f3d-tilt-stiffness', 'Наклон: жёсткость', 20, 900, 5, ''],
             ['--f3d-tilt-damping', 'Наклон: трение', 2, 60, 1, ''],
-            ['--f3d-lift-stiffness', 'Подъём: жёсткость', 20, 800, 5, ''],
+            ['--f3d-lift-stiffness', 'Подъём: жёсткость', 20, 900, 5, ''],
             ['--f3d-lift-damping', 'Подъём: трение', 2, 60, 1, 'меньше — сильнее пружинит'],
-            ['--f3d-press', 'Просадка при нажатии', 0, 1, 0.05, ''],
+            ['--f3d-press', 'Просадка при нажатии', 0, 1, 0.05, '1 — не проседает, 0 — ложится'],
         ]],
     ];
-    const PRESETS = {
-        'Тонко': { '--f3d-depth': 14, '--f3d-tilt': 9, '--f3d-perspective': 520, '--f3d-drift': 1, '--f3d-shadow-offset': 3, '--f3d-glare': 0.1, '--f3d-lift-damping': 22 },
-        'Голограмма': { '--f3d-depth': 40, '--f3d-tilt': 20, '--f3d-perspective': 300, '--f3d-drift': 3, '--f3d-shadow-offset': 10, '--f3d-shadow-blur': 6, '--f3d-shadow-opacity': 0.7, '--f3d-glare': 0.38, '--f3d-lift-damping': 8, '--f3d-hover-scale': 1.1 },
-    };
     const ALL = PARAMS.flatMap(([, list]) => list);
+    const UNIT = Object.fromEntries(ALL.map(([name, , , , , unit]) => [name, unit]));
+    const SCOPES = {
+        all: { label: 'Все', selector: ':root', live: ':root:root' },
+        card: { label: 'Карточки', selector: '.f3d--card', live: '.f3d--card.f3d--card' },
+    };
+    const PRESETS = {
+        'Сдержанно': { '--f3d-depth': 10, '--f3d-tilt': 7, '--f3d-perspective': 600, '--f3d-drift': 0.5, '--f3d-shadow-offset': 2, '--f3d-glare': 0.08, '--f3d-lift-damping': 26 },
+        'Выразительно': { '--f3d-depth': 26, '--f3d-tilt': 14, '--f3d-perspective': 360, '--f3d-drift': 2, '--f3d-shadow-offset': 6, '--f3d-glare': 0.2, '--f3d-lift-damping': 13 },
+        'Голограмма': { '--f3d-depth': 40, '--f3d-tilt': 20, '--f3d-perspective': 300, '--f3d-drift': 3, '--f3d-shadow-offset': 10, '--f3d-shadow-blur': 6, '--f3d-shadow-opacity': 0.7, '--f3d-glare': 0.38, '--f3d-lift-damping': 8 },
+    };
 
     let panelHost = null;
 
@@ -332,52 +396,70 @@
         return s;
     }
 
-    function applyLive(values) {
-        const body = Object.entries(values).map(([k, v]) => `  ${k}: ${v};`).join('\n');
-        // Тройной класс — перебить и дефолты модуля, и настройки конкретной страницы
-        liveStyle().textContent = body ? `.f3d.f3d.f3d {\n${body}\n}` : '';
-        instances.forEach((f) => { f.cfg = readConfig(f.el); });
+    function refreshConfigs() {
+        active.forEach((f) => { f.cfg = readConfig(f.el); });
+    }
+
+    // Значения из CSS как есть: через невидимый «зонд» с нужным классом
+    function readScope(scope) {
+        const probe = document.createElement('div');
+        if (scope === 'card') probe.className = 'f3d f3d--card';
+        probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
+        document.body.appendChild(probe);
+        const cs = getComputedStyle(probe);
+        const out = {};
+        ALL.forEach(([name]) => { out[name] = parseFloat(cs.getPropertyValue(name)) || 0; });
+        probe.remove();
+        return out;
     }
 
     function loadStored() {
         try { return JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { return {}; }
     }
 
-    function saveStored(values) {
-        try { localStorage.setItem(STORE, JSON.stringify(values)); } catch (e) { /* приватный режим */ }
+    function saveStored(v) {
+        try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (e) { /* приватный режим */ }
     }
 
-    // Закрыли панель — живые правки и рентген убираем: на экране снова ровно то, что в CSS
     function closePanel() {
         panelHost.remove();
         panelHost = null;
         if (!/[?&]f3d\b/.test(location.search)) liveStyle().textContent = '';
         document.documentElement.classList.remove('f3d-xray');
-        instances.forEach((f) => { f.cfg = readConfig(f.el); });
+        refreshConfigs();
     }
 
     function panel() {
         if (panelHost) { closePanel(); return; }
 
-        const sample = instances.keys().next().value;
-        if (!sample) { console.warn('Float3D: на странице нет подключённых элементов'); return; }
-
-        // Базовые значения — то, что сейчас реально действует из CSS (без живых правок)
+        // База — то, что реально задано в CSS, без живых правок
         liveStyle().textContent = '';
-        const cs = getComputedStyle(sample);
-        const base = {};
-        ALL.forEach(([name]) => {
-            base[name] = parseFloat(cs.getPropertyValue(name)) || 0;
-        });
-        const current = Object.assign({}, base, loadStored());
-        const withUnits = () => {
-            const out = {};
-            ALL.forEach(([name, , , , , unit]) => {
-                if (current[name] !== base[name]) out[name] = current[name] + unit;
-            });
-            return out;
+        const base = { all: readScope('all'), card: readScope('card') };
+        // Что карточки переопределяют у себя (значение отличается от общего)
+        const cardOwn = new Set(ALL.map(([n]) => n).filter((n) => base.card[n] !== base.all[n]));
+        const stored = loadStored();
+        const cur = {
+            all: Object.assign({}, base.all, stored.all),
+            card: Object.assign({}, base.card, stored.card),
         };
-        const commit = () => { const v = withUnits(); applyLive(v); saveStored(Object.fromEntries(Object.keys(v).map((k) => [k, current[k]]))); };
+        // Параметры, которые карточки берут у «Всех», пока их не тронули во вкладке «Карточки»
+        const touched = new Set(Object.keys(stored.card || {}));
+        const ownCard = (n) => cardOwn.has(n) || touched.has(n);
+        const valueOf = (sc, n) => (sc === 'card' && !ownCard(n) ? cur.all[n] : cur[sc][n]);
+        let scope = 'all';
+
+        const changed = (sc) => ALL.map(([n]) => n)
+            .filter((n) => (sc === 'all' || ownCard(n)) && cur[sc][n] !== base[sc][n]);
+        const commit = () => {
+            const block = (sc) => {
+                const names = changed(sc);
+                return names.length ? `${SCOPES[sc].live} {\n${names.map((n) => `  ${n}: ${cur[sc][n]}${UNIT[n]};`).join('\n')}\n}` : '';
+            };
+            liveStyle().textContent = [block('all'), block('card')].filter(Boolean).join('\n');
+            const pick = (sc) => Object.fromEntries(changed(sc).map((n) => [n, cur[sc][n]]));
+            saveStored({ all: pick('all'), card: pick('card') });
+            refreshConfigs();
+        };
 
         panelHost = document.createElement('div');
         panelHost.id = 'f3d-panel';
@@ -388,19 +470,25 @@
 <style>
   :host { all: initial; position: fixed; right: 16px; bottom: 16px; z-index: 2147483000;
           font: 12px/1.35 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #eee; }
-  .box { width: 300px; max-height: min(78vh, 720px); overflow: auto; padding: 14px 14px 12px;
-         border-radius: 16px; background: rgba(18, 8, 28, .82); backdrop-filter: blur(18px) saturate(140%);
+  .box { width: 310px; max-height: min(80vh, 760px); overflow: auto; padding: 14px 14px 12px;
+         border-radius: 16px; background: rgba(18, 8, 28, .84); backdrop-filter: blur(18px) saturate(140%);
          -webkit-backdrop-filter: blur(18px) saturate(140%);
          border: 1px solid rgba(255,255,255,.12); box-shadow: 0 24px 60px -20px rgba(0,0,0,.8); }
   header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   h1 { flex: 1; margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
   h1 small { font-weight: 400; opacity: .5; margin-left: 4px; }
   h2 { margin: 14px 0 6px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #ff5ba8; }
-  .row { display: grid; grid-template-columns: 1fr 56px; gap: 2px 8px; align-items: center; margin: 6px 0; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; margin-bottom: 10px;
+          border-radius: 10px; background: rgba(0,0,0,.35); }
+  .tabs button { justify-content: center; text-align: center; border-radius: 8px; border-color: transparent; background: none; }
+  .tabs button[aria-selected="true"] { background: rgba(195,33,120,.5); }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; margin: 6px 0; }
   .row label { opacity: .85; }
   .row output { text-align: right; font-variant-numeric: tabular-nums; opacity: .7; }
   .row input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: #c32178; }
+  .row.muted { opacity: .38; }
   .hint { grid-column: 1 / -1; font-size: 10.5px; opacity: .45; margin-top: -2px; }
+  .own { font-size: 10px; color: #5ab0ff; margin-left: 6px; }
   .chips, .actions { display: flex; flex-wrap: wrap; gap: 6px; }
   .actions { margin-top: 14px; }
   button { all: unset; cursor: pointer; padding: 6px 10px; border-radius: 999px; font-size: 11.5px;
@@ -411,21 +499,24 @@
   button[aria-pressed="true"] { background: rgba(90,176,255,.25); border-color: rgba(90,176,255,.6); }
   .x { padding: 2px 8px; font-size: 14px; }
   .foot { margin-top: 10px; font-size: 10.5px; opacity: .45; }
-  textarea { width: 100%; height: 120px; margin-top: 8px; box-sizing: border-box; font: 11px ui-monospace, monospace;
+  textarea { width: 100%; height: 140px; margin-top: 8px; box-sizing: border-box; font: 11px ui-monospace, monospace;
              color: #eee; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; }
 </style>
 <div class="box" role="dialog" aria-label="Настройка Float3D">
   <header><h1>Float3D<small>Alt+Shift+F</small></h1><button class="x" data-act="close" title="Закрыть">×</button></header>
+  <div class="tabs" role="tablist">
+    ${Object.entries(SCOPES).map(([id, s]) => `<button role="tab" data-scope="${id}">${s.label}</button>`).join('')}
+  </div>
   <div class="chips">
-    <button data-act="xray" aria-pressed="false" title="Разобрать кнопки на слои и показать их сбоку">Рентген</button>
+    <button data-act="xray" aria-pressed="false" title="Развернуть кнопки боком и показать слои">Рентген</button>
     ${Object.keys(PRESETS).map((p) => `<button data-preset="${p}">${p}</button>`).join('')}
   </div>
   <div id="rows"></div>
   <div class="actions">
     <button class="primary" data-act="copy">Копировать CSS</button>
-    <button data-act="reset">Сброс к CSS</button>
+    <button data-act="reset">Сброс вкладки</button>
   </div>
-  <div class="foot">Правки видны только тебе и только с открытой панелью (или с ?f3d в адресе). В код попадают через «Копировать CSS».</div>
+  <div class="foot">Правки видны только тебе и только с открытой панелью. В код — «Копировать CSS» → вставить блок в swad/css/float3d.css.</div>
 </div>`;
 
         const rows = root.getElementById('rows');
@@ -437,41 +528,62 @@
             list.forEach(([name, label, min, max, step, unit, hint]) => {
                 const row = document.createElement('div');
                 row.className = 'row';
-                row.innerHTML = `<label>${label}</label><output></output>
+                row.innerHTML = `<label>${label}<span class="own" hidden>у карточек своё</span></label><output></output>
                     <input type="range" min="${min}" max="${max}" step="${step}">
                     ${hint ? `<div class="hint">${hint}</div>` : ''}`;
                 const input = row.querySelector('input');
                 const out = row.querySelector('output');
-                const show = () => { out.textContent = `${+(+current[name]).toFixed(2)}${unit}`; };
-                input.value = current[name];
-                show();
-                input.addEventListener('input', () => { current[name] = +input.value; show(); commit(); });
-                inputs[name] = { input, show };
+                const show = () => { out.textContent = `${+(+valueOf(scope, name)).toFixed(3)}${unit}`; };
+                input.addEventListener('input', () => {
+                    if (scope === 'card') touched.add(name);
+                    cur[scope][name] = +input.value;
+                    show();
+                    commit();
+                });
+                inputs[name] = { row, input, show, own: row.querySelector('.own') };
                 rows.appendChild(row);
             });
         });
 
-        const syncInputs = () => Object.entries(inputs).forEach(([name, { input, show }]) => { input.value = current[name]; show(); });
+        const render = () => {
+            root.querySelectorAll('[data-scope]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.scope === scope)));
+            Object.entries(inputs).forEach(([name, it]) => {
+                it.input.value = valueOf(scope, name);
+                it.show();
+                const own = scope === 'all' && cardOwn.has(name);
+                it.own.hidden = !own;
+            });
+        };
 
         root.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
             const act = btn.dataset.act;
-            if (btn.dataset.preset) {
-                Object.assign(current, base, PRESETS[btn.dataset.preset]);
-                syncInputs();
+            if (btn.dataset.scope) {
+                scope = btn.dataset.scope;
+                render();
+            } else if (btn.dataset.preset) {
+                const preset = PRESETS[btn.dataset.preset];
+                if (scope === 'card') Object.keys(preset).forEach((n) => touched.add(n));
+                Object.assign(cur[scope], preset);
+                render();
                 commit();
             } else if (act === 'reset') {
-                Object.assign(current, base);
-                syncInputs();
+                cur[scope] = Object.assign({}, base[scope]);
+                if (scope === 'card') touched.clear();
+                render();
                 commit();
             } else if (act === 'xray') {
                 const on = document.documentElement.classList.toggle('f3d-xray');
+                // Элементы «оживают» при первом наведении — для рентгена оживляем все сразу
+                if (on) document.querySelectorAll(selector).forEach(instanceFor);
                 btn.setAttribute('aria-pressed', String(on));
             } else if (act === 'close') {
                 closePanel();
             } else if (act === 'copy') {
-                const css = `/* Float3D — подобрано в панели. Замени блок настроек в CSS. */\n{\n${ALL.map(([name, , , , , unit]) => `    ${name}: ${+(+current[name]).toFixed(3)}${unit};`).join('\n')}\n}`;
+                // «Все» — весь блок :root целиком; «Карточки» — только то, чем они отличаются
+                const names = ALL.map(([n]) => n).filter((n) => scope === 'all' || ownCard(n));
+                const css = `${SCOPES[scope].selector} {\n${names.map((n) => `    ${n}: ${+(+valueOf(scope, n)).toFixed(3)}${UNIT[n]};`).join('\n')}\n}`;
                 const fallback = () => {
                     let ta = root.querySelector('textarea');
                     if (!ta) { ta = document.createElement('textarea'); root.querySelector('.box').appendChild(ta); }
@@ -489,6 +601,7 @@
             }
         });
 
+        render();
         commit();
     }
 
@@ -500,11 +613,13 @@
     });
 
     function boot() {
-        attach('[data-f3d]');
         if (/[?&]f3d\b/.test(location.search)) panel();
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
     else boot();
 
-    window.Float3D = { attach, panel };
+    // [data-f3d] в разметке — подключится без единой строки JS
+    register('[data-f3d]', {});
+
+    window.Float3D = { register, attach: register, panel };
 })();

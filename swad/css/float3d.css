@@ -1,107 +1,128 @@
 /* =============================================================================
-   FLOAT3D — наклон за курсором + контент, парящий над поверхностью
-   JS: swad/js/float3d.js. Живая настройка на сайте: Alt+Shift+F (или ?f3d).
+   FLOAT3D — наклон за курсором + содержимое, парящее над поверхностью
+   JS: swad/js/float3d.js. Живая настройка на любой странице: Alt+Shift+F (или ?f3d).
+
+   ЕДИНСТВЕННОЕ МЕСТО НАСТРОЕК — блок :root ниже (+ профиль карточек под ним).
+   Все кнопки и карточки сайта берут значения отсюда. Не переопределяй эти
+   переменные в CSS отдельных страниц: иначе ползунок в панели «не работает»
+   на этих элементах — у них своё значение, и оно сильнее унаследованного.
 
    JS пишет на элемент три числа, всё остальное считается здесь:
      --f3d-nx, --f3d-ny  ∈ [-1..1]  где курсор (сглажено пружиной)
-     --f3d-lift          ∈ [0..1+]  насколько контент «оторвался» (с перелётом)
-
+     --f3d-lift          ∈ [0..1+]  насколько содержимое «оторвалось» (с перелётом)
    Модель: курсор — это фонарик. Поверхность прогибается под ним, блик
-   собирается вокруг него, тень от парящего контента отбегает от него.
-
-   Что ломает 3D: overflow (не visible), opacity < 1, filter, clip-path, mask,
-   mix-blend-mode, isolation на .f3d или .f3d-stack. Это «группирующие»
-   свойства — они молча превращают preserve-3d во flat, и слои схлопываются.
-   На .f3d-layer, .f3d-shadow и .f3d-glare — можно.
+   собирается вокруг него, тень от парящего содержимого отбегает от него.
    ============================================================================= */
 
-/* ── Настройки по умолчанию ──────────────────────────────────────────────────
-   :where() — нулевая специфичность: любой селектор страницы их перебьёт.
-   Физика (stiffness/damping/press) — числа без единиц, их читает JS. */
-:where(.f3d) {
-    --f3d-perspective: 360px;     /* меньше — сильнее перспектива и параллакс   */
-    --f3d-tilt: 14deg;            /* максимальный наклон поверхности           */
-    --f3d-hover-scale: 1.06;      /* увеличение при наведении                   */
+:root {
+    --f3d-perspective: 520px;     /* меньше — сильнее перспектива                */
+    --f3d-tilt: 9deg;             /* максимальный наклон поверхности             */
+    --f3d-hover-scale: 1.08;      /* увеличение при наведении                    */
     --f3d-hover-rise: -3px;       /* подъём всего элемента по Y                  */
 
-    --f3d-depth: 32px;            /* высота парения контента — главный рычаг    */
-    --f3d-drift: 3px;             /* доп. 2D-сдвиг контента к курсору (усиление) */
-    --f3d-badge-depth: 1.6;       /* бейджи висят выше контента во столько раз   */
+    --f3d-depth: 14px;            /* высота парения — главный рычаг              */
+    --f3d-drift: 1px;             /* доп. сдвиг содержимого к курсору (усиление) */
+    --f3d-badge-depth: 1.6;       /* бейджи висят выше содержимого во столько раз */
 
-    --f3d-shadow-offset: 6px;     /* насколько тень отбегает от контента         */
-    --f3d-shadow-blur: 2.5px;
+    --f3d-shadow-offset: 3px;     /* насколько тень отбегает от содержимого      */
+    --f3d-shadow-blur: 4px;
     --f3d-shadow-opacity: .55;
-    --f3d-glare: .2;              /* яркость блика                               */
+    --f3d-glare: .1;              /* яркость блика                               */
 
-    --f3d-tilt-stiffness: 170;    /* наклон: жёсткость пружины                   */
-    --f3d-tilt-damping: 20;       /*         трение (ζ≈0.77 — чуть живой)        */
-    --f3d-lift-stiffness: 320;    /* подъём: жёсткость                           */
-    --f3d-lift-damping: 13;       /*         трение (ζ≈0.36 — «выпрыгивает»)     */
-    --f3d-press: .3;              /* до какой доли подъёма проседает при нажатии */
-
-    --f3d-gap: .4em;              /* зазор между детьми внутри слоя              */
-
-    position: relative;
+    /* Физика — числа без единиц, их читает JS. ζ = трение / (2·√жёсткость):
+       меньше 1 — с перелётом («пружинит»), от 1 — плавно, без перелёта */
+    --f3d-tilt-stiffness: 600;    /* ζ≈0.33 — наклон догоняет курсор с оттяжкой */
+    --f3d-tilt-damping: 16;
+    --f3d-lift-stiffness: 720;    /* ζ≈0.41 — содержимое «выпрыгивает»          */
+    --f3d-lift-damping: 22;
+    --f3d-press: 0;               /* доля подъёма при нажатии: 0 — ложится на поверхность, 1 — не проседает */
 }
 
-.f3d,
-.f3d-stack {
-    transform-style: preserve-3d;
+/* Профиль «карточка»: карточка в разы больше кнопки, поэтому своё только то,
+   что зависит от размера. Всё остальное наследуется из :root. */
+.f3d--card {
+    --f3d-hover-scale: 1.03;
+    --f3d-hover-rise: -8px;
 }
 
-/* ── Поверхность ────────────────────────────────────────────────────────────
-   Transform есть только пока элемент «живой» (.f3d-on). В покое — none:
-   без 3D-слоя браузер рисует текст как обычно, резким. */
+/* ── Механика (менять не нужно) ─────────────────────────────────────────── */
+
+/* Неактивный элемент обнуляет свои числа: иначе кнопка внутри наклонённой
+   карточки унаследовала бы движение карточки */
+.f3d:not(.f3d-on) {
+    --f3d-nx: 0;
+    --f3d-ny: 0;
+    --f3d-lift: 0;
+}
+
+:where(.f3d) {
+    position: relative;           /* :where — нулевая специфичность, сайт перебьёт */
+}
+
+:where(.f3d.f3d-on) {
+    z-index: 1;                   /* наклонённый и увеличенный — поверх соседей */
+}
+
+/* Поверхность. Transform есть только пока элемент «живой»; в покое — none,
+   и браузер рисует текст как обычно, резким.
+   !important — Float3D владеет transform'ом элемента, пока тот активен:
+   иначе его перебил бы, например, .platform-card:hover { transform: … }.
+   transform-style: flat — парящий слой рисует глубину сам (см. ниже), чужой
+   preserve-3d на элементе удвоил бы перспективу. */
 .f3d.f3d-on {
     transform:
         perspective(var(--f3d-perspective))
         translateY(calc(var(--f3d-lift) * var(--f3d-hover-rise)))
         rotateX(calc(var(--f3d-ny) * var(--f3d-tilt) * -1))
         rotateY(calc(var(--f3d-nx) * var(--f3d-tilt)))
-        scale(calc(1 + (var(--f3d-hover-scale) - 1) * var(--f3d-lift)));
+        scale(calc(1 + (var(--f3d-hover-scale) - 1) * var(--f3d-lift))) !important;
+    transform-style: flat !important;
+    will-change: transform;
 }
 
-/* ── Слой и тень в одной ячейке ─────────────────────────────────────────── */
-.f3d-stack {
-    display: inline-grid;
-    place-items: center;
+/* Слой-обёртка содержимого кнопки. У flex-кнопки он повторяет её раскладку
+   (gap, выравнивание, направление) и растягивается на всю кнопку —
+   расположение детей не меняется ни на пиксель. */
+.f3d-layer {
+    display: inline-block;
 }
 
-.f3d-layer,
-.f3d-shadow {
-    grid-area: 1 / 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--f3d-gap);
+.f3d-layer--flex {
+    display: flex;
+    flex: 1 1 auto;
+    align-self: stretch;
+    min-width: 0;
+    flex-direction: inherit;
+    flex-wrap: inherit;
+    align-items: inherit;
+    justify-content: inherit;
+    gap: inherit;
 }
 
-.f3d-on .f3d-layer {
-    transform: translate3d(
-        calc(var(--f3d-nx) * var(--f3d-drift)),
-        calc(var(--f3d-ny) * var(--f3d-drift)),
-        calc(var(--f3d-lift) * var(--f3d-depth)));
-}
+/* ── Парение (эмуляция глубины) ─────────────────────────────────────────────
+   Точка на высоте z над поверхностью, наклонённой на угол φ, после поворота
+   оказывается там же, где точка в самой плоскости, сдвинутая на z·tan φ.
+   Поэтому слой не поднимаем в настоящем 3D (его бы схлопнул любой overflow
+   или opacity у предков — а у карточек они есть), а сдвигаем на z·tan φ и
+   «приближаем» своей перспективой. После поворота поверхности картинка
+   та же, что в настоящем 3D, но работает внутри чего угодно.
 
-/* Тень — копия контента, залитая чёрным, лежит на поверхности (z = 0).
-   Отбегает от курсора и всегда чуть вниз (свет немного сверху). */
-.f3d-shadow {
-    pointer-events: none;
-    user-select: none;
-    opacity: 0;
-    filter: brightness(0) blur(var(--f3d-shadow-blur));
-}
+   Тень — drop-shadow того же слоя, но сдвинутая НАЗАД на смещение слоя:
+   она остаётся на поверхности, а содержимое уезжает от неё — по этому
+   расхождению глаз и считывает высоту. */
+.f3d-float { --_k: 1; }
+.f3d-badge { --_k: var(--f3d-badge-depth); }
 
-.f3d-on .f3d-shadow {
-    --_sx: calc(var(--f3d-nx) * var(--f3d-shadow-offset) * -1);
-    --_sy: calc((.5 - var(--f3d-ny)) * var(--f3d-shadow-offset));
-    opacity: calc(var(--f3d-lift) * var(--f3d-shadow-opacity));
-    transform: translate(calc(var(--_sx) * var(--f3d-lift)), calc(var(--_sy) * var(--f3d-lift)));
-}
-
-/* Бейджи (абсолютные дети) — ещё выше контента */
-.f3d-on > .f3d-badge {
-    transform: translateZ(calc(var(--f3d-lift) * var(--f3d-depth) * var(--f3d-badge-depth)));
+.f3d-on :is(.f3d-float, .f3d-badge) {
+    --_z: calc(var(--f3d-lift) * var(--f3d-depth) * var(--_k));
+    --_ox: calc(var(--_z) * tan(var(--f3d-nx) * var(--f3d-tilt)) + var(--f3d-nx) * var(--f3d-drift));
+    --_oy: calc(var(--_z) * tan(var(--f3d-ny) * var(--f3d-tilt)) + var(--f3d-ny) * var(--f3d-drift));
+    transform: perspective(var(--f3d-perspective)) translate3d(var(--_ox), var(--_oy), var(--_z));
+    filter: drop-shadow(
+        calc(var(--f3d-lift) * var(--f3d-nx) * var(--f3d-shadow-offset) * -1 - var(--_ox))
+        calc(var(--f3d-lift) * (.5 - var(--f3d-ny)) * var(--f3d-shadow-offset) - var(--_oy))
+        var(--f3d-shadow-blur)
+        rgb(0 0 0 / calc(var(--f3d-shadow-opacity) * var(--f3d-lift))));
 }
 
 /* ── Блик-«фонарик» на поверхности ──────────────────────────────────────── */
@@ -113,49 +134,43 @@
     opacity: 0;
 }
 
-.f3d-on > .f3d-glare {
+.f3d-on .f3d-glare {
     opacity: clamp(0, var(--f3d-lift), 1);
     background: radial-gradient(
         circle at calc((var(--f3d-nx) + 1) * 50%) calc((var(--f3d-ny) + 1) * 50%),
-        rgba(255, 255, 255, var(--f3d-glare)) 0%,
-        rgba(255, 255, 255, 0) 70%);
+        rgb(255 255 255 / var(--f3d-glare)) 0%,
+        rgb(255 255 255 / 0) 70%);
 }
 
 /* ── Рентген (кнопка в панели) ──────────────────────────────────────────────
-   Все .f3d замирают в «поднятом» состоянии и медленно поворачиваются боком:
-   видно, что поверхность, тень и контент — физически разные плоскости.
-   rotateX отрицательный — верхний край к нам, и слои раскрываются ВНИЗ:
-   хедер стоит у кромки экрана, вверх им раскрываться некуда. */
+   Кнопки замирают «поднятыми» и медленно поворачиваются боком: слой с
+   надписью поднимается над поверхностью уже по-настоящему, в 3D, — видно,
+   что это отдельная плоскость. Карточки не участвуют: их парящее название
+   внутри overflow, настоящее 3D там схлопывается, а крутящаяся карточка
+   на полэкрана только мешает смотреть. */
 @keyframes f3d-orbit {
     from { transform: perspective(500px) rotateX(-40deg) rotateZ(-18deg); }
-    to   { transform: perspective(500px) rotateX(-40deg) rotateZ(18deg) ; }
+    to   { transform: perspective(500px) rotateX(-40deg) rotateZ(18deg); }
 }
 
-.f3d-xray .f3d {
+.f3d-xray .f3d:not(.f3d--card) {
     --f3d-lift: 1 !important;
     --f3d-nx: 0 !important;
     --f3d-ny: 0 !important;
+    transform-style: preserve-3d;
     animation: f3d-orbit 3.2s ease-in-out infinite alternate;
-    outline: 1px dashed rgba(255, 255, 255, .35);
+    outline: 1px dashed rgb(255 255 255 / .35);
 }
 
-.f3d-xray .f3d-layer {
-    transform: translateZ(var(--f3d-depth));
-    outline: 1px solid rgba(255, 91, 168, .9);
-}
-
-.f3d-xray .f3d-shadow {
-    opacity: var(--f3d-shadow-opacity);
-    transform: translateY(calc(var(--f3d-shadow-offset) * .5));
-    outline: 1px solid rgba(90, 176, 255, .9);
-}
-
-.f3d-xray .f3d > .f3d-badge {
-    transform: translateZ(calc(var(--f3d-depth) * var(--f3d-badge-depth)));
+.f3d-xray .f3d:not(.f3d--card) > .f3d-layer,
+.f3d-xray .f3d:not(.f3d--card) > .f3d-badge {
+    transform: translateZ(calc(var(--f3d-depth) * var(--_k)));
+    filter: none;
+    outline: 1px solid rgb(255 91 168 / .9);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .f3d-xray .f3d {
+    .f3d-xray .f3d:not(.f3d--card) {
         animation: none;
         transform: perspective(500px) rotateX(-40deg) rotateZ(-14deg);
     }
