@@ -452,7 +452,22 @@ function format_last_seen(int $ts): string
                         </a>
                     </div>
                 <?php endif; ?>
+
+                <?php /* Шестерёнка у правого края — только владельцу профиля: открывает окно
+                         «Настройки» (swad/static/elements/user_settings.php, подключено ниже).
+                         data-f3d — сама шестерёнка тоже наклоняется за курсором. */ ?>
+                <?php if ($is_owner): ?>
+                    <button type="button" class="us-gear" data-open-settings data-f3d
+                            aria-haspopup="dialog" aria-controls="userSettings" aria-expanded="false"
+                            title="Настройки" aria-label="Настройки">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M14.647 4.081a.724.724 0 0 0 1.08.448c2.439-1.485 5.23 1.305 3.745 3.744a.724.724 0 0 0 .447 1.08c2.775.673 2.775 4.62 0 5.294a.724.724 0 0 0-.448 1.08c1.485 2.439-1.305 5.23-3.744 3.745a.724.724 0 0 0-1.08.447c-.673 2.775-4.62 2.775-5.294 0a.724.724 0 0 0-1.08-.448c-2.439 1.485-5.23-1.305-3.745-3.744a.724.724 0 0 0-.447-1.08c-2.775-.673-2.775-4.62 0-5.294a.724.724 0 0 0 .448-1.08c-1.485-2.439 1.305-5.23 3.744-3.745a.722.722 0 0 0 1.08-.447c.673-2.775 4.62-2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0-6" />
+                        </svg>
+                    </button>
+                <?php endif; ?>
             </div>
+
+            <?php if ($is_owner) require_once('swad/static/elements/user_settings.php'); ?>
 
             <?php
             $games_main   = array_slice($games, 0, 6);

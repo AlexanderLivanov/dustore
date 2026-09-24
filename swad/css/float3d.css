@@ -29,8 +29,8 @@
     --f3d-tilt-stiffness: 900;
     --f3d-tilt-damping: 27;
     --f3d-lift-stiffness: 900;
-    --f3d-lift-damping: 30меньше — сильнее пружинит;
-    --f3d-press: 01 — не проседает, 0 — ложится;
+    --f3d-lift-damping: 30;
+    --f3d-press: 0;
 }
 
 /* Профиль «карточка»: карточка в разы больше кнопки, поэтому своё только то,
@@ -44,7 +44,7 @@
     --f3d-drift: 1.5px;
     --f3d-shadow-offset: 2px;
     --f3d-glare: 0.08;
-    --f3d-lift-damping: 26меньше — сильнее пружинит;
+    --f3d-lift-damping: 26;
 }
 
 /* ── Механика (менять не нужно) ─────────────────────────────────────────── */
@@ -61,6 +61,31 @@
     position: relative;           /* :where — нулевая специфичность, сайт перебьёт */
 }
 
+/* Сила эффекта — настройка пользователя (шестерёнка в профиле → «Эффекты»).
+   Два множителя 0..2 кладёт на <html> float3d.js: для кнопок и для карточек;
+   1 — ровно как задано выше, 0 — эффект выключен. Масштабируется всё, что
+   отвечает за «сколько» (наклон, высота, сдвиги, тень, блик, подъём), а
+   физика — нет: характер движения остаётся тем, что задан в токенах.
+   Считается на самом элементе: у каждого свой профиль и свой множитель.
+
+   Наклон и высота берутся через √k: главное, что видит глаз, — сдвиг
+   надписи ≈ высота · tan(наклон), и если умножить на k оба сомножителя,
+   сдвиг вырастет в k², а ползунок станет «нелинейным» (к 50% эффект почти
+   пропадает, к 200% — взлетает вчетверо). С √k·√k сдвиг растёт ровно в k раз. */
+.f3d { --f3d-power: var(--f3d-user-buttons, 1); }
+.f3d.f3d--card { --f3d-power: var(--f3d-user-cards, 1); }
+
+.f3d {
+    --_tilt: calc(var(--f3d-tilt) * sqrt(var(--f3d-power)));
+    --_depth: calc(var(--f3d-depth) * sqrt(var(--f3d-power)));
+    --_drift: calc(var(--f3d-drift) * var(--f3d-power));
+    --_rise: calc(var(--f3d-hover-rise) * var(--f3d-power));
+    --_grow: calc((var(--f3d-hover-scale) - 1) * var(--f3d-power));
+    --_shadow: calc(var(--f3d-shadow-offset) * var(--f3d-power));
+    --_shadow-a: calc(var(--f3d-shadow-opacity) * min(var(--f3d-power), 1));
+    --_glare: calc(var(--f3d-glare) * var(--f3d-power));
+}
+
 :where(.f3d.f3d-on) {
     z-index: 1;                   /* наклонённый и увеличенный — поверх соседей */
 }
@@ -74,10 +99,10 @@
 .f3d.f3d-on {
     transform:
         perspective(var(--f3d-perspective))
-        translateY(calc(var(--f3d-lift) * var(--f3d-hover-rise)))
-        rotateX(calc(var(--f3d-ny) * var(--f3d-tilt) * -1))
-        rotateY(calc(var(--f3d-nx) * var(--f3d-tilt)))
-        scale(calc(1 + (var(--f3d-hover-scale) - 1) * var(--f3d-lift))) !important;
+        translateY(calc(var(--f3d-lift) * var(--_rise)))
+        rotateX(calc(var(--f3d-ny) * var(--_tilt) * -1))
+        rotateY(calc(var(--f3d-nx) * var(--_tilt)))
+        scale(calc(1 + var(--_grow) * var(--f3d-lift))) !important;
     transform-style: flat !important;
     will-change: transform;
 }
@@ -116,15 +141,15 @@
 .f3d-badge { --_k: var(--f3d-badge-depth); }
 
 .f3d-on :is(.f3d-float, .f3d-badge) {
-    --_z: calc(var(--f3d-lift) * var(--f3d-depth) * var(--_k));
-    --_ox: calc(var(--_z) * tan(var(--f3d-nx) * var(--f3d-tilt)) + var(--f3d-nx) * var(--f3d-drift));
-    --_oy: calc(var(--_z) * tan(var(--f3d-ny) * var(--f3d-tilt)) + var(--f3d-ny) * var(--f3d-drift));
+    --_z: calc(var(--f3d-lift) * var(--_depth) * var(--_k));
+    --_ox: calc(var(--_z) * tan(var(--f3d-nx) * var(--_tilt)) + var(--f3d-nx) * var(--_drift));
+    --_oy: calc(var(--_z) * tan(var(--f3d-ny) * var(--_tilt)) + var(--f3d-ny) * var(--_drift));
     transform: perspective(var(--f3d-perspective)) translate3d(var(--_ox), var(--_oy), var(--_z));
     filter: drop-shadow(
-        calc(var(--f3d-lift) * var(--f3d-nx) * var(--f3d-shadow-offset) * -1 - var(--_ox))
-        calc(var(--f3d-lift) * (.5 - var(--f3d-ny)) * var(--f3d-shadow-offset) - var(--_oy))
+        calc(var(--f3d-lift) * var(--f3d-nx) * var(--_shadow) * -1 - var(--_ox))
+        calc(var(--f3d-lift) * (.5 - var(--f3d-ny)) * var(--_shadow) - var(--_oy))
         var(--f3d-shadow-blur)
-        rgb(0 0 0 / calc(var(--f3d-shadow-opacity) * var(--f3d-lift))));
+        rgb(0 0 0 / calc(var(--_shadow-a) * var(--f3d-lift))));
 }
 
 /* ── Блик-«фонарик» на поверхности ──────────────────────────────────────── */
@@ -140,7 +165,7 @@
     opacity: clamp(0, var(--f3d-lift), 1);
     background: radial-gradient(
         circle at calc((var(--f3d-nx) + 1) * 50%) calc((var(--f3d-ny) + 1) * 50%),
-        rgb(255 255 255 / var(--f3d-glare)) 0%,
+        rgb(255 255 255 / var(--_glare)) 0%,
         rgb(255 255 255 / 0) 70%);
 }
 

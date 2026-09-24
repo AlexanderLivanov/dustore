@@ -23,6 +23,8 @@
  * После поворота поверхности это ровно та же картинка, но работает внутри чего угодно.
  *
  * API: Float3D.register(selector, opts) · Float3D.panel() (или Alt+Shift+F, или ?f3d в адресе)
+ *      Float3D.settings.get() / .set({ buttons, cards }) / .reset() — сила эффекта от
+ *      пользователя (0..2, окно «Настройки» в профиле); событие 'f3d:settings' на document.
  */
 (function () {
     'use strict';
@@ -36,6 +38,57 @@
     let selector = '';
     const instances = new WeakMap();
     const active = new Set();
+
+    /* ── Сила эффекта от пользователя ──────────────────────────────────────
+       Два множителя 0..2: кнопки и карточки. 1 — как задано в CSS, 0 — выкл.
+       Хранятся в браузере, как и тема (dustore_theme), и применяются прямо здесь,
+       в <head>, до первой отрисовки: без мигания «сначала сильно, потом слабо». */
+    const USER_KEY = 'dustore_effects';
+    const USER_DEFAULT = { buttons: 1, cards: 1 };
+    let user = Object.assign({}, USER_DEFAULT);
+
+    const clampPower = (v) => (Number.isFinite(+v) ? Math.max(0, Math.min(2, +v)) : 1);
+
+    function loadUser() {
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem(USER_KEY) || '{}') || {}; } catch (e) { /* приватный режим */ }
+        // ?? а не ||: ноль — законное значение «выключено»
+        user = { buttons: clampPower(saved.buttons ?? 1), cards: clampPower(saved.cards ?? 1) };
+    }
+
+    function applyUser() {
+        const s = document.documentElement.style;
+        s.setProperty('--f3d-user-buttons', String(user.buttons));
+        s.setProperty('--f3d-user-cards', String(user.cards));
+        document.dispatchEvent(new CustomEvent('f3d:settings', { detail: Object.assign({}, user) }));
+    }
+
+    const settings = {
+        defaults: Object.freeze(Object.assign({}, USER_DEFAULT)),
+        get: () => Object.assign({}, user),
+        set(patch) {
+            user = {
+                buttons: clampPower(patch.buttons ?? user.buttons),
+                cards: clampPower(patch.cards ?? user.cards),
+            };
+            try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (e) { /* приватный режим */ }
+            applyUser();
+        },
+        reset() {
+            try { localStorage.removeItem(USER_KEY); } catch (e) { /* приватный режим */ }
+            user = Object.assign({}, USER_DEFAULT);
+            applyUser();
+        },
+    };
+
+    loadUser();
+    applyUser();
+    // Поменяли в другой вкладке — подхватываем без перезагрузки
+    addEventListener('storage', (e) => {
+        if (e.key !== USER_KEY && e.key !== null) return;
+        loadUser();
+        applyUser();
+    });
 
     // Скролл/ресайз сдвигают элементы под курсором — кэш прямоугольников устаревает
     let layoutStamp = 0;
@@ -145,6 +198,11 @@
             el.style.transform = prev;
             this.stamp = layoutStamp;
             this.cfg = readConfig(el);
+        }
+
+        // Сила от пользователя: 0 — элемент не оживает вовсе
+        power() {
+            return this.entry.card ? user.cards : user.buttons;
         }
 
         contains(e) {
@@ -283,11 +341,11 @@
        оказался над другим, не вложенным, элементом. */
     function onMove(e) {
         if (e.pointerType === 'touch' || !selector) return;
-        const chain = chainAt(e.target);
+        const chain = chainAt(e.target).filter((f) => f.power() > 0);
         for (const f of active) {
             if (chain.includes(f)) continue;
             const foreign = chain.some((c) => !c.el.contains(f.el));
-            if (!foreign && f.el.isConnected && f.contains(e)) { f.aim(e); continue; }
+            if (!foreign && f.power() > 0 && f.el.isConnected && f.contains(e)) { f.aim(e); continue; }
             f.leave();
             active.delete(f);
         }
@@ -368,8 +426,8 @@
             ['--f3d-tilt-stiffness', 'Наклон: жёсткость', 20, 900, 5, ''],
             ['--f3d-tilt-damping', 'Наклон: трение', 2, 60, 1, ''],
             ['--f3d-lift-stiffness', 'Подъём: жёсткость', 20, 900, 5, ''],
-            ['--f3d-lift-damping', 'Подъём: трение', 2, 60, 1, 'меньше — сильнее пружинит'],
-            ['--f3d-press', 'Просадка при нажатии', 0, 1, 0.05, '1 — не проседает, 0 — ложится'],
+            ['--f3d-lift-damping', 'Подъём: трение', 2, 60, 1, '', 'меньше — сильнее пружинит'],
+            ['--f3d-press', 'Просадка при нажатии', 0, 1, 0.05, '', '1 — не проседает, 0 — ложится'],
         ]],
     ];
     const ALL = PARAMS.flatMap(([, list]) => list);
@@ -621,5 +679,5 @@
     // [data-f3d] в разметке — подключится без единой строки JS
     register('[data-f3d]', {});
 
-    window.Float3D = { register, attach: register, panel };
+    window.Float3D = { register, attach: register, panel, settings };
 })();
