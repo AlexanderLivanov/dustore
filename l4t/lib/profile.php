@@ -45,6 +45,8 @@ final class L4TProfile
         ['regular',    'Постоянство',  'Активные дни на платформе',           'active_days', [7, 30, 120],   'calendar'],
         ['oldtimer',   'Старожил',     'Дни с регистрации',                   'days_on',     [30, 180, 365], 'clock'],
         ['noticed',    'Заметный',     'Просмотры профиля',                   'views_total', [10, 100, 1000],'eye'],
+        ['trusted',    'С рекомендациями', 'Рекомендации от коллег',          'recs',        [1, 5, 15],     'check'],
+        ['networker',  'На виду',      'Мероприятия, где отмечен',            'events',      [1, 3, 10],     'pin'],
     ];
 
     public array $user;
@@ -126,7 +128,19 @@ final class L4TProfile
             'accent'        => preg_match('/^#[0-9a-f]{6}$/', $accent) ? $accent : self::ACCENTS[0],
             'pinned'        => array_values(array_filter(explode(',', (string)($p['pinned_badges'] ?? '')))),
             'hidden'        => array_values(array_filter(explode(',', (string)($p['hidden_blocks'] ?? '')))),
+            'work_modes'    => array_values(array_filter(explode(',', (string)($p['work_modes'] ?? '')))),
+            'rate'          => (string)($p['rate'] ?? ''),
+            'tz'            => isset($p['tz']) ? (int)$p['tz'] : null,
+            'manual'        => (string)($p['manual'] ?? ''),
+            'avail_expired' => false,
         ];
+
+        /* «Ищу» протухает через 30 дней. Гость видит, что статуса нет; владелец —
+           плашку «вы всё ещё открыты?» с продлением в один клик. */
+        if ($this->profile['availability'] !== '' && !empty($p['avail_until']) && $p['avail_until'] < date('Y-m-d')) {
+            $this->profile['avail_expired'] = true;
+            if (!$this->isOwner) $this->profile['availability'] = '';
+        }
     }
 
     private function loadStudios(int $uid): void
@@ -257,6 +271,8 @@ final class L4TProfile
             'days_on'     => max(0, (int)floor((time() - $added) / 86400)),
             'active_days' => $this->activity['days'],
             'views_total' => $this->views['total'],
+            'recs'        => $this->l4tdb ? (int)$this->val($this->l4tdb, "SELECT COUNT(*) FROM recommendations WHERE target_id = ? AND hidden = 0", [$uid]) : 0,
+            'events'      => $this->l4tdb ? (int)$this->val($this->l4tdb, "SELECT COUNT(*) FROM event_checkins WHERE user_id = ?", [$uid]) : 0,
         ] + $this->l4t;
     }
 

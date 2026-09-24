@@ -498,14 +498,56 @@
             .then(function () { feed.busy = false; if (moreBtn) moreBtn.disabled = false; });
     }
 
-    var qEl = $('#feedQ'), qT;
+    var qEl = $('#feedQ'), qT, peopleMode = false;
     if (qEl) qEl.addEventListener('input', function () {
         clearTimeout(qT);
-        qT = setTimeout(function () { feed.q = qEl.value.trim(); loadFeed(false); }, 250);   // дебаунс: не бьём БД на каждую букву
+        qT = setTimeout(function () {   // дебаунс: не бьём БД на каждую букву
+            feed.q = qEl.value.trim();
+            if (peopleMode) loadPeople(); else loadFeed(false);
+        }, 250);
+    });
+
+    /* ── режим «Специалисты»: поиск людей по навыку ─────────────────── */
+    var peopleEl = $('#people'), pSkill = $('#peopleSkill'), pSave = $('#peopleSave');
+    function setPeopleMode(on) {
+        peopleMode = on;
+        if (peopleEl) peopleEl.hidden = !on;
+        if (feedEl) feedEl.hidden = on;
+        if (moreBtn) moreBtn.hidden = on || moreBtn.hidden;
+        if (pSkill) pSkill.hidden = !on;
+        if (pSave) pSave.hidden = !on;
+        var tags = $('#feedTags'); if (tags) tags.hidden = on;
+        if (qEl) qEl.placeholder = on ? 'Имя, роль, строка о себе…' : 'Роль, движок, условия…';
+    }
+    function loadPeople() {
+        if (!peopleEl) return;
+        var qs = new URLSearchParams({ op: 'people', skill: pSkill ? pSkill.value : '', q: qEl ? qEl.value.trim() : '' });
+        fetch('/l4t/api/action.php?' + qs, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+            var items = r.items || [];
+            if (countEl) countEl.textContent = items.length + ' чел.';
+            peopleEl.innerHTML = items.length ? items.map(function (u) {
+                var av = C.availability[u.availability];
+                return '<a class="l4x-bid l4x-person" href="/l4t/' + encodeURIComponent(u.handle) + '">' +
+                    '<div class="l4x-bid__top"><span class="l4x-bid__who">' + (u.avatar ? '<img src="' + esc(u.avatar) + '" alt="">' : '<span class="l4x-bid__ph">' + icon('user') + '</span>') + esc(u.name) + '</span>' +
+                    (av ? '<span class="l4x-avail is-' + av.cls + '"><i></i>' + esc(av.label) + '</span>' : '') + '</div>' +
+                    '<h3 class="l4x-bid__role">' + esc(u.role || 'Роль не указана') + '</h3>' +
+                    (u.headline ? '<p class="l4x-bid__desc">' + esc(u.headline) + '</p>' : '') +
+                    '<div class="l4x-bid__tags">' + (u.skills || []).map(function (s) { return '<span class="l4x-chip">' + esc((C.skills[s] || {}).name || s) + '</span>'; }).join('') + '</div></a>';
+            }).join('') : '<div class="l4x-empty">Никого не нашлось. Сохраните поиск — пришлём уведомление, когда такой человек появится.</div>';
+        });
+    }
+    if (pSkill) pSkill.addEventListener('change', loadPeople);
+    if (pSave) pSave.addEventListener('click', function () {
+        api('/l4t/api/action.php', { op: 'search_save', skill: pSkill.value, q: qEl ? qEl.value.trim() : '' }).then(function (r) {
+            toast(r.ok ? 'Поиск сохранён — пришлём, когда кто-то появится' : (r.error || 'Не сохранилось'), r.ok ? 'ok' : 'err');
+        });
     });
     $$('#feedKind button').forEach(function (b) {
         b.addEventListener('click', function () {
             $$('#feedKind button').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+            var people = b.dataset.kind === 'people';
+            setPeopleMode(people);
+            if (people) { loadPeople(); return; }
             feed.kind = b.dataset.kind; loadFeed(false);
         });
     });
@@ -578,8 +620,23 @@
                 (d.who ? '<a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/l4t/' + encodeURIComponent(d.who.handle) + '">' + icon('user') + 'Профиль' + (d.l4trole ? ' · ' + esc(d.l4trole) : '') + '</a>' : '') +
                 (d.tg ? '<a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="https://t.me/' + esc(d.tg) + '" target="_blank" rel="noopener">' + icon('telegram') + '@' + esc(d.tg) + '</a>' : '') +
                 (!d.who && !d.tg ? '<span class="l4x-muted">Контакты не указаны</span>' : '') + '</div>';
+            html += '<div class="l4x-sep"><div class="l4x-field__label" style="margin-bottom:8px">Решение — автор отклика получит уведомление</div><div class="l4x-seg" id="respStatus">' +
+                (C.statuses || []).map(function (s) {
+                    return '<button data-s="' + esc(s) + '" class="' + (s === d.status ? 'is-on' : '') + '">' + esc(s) + '</button>';
+                }).join('') + '</div><p class="l4x-hint">«В команде» добавит проект в титры обоим и откроет возможность написать рекомендации.</p></div>';
         }
         M.open(d.kind === 'incoming' ? 'Отклик: ' + (d.who ? d.who.name : '') : 'Мой отклик', html, null);
+        var seg = $('#respStatus');
+        if (seg) seg.addEventListener('click', function (e) {
+            var b = e.target.closest('button'); if (!b) return;
+            api('/l4t/api/action.php', { op: 'respond_status', id: d.id, status: b.dataset.s }).then(function (r) {
+                if (!r.ok) { toast(r.error || 'Не сохранилось', 'err'); return; }
+                $$('#respStatus button').forEach(function (x) { x.classList.toggle('is-on', x === b); });
+                d.status = b.dataset.s; el.dataset.resp = JSON.stringify(d);
+                var chip = el.querySelector('.l4x-chip'); if (chip) chip.textContent = d.status;
+                toast('Статус: ' + d.status);
+            });
+        });
     }
 
     /* ═══════════════════════ МОИ ЗАЯВКИ ═══════════════════════ */
@@ -606,6 +663,7 @@
             var r = $('input[name="owner_type"][value="' + (d.owner_type === 'studio' ? 'studio' : 'user') + '"]', form);
             if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
             if (studioSel && d.owner_type === 'studio') studioSel.value = d.owner_id;
+            $$('#f_skills input', form).forEach(function (c) { c.checked = (d.skills || []).indexOf(c.value) > -1; });
             $('#bidFormTitle').innerHTML = icon('edit') + 'Заявка #' + d.id;
             $('#bidSubmitText').textContent = 'Сохранить';
             $('#bidCancel').hidden = false;
@@ -620,6 +678,11 @@
             $('#bidCancel').hidden = true;
             if (studioSel) studioSel.hidden = true;
             cnt();
+        });
+        form.addEventListener('change', function (e) {
+            if (e.target.name === 'skills[]' && $$('#f_skills input:checked', form).length > 8) {
+                e.target.checked = false; toast('Не больше 8 навыков', 'err');
+            }
         });
         form.addEventListener('submit', function (e) {
             if (!f('f_role').value.trim()) { e.preventDefault(); toast('Укажите, кого ищете', 'err'); f('f_role').focus(); }
@@ -732,4 +795,8 @@
                 $('#f_role', form).focus();
             }, { saveText: 'Перейти к заявке' });
     }
+
+    /* Внутреннее API для l4x-more.js: те же модалка, тост и делегирование. */
+    window.L4XUI = { C: C, root: root, $: $, $$: $$, esc: esc, icon: icon, api: api, save: save, toast: toast, M: M,
+                     actions: actions, showTab: showTab, uploadImage: uploadImage, openDrawer: openDrawer };
 })();

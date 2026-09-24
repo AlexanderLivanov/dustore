@@ -44,6 +44,8 @@ function l4x_sprite(): void
         'chart'     => '<path d="M4 20V4M4 20h16"/><path d="m7.5 15 3.5-4 3 2.5 5-6"/>',
         'telegram'  => '<path d="m20.5 4.5-17 6.8 5.2 1.9 2 6.3 3-3.7 4.6 3.4z"/><path d="m8.7 13.2 8.8-6"/>',
         'camera'    => '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.8" r="3.2"/>',
+        'bookmark'  => '<path d="M6.5 4h11a1 1 0 0 1 1 1v15l-6.5-4-6.5 4V5a1 1 0 0 1 1-1z"/>',
+        'qr'        => '<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2M14 18v2M18 18h2v2h-2z"/>',
         'arrow'     => '<path d="M5 12h14M13 6l6 6-6 6"/>',
     ];
     echo '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>';

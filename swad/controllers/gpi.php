@@ -81,6 +81,9 @@ final class GPI
     /** live-активность: day => [uid => sessions] */
     private array $act = [];
     private ?int $actStart = null;
+    /** время до команды: day => [часы, ...] */
+    private array $ttt = [];
+    private ?int $tttStart = null;
     /** регистрации: day => [uid, ...] */
     private array $reg = [];
 
@@ -252,6 +255,8 @@ final class GPI
             ['id' => 'l4t_responds', 'p' => 'community', 'label' => 'Отклики L4T', 'fmt' => 'int', 'type' => 'flow', 'k' => 2,
              'src' => [['db' => 'l4t', 't' => 'responds', 'd' => 'created_at']],
              'hint' => 'Заявка без откликов — мёртвая. Отклики показывают, работает ли биржа как рынок.'],
+            ['id' => 'time_to_team', 'p' => 'community', 'label' => 'Время до команды', 'fmt' => 'hours', 'type' => 'ttt', 'k' => 6, 'invert' => true,
+             'hint' => 'Медиана часов от публикации заявки до первого принятого отклика. Меньше — лучше: северная звезда L4T.'],
 
             /* ── Разработчики ───────────────────────────────────── */
             ['id' => 'active_devs', 'p' => 'devs', 'label' => 'Активные разработчики', 'fmt' => 'int', 'type' => 'uniq', 'k' => 2,
@@ -404,6 +409,22 @@ final class GPI
             }
         }
 
+        /* Время до команды: заявка → первый принятый отклик. */
+        if ($this->l4t && $this->has('l4t', 'responds', ['decided_at', 'status', 'bid_id'])) {
+            try {
+                $st = $this->l4t->prepare("SELECT DATE(MIN(r.decided_at)) d, TIMESTAMPDIFF(MINUTE, b.created_at, MIN(r.decided_at)) / 60 h
+                                             FROM responds r JOIN bids b ON b.id = r.bid_id
+                                            WHERE r.status IN ('принят','в команде') AND r.decided_at IS NOT NULL
+                                            GROUP BY b.id, b.created_at HAVING d >= ?");
+                $st->execute([$fromSql]);
+                foreach ($st as $r) $this->ttt[self::dn($r['d'])][] = max(0.0, (float)$r['h']);
+                $v = $this->l4t->query("SELECT MIN(DATE(decided_at)) FROM responds WHERE decided_at IS NOT NULL")->fetchColumn();
+                $this->tttStart = $v ? self::dn($v) : null;
+            } catch (Throwable $e) {
+                error_log('[gpi] ttt: ' . $e->getMessage());
+            }
+        }
+
         /* Live-активность и регистрации — общие для столпов «Игроки» и «Рост». */
         if ($this->has('main', 'user_daily_activity', ['user_id', 'day', 'sessions', 'source'])) {
             try {
@@ -434,6 +455,7 @@ final class GPI
         return match ($m['type']) {
             'act'    => $this->actStart,
             'static' => 0,
+            'ttt'    => $this->tttStart,
             default  => $this->coverage[$m['id']] ?? null,
         };
     }
@@ -461,6 +483,7 @@ final class GPI
             'repeat' => $this->repeatWin($id, $D),
             'share'  => $this->shareWin($id, $D),
             'act'    => $this->{$m['fn']}($D),
+            'ttt'    => $this->tttWin($D),
             'static' => null,
         };
         return $this->memo[$key] = $v;
@@ -502,6 +525,17 @@ final class GPI
         }
         if ($den <= 0) return null;
         return min(1.0, count($this->unionWin($this->uniq[$id] ?? [], $D)) / $den);
+    }
+
+    /** Медиана часов до команды по заявкам, закрытым в окне. Меньше двух — шум, не считаем. */
+    private function tttWin(int $D): ?float
+    {
+        $h = [];
+        for ($i = 0; $i < self::WIN; $i++) foreach ($this->ttt[$D - $i] ?? [] as $x) $h[] = $x;
+        if (count($h) < 2) return null;
+        sort($h);
+        $m = intdiv(count($h), 2);
+        return count($h) % 2 ? $h[$m] : ($h[$m - 1] + $h[$m]) / 2;
     }
 
     /* ── Активность ─────────────────────────────────────────────── */
@@ -648,6 +682,7 @@ final class GPI
         $base = array_sum($prev) / count($prev);
         $k = (float)$m['k'];
         $s = ($v + $k) / ($base + $k);
+        if (!empty($m['invert'])) $s = 1 / $s;          // «меньше — лучше»: быстрее нашли команду = рост
         return [max(self::CLAMP[0], min(self::CLAMP[1], $s)), $base];
     }
 
@@ -686,6 +721,7 @@ final class GPI
     {
         $srcOk = match ($m['type']) {
             'act'    => $this->has('main', 'user_daily_activity', ['user_id', 'day']),
+            'ttt'    => $this->has('l4t', 'responds', ['decided_at', 'status', 'bid_id']),
             'static' => true,
             default  => !empty($this->resolved[$m['id']]),
         };
@@ -719,6 +755,7 @@ final class GPI
             'hint'      => $m['hint'] ?? '',
             'fmt'       => $m['fmt'],
             'money'     => !empty($m['money']),
+            'invert'    => !empty($m['invert']),
             'info'      => !empty($m['info']),
             'status'    => $status,
             'days_left' => $status === 'collecting' ? $left : null,

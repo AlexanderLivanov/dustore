@@ -16,6 +16,7 @@ if (!function_exists('gpi_fmt')) {
             'pct'   => number_format($v * 100, 1, ',', ' ') . '%',
             'dec'   => number_format($v, 1, ',', ' '),
             'rub'   => number_format($v, 0, ',', ' ') . ' ₽',
+            'hours' => $v < 48 ? number_format($v, 0, ',', ' ') . ' ч' : number_format($v / 24, 1, ',', ' ') . ' дн.',
             default => number_format($v, 0, ',', ' '),
         };
     }
@@ -194,6 +195,7 @@ $dcls = fn($d) => $d === null ? 'flat' : ($d > 0 ? 'up' : ($d < 0 ? 'down' : 'fl
                         $hideMoney = $m['money'] && empty($GPI_ADMIN);
                         $chg = $off ? null : gpi_change($m);
                         $ccls = $chg === null ? 'flat' : ($chg[0] > 0.5 ? 'up' : ($chg[0] < -0.5 ? 'down' : 'flat'));
+                        if (!empty($m['invert']) && $ccls !== 'flat') $ccls = $ccls === 'up' ? 'down' : 'up';   // «меньше — лучше»
                     ?>
                         <div class="gpi__m <?= $off ? 'gpi__m--off' : '' ?>">
                             <div class="gpi__m-name">

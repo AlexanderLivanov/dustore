@@ -446,3 +446,106 @@ html.l4x-dark, html.l4x-dark body { background: #14041d; }
     .l4x-feed { grid-template-columns: 1fr; }
     .l4x-toolbar__count { margin-left: 0; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ВТОРАЯ ВОЛНА: навыки, опыт, титры, рекомендации, QR, связи, «Для тебя»
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* цвет группы навыка — тонкая левая черта, без радуги */
+.l4x { --g-code: #2e9bff; --g-art: #e34ac8; --g-design: #ffb020; --g-audio: #2ee6a8; --g-prod: #a58cff; }
+
+.l4x-skills { display: flex; flex-wrap: wrap; gap: 8px; }
+.l4x-skill { --s: 3px; display: inline-flex; align-items: center; gap: 10px; padding: 7px 11px; font-size: 13.5px; background: var(--card2);
+    box-shadow: inset 2px 0 0 var(--gc, var(--acc)); }
+.l4x-skill.g-code { --gc: var(--g-code); } .l4x-skill.g-art { --gc: var(--g-art); } .l4x-skill.g-design { --gc: var(--g-design); }
+.l4x-skill.g-audio { --gc: var(--g-audio); } .l4x-skill.g-prod { --gc: var(--g-prod); }
+.l4x-lvl { display: inline-flex; gap: 2px; font-style: normal; }
+.l4x-lvl b { width: 5px; height: 9px; background: rgba(255, 255, 255, .15); }
+.l4x-lvl.l1 b:nth-child(-n+1), .l4x-lvl.l2 b:nth-child(-n+2), .l4x-lvl.l3 b { background: var(--acc); }
+
+.l4x-pick { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow: auto; padding: 10px; background: rgba(0, 0, 0, .18); border: 1px solid var(--line); }
+.l4x-pick__grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.l4x-pick__grp > span { width: 100%; font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.l4x-pick label { cursor: pointer; }
+.l4x-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.l4x-pick label span, .l4x .l4x-skpick { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 12.5px; background: var(--card2); color: rgba(244, 238, 248, .85); }
+.l4x-pick input:checked + span, .l4x .l4x-skpick.l1, .l4x .l4x-skpick.l2, .l4x .l4x-skpick.l3 { background: var(--acc-soft); color: var(--fg); box-shadow: inset 0 0 0 1px var(--acc-line); }
+.l4x-modal .l4x-pick__grp { margin-top: 6px; }
+
+.l4x-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.l4x .l4x-suggest .l4x-chip { padding: 6px 10px; cursor: pointer; }
+
+.l4x-timeline { list-style: none; margin: 0; padding: 0; }
+.l4x-tl { display: grid; grid-template-columns: 14px 1fr; gap: 12px; position: relative; padding-bottom: 16px; }
+.l4x-tl:not(:last-child)::before { content: ''; position: absolute; left: 4px; top: 16px; bottom: 0; width: 2px; background: var(--line); }
+.l4x-tl__dot { width: 10px; height: 10px; margin-top: 6px; background: var(--card2); box-shadow: inset 0 0 0 2px var(--muted); }
+.l4x-tl__dot.is-ok { background: var(--acc); box-shadow: none; }
+.l4x-tl__title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
+.l4x-tl__org { font-size: 14px; }
+.l4x-tl__org a { color: color-mix(in srgb, var(--acc) 55%, #fff); text-decoration: none; }
+.l4x-tl__when { font-size: 12.5px; }
+.l4x-tl__desc { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; color: rgba(244, 238, 248, .8); }
+.l4x-verified { display: inline-flex; align-items: center; gap: 4px; font: 600 11px 'JetBrains Mono', monospace; color: var(--up); }
+.l4x-verified .l4x-ic { width: 13px; height: 13px; }
+
+.l4x-credits { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.l4x-credit { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.l4x-credit:last-child { border-bottom: 0; }
+.l4x-credit.is-hidden { opacity: .45; }
+.l4x-credit__cover { width: 44px; height: 44px; object-fit: cover; flex: none; display: grid; place-items: center; background: var(--card2); color: var(--muted); }
+.l4x-credit__body { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14px; }
+.l4x-credit__body a { text-decoration: none; }
+.l4x-credit__body a:hover b { color: color-mix(in srgb, var(--acc) 50%, #fff); }
+.l4x-credit__body .l4x-muted { font-size: 12.5px; }
+
+.l4x-again { font-size: 12.5px; color: var(--muted); }
+.l4x-again b { color: var(--up); font-family: 'JetBrains Mono', monospace; }
+.l4x-recs { display: grid; gap: 12px; }
+.l4x-rec { margin: 0; padding: 14px 16px; background: var(--card2); box-shadow: inset 2px 0 0 var(--acc); }
+.l4x-rec.is-hidden { opacity: .45; }
+.l4x-rec blockquote { margin: 0 0 12px; font-size: 14px; line-height: 1.65; color: rgba(244, 238, 248, .9); }
+.l4x-rec figcaption { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.l4x-rec__who { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; font-size: 13px; }
+.l4x-rec__who > span:last-child { display: flex; flex-direction: column; }
+.l4x-rec__who .l4x-muted { font-size: 12px; }
+.l4x-rec__ava { width: 32px; height: 32px; display: grid; place-items: center; background: var(--acc-soft); font: 800 14px 'Syne', sans-serif; overflow: hidden; }
+.l4x-rec__ava img { width: 100%; height: 100%; object-fit: cover; }
+
+.l4x-card--warn { box-shadow: inset 0 0 0 1px rgba(255, 176, 32, .35); background: rgba(255, 176, 32, .06); }
+.l4x-verify { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.l4x-verify:last-child { border-bottom: 0; }
+.l4x-verify .l4x-muted { font-size: 12px; }
+.l4x-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.l4x-events li { display: flex; flex-direction: column; font-size: 13.5px; }
+.l4x-events .l4x-muted { font-size: 12px; }
+
+.l4x-qrbar { --s: 4px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 18px; background: var(--acc-soft); box-shadow: inset 0 0 0 1px var(--acc-line); font-size: 14px; }
+.l4x-qrbar > span { flex: 1; min-width: 200px; }
+
+/* ── «Для тебя» ─────────────────────────────────────────────────────── */
+.l4x-fy { display: flex; flex-direction: column; gap: 6px; }
+.l4x-fy > .l4x-bid { flex: 1; }
+.l4x-why { display: flex; align-items: center; gap: 6px; font-size: 12px; color: color-mix(in srgb, var(--acc) 55%, #fff); }
+.l4x-why .l4x-ic { width: 14px; height: 14px; }
+.l4x-bid--jam, .l4x-bid--queue { cursor: default; }
+.l4x-bid--queue { background: linear-gradient(135deg, var(--acc-soft), transparent 70%); }
+.l4x-bid__foot .l4x-btn { font-family: 'Inter', sans-serif; }
+.l4x-person { text-decoration: none; }
+
+/* ── связи ──────────────────────────────────────────────────────────── */
+.l4x-contacts { display: grid; gap: 4px; }
+.l4x-contact { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); gap: 10px; align-items: center; }
+@media (max-width: 640px) { .l4x-contact { grid-template-columns: 1fr; } }
+.l4x-input--note { font-size: 12.5px; padding: 6px 10px; background: transparent; }
+.l4x-input--inline { width: auto; min-width: 180px; height: 40px; }
+.l4x-my.is-off { opacity: .45; }
+
+/* ── автодополнение, QR ─────────────────────────────────────────────── */
+.l4x-ac { display: flex; flex-direction: column; margin-top: -8px; }
+.l4x .l4x-ac button { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; font-size: 13px; background: var(--card2); }
+.l4x .l4x-ac button:hover { background: var(--acc-soft); }
+.l4x-qrbox { display: grid; place-items: center; min-height: 272px; }
+.l4x-qr { display: block; width: min(260px, 70vw); height: auto; image-rendering: pixelated; }
+.l4x-qrttl { height: 3px; background: rgba(255, 255, 255, .08); width: min(260px, 70vw); margin: -6px auto 0; }
+.l4x-qrttl i { display: block; height: 100%; background: var(--acc); }
+.l4x-modal #qrTabs { align-self: center; }
