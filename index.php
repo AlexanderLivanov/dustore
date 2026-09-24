@@ -596,11 +596,6 @@ mobile_redirect_if_needed();
                     <p style="font-weight: 300; opacity: 0.8;">
                         Мы верим, что творчество не зависит от того, где вы находитесь и кто вы есть. Здесь можно создавать, делиться и находить единомышленников.
                     </p>
-                    <div class="hero-buttons">
-                        <a href="/devs" class="btn">Хочу опубликовать свои игры!</a>
-                        <a href="/explore" class="btn btn-secondary">Хочу играть в игры!</a>
-                        <a href="https://t.me/dustore_devs" target="_blank" class="btn btn-secondary">Чатик для разработчиков</a>
-                    </div>
                 </div>
             </div>
         </section>

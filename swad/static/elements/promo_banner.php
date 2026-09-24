@@ -10,10 +10,16 @@
  *     <?php require_once('swad/static/elements/promo_banner.php'); ?>
  *     <main> ... ваш текущий контент ... </main>
  *
- * Файл самодостаточен: сам ищет активный слот, сам решает — рисовать себя или нет.
- * Если на сейчас нет оплаченного слота — выводит пустую строку и не задевает
- * остальную вёрстку главной вообще никак.
+ * ВАЖНО (из-за этого не работало натяжение):
+ * header.php заканчивается тегами </body></html> — то есть после его инклюда
+ * <body> уже закрыт. <main> из index.php оказывается вне <body> в глазах
+ * HTML-парсера (потом его перекидывает, но document.querySelector('body > main')
+ * в момент выполнения скрипта возвращает null). Поэтому:
+ *   - main ищем через querySelector('main') БЕЗ обёртки по body;
+ *   - в CSS используем `body.pb-flown main`, а не `body.pb-flown > main`;
+ *   - все движения main/wrap идут inline-стилями из JS.
  *
+<<<<<<< HEAD
  * ИСТОРИЯ АНИМАЦИИ (v6, текущая):
  * v1 — перехват wheel (preventDefault) и ручная стейт-машина: классический
  * scroll-jacking, ломался на трекпадах, на тач просто отключали.
@@ -70,6 +76,21 @@
  * (см. scrollRoot() ниже) — это то же самое, что использует сам браузер
  * для Home/End/колеса, так что мы гарантированно двигаем ТОТ элемент,
  * который реально скроллится, а не гадаем между html и body.
+=======
+ * Прокрутка: у нас фактически скроллится document.scrollingElement (обычно
+ * body), а не window/html. window.scrollTo()/scrollY — тихий no-op, поэтому
+ * весь скролл идёт через scrollRoot().
+ *
+ * ФЛАГ «БАННЕР УЖЕ ПОКАЗЫВАЛСЯ» (sessionStorage):
+ * Ключ pbBannerShown:<PROMO_ID> ставится при первом commitDown — то есть
+ * когда пользователь первый раз прорвался с баннера вниз на главную. При
+ * следующих заходах на главную в этой же сессии баннер не показывается
+ * с нуля: wrap сразу паркуется за верхнюю кромку, pb-locked не ставится,
+ * main рендерится сразу. Баннер остаётся доступен через натяжение вверх
+ * у верхней границы main — commitUp возвращает его как обычно.
+ * sessionStorage (не localStorage) — потому что сценарий «первый раз»,
+ * а не «навсегда»: новая вкладка = снова первый раз.
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
  */
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -78,8 +99,6 @@ require_once(__DIR__ . '/../../controllers/analytics.php');
 
 $__pb_conn = (new Database())->connect();
 
-/* + рейтинг (game_reviews) — тот же JOIN-паттерн, что в Game::queryGames()
-   и на самой странице игры: 10-балльная шкала, 5 звёзд в разметке. */
 $__pb_stmt = $__pb_conn->prepare("
     SELECT gp.id AS promo_id, g.id AS game_id, g.name, g.short_description, g.description,
            g.path_to_cover, g.banner_url, g.icon_url, g.downloads, g.platforms,
@@ -97,15 +116,9 @@ $__pb_stmt->execute();
 $promo = $__pb_stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($promo):
-    // Показ считаем на сервере: рендер баннера в разметке = гарантированный impression,
-    // в отличие от JS-события, которое можно потерять (блокировщики, медленный JS).
-    // trackOncePerSession — иначе каждый F5 страницы плодит новый показ в одной и той же сессии.
     $__pb_analytics = new Analytics($__pb_conn);
     $__pb_analytics->trackOncePerSession('promotion', (int)$promo['promo_id'], 'impression');
 
-    // Запуски — из общего модуля аналитики (event_type=launch), не из games.downloads:
-    // это отдельная метрика («сколько раз игру ЗАПУСТИЛИ», актуально для веб-игр и
-    // для игр, скачанных раньше), которую и просили вынести отдельно от скачиваний.
     $__pb_launches = $__pb_analytics->summarize('game', (int)$promo['game_id'])['launch']['count'] ?? 0;
 
     $pbImage = $promo['banner_url'] ?: $promo['path_to_cover'] ?: '';
@@ -116,12 +129,6 @@ if ($promo):
     $pbRating = $promo['avg_rating'] !== null ? (float)$promo['avg_rating'] : null;
     $pbStars  = $pbRating !== null ? max(0, min(5, (int)round($pbRating / 2))) : 0;
 
-    /* Можно ли отсюда позвать оставить отзыв — та же логика, что $userCanReview
-       в game.php (иначе кнопка вела бы на анкор #review-form-wrap, которого
-       для этого посетителя там просто не будет: форма отзыва на странице игры
-       рендерится только при владении игрой или для чисто веб-игр). Дублируем
-       проверку тут же, а не выносим в общую функцию — она в три строки и
-       больше нигде, кроме этих двух файлов, не нужна. */
     $pbCanReview = false;
     if (!empty($_SESSION['USERDATA']['id'])) {
         $__pb_platforms = array_map(fn($p) => strtolower(trim($p)), explode(',', (string)($promo['platforms'] ?? '')));
@@ -136,9 +143,6 @@ if ($promo):
     }
 ?>
     <style>
-        /* Пока не набран порог накопленного скролла — страница физически залочена.
-           html и body оба на случай браузерных различий в том, какой из них
-           реальный scrolling box. Класс вешается/снимается из JS ниже. */
         html.pb-locked,
         html.pb-locked body {
             overflow: hidden;
@@ -147,14 +151,7 @@ if ($promo):
 
         .pb-wrap {
             position: relative;
-            background: #14041d;
-            /* Ровно один вьюпорт, без max/min-height кэпов: это snap-секция, и маркер
-               #pbMainTopMarker сразу после неё обязан начинаться НИЖЕ первого экрана —
-               иначе на высоких вьюпортах (там, где раньше 880px-кэп срабатывал раньше,
-               чем кончался вьюпорт) IntersectionObserver видел маркер уже на первом
-               кадре, и баннер оказывался «улетевшим» без единого скролла. Карточка
-               внутри (.pb-inner) сама ограничена по размеру и просто центрируется —
-               визуально она не станет больше, даже когда секция выше её на 4K-мониторе. */
+            background: #0f0a20;
             height: 100vh;
             overflow: hidden;
             display: flex;
@@ -172,10 +169,11 @@ if ($promo):
             --pb-scaleEnd: 0.78;
         }
 
-        @media (max-width:640px) {
+        body.moonlight-theme .pb-wrap {
+            background: transparent;
+        }
 
-            /* Мобильный: та же механика, но без полного 3D-кувырка — короче дистанция
-       скролла и мягче углы, иначе на слабых телефонах будет дёргаться. */
+        @media (max-width:640px) {
             .pb-wrap {
                 --pb-flyX: 40%;
                 --pb-flyY: 6%;
@@ -187,12 +185,13 @@ if ($promo):
             }
         }
 
-        /* Пустой маркер ровно на границе с <main> — читаем его позицию в JS
-           (getBoundingClientRect), чтобы прыгнуть туда ровно, без нативного
-           snap: сами решаем момент и точку прыжка, а не полагаемся на то,
-           как конкретный браузер трактует scroll-snap-stop. */
         .pb-main-marker {
             display: block;
+        }
+
+        @keyframes pbIntro {
+            from { opacity: 0; filter: blur(20px); }
+            to   { opacity: 1; filter: blur(0); }
         }
 
         .pb-inner {
@@ -204,6 +203,7 @@ if ($promo):
             transform: translateY(var(--pbNudge, 0px));
             transition: transform .001s;
             will-change: transform;
+<<<<<<< HEAD
         }
 
         .pb-inner.pb-decaying {
@@ -439,6 +439,186 @@ body.moonlight-theme.pb-flown main::after {
         0 0 calc(var(--pb-tension, 0) * 50px) rgba(80, 130, 220, calc(var(--pb-tension, 0) * 1)),
         0 0 calc(var(--pb-tension, 0) * 120px) rgba(80, 130, 220, calc(var(--pb-tension, 0) * 0.5));
 }
+=======
+            animation: pbIntro .7s ease-out both;
+        }
+
+        .pb-inner.pb-decaying {
+            transition: transform .5s cubic-bezier(.34, 1.56, .64, 1);
+        }
+
+        .pb-card {
+            position: absolute;
+            inset: 0;
+            border-radius: 22px;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transform-origin: 50% 50%;
+            box-shadow: 0 40px 100px -28px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .07) inset;
+            transform: rotateY(var(--tiltY, 0deg)) rotateX(var(--tiltX, 0deg));
+            opacity: 1;
+            filter: blur(0);
+            transition: transform .001s, opacity .3s ease, filter .3s ease;
+            will-change: transform, opacity, filter;
+        }
+
+        .pb-card.pb-flying {
+            transition:
+                transform .55s cubic-bezier(.22, .61, .36, 1),
+                opacity .45s ease,
+                filter .45s ease;
+        }
+
+        .pb-card.pb-flown {
+            transform:
+                translate3d(var(--pb-flyX), var(--pb-flyY), var(--pb-flyZ))
+                rotateY(var(--pb-rotY)) rotateX(var(--pb-rotX)) rotateZ(var(--pb-rotZ))
+                scale(var(--pb-scaleEnd));
+            opacity: 0;
+            filter: blur(6px);
+            pointer-events: none;
+        }
+
+        @keyframes pbCardEnter {
+            from { transform: translateY(-20vh); opacity: 0; filter: blur(8px); }
+            to   { transform: translateY(0);     opacity: 1; filter: blur(0);   }
+        }
+
+        .pb-card.pb-entering {
+            animation: pbCardEnter .62s cubic-bezier(.22, .61, .36, 1) both;
+        }
+
+        @keyframes pbShake {
+            0%   { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)); }
+            14%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-12px, 4px, 0) rotateZ(-2.2deg) scale(.972); }
+            32%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d( 12px, 4px, 0) rotateZ( 2.2deg) scale(.972); }
+            52%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-7px,  0,   0) rotateZ(-1.3deg) scale(1.010); }
+            70%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d( 7px,  0,   0) rotateZ( 1.3deg) scale(1.010); }
+            86%  { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)) translate3d(-2px,  0,   0) rotateZ(-0.4deg) scale(1); }
+            100% { transform: rotateY(var(--tiltY,0deg)) rotateX(var(--tiltX,0deg)); }
+        }
+        .pb-card.pb-shake {
+            animation: pbShake .38s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes pbMainEnter {
+            from { transform: translateY(80px); opacity: 0; filter: blur(8px); }
+            to   { transform: translateY(0);    opacity: 1; filter: blur(0);   }
+        }
+        main.pb-main-enter {
+            animation: pbMainEnter .62s cubic-bezier(.22, .61, .36, 1);
+        }
+
+        .pb-wrap.pb-parked {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            z-index: 1;
+            padding: 24px;
+            align-items: flex-start;
+            overflow: hidden;
+            pointer-events: none;
+            transform: translateY(-100%);
+            will-change: transform;
+            perspective: none;
+        }
+
+        .pb-wrap.pb-parked .pb-inner {
+            height: auto;
+            min-height: 0;
+            flex-shrink: 0;
+        }
+
+        main {
+            position: relative;
+            z-index: 2;
+            transform-origin: 50% 0;
+        }
+
+        @property --pb-tension {
+            syntax: '<number>';
+            inherits: true;
+            initial-value: 0;
+        }
+        @property --pb-tension-down {
+            syntax: '<number>';
+            inherits: true;
+            initial-value: 0;
+        }
+
+        body.pb-flown::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+            background: #0f0a20;
+            opacity: calc(var(--pb-tension, 0) * 0.95);
+            transition: opacity .1s linear;
+        }
+
+        body.moonlight-theme.pb-flown::before {
+            background: #050a14;
+        }
+
+        body.pb-flown main::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            height: 2px;
+            width: calc(var(--pb-tension, 0) * 100%);
+            max-width: 100%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 100;
+            background: linear-gradient(90deg,
+                rgba(230, 46, 138, 0) 0%,
+                rgba(230, 46, 138, 0.95) 50%,
+                rgba(230, 46, 138, 0) 100%);
+            box-shadow: 0 0 12px rgba(230, 46, 138, calc(var(--pb-tension, 0) * 0.7));
+        }
+
+        body.moonlight-theme.pb-flown main::after {
+            background: linear-gradient(90deg,
+                rgba(86, 144, 240, 0) 0%,
+                rgba(86, 144, 240, 0.95) 50%,
+                rgba(86, 144, 240, 0) 100%);
+            box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension, 0) * 0.7));
+        }
+
+        body:not(.pb-flown) .pb-card::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            height: 2px;
+            width: calc(var(--pb-tension-down, 0) * 100%);
+            max-width: 100%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 10;
+            background: linear-gradient(90deg,
+                rgba(230, 46, 138, 0) 0%,
+                rgba(230, 46, 138, 0.95) 50%,
+                rgba(230, 46, 138, 0) 100%);
+            box-shadow: 0 0 12px rgba(230, 46, 138, calc(var(--pb-tension-down, 0) * 0.7));
+            transition: width .05s linear;
+        }
+
+        body.moonlight-theme:not(.pb-flown) .pb-card::before {
+            background: linear-gradient(90deg,
+                rgba(86, 144, 240, 0) 0%,
+                rgba(86, 144, 240, 0.95) 50%,
+                rgba(86, 144, 240, 0) 100%);
+            box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension-down, 0) * 0.7));
+        }
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
         .pb-bg {
             position: absolute;
@@ -447,16 +627,10 @@ body.moonlight-theme.pb-flown main::after {
                 <?php if ($pbImage): ?> linear-gradient(to top, rgba(20, 4, 29, .94) 0%, rgba(20, 4, 29, .55) 40%, rgba(20, 4, 29, .15) 68%, transparent 82%),
                 url('<?= htmlspecialchars($pbImage) ?>') center/cover no-repeat;
             <?php else: ?>
-            /* Фирменный градиент Dustore (--gradient2 из pages.css), без цветных орбов —
-           баннер должен выглядеть частью платформы, а не отдельным неоновым виджетом. */
             linear-gradient(160deg, #14041d 0%, #400c4a 45%, #74155d 78%, #c32178 100%);
             <?php endif; ?>
         }
 
-        /* Вся пустая площадь карточки — тоже ссылка на игру, поверх .pb-bg,
-           но под содержимым (.pb-content) и инфо-ссылкой: у них свой href,
-           вложенные <a> в HTML невалидны, поэтому это отдельный слой снизу,
-           а не обёртка вокруг остального. */
         .pb-bg-link {
             position: absolute;
             inset: 0;
@@ -498,7 +672,6 @@ body.moonlight-theme.pb-flown main::after {
             flex: none;
         }
 
-        /* Бейдж — фирменный розовый (var(--primary)), без неонового свечения. */
         .pb-eyebrow {
             display: inline-flex;
             align-items: center;
@@ -549,7 +722,6 @@ body.moonlight-theme.pb-flown main::after {
             color: #e5d9e0;
         }
 
-        /* Кнопка — тот же .btn, что везде на платформе (pages.css), только с флексом под иконку. */
         .pb-btn {
             display: inline-flex;
             align-items: center;
@@ -593,10 +765,6 @@ body.moonlight-theme.pb-flown main::after {
             background: #35d07f;
         }
 
-        /* Маленькая кнопка «оставить отзыв» — акцентный розовый с подчёркиванием,
-           внутри строки статистики: так это читается как «вот рейтинг игры —
-           а вот тут можно на него повлиять», а не как отдельный большой CTA,
-           спорящий с play-кнопкой. */
         .pb-review-cta {
             color: #e88fc0;
             text-decoration: none;
@@ -610,13 +778,6 @@ body.moonlight-theme.pb-flown main::after {
             border-color: rgba(255, 111, 184, .7);
         }
 
-        /* ── Мини-баннер, появляется, когда карточка уже «улетела» ──
-           Раньше top:76px и z-index:90 — при высоте хедера ~80px плашка
-           наезжала на его нижний край и по z-index была ВЫШЕ хедера (10),
-           поэтому клик по переключателю темы попадал в неё, а не в кнопку —
-           открывшееся меню темы тут же теряло клик и схлопывалось.
-           Теперь: ниже хедера с запасом и z-index ниже хедера, а не выше —
-           плашка больше физически не может перекрыть ничего в хедере. */
         .pb-mini {
             position: fixed;
             top: 96px;
@@ -872,9 +1033,6 @@ body.moonlight-theme.pb-flown main::after {
         </div>
     </div>
 
-    <!-- Вторая snap-точка: пустой маркер строго на границе с <main>, который index.php
-         подключает сразу после этого файла (см. докблок вверху). Сам по себе невидим —
-         IntersectionObserver в JS ниже следит именно за ним, а не считает пиксели скролла. -->
     <div class="pb-main-marker" id="pbMainTopMarker" aria-hidden="true"></div>
 
     <div class="pb-mini" id="pbMini">
@@ -910,6 +1068,7 @@ body.moonlight-theme.pb-flown main::after {
     var GAME_ID = <?= (int)$promo['game_id'] ?>;
     var DISMISS_KEY = 'pbMiniDismissed:' + PROMO_ID;
 
+<<<<<<< HEAD
     var wrap = document.getElementById('pbWrap');
     var inner = document.getElementById('pbInner');
     var card = document.getElementById('pbCard');
@@ -956,6 +1115,45 @@ body.moonlight-theme.pb-flown main::after {
 
     var flown = false;
     var attemptsDown = 0;
+=======
+    /* Флаг «баннер уже был показан в этой сессии». Ставится при первом
+       commitDown — когда пользователь впервые прорвался с баннера на
+       главную. При последующих заходах на главную баннер сразу уходит
+       за верхнюю кромку, main рендерится без блокировки, pb-locked не
+       ставится. Баннер по-прежнему доступен через натяжение вверх. */
+    var BANNER_SHOWN_KEY = 'pbBannerShown:' + PROMO_ID;
+    var bannerAlreadyShown = false;
+    try { bannerAlreadyShown = sessionStorage.getItem(BANNER_SHOWN_KEY) === '1'; } catch (e) {}
+
+    var wrap = document.getElementById('pbWrap');
+    var inner = document.getElementById('pbInner');
+    var card = document.getElementById('pbCard');
+    var mini = document.getElementById('pbMini');
+    var miniClose = document.getElementById('pbMiniClose');
+    var html = document.documentElement;
+
+    var mainEl = null;
+    function getMainEl() {
+        if (!mainEl) mainEl = document.querySelector('main');
+        return mainEl;
+    }
+    if (document.readyState !== 'loading') getMainEl();
+    else document.addEventListener('DOMContentLoaded', getMainEl, { once: true });
+
+    var dismissed = false;
+    try { dismissed = sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
+
+    var THRESHOLD_DOWN = 580;
+    var THRESHOLD_UP   = 580;
+    var MAX_DELTA_PER_TICK = 100;
+    var DECAY_MS  = 250;
+    var MIN_ATTEMPT = 40;
+    var UP_GATE   = 60;
+    var MAIN_PULL = 180;
+    var SPRING_MS = 550;
+
+    var flown = false;
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     var accum = 0;
     var decayTimer = null;
     var animating = false;
@@ -965,6 +1163,7 @@ body.moonlight-theme.pb-flown main::after {
         return document.scrollingElement || document.documentElement;
     }
 
+<<<<<<< HEAD
     /* Предел --pb-pull = реальная высота запаркованного wrap (та же формула,
        что в CSS: min(220px, 40vh)). Раньше это была отдельная константа
        MAIN_PULL=180, из-за чего натяжение упиралось в потолок РАНЬШЕ, чем
@@ -990,10 +1189,13 @@ body.moonlight-theme.pb-flown main::after {
     }
 
     /* ── Пружина баннера (вниз) ──────────────────────────────────────── */
+=======
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     function setNudge(px) {
         inner.style.setProperty('--pbNudge', px.toFixed(1) + 'px');
     }
 
+<<<<<<< HEAD
     /* ── Пружина main (вверх) ──────────────────────────────────────────
        Пишем --pb-pull на :root. По ней одновременно:
        - main едет вниз (CSS body.pb-flown main),
@@ -1015,12 +1217,55 @@ body.moonlight-theme.pb-flown main::after {
             html.style.setProperty('--pb-pull', '0px');
             html.style.setProperty('--pb-tension', '0');
             setTimeout(function () { html.classList.remove('pb-springing'); }, 620);
+=======
+    function updateTensionDown() {
+        var p = Math.min(accum / THRESHOLD_DOWN, 1);
+        html.style.setProperty('--pb-tension-down', p.toFixed(3));
+    }
+    function clearTensionDown() {
+        html.style.setProperty('--pb-tension-down', '0');
+    }
+
+    function setMainNudge(px, live) {
+        var m = getMainEl();
+        if (!m) return;
+        var p = Math.min(Math.abs(px) / MAIN_PULL, 1);
+
+        html.style.setProperty('--pb-tension', p.toFixed(3));
+
+        if (live) {
+            m.style.transition = 'transform .07s linear, filter .07s linear';
+            m.style.transform = 'translateY(' + px.toFixed(1) + 'px)';
+            m.style.filter = px > 1 ? 'blur(' + (p * 1.6).toFixed(2) + 'px)' : '';
+
+            wrap.style.transition = 'transform .07s linear';
+            wrap.style.transform = 'translateY(calc(-100% + ' + px.toFixed(1) + 'px))';
+        } else {
+            m.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1), filter ' + SPRING_MS + 'ms ease';
+            m.style.transform = '';
+            m.style.filter = '';
+
+            wrap.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1)';
+            wrap.style.transform = 'translateY(-100%)';
+
+            html.style.setProperty('--pb-tension', '0');
+
+            setTimeout(function () {
+                m.style.transition = '';
+                m.style.filter = '';
+                wrap.style.transition = '';
+            }, SPRING_MS + 80);
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
         }
     }
 
     function springBackBanner() {
         inner.classList.add('pb-decaying');
         setNudge(0);
+<<<<<<< HEAD
+=======
+        clearTensionDown();
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
         setTimeout(function () { inner.classList.remove('pb-decaying'); }, 560);
     }
 
@@ -1035,24 +1280,34 @@ body.moonlight-theme.pb-flown main::after {
         clearTimeout(decayTimer);
         decayTimer = setTimeout(function () {
             if (!flown) {
+<<<<<<< HEAD
                 if (accum > MIN_ATTEMPT) attemptsDown++;
+=======
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
                 springBackBanner();
             } else {
                 setMainNudge(0, false);
             }
             accum = 0;
             shookThisGesture = false;
+<<<<<<< HEAD
             hideTension();
         }, DECAY_MS);
     }
 
     /* ── Полёт карточки ──────────────────────────────────────────────── */
+=======
+        }, DECAY_MS);
+    }
+
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     function flyCardOut() {
         card.classList.add('pb-flying');
         void card.offsetWidth;
         card.classList.add('pb-flown');
         setTimeout(function () { card.classList.remove('pb-flying'); }, 620);
     }
+<<<<<<< HEAD
     function flyCardIn() {
         card.classList.add('pb-flying');
         void card.offsetWidth;
@@ -1147,10 +1402,101 @@ body.moonlight-theme.pb-flown main::after {
 
             /* Снять парковку: wrap снова в потоке, main уходит под него. */
             wrap.classList.remove('pb-parked', 'pb-swap-out');
+=======
+
+    function commitDown() {
+        if (animating) return;
+        animating = true;
+        clearTimeout(decayTimer);
+
+        /* Помечаем баннер как «уже показанный» — при следующих заходах
+           на главную в этой сессии он не будет показываться с нуля. */
+        try { sessionStorage.setItem(BANNER_SHOWN_KEY, '1'); } catch (e) {}
+
+        inner.classList.remove('pb-decaying');
+        setNudge(0);
+        clearTensionDown();
+        accum = 0;
+        shookThisGesture = false;
+
+        flyCardOut();
+        if (!dismissed) setTimeout(function () { mini.classList.add('pb-visible'); }, 380);
+
+        setTimeout(function () {
+            html.style.setProperty('--pb-tension', '0');
+            clearTensionDown();
+
+            wrap.classList.add('pb-parked');
+            wrap.style.transition = 'none';
+            wrap.style.transform = 'translateY(-100%)';
+            void wrap.offsetWidth;
+            wrap.style.transition = '';
+
+            card.classList.remove('pb-flown', 'pb-flying', 'pb-shake', 'pb-entering');
+
+            requestAnimationFrame(function () { scrollRoot().scrollTop = 0; });
+            html.classList.remove('pb-locked');
+            document.body.classList.add('pb-flown');
+            flown = true;
+
+            var m = getMainEl();
+            if (m) m.classList.add('pb-main-enter');
+        }, 420);
+
+        setTimeout(function () {
+            var m = getMainEl();
+            if (m) m.classList.remove('pb-main-enter');
+            animating = false;
+        }, 420 + 640);
+    }
+
+    function commitUp() {
+        if (animating) return;
+        animating = true;
+        clearTimeout(decayTimer);
+
+        var m = getMainEl();
+
+        wrap.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1)';
+        if (m) {
+            m.style.transition = 'transform ' + SPRING_MS + 'ms cubic-bezier(.34, 1.56, .64, 1), filter ' + SPRING_MS + 'ms ease';
+        }
+
+        void wrap.offsetWidth;
+
+        wrap.style.transform = 'translateY(0)';
+        if (m) {
+            m.style.transform = 'translateY(100vh)';
+            m.style.filter = '';
+        }
+
+        card.classList.remove('pb-entering');
+        void card.offsetWidth;
+        card.classList.add('pb-entering');
+
+        html.style.setProperty('--pb-tension', '0');
+        mini.classList.remove('pb-visible');
+
+        setTimeout(function () {
+            if (m) {
+                m.style.transition = 'none';
+                m.style.transform = '';
+                m.style.filter = '';
+                void m.offsetWidth;
+                m.style.transition = '';
+            }
+            wrap.style.transition = 'none';
+            wrap.style.transform = '';
+            void wrap.offsetWidth;
+            wrap.style.transition = '';
+
+            wrap.classList.remove('pb-parked');
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
             requestAnimationFrame(function () { scrollRoot().scrollTop = 0; });
             html.classList.add('pb-locked');
             document.body.classList.remove('pb-flown');
+<<<<<<< HEAD
             mini.classList.remove('pb-visible');
 
             wrap.classList.add('pb-swap-in');
@@ -1164,24 +1510,103 @@ body.moonlight-theme.pb-flown main::after {
     }
 
     /* ── Колесо ──────────────────────────────────────────────────────── */
+=======
+
+            scrollRoot().scrollTop = 0;
+
+            flown = false;
+            animating = false;
+            accum = 0;
+            shookThisGesture = false;
+        }, SPRING_MS + 30);
+
+        setTimeout(function () { card.classList.remove('pb-entering'); }, SPRING_MS + 700);
+    }
+
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     function onWheel(e) {
         if (e.ctrlKey) return;
         if (animating) { e.preventDefault(); return; }
 
         if (!flown) {
+<<<<<<< HEAD
             /* ─── ВНИЗ С БАННЕРА ─── */
             if (e.deltaY <= 0) return;
             e.preventDefault();
             accum += Math.abs(e.deltaY);
+=======
+            if (e.deltaY <= 0) return;
+            e.preventDefault();
+            accum += Math.min(Math.abs(e.deltaY), MAX_DELTA_PER_TICK);
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
             if (!shookThisGesture && accum > MIN_ATTEMPT) {
                 shookThisGesture = true;
                 triggerShake();
             }
 
+<<<<<<< HEAD
             if (accum >= THRESHOLD_DOWN && attemptsDown >= ATTEMPTS_NEEDED - 1) {
                 commitDown();
                 return;
+=======
+            updateTensionDown();
+
+            if (accum >= THRESHOLD_DOWN) {
+                commitDown();
+                return;
+            }
+            setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
+            scheduleDecay();
+            return;
+        }
+
+        if (e.deltaY >= 0) {
+            if (accum > 0) {
+                accum = 0;
+                setMainNudge(0, false);
+            }
+            return;
+        }
+
+        var s = scrollRoot();
+        if (s.scrollTop > UP_GATE) {
+            accum = 0;
+            return;
+        }
+
+        e.preventDefault();
+        accum += Math.min(Math.abs(e.deltaY), MAX_DELTA_PER_TICK);
+
+        if (accum >= THRESHOLD_UP) {
+            commitUp();
+            return;
+        }
+
+        var p = Math.min(accum / THRESHOLD_UP, 1);
+        var eased = Math.pow(p, 0.75);
+        setMainNudge(MAIN_PULL * eased, true);
+        scheduleDecay();
+    }
+    window.addEventListener('wheel', onWheel, { passive: false });
+
+    var touchStartY = null;
+    window.addEventListener('touchstart', function (e) {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function (e) {
+        if (touchStartY === null || animating) return;
+        var dy = touchStartY - e.touches[0].clientY;
+
+        if (!flown) {
+            if (dy <= 0) return;
+            e.preventDefault();
+            accum = dy;
+            if (!shookThisGesture && accum > MIN_ATTEMPT) {
+                shookThisGesture = true;
+                triggerShake();
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             }
             setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
             /* Честный прогресс: не «набрали 240px», а «это N-я попытка из 3» —
@@ -1191,6 +1616,7 @@ body.moonlight-theme.pb-flown main::after {
             return;
         }
 
+<<<<<<< HEAD
         /* ─── ВВЕРХ С ГЛАВНОЙ ─── */
         if (e.deltaY >= 0) {
             if (accum > 0) {
@@ -1248,11 +1674,25 @@ body.moonlight-theme.pb-flown main::after {
             }
             setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
             showTension('down', (attemptsDown + accum / THRESHOLD_DOWN) / ATTEMPTS_NEEDED);
+=======
+            updateTensionDown();
+
+            if (accum >= THRESHOLD_DOWN) {
+                commitDown();
+                touchStartY = null;
+                return;
+            }
+            setNudge(-16 * Math.min(accum / THRESHOLD_DOWN, 1));
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             return;
         }
 
         if (dy >= 0) {
+<<<<<<< HEAD
             if (accum > 0) { accum = 0; setMainNudge(0, false); hideTension(); }
+=======
+            if (accum > 0) { accum = 0; setMainNudge(0, false); }
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             return;
         }
 
@@ -1267,24 +1707,36 @@ body.moonlight-theme.pb-flown main::after {
             return;
         }
         var p = Math.min(accum / THRESHOLD_UP, 1);
+<<<<<<< HEAD
         setMainNudge(peekHeight() * Math.pow(p, 0.75), true);
         showTension('up', p);
+=======
+        setMainNudge(MAIN_PULL * Math.pow(p, 0.75), true);
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     }, { passive: false });
 
     window.addEventListener('touchend', function () {
         touchStartY = null;
         if (!flown) {
+<<<<<<< HEAD
             if (accum > MIN_ATTEMPT) attemptsDown++;
+=======
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
             springBackBanner();
         } else {
             setMainNudge(0, false);
         }
         accum = 0;
         shookThisGesture = false;
+<<<<<<< HEAD
         hideTension();
     }, { passive: true });
 
     /* ── Клавиатура ──────────────────────────────────────────────────── */
+=======
+    }, { passive: true });
+
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     window.addEventListener('keydown', function (e) {
         if (animating || flown) return;
         if (['PageDown', 'ArrowDown', 'End', ' '].indexOf(e.key) !== -1) {
@@ -1292,9 +1744,41 @@ body.moonlight-theme.pb-flown main::after {
         }
     });
 
+<<<<<<< HEAD
     /* ── Стартовое состояние ─────────────────────────────────────────── */
     scrollRoot().scrollTop = 0;
     html.classList.add('pb-locked');
+=======
+    /* ── Инициализация ────────────────────────────────────────────────
+       Развилка:
+         - bannerAlreadyShown = true  → wrap сразу паркуется за верхнюю
+           кромку, main рендерится сразу, pb-locked НЕ ставится. Баннер
+           доступен через натяжение вверх у верха главной.
+         - bannerAlreadyShown = false → старое поведение: wrap в потоке
+           на первом экране, pb-locked стоит, пока не прорвёмся вниз. */
+    if (bannerAlreadyShown) {
+        /* Мгновенно, без анимации — до того как браузер отрисует первый
+           кадр. Скрипт исполняется до того, как в DOM появится <main>
+           из index.php, так что подмена контекста не видна. */
+        wrap.classList.add('pb-parked');
+        wrap.style.transition = 'none';
+        wrap.style.transform = 'translateY(-100%)';
+        void wrap.offsetWidth;
+        wrap.style.transition = '';
+
+        /* Карточка — нормальная, без pb-flown. */
+        card.classList.remove('pb-flown', 'pb-flying', 'pb-shake');
+
+        /* main доступен — блокировку не ставим. */
+        document.body.classList.add('pb-flown');
+        flown = true;
+
+        if (!dismissed) mini.classList.add('pb-visible');
+    } else {
+        scrollRoot().scrollTop = 0;
+        html.classList.add('pb-locked');
+    }
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
 
     if (miniClose) {
         miniClose.addEventListener('click', function () {
@@ -1304,7 +1788,10 @@ body.moonlight-theme.pb-flown main::after {
         });
     }
 
+<<<<<<< HEAD
     /* ── Параллакс от мыши ───────────────────────────────────────────── */
+=======
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         var pbRaf = null;
         wrap.addEventListener('mousemove', function (e) {
@@ -1325,7 +1812,10 @@ body.moonlight-theme.pb-flown main::after {
         });
     }
 
+<<<<<<< HEAD
     /* ── Аналитика ───────────────────────────────────────────────────── */
+=======
+>>>>>>> 8c94329b65bc0ef7fb2df84b19b3b7b338308c90
     if (window.DustoreAnalytics) {
         DustoreAnalytics.observeView(card, 'promotion', PROMO_ID);
         var clicked = false;
