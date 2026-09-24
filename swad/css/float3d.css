@@ -1,0 +1,162 @@
+/* =============================================================================
+   FLOAT3D — наклон за курсором + контент, парящий над поверхностью
+   JS: swad/js/float3d.js. Живая настройка на сайте: Alt+Shift+F (или ?f3d).
+
+   JS пишет на элемент три числа, всё остальное считается здесь:
+     --f3d-nx, --f3d-ny  ∈ [-1..1]  где курсор (сглажено пружиной)
+     --f3d-lift          ∈ [0..1+]  насколько контент «оторвался» (с перелётом)
+
+   Модель: курсор — это фонарик. Поверхность прогибается под ним, блик
+   собирается вокруг него, тень от парящего контента отбегает от него.
+
+   Что ломает 3D: overflow (не visible), opacity < 1, filter, clip-path, mask,
+   mix-blend-mode, isolation на .f3d или .f3d-stack. Это «группирующие»
+   свойства — они молча превращают preserve-3d во flat, и слои схлопываются.
+   На .f3d-layer, .f3d-shadow и .f3d-glare — можно.
+   ============================================================================= */
+
+/* ── Настройки по умолчанию ──────────────────────────────────────────────────
+   :where() — нулевая специфичность: любой селектор страницы их перебьёт.
+   Физика (stiffness/damping/press) — числа без единиц, их читает JS. */
+:where(.f3d) {
+    --f3d-perspective: 360px;     /* меньше — сильнее перспектива и параллакс   */
+    --f3d-tilt: 14deg;            /* максимальный наклон поверхности           */
+    --f3d-hover-scale: 1.06;      /* увеличение при наведении                   */
+    --f3d-hover-rise: -3px;       /* подъём всего элемента по Y                  */
+
+    --f3d-depth: 32px;            /* высота парения контента — главный рычаг    */
+    --f3d-drift: 3px;             /* доп. 2D-сдвиг контента к курсору (усиление) */
+    --f3d-badge-depth: 1.6;       /* бейджи висят выше контента во столько раз   */
+
+    --f3d-shadow-offset: 6px;     /* насколько тень отбегает от контента         */
+    --f3d-shadow-blur: 2.5px;
+    --f3d-shadow-opacity: .55;
+    --f3d-glare: .2;              /* яркость блика                               */
+
+    --f3d-tilt-stiffness: 170;    /* наклон: жёсткость пружины                   */
+    --f3d-tilt-damping: 20;       /*         трение (ζ≈0.77 — чуть живой)        */
+    --f3d-lift-stiffness: 320;    /* подъём: жёсткость                           */
+    --f3d-lift-damping: 13;       /*         трение (ζ≈0.36 — «выпрыгивает»)     */
+    --f3d-press: .3;              /* до какой доли подъёма проседает при нажатии */
+
+    --f3d-gap: .4em;              /* зазор между детьми внутри слоя              */
+
+    position: relative;
+}
+
+.f3d,
+.f3d-stack {
+    transform-style: preserve-3d;
+}
+
+/* ── Поверхность ────────────────────────────────────────────────────────────
+   Transform есть только пока элемент «живой» (.f3d-on). В покое — none:
+   без 3D-слоя браузер рисует текст как обычно, резким. */
+.f3d.f3d-on {
+    transform:
+        perspective(var(--f3d-perspective))
+        translateY(calc(var(--f3d-lift) * var(--f3d-hover-rise)))
+        rotateX(calc(var(--f3d-ny) * var(--f3d-tilt) * -1))
+        rotateY(calc(var(--f3d-nx) * var(--f3d-tilt)))
+        scale(calc(1 + (var(--f3d-hover-scale) - 1) * var(--f3d-lift)));
+}
+
+/* ── Слой и тень в одной ячейке ─────────────────────────────────────────── */
+.f3d-stack {
+    display: inline-grid;
+    place-items: center;
+}
+
+.f3d-layer,
+.f3d-shadow {
+    grid-area: 1 / 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--f3d-gap);
+}
+
+.f3d-on .f3d-layer {
+    transform: translate3d(
+        calc(var(--f3d-nx) * var(--f3d-drift)),
+        calc(var(--f3d-ny) * var(--f3d-drift)),
+        calc(var(--f3d-lift) * var(--f3d-depth)));
+}
+
+/* Тень — копия контента, залитая чёрным, лежит на поверхности (z = 0).
+   Отбегает от курсора и всегда чуть вниз (свет немного сверху). */
+.f3d-shadow {
+    pointer-events: none;
+    user-select: none;
+    opacity: 0;
+    filter: brightness(0) blur(var(--f3d-shadow-blur));
+}
+
+.f3d-on .f3d-shadow {
+    --_sx: calc(var(--f3d-nx) * var(--f3d-shadow-offset) * -1);
+    --_sy: calc((.5 - var(--f3d-ny)) * var(--f3d-shadow-offset));
+    opacity: calc(var(--f3d-lift) * var(--f3d-shadow-opacity));
+    transform: translate(calc(var(--_sx) * var(--f3d-lift)), calc(var(--_sy) * var(--f3d-lift)));
+}
+
+/* Бейджи (абсолютные дети) — ещё выше контента */
+.f3d-on > .f3d-badge {
+    transform: translateZ(calc(var(--f3d-lift) * var(--f3d-depth) * var(--f3d-badge-depth)));
+}
+
+/* ── Блик-«фонарик» на поверхности ──────────────────────────────────────── */
+.f3d-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.f3d-on > .f3d-glare {
+    opacity: clamp(0, var(--f3d-lift), 1);
+    background: radial-gradient(
+        circle at calc((var(--f3d-nx) + 1) * 50%) calc((var(--f3d-ny) + 1) * 50%),
+        rgba(255, 255, 255, var(--f3d-glare)) 0%,
+        rgba(255, 255, 255, 0) 70%);
+}
+
+/* ── Рентген (кнопка в панели) ──────────────────────────────────────────────
+   Все .f3d замирают в «поднятом» состоянии и медленно поворачиваются боком:
+   видно, что поверхность, тень и контент — физически разные плоскости.
+   rotateX отрицательный — верхний край к нам, и слои раскрываются ВНИЗ:
+   хедер стоит у кромки экрана, вверх им раскрываться некуда. */
+@keyframes f3d-orbit {
+    from { transform: perspective(500px) rotateX(-40deg) rotateZ(-18deg); }
+    to   { transform: perspective(500px) rotateX(-40deg) rotateZ(18deg) ; }
+}
+
+.f3d-xray .f3d {
+    --f3d-lift: 1 !important;
+    --f3d-nx: 0 !important;
+    --f3d-ny: 0 !important;
+    animation: f3d-orbit 3.2s ease-in-out infinite alternate;
+    outline: 1px dashed rgba(255, 255, 255, .35);
+}
+
+.f3d-xray .f3d-layer {
+    transform: translateZ(var(--f3d-depth));
+    outline: 1px solid rgba(255, 91, 168, .9);
+}
+
+.f3d-xray .f3d-shadow {
+    opacity: var(--f3d-shadow-opacity);
+    transform: translateY(calc(var(--f3d-shadow-offset) * .5));
+    outline: 1px solid rgba(90, 176, 255, .9);
+}
+
+.f3d-xray .f3d > .f3d-badge {
+    transform: translateZ(calc(var(--f3d-depth) * var(--f3d-badge-depth)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .f3d-xray .f3d {
+        animation: none;
+        transform: perspective(500px) rotateX(-40deg) rotateZ(-14deg);
+    }
+}

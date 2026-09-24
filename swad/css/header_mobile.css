@@ -312,10 +312,17 @@
         /* гасим hover-tilt, привязанный к .header .button */
     }
 
-    /* Парящий слой (header.php) в панели не нужен: display: contents
-       возвращает детей прямо во flex кнопки — gap и flex у svg работают как раньше */
-    .user-menu .button > .float-layer {
+    /* Float3D (float3d.js) в панели не нужен: display: contents возвращает
+       детей прямо во flex кнопки — gap и flex у svg работают как раньше,
+       а копия-тень и блик просто не рисуются */
+    .user-menu .button .f3d-stack,
+    .user-menu .button .f3d-layer {
         display: contents;
+    }
+
+    .user-menu .button .f3d-shadow,
+    .user-menu .button .f3d-glare {
+        display: none;
     }
 
     .user-menu .button:active {

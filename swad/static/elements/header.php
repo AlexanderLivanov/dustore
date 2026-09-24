@@ -121,6 +121,8 @@ $stmt->execute([
     <!-- /Yandex.Metrika counter -->
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header_mobile.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/float3d.css') ?>">
+    <script src="<?= asset_url('/swad/js/float3d.js') ?>"></script>
     <link rel="shortcut icon" href="../img/logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/style.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/notifications.css') ?>">
@@ -497,7 +499,7 @@ $stmt->execute([
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
                             </svg>
-                            <span>Войти в аккаунт</span>
+                            <span class="header-profile-label">Войти в аккаунт</span>
                         </button>
                     <?php else: ?>
                         <?php
@@ -516,7 +518,7 @@ $stmt->execute([
                                     <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
                                 </svg>
                             <?php endif; ?>
-                            <span><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></span>
+                            <span class="header-profile-label"><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></span>
                         </button>
                     <?php endif; ?>
                 </div>
@@ -733,84 +735,10 @@ $stmt->execute([
                 imageContainer.addEventListener('mouseleave', resetTilt);
             });
 
-            (function() {
-                // Добавляем .version-badge в список
-                const items = document.querySelectorAll('.header .button, .version-badge');
-                if (!items.length) return;
-
-                /* Парящий слой. Всё содержимое кнопки переносим в <span class="float-layer">:
-                   кнопка — preserve-3d, слой в её 3D-пространстве поднят над поверхностью
-                   через translateZ (см. «ПАРЯЩИЙ СЛОЙ» в header.css). Перспектива из
-                   transform кнопки проецирует его сильнее, чем фон, — отсюда параллакс.
-                   Текстовый узел трансформировать нельзя, поэтому нужна обёртка.
-                   Абсолютные дети (бейджи) не переносим: слой с transform стал бы для них
-                   containing block, и top/right считались бы уже от него. */
-                function wrapFloatLayer(el) {
-                    if (el.querySelector(':scope > .float-layer')) return;
-                    const layer = document.createElement('span');
-                    layer.className = 'float-layer';
-                    Array.from(el.childNodes).forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE && getComputedStyle(node).position === 'absolute') {
-                            node.classList.add('float-badge');
-                            return;
-                        }
-                        layer.appendChild(node);
-                    });
-                    el.prepend(layer);
-                }
-
-                document.querySelectorAll('.header .button').forEach(wrapFloatLayer);
-
-                function resetTilt(el) {
-                    el.style.transform = '';
-                    el.style.removeProperty('--dx');
-                    el.style.removeProperty('--nx');
-                    el.style.removeProperty('--ny');
-                }
-
-                function handleMouseMove(e) {
-                    const el = e.currentTarget;
-                    const rect = el.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    const nx = (x / rect.width) * 2 - 1;
-                    const ny = (y / rect.height) * 2 - 1;
-
-                    const maxAngle = 15;
-                    const rotateY = maxAngle * nx;
-                    const rotateX = -maxAngle * ny;
-
-                    const translateY = -3;
-                    const scale = 1.1;
-
-                    el.style.transform =
-                        `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-
-                    // Для блика (--dx)
-                    el.style.setProperty('--dx', (nx * 50) + '%');
-                    // Для тени парящего слоя: она уходит от курсора
-                    el.style.setProperty('--nx', nx.toFixed(3));
-                    el.style.setProperty('--ny', ny.toFixed(3));
-                }
-
-                function handleMouseLeave(e) {
-                    resetTilt(e.currentTarget);
-                }
-
-                items.forEach(el => {
-                    el.addEventListener('mousemove', handleMouseMove);
-                    el.addEventListener('mouseleave', handleMouseLeave);
-                    // Добавляем класс is-tilting при наведении (для активации блика)
-                    el.addEventListener('mouseenter', function() {
-                        this.classList.add('is-tilting');
-                    });
-                    // Убираем класс при уходе
-                    el.addEventListener('mouseleave', function() {
-                        this.classList.remove('is-tilting');
-                    });
-                });
-            })();
+            /* Наклон за курсором + контент, парящий над кнопкой: swad/js/float3d.js.
+               Настройки — блок «FLOAT3D В ХЕДЕРЕ» в header.css; подбирать вживую —
+               Alt+Shift+F на любой странице (или ?f3d в адресе). */
+            window.Float3D?.attach('.header .button, .version-badge');
 
 
             window.addEventListener('load', function() {
@@ -1763,8 +1691,8 @@ $stmt->execute([
             // pinksparkle = ни одного класса (дефолт)
 
             if (logoImg && logos[theme]) logoImg.src = logos[theme];
-            // Иконку кладём внутрь парящего слоя, если он уже есть, — иначе innerHTML его снесёт
-            (themeBtn.querySelector(':scope > .float-layer') || themeBtn).innerHTML = icons[theme] || icons.pinksparkle;
+            // Иконку кладём внутрь парящего слоя Float3D, если он уже есть, — иначе innerHTML его снесёт
+            (themeBtn.querySelector('.f3d-layer') || themeBtn).innerHTML = icons[theme] || icons.pinksparkle;
 
             document.querySelectorAll('.theme-dropdown__item').forEach(item => {
                 item.classList.toggle('is-active', item.dataset.theme === theme);
@@ -1864,9 +1792,9 @@ $stmt->execute([
                     const home = right.parentNode;
                     const mq = window.matchMedia('(max-width: 900px)');
                     const profileBtn = right.querySelector('.button[onclick*="/player/"], .button[onclick*="/login"]');
-                    // :not(.float-layer) — первый span в кнопке теперь обёртка парящего слоя,
-                    // а textContent по ней снёс бы и аватарку
-                    const profileLabel = profileBtn ? (profileBtn.querySelector('span:not(.float-layer)') || profileBtn) : null;
+                    // Ищем подпись по классу: в кнопке есть служебные span'ы Float3D (слой, тень-копия),
+                    // и textContent по любому из них снёс бы аватарку
+                    const profileLabel = profileBtn ? (profileBtn.querySelector('.header-profile-label') || profileBtn) : null;
                     const profileName = profileLabel ? profileLabel.textContent.trim() : '';
                     const isAuth = !!(profileBtn && profileBtn.getAttribute('onclick').indexOf('/player/') !== -1);
 
