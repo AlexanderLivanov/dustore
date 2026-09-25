@@ -170,6 +170,21 @@
      может вернуть false у видимой страницы, и тогда сообщения не читались вовсе.
      Там достаточно того, что вкладка видна. */
   const touch = matchMedia('(pointer: coarse)').matches;
+
+  /* Высота видимой области → CSS (--vvh, --vvt). На iOS клавиатура не сжимает
+     страницу, а сдвигает видимое окно: без этого беседа уезжала вверх вместе с
+     шапкой, а после закрытия клавиатуры композер оставался не у нижнего края. */
+  if (touch && window.visualViewport) {
+    const vv = visualViewport, root = document.documentElement;
+    const syncVV = () => {
+      root.style.setProperty('--vvh', vv.height + 'px');
+      root.style.setProperty('--vvt', vv.offsetTop + 'px');
+      root.classList.toggle('kb', innerHeight - vv.height > 120);
+    };
+    vv.addEventListener('resize', syncVV);
+    vv.addEventListener('scroll', syncVV);
+    syncVV();
+  }
   let unseenFetch = false;               // был запрос с seen=0 — отметим, как только человек «появится»
   const isSeen = () => {
     const s = document.visibilityState === 'visible' && (touch || document.hasFocus()) ? 1 : 0;
