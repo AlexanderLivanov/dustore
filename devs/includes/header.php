@@ -152,6 +152,7 @@ if ($is_moder) {
     $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => 'security'];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
+        $nav_items[] = ['id' => 'notifications', 'href' => '/devs/notifications', 'icon' => 'campaign', 'label' => 'Уведомления'];
     }
 }
 ?>

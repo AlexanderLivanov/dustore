@@ -51,7 +51,9 @@ $db->exec("UPDATE push_outbox SET status='failed'
             WHERE status='pending' AND created_at < NOW() - INTERVAL " . PUSH_STALE_MIN . " MINUTE");
 
 // выдать pending с подписками
-$jobs = $db->query("SELECT id, user_id, title, body, url FROM push_outbox
+require_once __DIR__ . '/push_helpers.php';
+$iconCol = push_has_icon_column($db) ? ', icon' : '';
+$jobs = $db->query("SELECT id, user_id, title, body, url{$iconCol} FROM push_outbox
                      WHERE status='pending' ORDER BY id ASC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
 $out = [];
 // По одной строке на устройство: без UNIQUE по endpoint каждый заход в чат
@@ -67,7 +69,7 @@ foreach ($jobs as $j) {
     ], $subStmt->fetchAll(PDO::FETCH_ASSOC));
     $out[] = [
         'id' => (int)$j['id'],
-        'payload' => ['title' => $j['title'], 'body' => $j['body'], 'url' => $j['url']],
+        'payload' => ['title' => $j['title'], 'body' => $j['body'], 'url' => $j['url']] + (!empty($j['icon']) ? ['icon' => $j['icon']] : []),
         'subscriptions' => $subs,
     ];
 }

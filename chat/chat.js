@@ -165,9 +165,21 @@
   });
   /* «Прочитано» ставим, только когда человек реально смотрит: вкладка видна И окно
      в фокусе. Иначе сервер отметит лишь «доставлено». Вернулся в окно — сразу
-     дёргаем тред, чтобы собеседник увидел яркие галочки без задержки поллинга. */
-  const isSeen = () => (document.visibilityState === 'visible' && document.hasFocus() ? 1 : 0);
+     дёргаем тред, чтобы собеседник увидел яркие галочки без задержки поллинга.
+     На телефоне фокус окна — ненадёжный признак: в PWA и WebView document.hasFocus()
+     может вернуть false у видимой страницы, и тогда сообщения не читались вовсе.
+     Там достаточно того, что вкладка видна. */
+  const touch = matchMedia('(pointer: coarse)').matches;
+  let unseenFetch = false;               // был запрос с seen=0 — отметим, как только человек «появится»
+  const isSeen = () => {
+    const s = document.visibilityState === 'visible' && (touch || document.hasFocus()) ? 1 : 0;
+    if (!s) unseenFetch = true;
+    return s;
+  };
+  const catchUpSeen = () => { if (unseenFetch && isSeen() && state.convId && state.lastId) { unseenFetch = false; pollThread(); } };
   window.addEventListener('focus', () => { if (state.convId && state.lastId) pollThread(); });
+  document.addEventListener('pointerdown', catchUpSeen, { passive: true });
+  document.addEventListener('keydown', catchUpSeen);
 
   async function connectWS() {
     try {

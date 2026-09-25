@@ -155,6 +155,17 @@ function conv_access(PDO $db, int $convId, int $myId, array $myStudioIds): ?arra
     if(!$part && !$isStudioStaff) return null;
     $c['_part']=$part; $c['_isStudioStaff']=$isStudioStaff; return $c;
 }
+/**
+ * Настоящий последний id беседы. conversations.last_message_id бывает в прошлом:
+ * два сообщения, отправленные одновременно, перезаписывали его в обратном порядке,
+ * а старые беседы и внешние мосты его не обновляли. Непрочитанные же считаются
+ * по самой таблице messages — и сообщения выше указателя не читались никогда.
+ */
+function conv_true_last(PDO $db, array $c): int {
+    $q = $db->prepare("SELECT MAX(id) FROM messages WHERE conversation_id=?");
+    $q->execute([(int)$c['id']]);
+    return max((int)($c['last_message_id'] ?? 0), (int)$q->fetchColumn());
+}
 function customer_of(PDO $db, int $convId): int {
     $st=$db->prepare("SELECT user_id FROM conversation_participants WHERE conversation_id=? AND role='customer' LIMIT 1");
     $st->execute([$convId]); return (int)$st->fetchColumn();
@@ -501,7 +512,7 @@ if ($action === 'thread') {
     }
     $msgs = enrich_messages($db, $cid, $rows, $myId, $V2);
     // ФИКС прочтения: отмечаем по НАСТОЯЩЕМУ последнему id беседы, обе ветки указателя
-    $trueMax=(int)$c['last_message_id'];
+    $trueMax = $seen ? conv_true_last($db, $c) : 0;
     if($trueMax>0 && $seen){
         if($c['_part']) $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?)
                                        WHERE conversation_id=? AND user_id=?")->execute([$trueMax,$cid,$myId]);
@@ -589,7 +600,9 @@ if ($action === 'send') {
     }
     $msgId=(int)$db->lastInsertId();
     $pushText = preview_text($body, $file);
-    $db->prepare("UPDATE conversations SET last_message_id=?, last_message_at=NOW() WHERE id=?")->execute([$msgId,$cid]);
+    // GREATEST: при двух одновременных отправках UPDATE'ы приходят в любом порядке,
+    // и простое «= ?» откатывало указатель на более старое сообщение
+    $db->prepare("UPDATE conversations SET last_message_id=GREATEST(COALESCE(last_message_id,0),?), last_message_at=NOW() WHERE id=?")->execute([$msgId,$cid]);
     // ФИКС: любое новое сообщение возвращает беседу из архива всем участникам
     $db->prepare("UPDATE conversation_participants SET archived=0 WHERE conversation_id=?")->execute([$cid]);
     if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$msgId,$cid]);
@@ -832,7 +845,7 @@ if ($action === 'mark_read') {
     if ($c['type'] === 'system') {
         $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
     } else {
-        $last = (int)$c['last_message_id'];
+        $last = conv_true_last($db, $c);
         if ($c['_part']) $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?) WHERE conversation_id=? AND user_id=?")->execute([$last, $cid, $myId]);
         if ($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$last, $cid]);
     }
@@ -843,18 +856,34 @@ if ($action === 'mark_read') {
  * «Отметить всё как прочитанное» для текущей вкладки. Один UPDATE с JOIN,
  * а не цикл по беседам. */
 if ($action === 'mark_all_read') {
-    if (($_POST['tab'] ?? 'personal') === 'studio') {
+    /* Максимум считаем по messages, а не по conversations.last_message_id (см.
+       conv_true_last). Один запрос на MAX по списку бесед — и точечные UPDATE:
+       UPDATE с подзапросом к той же таблице MySQL не разрешает (ошибка 1093). */
+    $studio = ($_POST['tab'] ?? 'personal') === 'studio';
+    if ($studio) {
         if ($myStudioIds) {
             $in = implode(',', array_fill(0, count($myStudioIds), '?'));
-            $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),COALESCE(last_message_id,0))
-                           WHERE type='studio' AND studio_id IN ($in)")->execute($myStudioIds);
-        }
+            $q = $db->prepare("SELECT id FROM conversations WHERE type='studio' AND studio_id IN ($in)");
+            $q->execute($myStudioIds);
+            $convIds = array_map('intval', $q->fetchAll(PDO::FETCH_COLUMN));
+        } else $convIds = [];
     } else {
-        $db->prepare("UPDATE conversation_participants p JOIN conversations c ON c.id = p.conversation_id
-                         SET p.last_read_message_id = GREATEST(COALESCE(p.last_read_message_id,0), COALESCE(c.last_message_id,0))
-                       WHERE p.user_id=?")->execute([$myId]);
-        $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
+        $q = $db->prepare("SELECT conversation_id FROM conversation_participants WHERE user_id=?");
+        $q->execute([$myId]);
+        $convIds = array_map('intval', $q->fetchAll(PDO::FETCH_COLUMN));
     }
+    if ($convIds) {
+        $in = implode(',', array_fill(0, count($convIds), '?'));
+        $q = $db->prepare("SELECT conversation_id, MAX(id) FROM messages WHERE conversation_id IN ($in) GROUP BY conversation_id");
+        $q->execute($convIds);
+        $upd = $studio
+            ? $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")
+            : $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?) WHERE conversation_id=? AND user_id=?");
+        foreach ($q->fetchAll(PDO::FETCH_NUM) as [$cid, $mx]) {
+            $upd->execute($studio ? [(int)$mx, (int)$cid] : [(int)$mx, (int)$cid, $myId]);
+        }
+    }
+    if (!$studio) $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
     out(['ok' => true]);
 }
 

@@ -29,14 +29,34 @@ function push_user_has_subscription(PDO $db, int $userId): bool {
     return (bool)$st->fetchColumn();
 }
 
+/**
+ * Есть ли в push_outbox колонка icon (своя иконка у уведомления). Без неё всё
+ * работает как раньше, с иконкой по умолчанию из sw.js. Добавить:
+ *   ALTER TABLE push_outbox ADD COLUMN icon VARCHAR(255) NULL;
+ */
+function push_has_icon_column(PDO $db): bool {
+    static $has = null;
+    if ($has === null) {
+        try { $db->query("SELECT icon FROM push_outbox LIMIT 0"); $has = true; }
+        catch (Throwable $e) { $has = false; }
+    }
+    return $has;
+}
+
 /** Положить одну задачу в очередь. Возвращает id задачи или 0. */
-function push_enqueue_user(PDO $db, int $userId, string $title, string $body, string $url = '/chat/'): int {
+function push_enqueue_user(PDO $db, int $userId, string $title, string $body, string $url = '/chat/', ?string $icon = null): int {
     if ($userId <= 0) return 0;
     if (!push_user_has_subscription($db, $userId)) return 0;
 
-    $st = $db->prepare("INSERT INTO push_outbox(user_id, title, body, url, status, attempts, created_at)
-                        VALUES(?, ?, ?, ?, 'pending', 0, NOW())");
-    $st->execute([$userId, push_trim($title, 80), push_trim($body), $url]);
+    if ($icon !== null && $icon !== '' && push_has_icon_column($db)) {
+        $st = $db->prepare("INSERT INTO push_outbox(user_id, title, body, url, icon, status, attempts, created_at)
+                            VALUES(?, ?, ?, ?, ?, 'pending', 0, NOW())");
+        $st->execute([$userId, push_trim($title, 80), push_trim($body), $url, $icon]);
+    } else {
+        $st = $db->prepare("INSERT INTO push_outbox(user_id, title, body, url, status, attempts, created_at)
+                            VALUES(?, ?, ?, ?, 'pending', 0, NOW())");
+        $st->execute([$userId, push_trim($title, 80), push_trim($body), $url]);
+    }
     return (int)$db->lastInsertId();
 }
 
