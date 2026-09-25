@@ -624,43 +624,12 @@ $stmt->execute([
 
                  Если фича вернётся — раскомментируй разметку и верни
                  скрипт, но уже с проверкой, что элементы на странице есть. */ ?>
-        <!-- subscribe to push 19.01.2025 (c) Alexander Livanov -->
-        <script>
-            function urlBase64ToUint8Array(base64String) {
-                const padding = '='.repeat((4 - base64String.length % 4) % 4);
-                const base64 = (base64String + padding)
-                    .replace(/-/g, '+')
-                    .replace(/_/g, '/');
-
-                return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-            }
-
-            async function subscribeToPush() {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    const sub = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array("<?= VAPID_PUBLIC_KEY ?>")
-                    });
-
-                    console.log("Subscription object:", sub);
-
-                    const response = await fetch("/api/push/subscribe.php", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(sub)
-                    });
-
-                    const data = await response.json();
-                    console.log("Response from PHP:", data);
-                    alert("Подписка сохранена");
-                } catch (err) {
-                    console.error("Push subscription failed:", err);
-                }
-            }
-        </script>
+        <?php /* Подписка на пуши живёт в /pwa/push-client.js (чат, /m/chat, /m/profile).
+                 Здесь была её первая версия (19.01.2025): subscribeToPush() с ключом
+                 из константы VAPID_PUBLIC_KEY и записью в /api/push/subscribe.php.
+                 Её никто не вызывал, а ключ она брала не из того места, что
+                 push-client, — второй источник ключа, из-за которого пуши молча
+                 ломаются при смене ключей. Удалена. */ ?>
 
         <script>
             const header = document.querySelector('.header');
