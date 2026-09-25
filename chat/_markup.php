@@ -2,7 +2,8 @@
 /**
  * chat/_markup.php — разметка мессенджера. Общая для /chat/ (десктоп) и /m/chat
  * (мобильное PWA): chat.js один на оба, значит и DOM должен быть один.
- * Ожидает $hasStudio.
+ * Ожидает $hasStudio. Необязательно: $mobileUI — мобильное PWA (кнопка «новый чат», фильтры,
+ * «Недавние», быстрые ответы); на десктопе этих блоков в DOM нет.
  */
 ?>
 <div class="app" id="app">
@@ -11,11 +12,16 @@
       <div class="brand">
         <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5.1A8 8 0 1 1 21 12z"/></svg></span>
         <div>Чаты<small>личные · студии · уведомления</small></div>
+        <?php if (!empty($mobileUI)): ?>
+        <button type="button" class="icon-btn side-new" id="newChat" aria-label="Новый чат">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        </button>
+        <?php endif; ?>
         <button type="button" class="icon-btn side-more" id="sideMore" aria-label="Меню чатов">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
         </button>
       </div>
-      <div class="tabs">
+      <div class="tabs<?= $hasStudio ? '' : ' single' ?>">
         <button type="button" class="tab active" data-tab="personal">Личные</button>
         <?php if ($hasStudio): ?><button type="button" class="tab" data-tab="studio">Студия</button><?php endif; ?>
       </div>
@@ -27,6 +33,10 @@
       <button type="button" id="searchClear" aria-label="Очистить">&times;</button>
     </div>
 
+    <?php if (!empty($mobileUI)): ?>
+    <div class="chips" id="chips" role="tablist" aria-label="Фильтр чатов"></div>
+    <div class="recent" id="recent" hidden aria-label="Недавние"></div>
+    <?php endif; ?>
     <div class="list" id="list"><div class="empty">Загрузка…</div></div>
     <div class="search-results" id="searchResults" hidden></div>
   </aside>
@@ -87,12 +97,20 @@
         <button type="button" class="rb-x" id="rbX" aria-label="Отменить ответ">&times;</button>
       </div>
       <div class="attach-tray" id="attachTray" hidden></div>
+      <?php if (!empty($mobileUI)): ?>
+      <div class="quick" id="quick" hidden>
+        <button type="button" data-q="👍">👍</button>
+        <button type="button" data-q="Сейчас гляну">Сейчас гляну</button>
+        <button type="button" data-q="Спасибо!">Спасибо!</button>
+        <button type="button" data-q="Ок">Ок</button>
+      </div>
+      <?php endif; ?>
       <div class="composer">
         <button type="button" class="attach" id="attachBtn" aria-label="Прикрепить файл">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg>
         </button>
         <input type="file" id="fileInput" multiple hidden>
-        <textarea id="input" rows="1" placeholder="Написать сообщение…" enterkeyhint="send"></textarea>
+        <textarea id="input" rows="1" placeholder="<?= !empty($mobileUI) ? 'Сообщение' : 'Написать сообщение' ?>…" enterkeyhint="send"></textarea>
         <button class="send" id="send" disabled aria-label="Отправить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
     </div>

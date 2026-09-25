@@ -83,27 +83,55 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) pollBadge(); });
   }
 
-  /* ── Установка на экран «Домой» ── */
+  /* ── Установка на экран «Домой» ──
+     Плашка предлагает раз в 14 дней, шторка #installSheet объясняет шаги под платформу.
+     У iOS нет системного диалога установки — только «Поделиться → На экран Домой»,
+     поэтому там шторка обязательна. Открыть её можно откуда угодно: [data-install]
+     или window.mInstall() (например, из настроек уведомлений в чате). */
+  const ua = navigator.userAgent;
+  const isAndroid = /Android/i.test(ua);
+  const platform = isIOS ? 'ios' : isAndroid ? 'android' : 'other';
+  // in-app браузеры (Telegram, ВК…) не умеют «Домой»: у iOS в UA нет токена Safari/, у Android — «; wv)»
+  const inApp = /Telegram|Instagram|FBAN|FBAV|VKAndroidApp|VKClient|Snapchat|; wv\)/i.test(ua) || (isIOS && !/Safari\//.test(ua));
   let deferred = null;
-  const installEl = $('#install');
+  const installEl = $('#install'), sheet = $('#installSheet');
   const installHidden = () => (+store.get('m_install_x') || 0) > Date.now() - 14 * 864e5;
   function showInstall(hint) {
     if (!installEl || standalone || installHidden() || ['game', 'chat'].includes(M.page)) return;
     if (hint) $('#installHint').textContent = hint;
     installEl.hidden = false;
   }
+  function closeInstall() { if (!sheet) return; sheet.hidden = true; document.body.classList.remove('lock'); }
+  function openInstall() {
+    if (standalone) { toast('Dustore уже установлен'); return; }
+    if (!sheet) return;
+    $$('[data-for]', sheet).forEach(el => { el.hidden = el.dataset.for !== platform; });
+    $$('[data-inapp]', sheet).forEach(el => { el.hidden = !inApp; });
+    const native = $('[data-native]', sheet), manual = $('[data-manual]', sheet);
+    if (native && manual) { native.hidden = !deferred; manual.hidden = !!deferred; }
+    sheet.hidden = false; document.body.classList.add('lock');
+    if (installEl) installEl.hidden = true;
+  }
+  window.mInstall = openInstall;
+  async function nativeInstall() {
+    if (!deferred) return openInstall();
+    deferred.prompt();
+    const { outcome } = await deferred.userChoice; deferred = null;
+    if (outcome === 'accepted') { closeInstall(); if (installEl) installEl.hidden = true; toast('Dustore добавлен на экран'); }
+  }
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; showInstall(); });
+  addEventListener('appinstalled', () => { if (installEl) installEl.hidden = true; closeInstall(); toast('Dustore добавлен на экран'); });
   if (isIOS && !standalone) setTimeout(() => showInstall('Нажмите «Поделиться» → «На экран Домой»'), 2500);
-  $('#installBtn')?.addEventListener('click', async () => {
-    if (deferred) {
-      deferred.prompt();
-      const { outcome } = await deferred.userChoice; deferred = null;
-      if (outcome === 'accepted') { installEl.hidden = true; toast('Dustore добавлен на экран'); }
-    } else if (isIOS) {
-      toast('Внизу Safari: «Поделиться» → «На экран Домой»');
-    }
-  });
+  // кнопки «Установить» на плашке: на Android с готовым диалогом — сразу он, иначе шторка с шагами
+  $('#installBtn')?.addEventListener('click', () => (deferred ? nativeInstall() : openInstall()));
+  $('#installNative')?.addEventListener('click', nativeInstall);
+  $('#installClose')?.addEventListener('click', closeInstall);
+  sheet?.addEventListener('click', e => { if (e.target === sheet) closeInstall(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && sheet && !sheet.hidden) closeInstall(); });
+  document.addEventListener('click', e => { if (e.target.closest('[data-install]')) { e.preventDefault(); openInstall(); } });
   $('#installX')?.addEventListener('click', () => { installEl.hidden = true; store.set('m_install_x', Date.now()); });
+  // в установленном приложении пункты «Установить» не нужны
+  if (standalone) $$('[data-install]').forEach(el => { el.hidden = true; });
 
   /* ── Герой-карусель: точки + автопрокрутка, пауза на касании ── */
   const track = $('#heroTrack');

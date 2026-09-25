@@ -303,6 +303,15 @@ if ($action === 'list') {
         $users   = get_users_meta($db, $peerUserIds);
         $studios = get_studios_meta($db, $peerStudioIds);
 
+        // когда собеседник был на сайте — для точки «в сети» в списке (мобильное PWA)
+        $seenOf = [];
+        $sIds = array_values(array_unique(array_filter($peerUserIds)));
+        if ($sIds) {
+            $sst = $db->prepare("SELECT id, last_activity FROM users WHERE id IN (" . implode(',', array_fill(0, count($sIds), '?')) . ")");
+            $sst->execute($sIds);
+            foreach ($sst->fetchAll(PDO::FETCH_ASSOC) as $sr) $seenOf[(int)$sr['id']] = $sr['last_activity'];
+        }
+
         foreach ($rows as $r) {
             $cid = (int)$r['id'];
             if ($r['type'] === 'studio') {
@@ -316,7 +325,8 @@ if ($action === 'list') {
                 $pid  = $peerOf[$cid] ?? 0;
                 $peer = ['kind' => 'user', 'id' => $pid,
                          'name' => $users[$pid]['username'] ?? ('user#' . $pid),
-                         'avatar' => $users[$pid]['avatar'] ?? null];
+                         'avatar' => $users[$pid]['avatar'] ?? null,
+                         'seen' => $seenOf[$pid] ?? null];
             }
             // «Уведомления» живут в таблице notifications, а не в messages
             if ($r['type'] === 'system') { $cards[] = system_card($db, $cid, $peer, $myId); continue; }

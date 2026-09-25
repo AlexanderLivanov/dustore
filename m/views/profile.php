@@ -42,6 +42,8 @@ $footExtra = '<script>window.VAPID_PUBLIC = ' . json_encode(vapid_public_key()) 
 </section>
 
 <div class="menu">
+  <a class="menu-i" href="/m/library"><i class="ti ti-bookmark"></i><span><b>Библиотека</b><small><?= $nGames ?> <?= m_plural($nGames, 'игра', 'игры', 'игр') ?> · <?= $nWish ?> в вишлисте</small></span><i class="ti ti-chevron-right"></i></a>
+  <button type="button" class="menu-i" data-install><i class="ti ti-download"></i><span><b>Установить приложение</b><small>Иконка на экране «Домой», уведомления</small></span><i class="ti ti-chevron-right"></i></button>
   <div class="menu-i push" id="pushRow">
     <i class="ti ti-bell-ringing"></i>
     <span><b>Уведомления</b><small id="pushSub">Сообщения и события аккаунта</small></span>
