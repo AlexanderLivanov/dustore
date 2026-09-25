@@ -54,11 +54,12 @@ require __DIR__ . '/../swad/static/elements/header.php';
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0d0118">
 <title>Чаты · Dustore</title>
 <link rel="stylesheet" href="/swad/css/chat.css?v=<?= (int)@filemtime(__DIR__ . '/../swad/css/chat.css') ?>">
 </head>
-<body>
+<body class="chat-page">
 
 <div class="app" id="app">
   <aside class="panel side">
@@ -66,6 +67,9 @@ require __DIR__ . '/../swad/static/elements/header.php';
       <div class="brand">
         <span class="glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5.1A8 8 0 1 1 21 12z"/></svg></span>
         <div>Чаты<small>личные · студии · уведомления</small></div>
+        <button type="button" class="icon-btn side-more" id="sideMore" aria-label="Меню чатов">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
       </div>
       <div class="tabs">
         <button type="button" class="tab active" data-tab="personal">Личные</button>
@@ -75,7 +79,7 @@ require __DIR__ . '/../swad/static/elements/header.php';
 
     <div class="search-top" id="searchWrap">
       <span class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input id="searchInput" placeholder="Поиск или новый чат…" autocomplete="off">
+      <input id="searchInput" placeholder="Поиск или новый чат…" autocomplete="off" enterkeyhint="search">
       <button type="button" id="searchClear" aria-label="Очистить">&times;</button>
     </div>
 
@@ -102,7 +106,9 @@ require __DIR__ . '/../swad/static/elements/header.php';
     </div>
 
     <div class="room-head" id="roomHead" hidden>
-      <button class="back" id="back" aria-label="Назад">‹</button>
+      <button class="back" id="back" aria-label="Назад">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
       <button class="peer" id="peerHead">
         <div class="av" id="rhAv"></div>
         <div style="min-width:0">
@@ -111,19 +117,42 @@ require __DIR__ . '/../swad/static/elements/header.php';
         </div>
       </button>
       <div class="head-menu">
-        <button class="icon-btn" id="menuBtn" aria-label="Меню">⋯</button>
+        <button class="icon-btn" id="menuBtn" aria-label="Меню">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
         <div class="menu" id="menu" hidden>
+          <button id="markRead">Отметить прочитанным</button>
           <button class="danger" id="delConv">Удалить переписку</button>
         </div>
       </div>
     </div>
 
+    <button type="button" class="pinbar" id="pinbar" hidden>
+      <span class="pb-line" id="pbLine"></span>
+      <span class="pb-main"><span class="pb-title" id="pbTitle">Закреплённое</span><span class="pb-text" id="pbText"></span></span>
+      <span class="pb-x" id="pbX" role="button" aria-label="Открепить">&times;</span>
+    </button>
+
     <div class="thread" id="thread" hidden></div>
 
-    <div class="composer" id="composer" hidden>
-      <textarea id="input" rows="1" placeholder="Написать сообщение…"></textarea>
-      <button class="send" id="send" disabled aria-label="Отправить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    <div class="composer-wrap" id="composer" hidden>
+      <div class="reply-bar" id="replyBar" hidden>
+        <svg class="rb-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+        <div class="rb-main"><div class="rb-name" id="rbName"></div><div class="rb-text" id="rbText"></div></div>
+        <button type="button" class="rb-x" id="rbX" aria-label="Отменить ответ">&times;</button>
+      </div>
+      <div class="attach-tray" id="attachTray" hidden></div>
+      <div class="composer">
+        <button type="button" class="attach" id="attachBtn" aria-label="Прикрепить файл">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg>
+        </button>
+        <input type="file" id="fileInput" multiple hidden>
+        <textarea id="input" rows="1" placeholder="Написать сообщение…" enterkeyhint="send"></textarea>
+        <button class="send" id="send" disabled aria-label="Отправить"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
     </div>
+
+    <div class="dropzone" id="dropzone" hidden><div>Отпустите, чтобы прикрепить</div></div>
 
     <div class="profile" id="profile">
       <div class="profile-head"><button class="icon-btn" id="profBack">‹</button><span>Профиль</span></div>
@@ -132,545 +161,34 @@ require __DIR__ . '/../swad/static/elements/header.php';
   </section>
 </div>
 
+<!-- контекстное меню: сообщения, беседы, сайдбар -->
+<div class="ctx" id="ctx" hidden role="menu"></div>
+
+<!-- настройки звука и уведомлений -->
+<div class="modal" id="settings" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stTitle">
+    <div class="modal-head"><b id="stTitle">Звук и уведомления</b><button type="button" class="icon-btn" id="stClose" aria-label="Закрыть">&times;</button></div>
+    <div class="st-section">Звук входящих</div>
+    <div class="st-sounds" id="stSounds"></div>
+    <label class="st-vol">Громкость <input type="range" id="stVolume" min="0" max="100" step="5"></label>
+    <input type="file" id="soundInput" accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/aac,audio/mp4,.mp3,.ogg,.wav,.m4a" hidden>
+    <div class="st-section">Уведомления на этом устройстве</div>
+    <div class="st-push"><span id="pushState">…</span><button type="button" class="st-btn" id="pushBtn" hidden>Включить</button></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" hidden><img alt=""><a class="lb-dl" id="lbDl" href="#" download>Скачать</a></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="/pwa/push-client.js"></script>
 <script>
-(function () {
-'use strict';
-
-const ME   = <?= (int)$myId ?>;
-const AUTO = { to: <?= $openTo ?>, studio: <?= $openStudio ?>, conversation: <?= $openConv ?> };
-
-const $ = s => document.querySelector(s);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
-    c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-
-function api(action, params = {}, method = 'GET') {
-  const opt = { method };
-  let url = 'api.php?action=' + action;
-  if (method === 'GET') url += '&' + new URLSearchParams(params);
-  else opt.body = new URLSearchParams({ action, ...params });
-  return fetch(url, opt).then(r => r.json()).catch(() => ({ ok: false, error: 'network' }));
-}
-
-const initials = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-const avatarHTML = p => p.avatar
-  ? `<img src="${esc(p.avatar)}" alt="" data-fb="${esc(initials(p.name))}" onerror="this.outerHTML=this.dataset.fb">`
-  : esc(initials(p.name));
-const BELL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
-const avShape = p => p && p.kind === 'system' ? 'sys' : (p && p.kind === 'studio' ? 'sq' : 'round');
-const asDate = ts => new Date(String(ts).replace(' ', 'T'));
-const fmtTime = ts => asDate(ts).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
-const fmtDay  = ts => asDate(ts).toLocaleDateString('ru', { day: 'numeric', month: 'long' });
-
-function lastSeen(ts) {
-  if (!ts) return '';
-  const s = (Date.now() - asDate(ts)) / 1000;
-  if (s < 90)    return 'в сети';
-  if (s < 3600)  return 'был(а) ' + Math.floor(s / 60) + ' мин назад';
-  if (s < 86400) return 'был(а) ' + Math.floor(s / 3600) + ' ч назад';
-  return 'был(а) ' + asDate(ts).toLocaleDateString('ru', { day: 'numeric', month: 'short' });
-}
-
-let toastTimer;
-function toast(msg, err) {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.toggle('err', !!err);
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-/* ── Звук и пуш ───────────────────────────────────────────────────────────── */
-let audioCtx = null, prevTotal = null, pushInited = false;
+window.CHAT_CFG = {
+  me: <?= (int)$myId ?>,
+  api: '/chat/api.php',
+  auto: { to: <?= $openTo ?>, studio: <?= $openStudio ?>, conversation: <?= $openConv ?> },
+};
 window.VAPID_PUBLIC = <?= json_encode($VAPID_PUBLIC) ?>;
-document.addEventListener('click', () => {
-  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-  if (!pushInited && window.initPush) {
-    pushInited = true;
-    // Без ключа подписка молча падает внутри pushManager.subscribe —
-    // лучше сказать это в консоль, чем гадать, почему пуши не приходят.
-    if (!window.VAPID_PUBLIC) console.warn('[push] VAPID_PUBLIC пуст: ключ не найден ни в окружении, ни в /etc/dustore/push.env');
-    else window.initPush();
-  }
-}, { once: false });
-
-function ping() {
-  if (!audioCtx || document.hidden) return;
-  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-  o.connect(g); g.connect(audioCtx.destination);
-  o.type = 'sine'; o.frequency.value = 880;
-  const t = audioCtx.currentTime;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-  o.start(t); o.stop(t + 0.23);
-}
-window.chatPing = ping;
-
-/* ── Поллинг ──────────────────────────────────────────────────────────────── */
-/* Раньше таймеры крутились всегда, даже когда вкладка в фоне: каждая забытая
-   вкладка дёргала api.php раз в 8 секунд бесконечно. Теперь на скрытой вкладке
-   опрос останавливается и возобновляется при возврате. */
-const POLL_LIST = { fast: 8000, slow: 25000 };
-const POLL_THREAD = { fast: 3000, slow: 15000 };
-let wsRate = 'fast', ws = null, wsBackoff = 1000;
-
-const state = { tab: 'personal', convId: 0, lastId: 0, firstId: 0, hasMore: false,
-                draft: null, header: null, isSystem: false, listTimer: null, threadTimer: null,
-                peerLastRead: 0 };
-
-function startListTimer() {
-  clearInterval(state.listTimer);
-  if (document.hidden) return;
-  state.listTimer = setInterval(loadList, POLL_LIST[wsRate]);
-}
-function startThreadTimer() {
-  clearInterval(state.threadTimer);
-  if (document.hidden || !state.convId) return;
-  state.threadTimer = setInterval(pollThread, POLL_THREAD[wsRate]);
-}
-function setRate(mode) { if (wsRate === mode) return; wsRate = mode; startListTimer(); startThreadTimer(); }
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { clearInterval(state.listTimer); clearInterval(state.threadTimer); }
-  else { loadList(); if (state.convId) pollThread(); startListTimer(); startThreadTimer(); }
-});
-
-async function connectWS() {
-  try {
-    const t = await fetch('/chat/ws_ticket.php').then(r => r.json());
-    if (!t.ok) throw new Error('ticket');
-    ws = new WebSocket(`wss://${location.host}/ws?ticket=${encodeURIComponent(t.ticket)}`);
-    ws.onopen = () => { wsBackoff = 1000; setRate('slow'); };
-    ws.onmessage = e => {
-      let m; try { m = JSON.parse(e.data); } catch { return; }
-      if (m.type === 'new_message') {
-        if (m.conversation_id === state.convId) pollThread();
-        loadList();
-      }
-    };
-    ws.onclose = ws.onerror = () => {
-      setRate('fast');
-      setTimeout(connectWS, wsBackoff);
-      wsBackoff = Math.min(wsBackoff * 1.6 + Math.random() * 300, 15000);
-    };
-  } catch (e) {
-    setRate('fast');
-    setTimeout(connectWS, wsBackoff);
-    wsBackoff = Math.min(wsBackoff * 1.6, 15000);
-  }
-}
-
-/* ── Список бесед ─────────────────────────────────────────────────────────── */
-async function loadList() {
-  const r = await api('list', { tab: state.tab });
-  const box = $('#list');
-  if (!r.ok) { box.innerHTML = '<div class="empty">Не удалось загрузить список</div>'; return; }
-
-  const total = r.conversations.reduce((a, c) => a + (c.unread || 0), 0);
-  if (prevTotal !== null && total > prevTotal) ping();
-  prevTotal = total;
-
-  if (!r.conversations.length) { box.innerHTML = '<div class="empty">Здесь появятся ваши диалоги</div>'; return; }
-
-  box.innerHTML = r.conversations.map(c => {
-    const badge = c.unread ? `<span class="badge">${c.unread > 99 ? '99+' : c.unread}</span>` : '<span></span>';
-    const active = c.id === state.convId ? ' active' : '';
-    const isSys = c.peer.kind === 'system';
-    const cls = isSys ? ' system' : (c.type === 'studio' ? ' studio' : '');
-    const last = isSys
-      ? (c.last ? esc(c.last.body) : 'нет уведомлений')
-      : (c.last ? (c.last.mine ? '<span class="me">Вы: </span>' : '') + esc(c.last.body) : '<i>нет сообщений</i>');
-    return `<button type="button" class="card${cls}${active}" data-id="${c.id}"
-              data-peer='${esc(JSON.stringify(c.peer))}' data-studio="${c.type === 'studio' ? 1 : 0}" data-system="${isSys ? 1 : 0}">
-      <div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>
-      <div class="c-main">
-        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span><span class="c-time">${c.ts ? fmtTime(c.ts) : ''}</span></div>
-        <div class="c-last">${last}</div>
-        ${c.peer.tag ? `<div class="c-tag">→ ${esc(c.peer.tag)}</div>` : ''}
-      </div>
-      ${badge}
-    </button>`;
-  }).join('');
-
-  box.querySelectorAll('.card').forEach(el => el.addEventListener('click', () =>
-    openConv(+el.dataset.id, JSON.parse(el.dataset.peer), el.dataset.studio === '1', null, el.dataset.system === '1')));
-}
-
-/* ── Тред ─────────────────────────────────────────────────────────────────── */
-function showRoom(on) {
-  $('#roomEmpty').hidden = on;
-  $('#roomHead').hidden = !on;
-  $('#thread').hidden = !on;
-  $('#composer').hidden = !on || state.isSystem;
-}
-
-function openConv(id, peer, isStudio, draft, isSystem) {
-  state.convId = id; state.lastId = 0; state.firstId = 0; state.hasMore = false;
-  state.draft = draft || null; state.isSystem = !!isSystem; state.header = { peer, isStudio };
-
-  $('#room').classList.toggle('is-studio', !!isStudio);
-  $('#room').classList.toggle('is-system', !!isSystem);
-  $('#app').classList.add('show-room');
-  $('#profile').classList.remove('open');
-  $('#menu').hidden = true;
-  showRoom(true);
-
-  const th = $('#thread');
-  th.innerHTML = ''; th.dataset.lastDay = '';
-  $('#rhAv').className = 'av ' + avShape(isSystem ? { kind: 'system' } : peer);
-  $('#rhAv').innerHTML = isSystem ? BELL : avatarHTML(peer);
-  $('#rhName').textContent = peer.name;
-  $('#rhSub').innerHTML = '<span class="live off"></span>загрузка…';
-  document.querySelectorAll('.card').forEach(c => c.classList.toggle('active', +c.dataset.id === id));
-
-  clearInterval(state.threadTimer);
-  if (id > 0) { loadInitial().then(startThreadTimer); }
-  else { th.innerHTML = `<div class="empty">Новый чат с ${esc(peer.name)}.<br>Напишите первое сообщение ↓</div>`; }
-  $('#input').focus();
-}
-
-function applyHeader(h) {
-  state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind };
-  state.peerLastRead = h.peer_last_read_id || 0;
-  let sub;
-  if (h.kind === 'system') sub = 'системные уведомления';
-  else if (h.kind === 'studio') sub = 'официальный канал студии';
-  else sub = h.tag ? ('обращение · ' + h.tag) : (lastSeen(h.last_seen) || 'личный чат');
-  const online = h.kind === 'user' && h.last_seen && (Date.now() - asDate(h.last_seen) < 90000);
-  $('#rhSub').innerHTML = `<span class="live${online ? '' : ' off'}"></span>${esc(sub)}`;
-  updateReadTicks();
-}
-
-/* Первая загрузка: свежий хвост. Раньше сервер отдавал первые 500 сообщений
-   беседы, и в длинной переписке чат открывался на прошлогодней истории. */
-async function loadInitial() {
-  const r = await api('thread', { conversation_id: state.convId });
-  if (!r.ok) { toast('Не удалось открыть диалог', true); return; }
-  applyHeader(r.header);
-  state.hasMore = !!r.has_more;
-
-  const th = $('#thread');
-  th.innerHTML = '';
-  th.dataset.lastDay = '';
-  if (state.hasMore) th.insertAdjacentHTML('beforeend', '<button type="button" class="more-btn" id="moreBtn">Показать раньше</button>');
-  appendMessages(r.messages, 'beforeend');
-  if (!r.messages.length) {
-    th.innerHTML = `<div class="empty">${state.isSystem ? 'Уведомлений пока нет' : 'Сообщений пока нет — напишите первым'}</div>`;
-  }
-  th.scrollTop = th.scrollHeight;
-  bindMore();
-  loadList();
-}
-
-async function loadOlder() {
-  if (!state.hasMore || !state.firstId) return;
-  const btn = $('#moreBtn'); if (btn) btn.textContent = 'Загружаю…';
-  const r = await api('thread', { conversation_id: state.convId, before_id: state.firstId });
-  if (!r.ok) { if (btn) btn.textContent = 'Показать раньше'; return; }
-
-  const th = $('#thread');
-  const prevH = th.scrollHeight;
-  state.hasMore = !!r.has_more;
-  if (btn) btn.remove();
-  if (state.hasMore) th.insertAdjacentHTML('afterbegin', '<button type="button" class="more-btn" id="moreBtn">Показать раньше</button>');
-  appendMessages(r.messages, 'older');
-  th.scrollTop = th.scrollHeight - prevH;   // держим позицию просмотра
-  bindMore();
-}
-
-function bindMore() {
-  const btn = $('#moreBtn');
-  if (btn) btn.addEventListener('click', loadOlder);
-}
-
-async function pollThread() {
-  if (!state.convId || !state.lastId) return;
-  const r = await api('thread', { conversation_id: state.convId, after_id: state.lastId });
-  if (!r.ok || !r.messages.length) return;
-  applyHeader(r.header);
-  const th = $('#thread');
-  const atBottom = th.scrollHeight - th.scrollTop - th.clientHeight < 80;
-  const gotIncoming = r.messages.some(m => !m.mine);
-  appendMessages(r.messages, 'beforeend');
-  if (atBottom) th.scrollTop = th.scrollHeight;
-  if (gotIncoming) ping();
-  loadList();
-}
-
-function appendMessages(msgs, where) {
-  if (!msgs.length) return;
-  const th = $('#thread');
-  th.querySelector(':scope > .empty')?.remove();
-  if (where === 'older') {
-    // вставляем блоком в начало, день пересчитываем локально
-    let html = '', lastDay = '';
-    msgs.forEach(m => {
-      const day = fmtDay(m.at);
-      if (!state.isSystem && day !== lastDay) { html += `<div class="day">${day}</div>`; lastDay = day; }
-      html += renderMsg(m);
-      state.firstId = state.firstId ? Math.min(state.firstId, m.id) : m.id;
-    });
-    const anchor = $('#moreBtn');
-    if (anchor) anchor.insertAdjacentHTML('afterend', html);
-    else th.insertAdjacentHTML('afterbegin', html);
-  } else {
-    let html = '', lastDay = th.dataset.lastDay || '';
-    msgs.forEach(m => {
-      const day = fmtDay(m.at);
-      if (!state.isSystem && day !== lastDay) { html += `<div class="day">${day}</div>`; lastDay = day; }
-      html += renderMsg(m);
-      state.lastId = Math.max(state.lastId, m.id);
-      state.firstId = state.firstId ? Math.min(state.firstId, m.id) : m.id;
-    });
-    th.dataset.lastDay = lastDay;
-    th.insertAdjacentHTML('beforeend', html);
-  }
-  bindDelete();
-}
-
-const TICK_SVG = '<svg viewBox="0 0 16 11" width="15" height="11" fill="none" xmlns="http://www.w3.org/2000/svg">'
-  + '<path class="tick-a" d="M1 5.3L4.2 8.5L9.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
-  + '<path class="tick-b" d="M5.5 5.3L8.7 8.5L15 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
-  + '</svg>';
-function renderTicks(id) {
-  return `<span class="ticks${state.peerLastRead >= id ? ' read' : ''}" data-mid="${id}">${TICK_SVG}</span>`;
-}
-function updateReadTicks() {
-  document.querySelectorAll('#thread .ticks').forEach(el => {
-    el.classList.toggle('read', state.peerLastRead >= +el.dataset.mid);
-  });
-}
-
-/* Ссылка из уведомления: только http(s) и относительные пути — никаких javascript: */
-function safeLink(u) {
-  u = String(u || '').trim();
-  return (/^https?:\/\//i.test(u) || (u.startsWith('/') && !u.startsWith('//'))) ? u : '';
-}
-function renderNotif(m) {
-  const link = safeLink(m.link);
-  return `<div class="notif${m.unread ? ' unread' : ''}" data-id="${m.id}">
-    <div class="n-ico">${BELL}</div>
-    <div class="n-main">
-      ${m.title ? `<div class="n-title">${esc(m.title)}</div>` : ''}
-      <div class="n-body">${esc(m.body)}</div>
-      <div class="n-foot"><span class="n-time">${fmtDay(m.at)}, ${fmtTime(m.at)}</span>${link ? `<a class="n-link" href="${esc(link)}">Открыть →</a>` : ''}</div>
-    </div>
-  </div>`;
-}
-
-function renderMsg(m) {
-  if (state.isSystem) return renderNotif(m);
-  if (m.deleted) {
-    return `<div class="msg ${m.mine ? 'mine' : 'them'}" data-id="${m.id}"><div class="bubble gone">сообщение удалено</div></div>`;
-  }
-  const del = m.mine ? `<button class="del" data-mid="${m.id}" aria-label="Удалить">✕</button>` : '';
-  const ticks = m.mine ? renderTicks(m.id) : '';
-  return `<div class="msg ${m.mine ? 'mine' : 'them'}" data-id="${m.id}">
-    <div class="bubble">${del}${esc(m.body)}<span class="b-time">${fmtTime(m.at)}${ticks}</span></div></div>`;
-}
-
-function bindDelete() {
-  document.querySelectorAll('.del:not([data-bound])').forEach(b => {
-    b.dataset.bound = '1';
-    b.addEventListener('click', async e => {
-      e.stopPropagation();
-      if (!confirm('Удалить сообщение?')) return;
-      const r = await api('delete_message', { message_id: b.dataset.mid }, 'POST');
-      if (!r.ok) { toast('Не удалось удалить', true); return; }
-      const bub = b.closest('.bubble');
-      bub.classList.add('gone');
-      bub.textContent = 'сообщение удалено';
-      loadList();
-    });
-  });
-}
-
-/* ── Отправка ─────────────────────────────────────────────────────────────── */
-/* Было: текст стирался из поля сразу, и при ошибке ответа функция просто
-   выходила — сообщение исчезало бесследно. Теперь при неудаче текст
-   возвращается в поле и показывается причина. */
-let sending = false;
-async function send() {
-  const inp = $('#input');
-  const body = inp.value.trim();
-  if (!body || sending || (!state.convId && !state.draft)) return;
-
-  sending = true;
-  $('#send').disabled = true;
-  const backup = inp.value;
-  inp.value = ''; autosize();
-
-  const params = state.convId > 0
-    ? { conversation_id: state.convId, body }
-    : (state.draft.to ? { to: state.draft.to, body } : { studio: state.draft.studio, body });
-
-  const r = await api('send', params, 'POST');
-  sending = false;
-
-  if (!r.ok) {
-    inp.value = backup; autosize(); inp.focus();
-    const why = r.error === 'too_fast' ? 'Слишком часто, подождите секунду'
-              : r.error === 'network'  ? 'Нет соединения'
-              : r.error === 'too_long' ? 'Сообщение длиннее 4000 символов'
-              : 'Не удалось отправить';
-    toast(why, true);
-    return;
-  }
-
-  const th = $('#thread');
-  if (!state.convId) {
-    state.convId = r.conversation_id; state.lastId = 0; state.firstId = 0; state.draft = null;
-    await loadInitial(); startThreadTimer();
-  } else {
-    appendMessages([r.message], 'beforeend');
-  }
-  th.scrollTop = th.scrollHeight;
-  loadList();
-}
-
-function autosize() {
-  const t = $('#input');
-  t.style.height = 'auto';
-  t.style.height = Math.min(t.scrollHeight, 130) + 'px';
-  $('#send').disabled = !t.value.trim() || sending;
-}
-$('#input').addEventListener('input', autosize);
-$('#input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-});
-$('#send').addEventListener('click', send);
-$('#back').addEventListener('click', () => {
-  $('#app').classList.remove('show-room');
-  state.convId = 0; clearInterval(state.threadTimer); showRoom(false);
-});
-
-/* ── Меню беседы ──────────────────────────────────────────────────────────── */
-$('#menuBtn').addEventListener('click', e => { e.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; });
-document.addEventListener('click', () => { $('#menu').hidden = true; });
-$('#menu').addEventListener('click', e => e.stopPropagation());
-$('#delConv').addEventListener('click', async () => {
-  $('#menu').hidden = true;
-  if (!state.convId || !confirm('Удалить переписку у себя? Новое сообщение вернёт её в список.')) return;
-  const r = await api('delete_conversation', { conversation_id: state.convId }, 'POST');
-  if (!r.ok) { toast('Не удалось удалить', true); return; }
-  $('#app').classList.remove('show-room');
-  state.convId = 0; clearInterval(state.threadTimer); showRoom(false); loadList();
-});
-
-/* ── Профиль ──────────────────────────────────────────────────────────────── */
-$('#peerHead').addEventListener('click', async () => {
-  const h = state.header;
-  if (!h || h.kind === 'studio' || h.kind === 'system' || !h.peer_id) return;
-  $('#profileBody').innerHTML = '<div class="empty">Загрузка…</div>';
-  $('#profile').classList.add('open');
-  const r = await api('user_profile', { user_id: h.peer_id });
-  if (!r.ok) {
-    // Раньше писало просто «Профиль недоступен» — причина терялась
-    console.error('[chat] user_profile:', r.error || 'unknown');
-    const why = r.error === 'not_found' ? 'Пользователь удалён'
-              : r.error === 'bad_id'    ? 'Не удалось определить собеседника'
-              : r.error === 'network'   ? 'Нет соединения'
-              : 'Профиль недоступен';
-    $('#profileBody').innerHTML = '<div class="empty">' + esc(why) + '</div>';
-    return;
-  }
-  const p = r.profile, handle = p.handle || '', ls = lastSeen(p.last_seen);
-
-  /* Было: `/@${handle}` и `/player.php?id=${p.id}` — обоих маршрутов
-     не существует. player.php вытаскивает ник из адреса регуляркой
-     /\/player\/([a-zA-Z0-9_]+)/ и на всё остальное отвечает 404
-     с текстом «Пользователь не найден». Именно это и вылезало
-     при попытке открыть профиль собеседника. */
-  const link = handle ? `/player/${encodeURIComponent(handle)}` : null;
-  $('#profileBody').innerHTML = `
-    <div class="big-av">${avatarHTML({ name: p.name, avatar: p.avatar })}</div>
-    <div class="p-name">${esc(p.name)}</div>
-    ${handle ? `<div class="p-handle">@${esc(handle)}</div>` : ''}
-    ${ls ? `<div class="p-meta">${esc(ls)}</div>` : ''}
-    ${p.location ? `<div class="p-meta">${esc(p.location)}</div>` : ''}
-    <div class="p-stats">
-      <div class="p-stat"><b>${p.votes_up}</b><span>лайки</span></div>
-      <div class="p-stat"><b>${p.views}</b><span>просмотры</span></div>
-    </div>
-    ${link ? `<div class="p-links"><a class="primary" href="${esc(link)}">Профиль Dustore</a></div>` : ''}`;
-});
-$('#profBack').addEventListener('click', () => $('#profile').classList.remove('open'));
-
-/* ── Поиск ────────────────────────────────────────────────────────────────── */
-let searchTimer;
-const searchInput = $('#searchInput'), searchWrap = $('#searchWrap');
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  const q = searchInput.value.trim().replace(/^@/, '');
-  searchWrap.classList.toggle('has-value', searchInput.value !== '');
-  if (q.length < 2) { $('#searchResults').hidden = true; $('#list').hidden = false; return; }
-  $('#list').hidden = true;
-  $('#searchResults').hidden = false;
-  $('#searchResults').innerHTML = '<div class="empty">Ищу…</div>';
-  searchTimer = setTimeout(async () => {
-    const r = await api('search_users', { q });
-    renderResults(r.ok ? r.users : []);
-  }, 250);
-});
-$('#searchClear').addEventListener('click', () => {
-  searchInput.value = '';
-  searchWrap.classList.remove('has-value');
-  $('#searchResults').hidden = true;
-  $('#list').hidden = false;
-  searchInput.focus();
-});
-searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') $('#searchClear').click(); });
-
-function renderResults(users) {
-  const box = $('#searchResults');
-  if (!users.length) { box.innerHTML = '<div class="empty">Никого не нашлось</div>'; return; }
-  box.innerHTML = users.map(u => `<button type="button" class="result" data-u='${esc(JSON.stringify(u))}'>
-      <div class="av round">${avatarHTML({ name: u.username, avatar: u.avatar })}</div>
-      <div><div class="r-name">${esc(u.username)}</div><div class="r-sub">личный чат</div></div>
-    </button>`).join('');
-  box.querySelectorAll('.result').forEach(el => el.addEventListener('click', () => {
-    const u = JSON.parse(el.dataset.u);
-    $('#searchClear').click();
-    openConv(0, { kind: 'user', id: u.id, name: u.username, avatar: u.avatar }, false, { to: u.id }, false);
-  }));
-}
-
-$('#emptyNew').addEventListener('click', () => { $('#app').classList.remove('show-room'); $('#searchInput').focus(); });
-
-/* ── Вкладки ──────────────────────────────────────────────────────────────── */
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-  t.classList.add('active');
-  state.tab = t.dataset.tab;
-  $('#searchClear').click();
-  loadList();
-}));
-
-/* ── Старт ────────────────────────────────────────────────────────────────── */
-(async function init() {
-  await loadList();
-  startListTimer();
-  connectWS();
-
-  if (AUTO.conversation) {
-    const card = document.querySelector(`.card[data-id="${AUTO.conversation}"]`);
-    if (card) { card.click(); return; }
-  }
-  if (AUTO.to || AUTO.studio) {
-    const r = await api('start', AUTO.to ? { to: AUTO.to } : { studio: AUTO.studio });
-    if (r.ok) {
-      await loadList();
-      const card = document.querySelector(`.card[data-id="${r.conversation_id}"]`);
-      if (card) card.click();
-      else openConv(r.conversation_id, { kind: AUTO.studio ? 'studio' : 'user', name: '…' }, !!AUTO.studio);
-    }
-  }
-})();
-})();
 </script>
+<script src="/pwa/push-client.js"></script>
+<script src="/chat/chat.js?v=<?= (int)@filemtime(__DIR__ . '/chat.js') ?>"></script>
 </body>
 </html>

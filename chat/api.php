@@ -8,10 +8,31 @@ require_once __DIR__ . '/_bridge.php';
 if (is_file(__DIR__ . '/push_helpers.php')) require_once __DIR__ . '/push_helpers.php';
 if (is_file(__DIR__ . '/ws_helpers.php')) require_once __DIR__ . '/ws_helpers.php';
 require_once __DIR__ . '/_crypto.php';
+require_once __DIR__ . '/_files.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $db = (new Database())->connect('dustore');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+/**
+ * Чат v2 (файлы, ответы, пины, звук) включается сам, как только прогнана
+ * миграция chat/migrate_v2.php. До этого код работает по-старому и не падает.
+ * Положительный результат кэшируем в сессии, отрицательный — нет: после
+ * миграции фичи включатся на следующем же запросе.
+ */
+function chat_v2(PDO $db): bool {
+    if (($_SESSION['chat_v2'] ?? false) === true) return true;
+    try {
+        $db->query("SELECT reply_to_id, file_id FROM messages LIMIT 0");
+        $db->query("SELECT 1 FROM chat_files LIMIT 0");
+        $db->query("SELECT 1 FROM conversation_pins LIMIT 0");
+        $db->query("SELECT 1 FROM chat_user_settings LIMIT 0");
+    } catch (PDOException $e) {
+        return false;
+    }
+    return $_SESSION['chat_v2'] = true;
+}
+$V2 = chat_v2($db);
 
 function out($d): void { echo json_encode($d, JSON_UNESCAPED_UNICODE); exit; }
 
@@ -99,6 +120,7 @@ function unread_count(PDO $db, int $convId, int $afterId, int $excludeSender): i
 if ($action === 'list') {
     $tab   = ($_GET['tab'] ?? 'personal') === 'studio' ? 'studio' : 'personal';
     $cards = [];
+    $lFile = $V2 ? ', m.file_id AS l_file' : '';
 
     if ($tab === 'studio') {
         if (!$myStudioIds) out(['ok' => true, 'conversations' => []]);
@@ -107,7 +129,7 @@ if ($action === 'list') {
         // 1 запрос: беседы + последнее сообщение одним LEFT JOIN
         $st = $db->prepare("
             SELECT c.id, c.type, c.studio_id, c.last_message_id, c.last_message_at, c.studio_last_read_id,
-                   m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del
+                   m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del{$lFile}
               FROM conversations c
               LEFT JOIN messages m ON m.id = c.last_message_id
              WHERE c.type='studio' AND c.studio_id IN ($in)
@@ -115,6 +137,7 @@ if ($action === 'list') {
         $st->execute($myStudioIds);
         $rows = $st->fetchAll(PDO::FETCH_ASSOC);
         if (!$rows) out(['ok' => true, 'conversations' => []]);
+        $GLOBALS['lastFiles'] = $V2 ? chat_files_by_ids($db, array_column($rows, 'l_file')) : [];
 
         $convIds = array_map(fn($r) => (int)$r['id'], $rows);
         $inC = implode(',', array_fill(0, count($convIds), '?'));
@@ -162,7 +185,7 @@ if ($action === 'list') {
         $st = $db->prepare("
             SELECT c.id, c.type, c.studio_id, c.last_message_id, c.last_message_at,
                    p.last_read_message_id,
-                   m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del
+                   m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del{$lFile}
               FROM conversations c
               JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = ?
               LEFT JOIN messages m ON m.id = c.last_message_id
@@ -171,6 +194,7 @@ if ($action === 'list') {
         $st->execute([$myId]);
         $rows = $st->fetchAll(PDO::FETCH_ASSOC);
         if (!$rows) out(['ok' => true, 'conversations' => []]);
+        $GLOBALS['lastFiles'] = $V2 ? chat_files_by_ids($db, array_column($rows, 'l_file')) : [];
 
         $convIds = array_map(fn($r) => (int)$r['id'], $rows);
         $inC = implode(',', array_fill(0, count($convIds), '?'));
@@ -232,8 +256,9 @@ if ($action === 'list') {
 function build_card(array $r, array $peer, int $myId, int $unread): array {
     $last = null;
     if (!empty($r['last_message_id']) && $r['l_at'] !== null) {
+        $f = $GLOBALS['lastFiles'][(int)($r['l_file'] ?? 0)] ?? null;
         $last = [
-            'body' => $r['l_del'] ? 'сообщение удалено' : msg_decrypt((string)$r['l_body']),
+            'body' => $r['l_del'] ? 'сообщение удалено' : preview_text((string)msg_decrypt((string)$r['l_body']), $f),
             'at'   => $r['l_at'],
             'mine' => (int)$r['l_sender'] === $myId,
         ];
@@ -375,20 +400,21 @@ if ($action === 'thread') {
        беседы отдавались САМЫЕ СТАРЫЕ 500 сообщений, а свежие догружались
        только следующим поллингом. В длинной переписке человек открывал чат
        и три секунды смотрел на прошлогоднюю историю. */
+    $v2cols = $V2 ? ', reply_to_id, file_id' : '';
     if ($after > 0) {
         // поллинг: только то, что появилось после известного нам id
-        $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages
+        $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at{$v2cols} FROM messages
                             WHERE conversation_id=? AND id>? ORDER BY id ASC LIMIT 200");
         $q->execute([$cid, $after]);
         $rows = $q->fetchAll(PDO::FETCH_ASSOC);
     } else {
         // открытие или подгрузка истории вверх: берём хвост и разворачиваем
         if ($before > 0) {
-            $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages
+            $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at{$v2cols} FROM messages
                                 WHERE conversation_id=? AND id<? ORDER BY id DESC LIMIT " . ($LIMIT + 1));
             $q->execute([$cid, $before]);
         } else {
-            $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at FROM messages
+            $q = $db->prepare("SELECT id, sender_id, body, created_at, deleted_at{$v2cols} FROM messages
                                 WHERE conversation_id=? ORDER BY id DESC LIMIT " . ($LIMIT + 1));
             $q->execute([$cid]);
         }
@@ -396,14 +422,7 @@ if ($action === 'thread') {
         if (count($rows) > $LIMIT) { $hasMore = true; array_pop($rows); }
         $rows = array_reverse($rows);
     }
-    $smeta=get_users_meta($db,array_map(fn($m)=>(int)$m['sender_id'],$rows));
-    $msgs=[];
-    foreach($rows as $m){
-        $msgs[]=['id'=>(int)$m['id'],'mine'=>(int)$m['sender_id']===$myId,
-            'sender'=>['id'=>(int)$m['sender_id'],'name'=>$smeta[(int)$m['sender_id']]['username'] ?? ('user#'.$m['sender_id']),
-                       'avatar'=>$smeta[(int)$m['sender_id']]['avatar'] ?? null],
-            'body'=>$m['deleted_at'] ? null : msg_decrypt($m['body']),'deleted'=>(bool)$m['deleted_at'],'at'=>$m['created_at']];
-    }
+    $msgs = enrich_messages($db, $cid, $rows, $myId, $V2);
     // ФИКС прочтения: отмечаем по НАСТОЯЩЕМУ последнему id беседы, обе ветки указателя
     $trueMax=(int)$c['last_message_id'];
     if($trueMax>0){
@@ -411,7 +430,8 @@ if ($action === 'thread') {
                                        WHERE conversation_id=? AND user_id=?")->execute([$trueMax,$cid,$myId]);
         if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$trueMax,$cid]);
     }
-    out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId)]);
+    out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId),
+         'pins'=>$V2 ? conv_pins($db,$cid) : []]);
 }
 function thread_header(PDO $db, array $c, int $myId): array {
     if($c['type']==='system') return ['kind'=>'system','peer_id'=>0,'studio'=>false,'name'=>'Уведомления','avatar'=>null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>0];
@@ -437,13 +457,24 @@ function thread_header(PDO $db, array $c, int $myId): array {
 
 /* =================== ACTION: send =================== */
 if ($action === 'send') {
-    $body=trim((string)($_POST['body'] ?? '')); if($body==='') out(['ok'=>false,'error'=>'empty']);
+    $body=trim((string)($_POST['body'] ?? ''));
+    $fileId  = $V2 ? (int)($_POST['file_id']  ?? 0) : 0;
+    $replyTo = $V2 ? (int)($_POST['reply_to'] ?? 0) : 0;
+    if($body==='' && $fileId<=0) out(['ok'=>false,'error'=>'empty']);
     if(mb_strlen($body)>4000) out(['ok'=>false,'error'=>'too_long']);
-    // простой троттлинг: не чаще 1 сообщения в секунду от одного пользователя
-    $fl=$db->prepare("SELECT created_at FROM messages WHERE sender_id=? ORDER BY id DESC LIMIT 1");
+    $file = null;
+    if ($fileId > 0) {
+        // прикрепить можно только свой готовый файл (не звук уведомлений)
+        $fs = $db->prepare("SELECT * FROM chat_files WHERE id=? AND owner_id=? AND status='ready' AND kind IN ('image','file') LIMIT 1");
+        $fs->execute([$fileId, $myId]);
+        $file = $fs->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$file) out(['ok'=>false,'error'=>'bad_file']);
+    }
+    // антифлуд: не больше 5 сообщений за 5 секунд. Раньше было «1 в секунду»,
+    // и картинка, отправленная сразу после текста, отбивалась с ошибкой.
+    $fl=$db->prepare("SELECT COUNT(*) FROM messages WHERE sender_id=? AND created_at > NOW() - INTERVAL 5 SECOND");
     $fl->execute([$myId]);
-    $lastAt=$fl->fetchColumn();
-    if($lastAt && (time()-strtotime((string)$lastAt))<1) out(['ok'=>false,'error'=>'too_fast','message'=>'Слишком часто']);
+    if((int)$fl->fetchColumn() >= 5) out(['ok'=>false,'error'=>'too_fast','message'=>'Слишком часто']);
     $cid=(int)($_POST['conversation_id'] ?? 0);
     if(!$cid){
         $toUser=(int)($_POST['to'] ?? 0); $toStudio=(int)($_POST['studio'] ?? 0);
@@ -454,8 +485,20 @@ if ($action === 'send') {
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
     if($c['type']==='system') out(['ok'=>false,'error'=>'readonly']); // в «Уведомления» не пишем руками
 
-    $db->prepare("INSERT INTO messages(conversation_id,sender_id,body,created_at) VALUES(?,?,?,NOW())")->execute([$cid,$myId,msg_encrypt($body)]);
+    if ($replyTo > 0) {
+        // отвечать можно только на сообщение из этой же беседы
+        $rq = $db->prepare("SELECT 1 FROM messages WHERE id=? AND conversation_id=? LIMIT 1");
+        $rq->execute([$replyTo, $cid]);
+        if (!$rq->fetchColumn()) $replyTo = 0;
+    }
+    if ($V2) {
+        $db->prepare("INSERT INTO messages(conversation_id,sender_id,body,reply_to_id,file_id,created_at) VALUES(?,?,?,?,?,NOW())")
+           ->execute([$cid,$myId,msg_encrypt($body),$replyTo ?: null,$fileId ?: null]);
+    } else {
+        $db->prepare("INSERT INTO messages(conversation_id,sender_id,body,created_at) VALUES(?,?,?,NOW())")->execute([$cid,$myId,msg_encrypt($body)]);
+    }
     $msgId=(int)$db->lastInsertId();
+    $pushText = preview_text($body, $file);
     $db->prepare("UPDATE conversations SET last_message_id=?, last_message_at=NOW() WHERE id=?")->execute([$msgId,$cid]);
     // ФИКС: любое новое сообщение возвращает беседу из архива всем участникам
     $db->prepare("UPDATE conversation_participants SET archived=0 WHERE conversation_id=?")->execute([$cid]);
@@ -463,13 +506,14 @@ if ($action === 'send') {
     else $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?) WHERE conversation_id=? AND user_id=?")->execute([$msgId,$cid,$myId]);
 
     if(is_file(__DIR__.'/../vk/vk_helpers.php')){ require_once __DIR__.'/../vk/vk_helpers.php';
-        if(function_exists('vk_enqueue_for_conversation')) vk_enqueue_for_conversation($db,$cid,$myId,$body); }
+        if(function_exists('vk_enqueue_for_conversation')) vk_enqueue_for_conversation($db,$cid,$myId,$pushText); }
     if(function_exists('push_enqueue_for_conversation'))
-        push_enqueue_for_conversation($db,$cid,$myId, ($me['username'] ?? ($me['first_name'] ?? 'Новое сообщение')), $body);
+        push_enqueue_for_conversation($db,$cid,$myId, ($me['username'] ?? ($me['first_name'] ?? 'Новое сообщение')), $pushText);
     if(function_exists('ws_notify')) ws_notify($cid, ws_recipients($db, $cid, $myId));
 
-    out(['ok'=>true,'conversation_id'=>$cid,'message'=>['id'=>$msgId,'mine'=>true,'body'=>$body,'deleted'=>false,'at'=>date('Y-m-d H:i:s'),
-        'sender'=>['id'=>$myId,'name'=>$me['username'] ?? ($me['first_name'] ?? 'me'),'avatar'=>avatar_url($me['profile_picture'] ?? '')]]]);
+    $row = ['id'=>$msgId,'sender_id'=>$myId,'body'=>msg_encrypt($body),'created_at'=>date('Y-m-d H:i:s'),'deleted_at'=>null,
+            'reply_to_id'=>$replyTo ?: null,'file_id'=>$fileId ?: null];
+    out(['ok'=>true,'conversation_id'=>$cid,'message'=>enrich_messages($db,$cid,[$row],$myId,$V2)[0]]);
 }
 
 /* =================== ACTION: delete_message =================== */
@@ -489,6 +533,280 @@ if ($action === 'delete_conversation') {
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
     $db->prepare("UPDATE conversation_participants SET archived=1 WHERE conversation_id=? AND user_id=?")->execute([$cid,$myId]);
     out(['ok'=>true,'conversation_id'=>$cid]);
+}
+
+/* ════════════════════════ ЧАТ v2 ════════════════════════════════════════ */
+
+/** Короткая строка для превью в списке, пуша и цитаты ответа. */
+function preview_text(string $body, ?array $file, int $max = 0): string {
+    $body = trim(preg_replace('/\s+/u', ' ', $body) ?? '');
+    if ($file) {
+        $label = $file['kind'] === 'image' ? '🖼 Фото' : '📎 ' . $file['name'];
+        $body  = $body === '' ? $label : ($file['kind'] === 'image' ? '🖼 ' . $body : '📎 ' . $body);
+    }
+    if ($max > 0 && mb_strlen($body) > $max) $body = mb_substr($body, 0, $max - 1) . '…';
+    return $body;
+}
+
+/**
+ * Строки messages → контракт фронта. Отправители, вложения и цитаты ответов
+ * собираются пакетно (по одному запросу на вид данных, а не на сообщение).
+ */
+function enrich_messages(PDO $db, int $cid, array $rows, int $myId, bool $v2): array {
+    $replyIds = $v2 ? array_filter(array_map(fn($m) => (int)($m['reply_to_id'] ?? 0), $rows)) : [];
+    $replies  = [];
+    if ($replyIds) {
+        $in = implode(',', array_fill(0, count($replyIds), '?'));
+        $rq = $db->prepare("SELECT id, sender_id, body, file_id, deleted_at FROM messages WHERE conversation_id=? AND id IN ($in)");
+        $rq->execute([$cid, ...array_values($replyIds)]);
+        foreach ($rq->fetchAll(PDO::FETCH_ASSOC) as $r) $replies[(int)$r['id']] = $r;
+    }
+    $senderIds = array_merge(array_map(fn($m) => (int)$m['sender_id'], $rows), array_map(fn($r) => (int)$r['sender_id'], $replies));
+    $smeta = get_users_meta($db, $senderIds);
+    $files = $v2 ? chat_files_by_ids($db, array_merge(array_column($rows, 'file_id'), array_column($replies, 'file_id'))) : [];
+
+    $out = [];
+    foreach ($rows as $m) {
+        $sid  = (int)$m['sender_id'];
+        $del  = (bool)$m['deleted_at'];
+        $file = $files[(int)($m['file_id'] ?? 0)] ?? null;
+        $msg  = [
+            'id'      => (int)$m['id'],
+            'mine'    => $sid === $myId,
+            'sender'  => ['id' => $sid, 'name' => $smeta[$sid]['username'] ?? ('user#' . $sid), 'avatar' => $smeta[$sid]['avatar'] ?? null],
+            'body'    => $del ? null : msg_decrypt($m['body']),
+            'deleted' => $del,
+            'at'      => $m['created_at'],
+            'file'    => (!$del && $file) ? chat_file_dto($file) : null,
+            'reply'   => null,
+        ];
+        $rid = (int)($m['reply_to_id'] ?? 0);
+        if ($rid && isset($replies[$rid])) {
+            $r = $replies[$rid]; $rs = (int)$r['sender_id'];
+            $msg['reply'] = [
+                'id'      => $rid,
+                'name'    => $smeta[$rs]['username'] ?? ('user#' . $rs),
+                'mine'    => $rs === $myId,
+                'deleted' => (bool)$r['deleted_at'],
+                'text'    => $r['deleted_at'] ? 'сообщение удалено'
+                             : preview_text((string)msg_decrypt($r['body']), $files[(int)($r['file_id'] ?? 0)] ?? null, 120),
+            ];
+        } elseif ($rid) {
+            $msg['reply'] = ['id' => $rid, 'name' => '', 'mine' => false, 'deleted' => true, 'text' => 'сообщение недоступно'];
+        }
+        $out[] = $msg;
+    }
+    return $out;
+}
+
+/** Закреплённые сообщения беседы, свежие сверху. */
+function conv_pins(PDO $db, int $cid): array {
+    $q = $db->prepare("SELECT p.message_id, p.created_at AS pinned_at, m.sender_id, m.body, m.file_id
+                         FROM conversation_pins p JOIN messages m ON m.id = p.message_id
+                        WHERE p.conversation_id=? AND m.deleted_at IS NULL
+                        ORDER BY p.created_at DESC LIMIT 20");
+    $q->execute([$cid]);
+    $rows  = $q->fetchAll(PDO::FETCH_ASSOC);
+    $meta  = get_users_meta($db, array_column($rows, 'sender_id'));
+    $files = chat_files_by_ids($db, array_column($rows, 'file_id'));
+    return array_map(fn($r) => [
+        'id'   => (int)$r['message_id'],
+        'name' => $meta[(int)$r['sender_id']]['username'] ?? '',
+        'text' => preview_text((string)msg_decrypt($r['body']), $files[(int)($r['file_id'] ?? 0)] ?? null, 140),
+    ], $rows);
+}
+
+function need_v2(bool $v2): void {
+    if (!$v2) out(['ok' => false, 'error' => 'migration', 'message' => 'Нужно прогнать chat/migrate_v2.php']);
+}
+
+/** Сообщение + доступ к его беседе; иначе ответ с ошибкой. */
+function message_with_access(PDO $db, int $mid, int $myId, array $myStudioIds): array {
+    $st = $db->prepare("SELECT id, conversation_id, sender_id, deleted_at FROM messages WHERE id=? LIMIT 1");
+    $st->execute([$mid]);
+    $m = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$m || $m['deleted_at']) out(['ok' => false, 'error' => 'not_found']);
+    $c = conv_access($db, (int)$m['conversation_id'], $myId, $myStudioIds);
+    if (!$c) out(['ok' => false, 'error' => 'forbidden']);
+    return [$m, $c];
+}
+
+/* =================== ACTION: upload_init ===================
+ * Шаг 1 загрузки: запись pending + подписанные PUT-ссылки (файл и превью). */
+if ($action === 'upload_init') {
+    need_v2($V2);
+    $purpose = ($_POST['purpose'] ?? 'chat') === 'sound' ? 'sound' : 'chat';
+    $name = trim((string)($_POST['name'] ?? 'file'));
+    $name = mb_substr($name !== '' ? $name : 'file', 0, 200);
+    $size = (int)($_POST['size'] ?? 0);
+    $mime = strtolower(trim((string)($_POST['mime'] ?? ''))) ?: 'application/octet-stream';
+    $max  = $purpose === 'sound' ? CHAT_SOUND_MAX : CHAT_FILE_MAX;
+    if ($size <= 0) out(['ok' => false, 'error' => 'empty']);
+    if ($size > $max) out(['ok' => false, 'error' => 'too_big', 'max' => $max]);
+    $kind = chat_kind_for($mime, $purpose);
+    if (!$kind) out(['ok' => false, 'error' => 'bad_type']);
+
+    // защита от засорения бакета: не больше 60 незавершённых загрузок за час
+    $pc = $db->prepare("SELECT COUNT(*) FROM chat_files WHERE owner_id=? AND status='pending' AND created_at > NOW() - INTERVAL 1 HOUR");
+    $pc->execute([$myId]);
+    if ((int)$pc->fetchColumn() >= 60) out(['ok' => false, 'error' => 'too_many']);
+
+    $key   = chat_new_key($name);
+    $thumb = $kind === 'image' ? $key . '.thumb.webp' : null;
+    $db->prepare("INSERT INTO chat_files(owner_id,kind,status,s3_key,thumb_key,name,mime,size) VALUES(?,?,'pending',?,?,?,?,?)")
+       ->execute([$myId, $kind, $key, $thumb, $name, $mime, $size]);
+    $fid = (int)$db->lastInsertId();
+
+    out(['ok' => true, 'file_id' => $fid, 'kind' => $kind,
+         'put_url'   => chat_presign_put($key, $mime),
+         'thumb_url' => $thumb ? chat_presign_put($thumb, 'image/webp') : null]);
+}
+
+/** Своя pending-запись для шагов 2–3. */
+function own_pending(PDO $db, int $fid, int $myId): array {
+    $st = $db->prepare("SELECT * FROM chat_files WHERE id=? AND owner_id=? LIMIT 1");
+    $st->execute([$fid, $myId]);
+    $f = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$f) out(['ok' => false, 'error' => 'not_found']);
+    return $f;
+}
+
+/** Финал загрузки: HEAD в бакет, сверка размера, статус ready. */
+function commit_file(PDO $db, array $f, int $w, int $h, bool $hasThumb): array {
+    $real = chat_head_size($f['s3_key']);
+    if ($real === null) out(['ok' => false, 'error' => 'not_uploaded']);
+    $max = $f['kind'] === 'sound' ? CHAT_SOUND_MAX : CHAT_FILE_MAX;
+    if ($real > $max || $real !== (int)$f['size']) {
+        // подменили файл или размер — убираем из бакета, запись не активируем
+        chat_delete_key($f['s3_key']); chat_delete_key($f['thumb_key']);
+        out(['ok' => false, 'error' => 'size_mismatch']);
+    }
+    $thumbKey = ($hasThumb && $f['thumb_key'] && chat_head_size($f['thumb_key']) !== null) ? $f['thumb_key'] : null;
+    $w = $w > 0 && $w < 65536 ? $w : null;
+    $h = $h > 0 && $h < 65536 ? $h : null;
+    $db->prepare("UPDATE chat_files SET status='ready', thumb_key=?, width=?, height=? WHERE id=?")
+       ->execute([$thumbKey, $w, $h, (int)$f['id']]);
+    $f = array_merge($f, ['status' => 'ready', 'thumb_key' => $thumbKey, 'width' => $w, 'height' => $h]);
+    return chat_file_dto($f);
+}
+
+/* =================== ACTION: upload_commit =================== */
+if ($action === 'upload_commit') {
+    need_v2($V2);
+    $f = own_pending($db, (int)($_POST['file_id'] ?? 0), $myId);
+    if ($f['status'] === 'ready') out(['ok' => true, 'file' => chat_file_dto($f)]);
+    out(['ok' => true, 'file' => commit_file($db, $f, (int)($_POST['w'] ?? 0), (int)($_POST['h'] ?? 0), !empty($_POST['thumb']))]);
+}
+
+/* =================== ACTION: upload_proxy ===================
+ * Запасной путь, если браузер не смог PUT'нуть в S3 (CORS на локалке и т.п.):
+ * файл едет через PHP. Тип проверяем по содержимому, а не по заголовку. */
+if ($action === 'upload_proxy') {
+    need_v2($V2);
+    $f = own_pending($db, (int)($_POST['file_id'] ?? 0), $myId);
+    if ($f['status'] === 'ready') out(['ok' => true, 'file' => chat_file_dto($f)]);
+    $up = $_FILES['file'] ?? null;
+    if (!$up || $up['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($up['tmp_name'])) out(['ok' => false, 'error' => 'no_file']);
+    if ((int)$up['size'] !== (int)$f['size']) out(['ok' => false, 'error' => 'size_mismatch']);
+    $real = (new finfo(FILEINFO_MIME_TYPE))->file($up['tmp_name']) ?: 'application/octet-stream';
+    if ($f['kind'] === 'image' && !in_array($real, CHAT_IMAGE_MIME, true)) out(['ok' => false, 'error' => 'bad_type']);
+    if ($f['kind'] === 'sound' && !chat_kind_for($real, 'sound') && !str_starts_with($real, 'audio/')) out(['ok' => false, 'error' => 'bad_type']);
+    if (!chat_put_local($f['s3_key'], $up['tmp_name'], $f['mime'])) out(['ok' => false, 'error' => 'storage']);
+    $hasThumb = false;
+    $th = $_FILES['thumb'] ?? null;
+    if ($f['thumb_key'] && $th && $th['error'] === UPLOAD_ERR_OK && is_uploaded_file($th['tmp_name']) && $th['size'] < 512 * 1024) {
+        $hasThumb = chat_put_local($f['thumb_key'], $th['tmp_name'], 'image/webp');
+    }
+    out(['ok' => true, 'file' => commit_file($db, $f, (int)($_POST['w'] ?? 0), (int)($_POST['h'] ?? 0), $hasThumb)]);
+}
+
+/* =================== ACTION: pin / unpin =================== */
+if ($action === 'pin' || $action === 'unpin') {
+    need_v2($V2);
+    [$m, $c] = message_with_access($db, (int)($_POST['message_id'] ?? 0), $myId, $myStudioIds);
+    if ($c['type'] === 'system') out(['ok' => false, 'error' => 'readonly']);
+    $cid = (int)$m['conversation_id'];
+    if ($action === 'pin') {
+        $db->prepare("INSERT IGNORE INTO conversation_pins(conversation_id,message_id,pinned_by) VALUES(?,?,?)")->execute([$cid, (int)$m['id'], $myId]);
+    } else {
+        $db->prepare("DELETE FROM conversation_pins WHERE conversation_id=? AND message_id=?")->execute([$cid, (int)$m['id']]);
+    }
+    if (function_exists('ws_notify')) ws_notify($cid, ws_recipients($db, $cid, $myId));
+    out(['ok' => true, 'pins' => conv_pins($db, $cid)]);
+}
+
+/* =================== ACTION: mark_read =================== */
+if ($action === 'mark_read') {
+    $cid = (int)($_POST['conversation_id'] ?? 0);
+    $c = conv_access($db, $cid, $myId, $myStudioIds); if (!$c) out(['ok' => false, 'error' => 'forbidden']);
+    if ($c['type'] === 'system') {
+        $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
+    } else {
+        $last = (int)$c['last_message_id'];
+        if ($c['_part']) $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?) WHERE conversation_id=? AND user_id=?")->execute([$last, $cid, $myId]);
+        if ($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$last, $cid]);
+    }
+    out(['ok' => true]);
+}
+
+/* =================== ACTION: mark_all_read ===================
+ * «Отметить всё как прочитанное» для текущей вкладки. Один UPDATE с JOIN,
+ * а не цикл по беседам. */
+if ($action === 'mark_all_read') {
+    if (($_POST['tab'] ?? 'personal') === 'studio') {
+        if ($myStudioIds) {
+            $in = implode(',', array_fill(0, count($myStudioIds), '?'));
+            $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),COALESCE(last_message_id,0))
+                           WHERE type='studio' AND studio_id IN ($in)")->execute($myStudioIds);
+        }
+    } else {
+        $db->prepare("UPDATE conversation_participants p JOIN conversations c ON c.id = p.conversation_id
+                         SET p.last_read_message_id = GREATEST(COALESCE(p.last_read_message_id,0), COALESCE(c.last_message_id,0))
+                       WHERE p.user_id=?")->execute([$myId]);
+        $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
+    }
+    out(['ok' => true]);
+}
+
+/* =================== ACTION: settings / save_settings ===================
+ * Звук уведомлений хранится на сервере — одинаковый на всех устройствах. */
+const CHAT_SOUNDS = ['dust', 'drop', 'pop', 'pixel', 'custom', 'none'];
+
+function load_settings(PDO $db, int $myId): array {
+    $st = $db->prepare("SELECT sound, sound_file_id, volume FROM chat_user_settings WHERE user_id=?");
+    $st->execute([$myId]);
+    $r = $st->fetch(PDO::FETCH_ASSOC) ?: ['sound' => 'dust', 'sound_file_id' => null, 'volume' => 70];
+    $custom = null;
+    if ($r['sound_file_id']) {
+        $f = chat_files_by_ids($db, [(int)$r['sound_file_id']]);
+        $custom = isset($f[(int)$r['sound_file_id']]) ? chat_file_dto($f[(int)$r['sound_file_id']]) : null;
+    }
+    $sound = in_array($r['sound'], CHAT_SOUNDS, true) ? $r['sound'] : 'dust';
+    if ($sound === 'custom' && !$custom) $sound = 'dust';
+    return ['sound' => $sound, 'volume' => (int)$r['volume'], 'custom' => $custom];
+}
+
+if ($action === 'settings') {
+    if (!$V2) out(['ok' => true, 'settings' => ['sound' => 'dust', 'volume' => 70, 'custom' => null], 'v2' => false]);
+    out(['ok' => true, 'settings' => load_settings($db, $myId), 'v2' => true]);
+}
+
+if ($action === 'save_settings') {
+    need_v2($V2);
+    $sound  = (string)($_POST['sound'] ?? 'dust');
+    if (!in_array($sound, CHAT_SOUNDS, true)) out(['ok' => false, 'error' => 'bad_sound']);
+    $volume = max(0, min(100, (int)($_POST['volume'] ?? 70)));
+    $fileId = isset($_POST['sound_file_id']) ? (int)$_POST['sound_file_id'] : null;
+    if ($fileId) {
+        $fs = $db->prepare("SELECT 1 FROM chat_files WHERE id=? AND owner_id=? AND kind='sound' AND status='ready'");
+        $fs->execute([$fileId, $myId]);
+        if (!$fs->fetchColumn()) out(['ok' => false, 'error' => 'bad_file']);
+    }
+    $db->prepare("INSERT INTO chat_user_settings(user_id,sound,sound_file_id,volume) VALUES(?,?,?,?)
+                  ON DUPLICATE KEY UPDATE sound=VALUES(sound), volume=VALUES(volume),
+                                          sound_file_id=COALESCE(VALUES(sound_file_id), sound_file_id)")
+       ->execute([$myId, $sound, $fileId ?: null, $volume]);
+    out(['ok' => true, 'settings' => load_settings($db, $myId)]);
 }
 
 out(['ok'=>false,'error'=>'unknown_action']);
