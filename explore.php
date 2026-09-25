@@ -845,60 +845,22 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                 });
             }
 
-            const GROUPS = [
-                { sel: '.game-card',                a: 12, lift: -8, s: 1.03,  p: 800 },
-                { sel: '.sort-btn, .price-btn',     a: 15, lift: -3, s: 1.06,  p: 400 },
-                { sel: '.btn-filter',               a: 10, lift: -2, s: 1.03,  p: 400 }
-            ];
-            const SEL = GROUPS.map(g => g.sel).join(', ');
-            let active = null;
+            /* Наклон и парящее название — Float3D (swad/js/float3d.js), настройки общие
+               для всего сайта: блок :root в swad/css/float3d.css (живьём — Alt+Shift+F).
+               surface: курсор считается по .gc-inner — видимой поверхности. При
+               раскрытии растёт именно она, а .game-card держит место в сетке; если
+               считать от .game-card, на раскрытой карточке наклон «залипал» у краёв.
+               Карточки, дорисованные при фильтрации, подхватываются сами. */
+            if (window.Float3D) {
+                Float3D.register('.game-card', { float: '.game-title', surface: ':scope > .gc-inner', card: true });
+                Float3D.register('.sort-btn, .price-btn, .btn-filter');
+            }
 
+            /* Раскрытие карточки завязано на ту же «карточку под курсором». track()
+               зовётся на КАЖДОМ движении: пока курсор едет, таймер перезапускается,
+               и карточка раскрывается, только когда курсор на ней замер. */
             document.addEventListener('mousemove', e => {
-                const el = e.target.closest(SEL);
-                if (el !== active && active) {
-                    active.classList.remove('is-tilting');
-                    active.style.transform = '';
-                    active = null;
-                }
-                /* Отмена ДО раннего выхода. Раньше track(null) стоял ниже, и при
-                   уходе курсора не на другую карточку, а в пустое место
-                   выполнение обрывалось здесь — таймер продолжал тикать,
-                   и через секунду карточка раскрывалась под уже уехавшей мышью. */
-                if (!el) { hoverPreview.track(null); return; }
-                if (active !== el) { active = el; el.classList.add('is-tilting'); }
-
-                const cfg = GROUPS.find(g => el.matches(g.sel));
-                if (!cfg) return;
-
-                /* Мерим ВИДИМУЮ поверхность, а не сам грид-элемент.
-                   У карточки это .gc-inner: при раскрытии он вырастает, а
-                   .game-card остаётся прежнего размера (иначе поехала бы сетка).
-                   Если считать от .game-card, то на раскрытой карточке курсор
-                   уходит за её коробку, nx/ny упираются в ±1 и наклон
-                   «залипает» у краёв вместо того, чтобы следовать за мышью. */
-                const surf = el.querySelector(':scope > .gc-inner') || el;
-                const hw = surf.offsetWidth / 2, hh = surf.offsetHeight / 2;
-                if (!hw || !hh) return;
-
-                /* offsetWidth — размеры ДО трансформации, они не «плывут» от
-                   собственного scale. Центр берём из rect: transform-origin
-                   по умолчанию 50% 50%, значит он смещается только на translateY. */
-                const r = surf.getBoundingClientRect();
-                const lift = el.style.transform ? cfg.lift : 0;
-                const nx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / hw));
-                const ny = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2 - lift)) / hh));
-
-                // --dx двигает блик за курсором (используется в .game-card::after)
-                if (cfg.sel === '.game-card') el.style.setProperty('--dx', (nx * 50) + '%');
-
-                el.style.transform = 'perspective(' + cfg.p + 'px) '
-                    + 'rotateX(' + (-cfg.a * ny).toFixed(2) + 'deg) '
-                    + 'rotateY(' + (cfg.a * nx).toFixed(2) + 'deg) '
-                    + 'translateY(' + cfg.lift + 'px) scale(' + cfg.s + ')';
-
-                // раскрытие карточки завязано на тот же «активный элемент»
-                if (cfg.sel === '.game-card') hoverPreview.track(el);
-                else hoverPreview.track(null);
+                hoverPreview.track(e.target.closest('.game-card'));
             });
 
             document.addEventListener('mouseleave', () => hoverPreview.track(null));

@@ -181,7 +181,7 @@ $maxVotes        = max($maxVotes, 1);
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(195, 33, 120, .12) 0%, transparent 70%);
+            background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(var(--brand-rgb, 195, 33, 120), .12) 0%, transparent 70%);
             pointer-events: none;
         }
 
@@ -189,8 +189,8 @@ $maxVotes        = max($maxVotes, 1);
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(195, 33, 120, .15);
-            border: 1px solid rgba(195, 33, 120, .3);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .15);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .3);
             color: var(--p2);
             border-radius: 999px;
             padding: 5px 14px;
@@ -345,8 +345,8 @@ $maxVotes        = max($maxVotes, 1);
         }
 
         .card.voted {
-            border-color: rgba(195, 33, 120, .4);
-            background: rgba(195, 33, 120, .04)
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .4);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .04)
         }
 
         .cand-header {
@@ -464,14 +464,14 @@ $maxVotes        = max($maxVotes, 1);
         }
 
         .vote-btn:hover {
-            background: rgba(195, 33, 120, .12);
-            border-color: rgba(195, 33, 120, .4);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .12);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .4);
             color: var(--p2)
         }
 
         .vote-btn.active {
-            background: rgba(195, 33, 120, .15);
-            border-color: rgba(195, 33, 120, .5);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .15);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .5);
             color: var(--p2)
         }
 
@@ -486,8 +486,8 @@ $maxVotes        = max($maxVotes, 1);
 
         /* ── Auth nudge ── */
         .auth-nudge {
-            background: rgba(195, 33, 120, .08);
-            border: 1px solid rgba(195, 33, 120, .2);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .08);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .2);
             border-radius: 10px;
             padding: 14px 18px;
             text-align: center;

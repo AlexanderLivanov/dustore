@@ -186,7 +186,7 @@ body{background:var(--dark);color:var(--txt);font-family:Inter,sans-serif;margin
 
 /* bulk */
 .bulk{display:none;align-items:center;gap:10px;padding:10px 14px;margin-bottom:12px;
-  background:rgba(195,33,120,.10);border:1px solid rgba(195,33,120,.35);font-size:.84rem}
+  background:rgba(var(--brand-rgb, 195, 33, 120), .10);border:1px solid rgba(var(--brand-rgb, 195, 33, 120), .35);font-size:.84rem}
 .bulk.on{display:flex}
 .bulk .cnt{font-family:'JetBrains Mono',monospace;color:var(--p)}
 

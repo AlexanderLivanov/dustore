@@ -27,10 +27,10 @@
 }
 
 body.moonlight-theme {
-    --l4t-accent:      #3e7ad9;
+    --l4t-accent:      rgb(var(--moon-accent-rgb, 62, 122, 217));
     --l4t-accent-rgb:  62, 122, 217;
-    --l4t-accent-hi:   #5690f0;
-    --l4t-text:        #eaf0ff;
+    --l4t-accent-hi:   rgb(var(--moon-hi-rgb, 86, 144, 240));
+    --l4t-text:        rgb(var(--moon-ink-rgb, 234, 240, 255));
 }
 
 
@@ -362,7 +362,7 @@ body.moonlight-theme {
         }
 
         .modal-btn-primary:hover {
-            background: #9e1a66;
+            background: rgb(var(--brand-rgb, 158, 26, 102));
         }
 
         .modal-btn-ghost {

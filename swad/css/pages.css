@@ -26,8 +26,8 @@
 /* ── Скроллбар ── */
 ::-webkit-scrollbar       { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: #230e2d; }
-::-webkit-scrollbar-thumb { background: #c32178; border-radius: 6px; border: 2px solid #230e2d; }
-::-webkit-scrollbar-thumb:hover { background: #e62e8a; }
+::-webkit-scrollbar-thumb { background: rgb(var(--brand-rgb, 195, 33, 120)); border-radius: 6px; border: 2px solid #230e2d; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-hi-rgb, 230, 46, 138)); }
 
 /* ── Сброс + базовые ── */
 * {
@@ -43,7 +43,7 @@ body {
     overflow-x: hidden;
     margin: 0;
     min-height: 100vh;
-    background: linear-gradient(180deg, #0f0a20, #780066, #780066, #0f0a20, #0f0a20, #0f0a20);
+    background: linear-gradient(180deg, #0f0a20, rgb(var(--brand-deep-rgb, 120, 0, 102)), rgb(var(--brand-deep-rgb, 120, 0, 102)), #0f0a20, #0f0a20, #0f0a20);
 }
 
 
@@ -117,7 +117,7 @@ p {
 }
 
 .btn-secondary {
-    background: #c32178;
+    background: rgb(var(--brand-rgb, 195, 33, 120));
     border: 2px solid var(--primary);
 }
 
@@ -137,13 +137,13 @@ body.moonlight-theme .btn-secondary {
 
 /* Ховеры (общие, можно оставить как есть) */
 .btn:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
     transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 10px 20px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 .btn-secondary:hover {
-    background: rgba(195, 33, 120, 0.1);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.1);
 }
 
 .btn-tg:hover {
@@ -249,7 +249,7 @@ body.moonlight-theme .btn-secondary:hover {
 
 .platform-card:hover {
     transform: translateY(-10px);
-    background: #74155d;
+    background: rgb(var(--brand-deep-rgb, 116, 21, 93));
 }
 
 .platform-icon {
@@ -418,7 +418,7 @@ body.moonlight-theme .btn-secondary:hover {
 .team-member:hover,
 .value-card:hover {
     transform: translateY(-10px);
-    background: rgba(195, 33, 120, 0.1);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.1);
 }
 
 .team-member { padding: 30px; }
@@ -590,7 +590,7 @@ body.moonlight-theme .btn-secondary:hover {
 .slider-arrow {
     width: 50px;
     height: 50px;
-    background: rgba(195, 33, 120, 0.7);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.7);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -644,7 +644,7 @@ body.moonlight-theme .btn-secondary:hover {
 .vote-btn {
     display: inline-block;
     padding: 5px 15px;
-    background: #c32178;
+    background: rgb(var(--brand-rgb, 195, 33, 120));
     color: #fff;
     border-radius: 30px;
     font-size: 13px;
@@ -657,7 +657,7 @@ body.moonlight-theme .btn-secondary:hover {
 }
 
 .vote-btn:hover {
-    background: #a01b62;
+    background: rgb(var(--brand-rgb, 160, 27, 98));
     transform: scale(1.03);
 }
 
@@ -671,20 +671,20 @@ body.moonlight-theme #vote-banner {
 
 body.moonlight-theme .vote-label {
     opacity: 0.6;
-    color: #b8c8ff;
+    color: rgb(var(--moon-ink-rgb, 184, 200, 255));
 }
 
 body.moonlight-theme .vote-title {
-    color: #f0f4ff;
+    color: rgb(var(--moon-ink-rgb, 240, 244, 255));
 }
 
 body.moonlight-theme .vote-btn {
-    background: #3e7ad9;
+    background: rgb(var(--moon-accent-rgb, 62, 122, 217));
     transition: background 0.2s, transform 0.1s;
 }
 
 body.moonlight-theme .vote-btn:hover {
-    background: #5690f0;
+    background: rgb(var(--moon-hi-rgb, 86, 144, 240));
     transform: scale(1.03);
 }
 
@@ -763,7 +763,7 @@ body.moonlight-theme .vote-btn:hover {
 }
 .platform-card:not(.in-development):hover {
     transform: translateY(-10px);
-    background: #74155d;
+    background: rgb(var(--brand-deep-rgb, 116, 21, 93));
 }
 .platform-card.in-development {
     opacity: 0.55;
@@ -866,7 +866,7 @@ body.moonlight-theme .vote-btn:hover {
     height: 44px;
     flex-shrink: 0;
     border-radius: 50%;
-    background: rgba(195, 33, 120, 0.2);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.2);
     padding: 4px;
     object-fit: contain;
     animation: greetingFloat 1.8s ease-in-out infinite;
@@ -899,7 +899,7 @@ body.moonlight-theme .dusty-greeting {
     backdrop-filter: blur(16px);
 }
 body.moonlight-theme .dusty-greeting .greeting-avatar {
-    background: rgba(100, 150, 255, 0.15);
+    background: rgba(var(--moon-hi-rgb, 100, 150, 255), 0.15);
 }
 body.moonlight-theme .dusty-greeting .greeting-close {
     color: rgba(255, 255, 255, 0.4);
@@ -1039,7 +1039,7 @@ body.moonlight-theme .telegram-banner {
     backdrop-filter: blur(16px);
 }
 body.moonlight-theme .telegram-banner .tg-text a {
-    color: #6ab0f7;
+    color: rgb(var(--moon-hi-rgb, 106, 176, 247));
 }
 
 
@@ -1266,7 +1266,7 @@ body.moonlight-theme .telegram-banner .tg-text a {
 }
 body.moonlight-theme .platform-card:hover {
     transform: translateY(-10px);
-    background: #6b8ff780;
+    background: rgba(var(--moon-hi-rgb, 107, 143, 247), 0.502);
 }
 
 body.moonlight-theme h2:after {
@@ -1277,7 +1277,7 @@ body.moonlight-theme h2:after {
     transform: translateX(-50%);
     width: 100px;
     height: 4px;
-    background: #3e7ad9;
+    background: rgb(var(--moon-accent-rgb, 62, 122, 217));
     border-radius: 2px;
 }
 
@@ -1285,7 +1285,7 @@ body.moonlight-theme .stat-number {
     font-size: 4rem;
     font-weight: 700;
     margin-bottom: 10px;
-    color: #7999f7;
+    color: rgb(var(--moon-hi-rgb, 121, 153, 247));
     font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
 }
 
@@ -1309,67 +1309,14 @@ body.moonlight-theme .hero::before {
 
 
 /* =============================================================================
-   НАКЛОН ЗА КУРСОРОМ — общие правила
+   НАКЛОН ЗА КУРСОРОМ
    -----------------------------------------------------------------------------
-   Сам наклон вешает JS инлайновым transform (модуль в index.php). Здесь только
-   две вещи, без которых эффект выглядит сломанным:
-
-   1. Пока курсор внутри элемента, transform должен успевать за мышью.
-      У .platform-card в базе стоит `transform 0.3s ease`, у .vote-btn —
-      `transform 0.1s`: с ними элемент тащился бы за курсором с задержкой.
-      Класс .is-tilting подменяет ТОЛЬКО длительность transform, оставляя
-      background/left/top как были.
-
-   2. На mouseleave JS сначала снимает .is-tilting и лишь потом чистит transform.
-      Значит возврат считается уже по базовому transition: карточки уезжают
-      назад плавно (0.3s, как и до правки), кнопки — мгновенно (как .btn).
-      Отдельного «плавного возврата» городить не пришлось.
-
-   will-change ставится только на время наклона: постоянный will-change держит
-   лишний композитный слой на каждой кнопке страницы. #vote-banner сюда
-   намеренно не входит — у него backdrop-filter, и лишнее промотирование слоя
-   на нём только повышает риск артефактов в WebKit.
+   Кнопки и карточки наклоняет Float3D (swad/js/float3d.js + swad/css/float3d.css),
+   все настройки — там, в блоке :root. Правила .is-tilting отсюда ушли: Float3D сам
+   гасит transition на transform, пока элемент «живой», и возвращает его после.
+   #vote-banner по-прежнему наклоняет свой модуль в index.php (из-за перетаскивания);
+   will-change ему намеренно не ставим — у него backdrop-filter, лишнее промотирование
+   слоя в WebKit даёт артефакты.
    ============================================================================= */
 
-.btn.is-tilting,
-.vote-btn.is-tilting,
-.platform-card.is-tilting {
-    will-change: transform;
-}
-
-.platform-card.is-tilting {
-    transition: transform 0.001s linear, background 0.3s ease;
-}
-
-/* Второй селектор нужен из-за body.moonlight-theme .vote-btn — он переопределяет
-   transition и по специфичности бьёт одиночный .vote-btn.is-tilting. */
-.vote-btn.is-tilting,
-body.moonlight-theme .vote-btn.is-tilting {
-    transition: background 0.2s ease, transform 0.001s linear;
-}
-
-/* #vote-banner отдельного правила не требует: в его базовом transition
-   перечислены только left/top, значит transform меняется мгновенно. */
-
-   /* =============================================================================
-   ТЕМА MADNESS
-   -----------------------------------------------------------------------------
-   Хедер для madness переиспользует стили moonlight — класс moonlight-theme
-   навешивается вместе с madness-theme (см. скрипт темы в header.php). Поэтому
-   здесь только то, что уникально для madness: чисто чёрный фон без картинки.
-   ============================================================================= */
-
-body.madness-theme {
-    background: #000 !important;
-    background-image: none !important;
-    background-attachment: scroll !important;
-}
-
-/* Показываем hellfire только в madness. Сам блок .hellfire-bg объявлен
-   в index.php; по умолчанию он display:none, а тут включаем. */
-.hellfire-bg {
-    display: none;
-}
-body.madness-theme .hellfire-bg {
-    display: block;
-}
+/* Тема MADNESS целиком — swad/css/theme-madness.css (подключается в header.php) */

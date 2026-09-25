@@ -1,0 +1,214 @@
+/* =============================================================================
+   ТЕМА MADNESS — «Адское пекло» (swad/css/theme-madness.css)
+   Живые эффекты — swad/js/hell.js (угли, искры за курсором, вспышки по клику,
+   «зажигание» при выборе темы). Огонь внизу главной — hellfire в index.php.
+
+   Как устроено. Madness навешивает на <body> два класса: moonlight-theme и
+   madness-theme, то есть берёт всю тёмную раскладку лунной темы. Цвета лунной
+   темы и фирменный розовый во всех CSS записаны через токены с фолбэком:
+       rgba(var(--moon-accent-rgb, 62, 122, 217), .2)
+       rgb(var(--brand-rgb, 195, 33, 120))
+   Без токенов — исходный цвет (Moonlight и PinkSparkle не меняются ни на пиксель),
+   а здесь токены получают адские значения — и перекрашивается весь сайт сразу.
+   Роли токенов:
+     --moon-ink     бледный текст        --brand       основной фирменный
+     --moon-hi      светлый акцент       --brand-hi    ховер, яркие детали
+     --moon-accent  акцент               --brand-deep  тёмный фирменный
+     --moon-line    линии, рамки
+     --moon-raised  приподнятые панели
+     --moon-deep    глубокий фон
+   ============================================================================= */
+
+body.madness-theme {
+    /* Палитра: уголь, кровь, пепел. Красный — спокойный, кровяной, без оранжевого */
+    --moon-ink-rgb: 238, 224, 218;       /* пепельный вместо голубого */
+    --moon-hi-rgb: 196, 70, 74;          /* светлая кровь — мелкие акценты */
+    --moon-accent-rgb: 150, 30, 36;      /* кровь */
+    --moon-line-rgb: 72, 22, 24;
+    --moon-raised-rgb: 30, 10, 11;
+    --moon-deep-rgb: 10, 4, 4;
+
+    --brand-rgb: 150, 30, 36;            /* кровь */
+    --brand-hi-rgb: 181, 42, 48;         /* алая кровь */
+    --brand-deep-rgb: 74, 10, 14;        /* запёкшаяся кровь */
+
+    /* Переменные, объявленные на :root, токены не видят (там их ещё нет) —
+       переопределяем их прямо здесь */
+    --primary: #961e24;
+    --hell-heat: 120, 16, 20;            /* тёмный багровый отсвет — только в фоне страницы */
+    --hell-blood: #b52a30;               /* алый кровяной — названия, заголовки, «Бесплатно» */
+
+    /* Фон: чернота с жаром снизу, как будто под страницей горит */
+    background:
+        radial-gradient(120% 60% at 50% 115%, rgba(var(--hell-heat), .22) 0%, rgba(var(--hell-heat), .06) 45%, transparent 70%),
+        radial-gradient(80% 50% at 50% -10%, rgba(92, 10, 6, .35) 0%, transparent 70%),
+        #070202 !important;
+    background-attachment: fixed !important;
+    color: #f6e3d6;
+    accent-color: #961e24;
+}
+
+/* Витрина (explore.css). Двойной класс обязателен: explore.css объявляет те же
+   --ex-* в правиле body.moonlight-theme и подключается позже этого файла —
+   при равной специфичности его значения побеждали, и карточки оставались
+   тёмно-красными вместо серых. */
+body.madness-theme.moonlight-theme {
+    --ex-page: linear-gradient(180deg, #0a0202 0%, #140404 55%, #2a0705 100%);
+    --ex-page-fixed: none;
+    --ex-card: rgba(58, 58, 62, .6);     /* карточки игр — серые, полупрозрачные */
+    --ex-cover: #141416;
+    --ex-text: #f6e3d6;
+    --ex-muted: rgba(246, 227, 214, .52);
+    --ex-dim: rgba(246, 227, 214, .32);
+    --ex-accent: #961e24;
+    --ex-accent-hi: #b52a30;
+    --ex-accent-soft: rgba(150, 30, 36, .2);
+    --ex-free: #b52a30;                  /* «Бесплатно» — тем же алым */
+    --ex-sb: rgba(181, 42, 48, .3);
+    --ex-sb-hover: #b52a30;
+}
+
+body.madness-theme ::selection {
+    background: #961e24;
+    color: #fff;
+}
+
+/* Скроллбар тлеет */
+body.madness-theme {
+    scrollbar-color: #6e1419 #0a0404;
+}
+
+body.madness-theme ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #b52a30, #4a0a0e);
+    border-radius: 8px;
+}
+
+body.madness-theme ::-webkit-scrollbar-track {
+    background: #0a0404;
+}
+
+/* ── Хедер: серый ────────────────────────────────────────────────────────────
+   Остальной сайт — в адской палитре, а хедер нейтрально-серый. Делается теми же
+   токенами, но переопределёнными только внутри хедера (и мобильной панели, куда
+   переезжают его кнопки): его меню и выпадашки становятся серыми сами, без
+   отдельных правил на каждую. Красный остаётся только в мелких акцентах. */
+body.madness-theme :is(.header, #userMenu) {
+    --moon-deep-rgb: 22, 22, 24;
+    --moon-raised-rgb: 40, 40, 43;
+    --moon-line-rgb: 74, 74, 78;
+    --moon-ink-rgb: 222, 222, 226;
+}
+
+body.madness-theme .header__bg,
+body.madness-theme .header.scrolled .header__bg,
+body.madness-theme .header:hover .header__bg {
+    background-color: rgba(38, 38, 41, .66);
+}
+
+/* Кнопки хедера — кровяные, полупрозрачные, с белым текстом и иконками */
+body.madness-theme.moonlight-theme .header .button {
+    background-color: rgba(181, 42, 48, .7);
+    color: #fff;
+}
+
+body.madness-theme.moonlight-theme .header .button:hover {
+    background-color: rgba(181, 42, 48, .85);
+    color: #fff;
+}
+
+/* Голографический блик логотипа вырезан маской по форме ОБЫЧНОГО логотипа;
+   у логотипа с рогами другая форма, и маска вылезала за его края */
+body.madness-theme .image::after {
+    display: none;
+}
+
+/* ── Крупный текст, названия, заголовки — алые, кровяного оттенка ─────────────
+   Без свечения — чистый цвет. !important — у заголовков на страницах свои цвета
+   с разной специфичностью, а тема должна перекрасить их все. Не трогаем хедер и
+   кнопки: у .vote-btn класс pixel-title — это шрифт, а не заголовок. */
+body.madness-theme :is(h1, h2, h3, [class$="-title"], [class*="-title "], .user-name, .jv-jam-name, .ac-name):not(.header *, #userMenu *, .btn, .vote-btn, button) {
+    color: var(--hell-blood) !important;
+}
+
+body.madness-theme a:not([class]):hover {
+    color: #d0474c;
+}
+
+/* ── Кнопки: тёмно-красные, без свечения ─────────────────────────────────────
+   Двойной класс — чтобы перебить лунные правила .btn из pages.css: тот может
+   подключаться позже этого файла, и при равной специфичности победил бы он.
+   Тень — обычная тёмная: розовый «ореол» .btn:hover из pages.css в этой теме
+   стал бы красным свечением. */
+body.madness-theme.moonlight-theme :is(.btn, .vote-btn) {
+    background: linear-gradient(180deg, #5a1216 0%, #2a0709 100%);
+    border: 1px solid rgba(181, 42, 48, .45);
+    color: #ffe3d2;
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .6);
+}
+
+body.madness-theme.moonlight-theme :is(.btn, .vote-btn):hover {
+    background: linear-gradient(180deg, #7d1a1f 0%, #3a0a0d 100%);
+    border-color: rgba(200, 70, 74, .6);
+    box-shadow: 0 6px 16px -4px rgba(0, 0, 0, .7);
+}
+
+/* ── Окна пользователя: угольная панель ──────────────────────────────────── */
+body.madness-theme .us-dialog {
+    background: rgba(14, 4, 4, .94);
+    border-color: rgba(255, 255, 255, .12);
+    box-shadow: 0 40px 100px -30px #000;
+}
+
+body.madness-theme .us-dialog::backdrop {
+    background: rgba(4, 1, 1, .72);
+}
+
+/* ── Живой слой hell.js: угли, искры, вспышки ────────────────────────────────
+   Поверх контента, но под хедером (z-index 10) и окнами (top layer).
+   pointer-events: none — все клики проходят насквозь. */
+.hell-layer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.hell-layer[hidden] {
+    display: none;
+}
+
+/* «Зажигание» при выборе темы: стена пламени снизу вверх и тут же опадает */
+.hell-ignite {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    pointer-events: none;
+    background:
+        radial-gradient(140% 60% at 50% 100%, rgba(255, 240, 190, .95) 0%, rgba(255, 150, 40, .9) 22%, transparent 60%),
+        linear-gradient(to top, rgba(255, 110, 20, .92) 0%, rgba(210, 25, 0, .8) 35%, rgba(60, 0, 0, 0) 80%);
+    mix-blend-mode: screen;
+    -webkit-mask-image: linear-gradient(to top, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 55%, transparent 100%);
+    animation: hellIgnite 1.4s linear forwards;
+}
+
+/* Тайминг — на каждом отрезке свой: timing-function у самой анимации применялся бы
+   к каждому отрезку одинаково, и резкий старт затухания съедал пламя за 0.2 с */
+@keyframes hellIgnite {
+    0%   { transform: translateY(100%); opacity: 1;  animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+    28%  { transform: translateY(0);    opacity: 1;  animation-timing-function: ease-in-out; }
+    52%  { transform: translateY(-3%);  opacity: .9; animation-timing-function: ease-in; }
+    100% { transform: translateY(-12%); opacity: 0; }
+}
+
+/* ── Огонь внизу главной (index.php) показываем только в этой теме ───────── */
+.hellfire-bg {
+    display: none;
+}
+
+body.madness-theme .hellfire-bg {
+    display: block;
+}
+

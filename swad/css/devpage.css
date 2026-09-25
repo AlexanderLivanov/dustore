@@ -38,7 +38,7 @@ html.dsp-dark body {
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(900px 520px at 80% -10%, rgba(195, 33, 120, .22), transparent 65%),
+        radial-gradient(900px 520px at 80% -10%, rgba(var(--brand-rgb, 195, 33, 120), .22), transparent 65%),
         linear-gradient(180deg, #14041d 0%, #1e0725 55%, #2b0930 100%);
 }
 
@@ -261,7 +261,7 @@ html.dsp-dark body {
 
 .dsp-stat {
     background: rgba(255, 255, 255, .055);
-    border-top: 2px solid rgba(195, 33, 120, .5);
+    border-top: 2px solid rgba(var(--brand-rgb, 195, 33, 120), .5);
     padding: 15px 16px;
 }
 
@@ -386,7 +386,7 @@ html.dsp-dark body {
 }
 
 .dsp-card:hover {
-    background: rgba(195, 33, 120, .14);
+    background: rgba(var(--brand-rgb, 195, 33, 120), .14);
     transform: translateY(-4px);
 }
 

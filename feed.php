@@ -36,7 +36,7 @@
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
-            border: 1px solid rgba(195, 33, 120, 0.3);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.3);
         }
 
         .create-post-form h2 {
@@ -69,7 +69,7 @@
         }
 
         .submit-btn {
-            background: #c32178;
+            background: rgb(var(--brand-rgb, 195, 33, 120));
             color: white;
             border: none;
             padding: 15px 30px;
@@ -83,7 +83,7 @@
         }
 
         .submit-btn:hover {
-            background: #e62e8a;
+            background: rgb(var(--brand-hi-rgb, 230, 46, 138));
         }
 
         /* Лента постов */
@@ -97,7 +97,7 @@
             background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
             overflow: hidden;
-            border: 1px solid rgba(195, 33, 120, 0.3);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.3);
         }
 
         .post-media {
@@ -138,7 +138,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: linear-gradient(45deg, #c32178, #74155d);
+            background: linear-gradient(45deg, rgb(var(--brand-rgb, 195, 33, 120)), rgb(var(--brand-deep-rgb, 116, 21, 93)));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -197,7 +197,7 @@
         }
 
         .post-text blockquote {
-            border-left: 4px solid #c32178;
+            border-left: 4px solid rgb(var(--brand-rgb, 195, 33, 120));
             padding-left: 15px;
             margin: 15px 0;
             color: #aaa;
@@ -227,8 +227,8 @@
         }
 
         .tag {
-            background: rgba(195, 33, 120, 0.2);
-            color: #c32178;
+            background: rgba(var(--brand-rgb, 195, 33, 120), 0.2);
+            color: rgb(var(--brand-rgb, 195, 33, 120));
             padding: 5px 12px;
             border-radius: 15px;
             font-size: 0.8rem;
@@ -256,7 +256,7 @@
         }
 
         .action-btn:hover {
-            color: #c32178;
+            color: rgb(var(--brand-rgb, 195, 33, 120));
         }
 
         .empty-feed {
@@ -268,7 +268,7 @@
         .empty-feed i {
             font-size: 3rem;
             margin-bottom: 20px;
-            color: #c32178;
+            color: rgb(var(--brand-rgb, 195, 33, 120));
         }
 
         .empty-feed h3 {
@@ -326,7 +326,7 @@
         }
 
         .ql-snow .ql-picker-item:hover {
-            color: #c32178;
+            color: rgb(var(--brand-rgb, 195, 33, 120));
         }
 
         .ql-snow .ql-tooltip {

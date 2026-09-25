@@ -9,6 +9,17 @@ declare(strict_types=1);
 
 const L4X_FEED_PAGE = 20;
 
+/** Есть ли колонка в desl4t.bids — миграции на проде могут быть не накатаны. */
+function l4x_has_col(PDO $l4t, string $col): bool
+{
+    static $cols = null;
+    if ($cols === null) {
+        try { $cols = array_flip($l4t->query("SHOW COLUMNS FROM bids")->fetchAll(PDO::FETCH_COLUMN)); }
+        catch (Throwable $e) { $cols = []; }
+    }
+    return isset($cols[$col]);
+}
+
 /**
  * @param array{q?:string, tag?:string, kind?:string, offset?:int} $f
  * @return array{rows: array, total: int}
@@ -17,6 +28,8 @@ function l4x_feed(PDO $l4t, array $f): array
 {
     $where  = ["stage = 'active'"];
     $params = [];
+    // таймер: истёкшие снимает L4TMarket::sweep(), но между проходами не показываем их тоже
+    if (l4x_has_col($l4t, 'expires_at')) $where[] = '(expires_at IS NULL OR expires_at > NOW())';
 
     $q = trim((string)($f['q'] ?? ''));
     if (mb_strlen($q) >= 2) {

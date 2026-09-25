@@ -213,28 +213,28 @@ require_once('../swad/static/elements/header.php');
             background: #0d0414;
             font-family: 'Manrope', system-ui, sans-serif;
             color: #e8ddf0;
-            background: linear-gradient(180deg, #0f0a20, #240038, #780066);
+            background: linear-gradient(180deg, #0f0a20, #240038, rgb(var(--brand-deep-rgb, 120, 0, 102)));
         }
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(var(--brand-rgb, 195, 33, 120), .3); border-radius: 4px; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
-        .logo .brand { color: #c32178; }
+        .logo .brand { color: rgb(var(--brand-rgb, 195, 33, 120)); }
         .nav-btn { padding: 7px 15px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .001s; text-decoration: none; display: inline-block; }
         .nav-btn:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
-        .timer-badge { background: rgba(195,33,120,.12); border: 1px solid rgba(195,33,120,.3); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; }
+        .timer-badge { background: rgba(var(--brand-rgb, 195, 33, 120), .12); border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .3); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; }
         .participant-layout { display: flex; height: 80vh; }
         .sidebar { width: 230px; flex-shrink: 0; background: #00000030; padding: 10px; margin: 10px 0px 10px 10px; border-radius: 15px; overflow-y: auto; overflow-x: hidden;  }
         .sidebar-section { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.25); text-transform: uppercase; letter-spacing: .08em; padding: 10px 10px 5px; margin-top: 6px; }
         .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.45); transition: .001s; border: 1px solid transparent; }
         .sidebar-item:hover { background: rgba(255,255,255,.05); color: #e8ddf0; }
-        .sidebar-item.active { background: rgba(195,33,120,.12); color: #e8ddf0; border-color: rgba(195,33,120,.25); }
-        .sprint-info-card { background: rgba(195,33,120,.07); border: 1px solid rgba(195,33,120,.2); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+        .sidebar-item.active { background: rgba(var(--brand-rgb, 195, 33, 120), .12); color: #e8ddf0; border-color: rgba(var(--brand-rgb, 195, 33, 120), .25); }
+        .sprint-info-card { background: rgba(var(--brand-rgb, 195, 33, 120), .07); border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .2); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
         .si-title { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
         .si-host { font-size: 11px; color: rgba(255,255,255,.35); margin-bottom: 10px; }
         .si-stat { font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 4px; }
         .si-stat span { color: #e8ddf0; font-weight: 600; }
         .countdown-mini { background: rgba(0,0,0,.3); border-radius: 7px; padding: 8px; text-align: center; margin-top: 10px; }
-        .countdown-mini .cm-val { font-size: 18px; font-weight: 800; color: #c32178; font-variant-numeric: tabular-nums; }
+        .countdown-mini .cm-val { font-size: 18px; font-weight: 800; color: rgb(var(--brand-rgb, 195, 33, 120)); font-variant-numeric: tabular-nums; }
         .countdown-mini .cm-lbl { font-size: 10px; color: rgba(255,255,255,.3); margin-top: 2px; }
         .main-content { flex: 1; padding: 10px; margin: 10px; border-radius: 15px; overflow-y: auto; max-height: calc(100vh - 54px); background: #00000030; }
         .view { display: none; }
@@ -243,12 +243,12 @@ require_once('../swad/static/elements/header.php');
         .page-sub { color: rgba(255,255,255,.35); font-size: 13px; margin-bottom: 24px; }
         .welcome-hero { background: #00000030; border-radius: 14px; padding: 24px 28px; margin-bottom: 22px; position: relative; overflow: hidden; }
         .wh-top { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
-        .wh-avatar { width: 52px; height: 52px; background: rgba(195,33,120,.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; background-size: cover; background-position: center; }
+        .wh-avatar { width: 52px; height: 52px; background: rgba(var(--brand-rgb, 195, 33, 120), .2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; background-size: cover; background-position: center; }
         .wh-name { font-size: 18px; font-weight: 800; }
         .wh-status { margin-left: auto; background: rgba(34,197,94,.1); color: #22c55e; border: 1px solid rgba(34,197,94,.25); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
         .wh-progress-row { display: flex; align-items: center; gap: 14px; }
         .wh-prog-bar { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 99px; overflow: hidden; }
-        .wh-prog-fill { height: 100%; background: #c32178; border-radius: 99px; }
+        .wh-prog-fill { height: 100%; background: rgb(var(--brand-rgb, 195, 33, 120)); border-radius: 99px; }
         .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
         .stat-card { background: #00000030; border-radius: 12px; padding: 15px; }
         .stat-card .sc-val { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
@@ -257,16 +257,16 @@ require_once('../swad/static/elements/header.php');
         .card-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; justify-content: space-between; align-items: center; }
         .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
         .team-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 14px 12px; text-align: center; transition: .15s; }
-        .team-card:hover { background: rgba(195,33,120,.08); border-color: rgba(195,33,120,.2); transform: translateY(-2px); }
-        .team-card .tc-av { width: 48px; height: 48px; background: rgba(195,33,120,.15); border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .team-card:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .08); border-color: rgba(var(--brand-rgb, 195, 33, 120), .2); transform: translateY(-2px); }
+        .team-card .tc-av { width: 48px; height: 48px; background: rgba(var(--brand-rgb, 195, 33, 120), .15); border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
         .team-card .tc-name { font-size: 13px; font-weight: 600; }
         .team-card .tc-name a { color: #e8ddf0; text-decoration: none; }
-        .team-card .tc-name a:hover { color: #c32178; }
-        .team-card .tc-badge { font-size: 9px; background: rgba(195,33,120,.2); border-radius: 4px; padding: 1px 6px; display: inline-block; margin-top: 4px; }
-        .btn-primary { background: #c32178; border: none; color: #fff; border-radius: 8px; padding: 11px 22px; font-weight: 700; cursor: pointer; }
-        .btn-primary:hover { background: #9e1a66; }
-        .btn-team { background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.3); color: #e8ddf0; border-radius: 7px; padding: 7px 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: .15s; }
-        .btn-team:hover { background: rgba(195,33,120,.2); }
+        .team-card .tc-name a:hover { color: rgb(var(--brand-rgb, 195, 33, 120)); }
+        .team-card .tc-badge { font-size: 9px; background: rgba(var(--brand-rgb, 195, 33, 120), .2); border-radius: 4px; padding: 1px 6px; display: inline-block; margin-top: 4px; }
+        .btn-primary { background: rgb(var(--brand-rgb, 195, 33, 120)); border: none; color: #fff; border-radius: 8px; padding: 11px 22px; font-weight: 700; cursor: pointer; }
+        .btn-primary:hover { background: rgb(var(--brand-rgb, 158, 26, 102)); }
+        .btn-team { background: rgba(var(--brand-rgb, 195, 33, 120), .1); border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .3); color: #e8ddf0; border-radius: 7px; padding: 7px 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: .15s; }
+        .btn-team:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .2); }
         .form-input-s, .form-textarea-s { width: 100%; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 9px 13px; color: #e8ddf0; font-size: 13px; }
         .form-label-s { display: block; color: rgba(255,255,255,.4); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
         .form-row-s { margin-bottom: 13px; }
@@ -275,24 +275,24 @@ require_once('../swad/static/elements/header.php');
         .criteria-item { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 12px 14px; margin-bottom: 8px; }
         .ci-head { display: flex; justify-content: space-between; margin-bottom: 6px; }
         .ci-name { font-size: 13px; font-weight: 600; }
-        .ci-weight { font-size: 11px; color: #c32178; font-weight: 700; }
+        .ci-weight { font-size: 11px; color: rgb(var(--brand-rgb, 195, 33, 120)); font-weight: 700; }
         .ci-bar { height: 3px; background: rgba(255,255,255,.06); border-radius: 99px; margin-top: 8px; overflow: hidden; }
-        .ci-bar-fill { height: 100%; background: #c32178; border-radius: 99px; }
+        .ci-bar-fill { height: 100%; background: rgb(var(--brand-rgb, 195, 33, 120)); border-radius: 99px; }
         .ann-item { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 12px 14px; margin-bottom: 8px; }
-        .ann-item.new-ann { border-color: rgba(195,33,120,.3); background: rgba(195,33,120,.05); }
+        .ann-item.new-ann { border-color: rgba(var(--brand-rgb, 195, 33, 120), .3); background: rgba(var(--brand-rgb, 195, 33, 120), .05); }
         .ann-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
         .ann-body { font-size: 12px; color: rgba(255,255,255,.5); line-height: 1.6; margin-bottom: 5px; }
         .ann-meta { font-size: 10px; color: rgba(255,255,255,.25); }
         .btn-remove { background: none; border: none; color: #f44336; cursor: pointer; font-size: 1.1rem; }
-        .drop-zone { border: 2px dashed rgba(195,33,120,.3); border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; }
-        .drop-zone:hover { border-color: #c32178; background: rgba(195,33,120,.05); }
+        .drop-zone { border: 2px dashed rgba(var(--brand-rgb, 195, 33, 120), .3); border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; }
+        .drop-zone:hover { border-color: rgb(var(--brand-rgb, 195, 33, 120)); background: rgba(var(--brand-rgb, 195, 33, 120), .05); }
         #jam-progress { margin-top: 12px; }
-        #jam-bar { height: 8px; background: #c32178; border-radius: 999px; width: 0%; transition: width .3s; }
+        #jam-bar { height: 8px; background: rgb(var(--brand-rgb, 195, 33, 120)); border-radius: 999px; width: 0%; transition: width .3s; }
         .md-content { font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.7; }
         .md-content h1, .md-content h2, .md-content h3 { color: #e8ddf0; margin: 0 0 8px 0; }
         .md-content ul { padding-left: 20px; margin: 6px 0; }
         .md-content li { margin-bottom: 3px; }
-        .md-content a { color: #c32178; text-decoration: none; }
+        .md-content a { color: rgb(var(--brand-rgb, 195, 33, 120)); text-decoration: none; }
         .md-content a:hover { text-decoration: underline; }
         .md-content strong { color: #fff; }
     </style>
@@ -513,7 +513,7 @@ require_once('../swad/static/elements/header.php');
     .pcard {
         position: absolute; inset: 0;
         background: linear-gradient(160deg, #1c0c2a, #14041d);
-        border: 1px solid rgba(195,33,120,.35);
+        border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .35);
         border-radius: 18px;
         box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.03);
         display: flex; flex-direction: column;
@@ -523,7 +523,7 @@ require_once('../swad/static/elements/header.php');
     }
     .pcard-top { padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
     .pcard-alias { font-size: 24px; font-weight: 800; color: #e8ddf0; letter-spacing: -.4px; }
-    .pcard-handle { font-size: 12px; color: rgba(195,33,120,.85); margin-top: 2px; font-weight: 600; }
+    .pcard-handle { font-size: 12px; color: rgba(var(--brand-rgb, 195, 33, 120), .85); margin-top: 2px; font-weight: 600; }
     .pcard-city { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 6px; display: flex; align-items: center; gap: 5px; }
 
     .pcard-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
@@ -548,8 +548,8 @@ require_once('../swad/static/elements/header.php');
     .deck-btn.nope:hover { background: rgba(255,91,110,.12); }
     .deck-btn.like { color: #38d39f; border-color: rgba(56,211,159,.4); }
     .deck-btn.like:hover { background: rgba(56,211,159,.12); }
-    .deck-btn.shuffle { width: 50px; height: 50px; font-size: 20px; color: #c32178; border-color: rgba(195,33,120,.4); }
-    .deck-btn.shuffle:hover { background: rgba(195,33,120,.12); }
+    .deck-btn.shuffle { width: 50px; height: 50px; font-size: 20px; color: rgb(var(--brand-rgb, 195, 33, 120)); border-color: rgba(var(--brand-rgb, 195, 33, 120), .4); }
+    .deck-btn.shuffle:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .12); }
 
     .deck-hint { text-align: center; font-size: 11px; color: rgba(255,255,255,.3); margin-top: 12px; }
 
@@ -572,13 +572,13 @@ require_once('../swad/static/elements/header.php');
     /* онбординг */
     .deck-onboard-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.82); z-index: 400; display: none; align-items: center; justify-content: center; padding: 20px; }
     .deck-onboard-overlay.open { display: flex; }
-    .deck-onboard { max-width: 380px; width: 100%; background: #160822; border: 1px solid rgba(195,33,120,.35); border-radius: 16px; padding: 26px; text-align: center; }
+    .deck-onboard { max-width: 380px; width: 100%; background: #160822; border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .35); border-radius: 16px; padding: 26px; text-align: center; }
     .deck-onboard h3 { font-size: 20px; font-weight: 800; color: #e8ddf0; margin-bottom: 14px; }
     .deck-onboard .ob-row { display: flex; align-items: flex-start; gap: 12px; text-align: left; margin: 12px 0; font-size: 13px; color: rgba(255,255,255,.75); line-height: 1.45; }
     .deck-onboard .ob-row .ob-ico { font-size: 22px; flex-shrink: 0; width: 28px; text-align: center; }
     .deck-onboard .ob-cap { font-size: 12px; color: rgba(255,255,255,.4); margin: 16px 0 18px; }
-    .deck-onboard .ob-btn { width: 100%; background: #c32178; border: none; color: #fff; border-radius: 10px; padding: 12px; font-weight: 700; font-size: 14px; cursor: pointer; }
-    .deck-onboard .ob-btn:hover { background: #9e1a66; }
+    .deck-onboard .ob-btn { width: 100%; background: rgb(var(--brand-rgb, 195, 33, 120)); border: none; color: #fff; border-radius: 10px; padding: 12px; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .deck-onboard .ob-btn:hover { background: rgb(var(--brand-rgb, 158, 26, 102)); }
 </style>
 
 <div class="deck-wrap" id="deck-wrap">
@@ -1207,32 +1207,9 @@ require_once('../swad/static/elements/header.php');
     }
 </script>
 
-<!-- Эффект наклона -->
+<!-- Эффект наклона — Float3D, общие настройки сайта (swad/css/float3d.css) -->
 <script>
-(function() {
-    const buttons = document.querySelectorAll('.nav-btn, .btn-primary, .sidebar-item, .btn-team');
-    if (!buttons.length) return;
-    function resetTilt(btn) { btn.style.transform = ''; }
-    function handleMouseMove(e) {
-        const btn = e.currentTarget;
-        const rect = btn.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const nx = (x / rect.width) * 2 - 1;
-        const ny = (y / rect.height) * 2 - 1;
-        const maxAngle = 15;
-        const rotateY = maxAngle * nx;
-        const rotateX = -maxAngle * ny;
-        const translateY = -3;
-        const scale = 1.1;
-        btn.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-    }
-    function handleMouseLeave(e) { resetTilt(e.currentTarget); }
-    buttons.forEach(btn => {
-        btn.addEventListener('mousemove', handleMouseMove);
-        btn.addEventListener('mouseleave', handleMouseLeave);
-    });
-})();
+window.Float3D?.register('.nav-btn, .btn-primary, .sidebar-item, .btn-team');
 </script>
 
 </body>

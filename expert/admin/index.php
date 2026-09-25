@@ -81,7 +81,7 @@ $active_page = 'index';
         .quick-link{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:16px;transition:.2s;}
         .quick-link:hover{border-color:rgba(74,222,128,.3);transform:translateY(-2px);}
         .ql-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
-        .ql-green{background:rgba(74,222,128,.12);} .ql-blue{background:rgba(34,211,238,.12);} .ql-pink{background:rgba(244,114,182,.12);}
+        .ql-green{background:rgba(74,222,128,.12);} .ql-blue{background:rgba(34,211,238,.12);} .ql-pink{background:rgba(var(--brand-hi-rgb, 244, 114, 182), .12);}
         .quick-link h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:4px;} .quick-link p{font-size:.82rem;color:var(--muted);}
     </style>
 </head>

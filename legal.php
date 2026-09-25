@@ -64,7 +64,7 @@
         }
 
         .highlight {
-            color: #c32178;
+            color: rgb(var(--brand-rgb, 195, 33, 120));
             font-weight: 500;
         }
 

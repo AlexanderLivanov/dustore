@@ -119,7 +119,7 @@ $election = $conn->query("
         }
 
         .nav-links .btn-nav:hover {
-            background: #a01860;
+            background: rgb(var(--brand-rgb, 160, 24, 96));
             color: #fff;
         }
 
@@ -136,7 +136,7 @@ $election = $conn->query("
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(ellipse 60% 50% at 50% 0%, rgba(195, 33, 120, .18) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 50% 0%, rgba(var(--brand-rgb, 195, 33, 120), .18) 0%, transparent 70%),
                 radial-gradient(ellipse 40% 30% at 80% 80%, rgba(34, 211, 238, .08) 0%, transparent 60%);
             pointer-events: none;
         }
@@ -145,8 +145,8 @@ $election = $conn->query("
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(195, 33, 120, .12);
-            border: 1px solid rgba(195, 33, 120, .25);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .12);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25);
             border-radius: 20px;
             padding: 5px 16px;
             font-size: .78rem;
@@ -205,9 +205,9 @@ $election = $conn->query("
         }
 
         .btn-primary:hover {
-            background: #a01860;
+            background: rgb(var(--brand-rgb, 160, 24, 96));
             transform: translateY(-1px);
-            box-shadow: 0 8px 24px rgba(195, 33, 120, .3);
+            box-shadow: 0 8px 24px rgba(var(--brand-rgb, 195, 33, 120), .3);
         }
 
         .btn-ghost {
@@ -314,7 +314,7 @@ $election = $conn->query("
         }
 
         .step-card:hover {
-            border-color: rgba(195, 33, 120, .3);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .3);
             transform: translateY(-2px);
         }
 
@@ -322,7 +322,7 @@ $election = $conn->query("
             font-family: 'Syne', sans-serif;
             font-size: 2.5rem;
             font-weight: 800;
-            color: rgba(195, 33, 120, .2);
+            color: rgba(var(--brand-rgb, 195, 33, 120), .2);
             line-height: 1;
             margin-bottom: 12px;
         }

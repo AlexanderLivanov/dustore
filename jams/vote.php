@@ -150,23 +150,8 @@ if (!$sprint_id) {
         clear.addEventListener('click', () => { input.value = ''; apply(); input.focus(); });
         apply();
 
-        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-            let active = null;
-            document.addEventListener('mousemove', e => {
-                const el = e.target.closest('.jv-jam');
-                if (el !== active && active) { active.style.transform = ''; active = null; }
-                if (!el) return;
-                active = el;
-                const hw = el.offsetWidth / 2, hh = el.offsetHeight / 2;
-                if (!hw || !hh) return;
-                const r = el.getBoundingClientRect();
-                const lift = el.style.transform ? -6 : 0;
-                const nx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / hw));
-                const ny = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2 - lift)) / hh));
-                el.style.transform = 'perspective(800px) rotateX(' + (-10 * ny).toFixed(2) + 'deg) rotateY('
-                    + (10 * nx).toFixed(2) + 'deg) translateY(-6px) scale(1.02)';
-            });
-        }
+        // Наклон карточек и парящее название джема — Float3D, общие настройки сайта
+        window.Float3D?.register('.jv-jam', { float: '.jv-jam-name', card: true });
     })();
     </script>
     </body>

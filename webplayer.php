@@ -636,7 +636,7 @@ if ($ready && !empty($meta['isolated'])) {
             text-align: center;
             padding: 24px;
             background:
-                radial-gradient(700px 420px at 50% 30%, rgba(195, 33, 120, .22), transparent 70%),
+                radial-gradient(700px 420px at 50% 30%, rgba(var(--brand-rgb, 195, 33, 120), .22), transparent 70%),
                 linear-gradient(180deg, #0b0210, #1a0620);
             z-index: 10;
         }
@@ -706,7 +706,7 @@ if ($ready && !empty($meta['isolated'])) {
         }
 
         .btn:hover {
-            background: #e8479b;
+            background: rgb(var(--brand-hi-rgb, 232, 71, 155));
         }
 
         .btn--ghost {
@@ -723,7 +723,7 @@ if ($ready && !empty($meta['isolated'])) {
         .err {
             font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
-            color: #ff8fa8;
+            color: rgb(var(--brand-hi-rgb, 255, 143, 168));
             background: rgba(255, 95, 122, .1);
             padding: 10px 14px;
             max-width: 560px;

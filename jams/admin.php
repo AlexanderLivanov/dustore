@@ -30,7 +30,7 @@ if (!$sprint_id) {
     ?>
     <!DOCTYPE html>
     <html lang="ru">
-    <head><meta charset="UTF-8"><title>Выбор спринта</title><style>body{background:#0d0414;color:#e8ddf0;font-family:monospace;padding:40px}.sprint-item{background:rgba(0,0,0,.3);border:1px solid #c32178;border-radius:12px;padding:16px;margin-bottom:12px}.btn{background:#c32178;color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none}</style></head>
+    <head><meta charset="UTF-8"><title>Выбор спринта</title><style>body{background:#0d0414;color:#e8ddf0;font-family:monospace;padding:40px}.sprint-item{background:rgba(0,0,0,.3);border:1px solid rgb(var(--brand-rgb, 195, 33, 120));border-radius:12px;padding:16px;margin-bottom:12px}.btn{background:rgb(var(--brand-rgb, 195, 33, 120));color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none}</style></head>
     <body><div style="max-width:600px;margin:0 auto"><h1>🎮 Выберите спринт</h1>
     <?php foreach ($userSprints as $s): ?>
         <div class="sprint-item">
@@ -164,11 +164,11 @@ require_once('../swad/static/elements/header.php');
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(195,33,120,.1) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(120,20,80,.08) 0%, transparent 55%); }
+        body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(var(--brand-rgb, 195, 33, 120), .1) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(var(--brand-deep-rgb, 120, 20, 80), .08) 0%, transparent 55%); }
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(195,33,120,.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(var(--brand-rgb, 195, 33, 120), .3); border-radius: 4px; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
-        .logo .brand { color: #c32178; }
+        .logo .brand { color: rgb(var(--brand-rgb, 195, 33, 120)); }
         .nav-btn { padding: 7px 15px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .15s; text-decoration: none; display: inline-block; }
         .nav-btn:hover { background: rgba(255,255,255,.1); color: #e8ddf0; }
         .badge-live { background: rgba(34,197,94,.12); color: #22c55e; border: 1px solid rgba(34,197,94,.25); border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
@@ -179,9 +179,9 @@ require_once('../swad/static/elements/header.php');
         .sidebar-section { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.25); text-transform: uppercase; letter-spacing: .08em; padding: 10px 10px 5px; margin-top: 6px; }
         .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.45); transition: .15s; border: 1px solid transparent; }
         .sidebar-item:hover { background: rgba(255,255,255,.05); color: #e8ddf0; }
-        .sidebar-item.active { background: rgba(195,33,120,.12); color: #e8ddf0; border-color: rgba(195,33,120,.25); }
+        .sidebar-item.active { background: rgba(var(--brand-rgb, 195, 33, 120), .12); color: #e8ddf0; border-color: rgba(var(--brand-rgb, 195, 33, 120), .25); }
         .sidebar-item .ico { font-size: 16px; width: 20px; text-align: center; }
-        .sidebar-badge { margin-left: auto; background: rgba(195,33,120,.25); color: #e8ddf0; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+        .sidebar-badge { margin-left: auto; background: rgba(var(--brand-rgb, 195, 33, 120), .25); color: #e8ddf0; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
         .main-content { flex: 1; overflow-y: auto; padding: 26px 28px; max-height: calc(100vh - 54px); }
         .view { display: none; }
         .view.active { display: block; }
@@ -200,12 +200,12 @@ require_once('../swad/static/elements/header.php');
         .chart-title { font-size: 14px; font-weight: 700; }
         .chart-tabs { display: flex; gap: 4px; }
         .chart-tab { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.4); }
-        .chart-tab.active { background: rgba(195,33,120,.18); color: #e8ddf0; border: 1px solid rgba(195,33,120,.3); }
+        .chart-tab.active { background: rgba(var(--brand-rgb, 195, 33, 120), .18); color: #e8ddf0; border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .3); }
         .chart-area { height: 160px; position: relative; overflow: hidden; }
         .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 100%; padding-top: 10px; }
         .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .chart-bar { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, rgba(195,33,120,.7), rgba(195,33,120,.25)); transition: height .6s cubic-bezier(.4,0,.2,1); min-height: 4px; }
-        .chart-bar:hover { background: linear-gradient(180deg, rgba(195,33,120,1), rgba(195,33,120,.4)); }
+        .chart-bar { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, rgba(var(--brand-rgb, 195, 33, 120), .7), rgba(var(--brand-rgb, 195, 33, 120), .25)); transition: height .6s cubic-bezier(.4,0,.2,1); min-height: 4px; }
+        .chart-bar:hover { background: linear-gradient(180deg, rgb(var(--brand-rgb, 195, 33, 120)), rgba(var(--brand-rgb, 195, 33, 120), .4)); }
         .chart-bar::after { content: attr(data-val); position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 9px; color: rgba(255,255,255,.4); white-space: nowrap; }
         .chart-lbl { font-size: 9px; color: rgba(255,255,255,.25); text-align: center; }
         .chart-grid { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 20px; }
@@ -220,17 +220,17 @@ require_once('../swad/static/elements/header.php');
         .li-info { flex: 1; min-width: 0; }
         .li-name { font-size: 13px; font-weight: 600; color: #e8ddf0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .li-sub { font-size: 11px; color: rgba(255,255,255,.3); }
-        .li-val { font-size: 13px; font-weight: 700; color: #c32178; flex-shrink: 0; }
+        .li-val { font-size: 13px; font-weight: 700; color: rgb(var(--brand-rgb, 195, 33, 120)); flex-shrink: 0; }
         .table-wrap { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; overflow: hidden; }
         .table-toolbar { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; gap: 10px; align-items: center; }
         .tbl-search { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 7px; padding: 7px 12px; color: #e8ddf0; font-size: 12px; outline: none; }
-        .tbl-search:focus { border-color: #c32178; }
-        .tbl-btn { padding: 7px 14px; border-radius: 7px; border: 1px solid rgba(195,33,120,.3); background: rgba(195,33,120,.1); color: #e8ddf0; cursor: pointer; font-size: 12px; font-weight: 600; }
-        .tbl-btn:hover { background: rgba(195,33,120,.2); }
+        .tbl-search:focus { border-color: rgb(var(--brand-rgb, 195, 33, 120)); }
+        .tbl-btn { padding: 7px 14px; border-radius: 7px; border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .3); background: rgba(var(--brand-rgb, 195, 33, 120), .1); color: #e8ddf0; cursor: pointer; font-size: 12px; font-weight: 600; }
+        .tbl-btn:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .2); }
         table { width: 100%; border-collapse: collapse; }
         thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: rgba(255,255,255,.3); text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,.07); }
         tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: .15s; cursor: pointer; }
-        tbody tr:hover { background: rgba(195,33,120,.05); }
+        tbody tr:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .05); }
         tbody td { padding: 11px 14px; font-size: 12px; color: rgba(255,255,255,.7); }
         td .td-name { color: #e8ddf0; font-weight: 600; font-size: 13px; }
         td .td-sub { color: rgba(255,255,255,.3); font-size: 11px; }
@@ -238,16 +238,16 @@ require_once('../swad/static/elements/header.php');
         .pill-green { background: rgba(34,197,94,.1); color: #22c55e; border: 1px solid rgba(34,197,94,.2); }
         .pill-yellow { background: rgba(245,158,11,.1); color: #f59e0b; border: 1px solid rgba(245,158,11,.2); }
         .pill-gray { background: rgba(255,255,255,.05); color: rgba(255,255,255,.3); border: 1px solid rgba(255,255,255,.1); }
-        .pill-pink { background: rgba(195,33,120,.1); color: #d946a8; border: 1px solid rgba(195,33,120,.25); }
+        .pill-pink { background: rgba(var(--brand-rgb, 195, 33, 120), .1); color: rgb(var(--brand-hi-rgb, 217, 70, 168)); border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25); }
         .settings-section { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 20px; margin-bottom: 14px; }
         .settings-section-title { font-size: 13px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); }
         .form-row-s { margin-bottom: 14px; }
         .form-label-s { display: block; color: rgba(255,255,255,.4); font-size: 12px; font-weight: 600; margin-bottom: 5px; }
         .form-input-s { width: 100%; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 9px 13px; color: #e8ddf0; font-size: 13px; outline: none; }
-        .form-input-s:focus { border-color: #c32178; }
+        .form-input-s:focus { border-color: rgb(var(--brand-rgb, 195, 33, 120)); }
         .logo-preview { margin-top: 10px; display: flex; align-items: center; gap: 12px; }
         .logo-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
-        .btn-sm { background: rgba(195,33,120,.1); border: 1px solid rgba(195,33,120,.25); color: #e8ddf0; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 11px; }
+        .btn-sm { background: rgba(var(--brand-rgb, 195, 33, 120), .1); border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25); color: #e8ddf0; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 11px; }
         .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
         .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
         .toggle-info .ti-title { font-size: 13px; font-weight: 600; color: #e8ddf0; }
@@ -256,18 +256,18 @@ require_once('../swad/static/elements/header.php');
         .toggle input { opacity: 0; width: 0; height: 0; }
         .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,.1); border-radius: 22px; cursor: pointer; transition: .2s; }
         .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; left: 3px; top: 3px; transition: .2s; }
-        .toggle input:checked + .toggle-slider { background: #c32178; }
+        .toggle input:checked + .toggle-slider { background: rgb(var(--brand-rgb, 195, 33, 120)); }
         .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
-        .btn-save { background: #c32178; border: none; color: #fff; border-radius: 8px; padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
-        .btn-save:hover { background: #9e1a66; }
+        .btn-save { background: rgb(var(--brand-rgb, 195, 33, 120)); border: none; color: #fff; border-radius: 8px; padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .btn-save:hover { background: rgb(var(--brand-rgb, 158, 26, 102)); }
         .btn-danger { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #f87171; border-radius: 8px; padding: 10px 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
         .btn-danger:hover { background: rgba(239,68,68,.2); }
         .ann-item { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; }
-        .ann-item:hover { border-color: rgba(195,33,120,.3); background: rgba(195,33,120,.04); }
+        .ann-item:hover { border-color: rgba(var(--brand-rgb, 195, 33, 120), .3); background: rgba(var(--brand-rgb, 195, 33, 120), .04); }
         .ann-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
         .ann-meta { font-size: 11px; color: rgba(255,255,255,.3); }
         .ann-textarea { width: 100%; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 10px 13px; color: #e8ddf0; font-size: 13px; outline: none; resize: vertical; min-height: 90px; }
-        .ann-textarea:focus { border-color: #c32178; }
+        .ann-textarea:focus { border-color: rgb(var(--brand-rgb, 195, 33, 120)); }
         .btn-remove { background: none; border: none; color: #f44336; cursor: pointer; font-size: 1.1rem; }
     </style>
 </head>

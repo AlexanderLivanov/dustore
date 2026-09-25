@@ -138,7 +138,7 @@ function buildUrl($mergeParams)
 }
 
 body {
-    background: linear-gradient(180deg, #0f0a20, #240038, #780066);
+    background: linear-gradient(180deg, #0f0a20, #240038, rgb(var(--brand-deep-rgb, 120, 0, 102)));
     color: var(--light);
     font-family: 'Inter', system-ui, sans-serif;
     min-height: 100vh;
@@ -178,15 +178,15 @@ body.moonlight-theme {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: rgba(195,33,120,0.13);
-    border: 1px solid rgba(195,33,120,0.28);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.13);
+    border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.28);
     border-radius: 100px;
     padding: 5px 16px;
     font-size: .72rem;
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: #e88fc0;
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
     margin-bottom: 18px;
 }
 
@@ -233,8 +233,8 @@ body.moonlight-theme {
 }
 .ah-btn:hover {
     border-color: var(--primary);
-    background: rgba(195,33,120,0.12);
-    color: #e88fc0;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.12);
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
 }
 .ah-btn.primary {
     background: var(--primary);
@@ -242,8 +242,8 @@ body.moonlight-theme {
     color: #fff;
 }
 .ah-btn.primary:hover {
-    background: #d42485;
-    border-color: #d42485;
+    background: rgb(var(--brand-rgb, 212, 36, 133));
+    border-color: rgb(var(--brand-rgb, 212, 36, 133));
 }
 .ah-btn .badge {
     background: rgba(255,255,255,0.2);
@@ -277,9 +277,9 @@ body.moonlight-theme {
     cursor: pointer;
 }
 .ah-cat:hover, .ah-cat.active {
-    background: rgba(195,33,120,0.15);
-    border-color: rgba(195,33,120,0.35);
-    color: #e88fc0;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.15);
+    border-color: rgba(var(--brand-rgb, 195, 33, 120), 0.35);
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
 }
 
 .ah-stats {
@@ -334,7 +334,7 @@ body.moonlight-theme {
 }
 .s-bar:focus-within {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(195,33,120,0.2);
+    box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 195, 33, 120), 0.2);
 }
 .s-bar svg { color: rgba(255,255,255,0.4); flex-shrink: 0; }
 .s-bar input {
@@ -450,8 +450,8 @@ body.moonlight-theme {
 }
 .fb:hover { background: rgba(255,255,255,0.08); }
 .fb.active {
-    background: rgba(195,33,120,0.18);
-    color: #e88fc0;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.18);
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
 }
 .fb .em {
     font-size: .9rem;
@@ -471,8 +471,8 @@ body.moonlight-theme {
     text-align: center;
 }
 .fb.active .ct {
-    background: rgba(195,33,120,0.25);
-    color: #e88fc0;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.25);
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
 }
 .fdiv {
     height: 1px;
@@ -526,12 +526,12 @@ body.moonlight-theme {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    background: rgba(195,33,120,0.13);
-    border: 1px solid rgba(195,33,120,0.28);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.13);
+    border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.28);
     border-radius: 100px;
     padding: 4px 12px;
     font-size: .78rem;
-    color: #e88fc0;
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
     text-decoration: none;
 }
 .chip-x { opacity: .55; font-size: .65rem; }
@@ -565,28 +565,8 @@ body.moonlight-theme {
     transform: translateY(-10px);
     box-shadow: 0 15px 30px rgba(0,0,0,0.3);
 }
-.ac::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: linear-gradient(
-        115deg,
-        transparent 0%,
-        rgba(255,255,255,0.1) 20%,
-        rgba(255,255,255,0.5) 40%,
-        rgba(255,255,255,0.1) 60%,
-        transparent 80%
-    );
-    background-size: 200% 100%;
-    background-position: calc(50% + var(--dx, 0%)) 0;
-    opacity: 0;
-    transition: opacity 0.2s;
-    pointer-events: none;
-    z-index: 2;
-    mix-blend-mode: overlay;
-}
-.ac:hover::after { opacity: 1; }
+/* Блик за курсором рисует Float3D (.f3d-glare), яркость — общая настройка
+   --f3d-glare в swad/css/float3d.css */
 .ac::before {
     content: "";
     position: absolute;
@@ -636,7 +616,7 @@ body.moonlight-theme {
 }
 .ac:hover .ac-hover-cta { opacity: 1; }
 .ac-hover-cta span {
-    background: rgba(195,33,120,0.88);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.88);
     border-radius: 8px;
     padding: 7px 18px;
     font-size: .78rem;
@@ -683,7 +663,7 @@ body.moonlight-theme {
     position: absolute;
     bottom: 9px;
     left: 9px;
-    background: rgba(195,33,120,0.85);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.85);
     color: #fff;
     border-radius: 4px;
     padding: 2px 8px;
@@ -700,11 +680,11 @@ body.moonlight-theme {
 .cb-sfx       { background: rgba(20,184,166,0.7); color: #99f6e4; }
 .cb-sprite    { background: rgba(245,158,11,0.7); color: #fde68a; }
 .cb-shader    { background: rgba(139,92,246,0.7); color: #ddd6fe; }
-.cb-font      { background: rgba(236,72,153,0.7); color: #fbcfe8; }
+.cb-font      { background: rgba(var(--brand-hi-rgb, 236, 72, 153), 0.7); color: rgb(var(--brand-hi-rgb, 251, 207, 232)); }
 .cb-script    { background: rgba(59,130,246,0.7); color: #bfdbfe; }
 .cb-ui_kit    { background: rgba(16,185,129,0.7); color: #a7f3d0; }
 .cb-animation { background: rgba(239,68,68,0.7); color: #fecaca; }
-.cb-vfx       { background: rgba(195,33,120,0.7); color: #f5b8da; }
+.cb-vfx       { background: rgba(var(--brand-rgb, 195, 33, 120), 0.7); color: rgb(var(--brand-hi-rgb, 245, 184, 218)); }
 .cb-video     { background: rgba(107,114,128,0.7); color: #e5e7eb; }
 
 .ac-body {
@@ -782,7 +762,7 @@ body.moonlight-theme {
     display: inline-block;
 }
 .ac-dl-btn:hover {
-    background: #d42485;
+    background: rgb(var(--brand-rgb, 212, 36, 133));
     transform: translateY(-1px);
 }
 
@@ -1273,37 +1253,8 @@ body.moonlight-theme {
             });
         })();
 
-        /* ── 3D tilt on cards ── */
-        (function() {
-            const grid = document.getElementById('assetsGrid');
-            if (!grid) return;
-            let active = null;
-            grid.addEventListener('mousemove', e => {
-                const c = e.target.closest('.ac');
-                if (!c) return;
-                if (active !== c) {
-                    if (active) active.style.transform = '';
-                    active = c;
-                }
-                const r = c.getBoundingClientRect();
-                const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
-                const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
-                c.style.transform = `perspective(700px) rotateX(${-9*ny}deg) rotateY(${9*nx}deg) translateY(-5px) scale(1.018)`;
-            });
-            grid.addEventListener('mouseleave', () => {
-                if (active) {
-                    active.style.transform = '';
-                    active = null;
-                }
-            });
-            grid.addEventListener('mouseout', e => {
-                const c = e.target.closest('.ac');
-                if (c && !c.contains(e.relatedTarget)) {
-                    c.style.transform = '';
-                    if (active === c) active = null;
-                }
-            });
-        })();
+        /* ── Наклон карточек и парящее название — Float3D, общие настройки сайта ── */
+        window.Float3D?.register('.ac', { float: '.ac-name', card: true });
 
         /* ── Cmd+K ── */
         document.addEventListener('keydown', e => {

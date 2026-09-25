@@ -94,19 +94,20 @@ sendMail(
     buildEmail("Новая студия на модерации", $admin_body, 'Открыть в панели', 'https://dustore.ru/devs/recentorgs')
 );
 
-// ── Push всем админам через api/push/index.js (эндпоинт /send) ───────────
-$payload = json_encode([
-    'title' => "Новая студия: {$sn}",
-    'body'  => "Владелец: {$on} · Ожидает модерации",
-    'url'   => '/devs/recentorgs',
-]);
-$ctx = stream_context_create(['http' => [
-    'method'  => 'POST',
-    'header'  => "Content-Type: application/json\r\nContent-Length: " . strlen($payload),
-    'content' => $payload,
-    'timeout' => 5,
-]]);
-@file_get_contents('http://localhost:3001/send', false, $ctx);
+// ── Push админам платформы (global_role = -1) через общую очередь ─────────
+// Было: POST на старый api/push/index.js (:3001) /send без user_id, а он без
+// user_id рассылает ВСЕМ подписчикам — «Новая студия…» получал любой, кто
+// включил уведомления. Теперь адресно: push_outbox → pwa/push-worker.js.
+try {
+    $_SERVER['HTTP_HOST'] = 'dustore.ru';   // regorg.php зовёт нас с Host: localhost — Database взял бы локальные креды
+    require_once __DIR__ . '/../chat/push_helpers.php';
+    $db = (new Database())->connect('dustore');
+    foreach ($db->query("SELECT id FROM users WHERE global_role = -1")->fetchAll(PDO::FETCH_COLUMN) as $adminId) {
+        push_enqueue_user($db, (int)$adminId, "Новая студия: {$studio_name}", "Владелец: {$owner_name} · Ожидает модерации", '/devs/recentorgs');
+    }
+} catch (Throwable $e) {
+    error_log('[notify_worker] push: ' . $e->getMessage());
+}
 
 http_response_code(200);
 echo 'ok';

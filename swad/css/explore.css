@@ -20,11 +20,11 @@
 :root {
     --primary:   #c32178;
     --secondary: #74155d;
-    --dark:      #170423;
+    --dark:      rgb(var(--moon-deep-rgb, 23, 4, 35));
     --light:     #f8f9fa;
 
     --ex-header:      80px;   /* высота хедера, для sticky-отступов */
-    --ex-page:        linear-gradient(180deg, #0f0a20, #240038, #780066);
+    --ex-page:        linear-gradient(180deg, rgb(var(--moon-deep-rgb, 15, 10, 32)), rgb(var(--moon-raised-rgb, 36, 0, 56)), rgb(var(--brand-deep-rgb, 120, 0, 102)));
     --ex-page-fixed:  none;
 
     --ex-shell:       linear-gradient(180deg, #00000020, #00000030, #00000040);
@@ -32,7 +32,7 @@
     --ex-panel:       linear-gradient(180deg, #00000020, #00000040);
     --ex-panel-line:  #ffffff12;
 
-    --ex-card:        #1b0a26;
+    --ex-card:        rgb(var(--moon-raised-rgb, 27, 10, 38));
     --ex-card-line:   rgba(255, 255, 255, 0.08);
     --ex-card-line-hi:rgba(255, 255, 255, 0.16);
     --ex-cover:       #100418;
@@ -61,38 +61,38 @@
 /* Документный скроллбар берёт стили с <html>, до которого переменные с <body>
    не поднимаются. :has() перекидывает тему наверх. */
 html:has(body.moonlight-theme) {
-    --ex-sb:          rgba(184, 200, 255, 0.22);
-    --ex-sb-hover:    #3e7ad9;
+    --ex-sb:          rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
+    --ex-sb-hover:    rgb(var(--moon-accent-rgb, 62, 122, 217));
 }
 
 /* ── Тема Moonlight: только цвета ─────────────────────────────────────────── */
 body.moonlight-theme {
-    --ex-page:        #070c18;
+    --ex-page:        rgb(var(--moon-deep-rgb, 7, 12, 24));
     --ex-page-fixed:  url("/swad/static/img/Moonlight_pict.jpeg");
 
     --ex-shell:       linear-gradient(180deg, #00000030, #00000045, #00000055);
-    --ex-shell-line:  rgba(184, 200, 255, 0.18);
+    --ex-shell-line:  rgba(var(--moon-ink-rgb, 184, 200, 255), 0.18);
     --ex-panel:       linear-gradient(180deg, #00000025, #00000045);
-    --ex-panel-line:  rgba(184, 200, 255, 0.10);
+    --ex-panel-line:  rgba(var(--moon-ink-rgb, 184, 200, 255), 0.10);
 
-    --ex-card:        #101728;
-    --ex-card-line:   rgba(184, 200, 255, 0.11);
-    --ex-card-line-hi:rgba(184, 200, 255, 0.22);
-    --ex-cover:       #080d18;
+    --ex-card:        rgb(var(--moon-raised-rgb, 16, 23, 40));
+    --ex-card-line:   rgba(var(--moon-ink-rgb, 184, 200, 255), 0.11);
+    --ex-card-line-hi:rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
+    --ex-cover:       rgb(var(--moon-deep-rgb, 8, 13, 24));
 
-    --ex-text:        #eaf0ff;
-    --ex-muted:       rgba(184, 200, 255, 0.52);
-    --ex-dim:         rgba(184, 200, 255, 0.32);
+    --ex-text:        rgb(var(--moon-ink-rgb, 234, 240, 255));
+    --ex-muted:       rgba(var(--moon-ink-rgb, 184, 200, 255), 0.52);
+    --ex-dim:         rgba(var(--moon-ink-rgb, 184, 200, 255), 0.32);
 
-    --ex-accent:      #3e7ad9;
-    --ex-accent-hi:   #5690f0;
-    --ex-accent-soft: rgba(62, 122, 217, 0.22);
+    --ex-accent:      rgb(var(--moon-accent-rgb, 62, 122, 217));
+    --ex-accent-hi:   rgb(var(--moon-hi-rgb, 86, 144, 240));
+    --ex-accent-soft: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.22);
 
     --ex-chip:        rgba(255, 255, 255, 0.06);
-    --ex-chip-line:   rgba(184, 200, 255, 0.13);
+    --ex-chip-line:   rgba(var(--moon-ink-rgb, 184, 200, 255), 0.13);
 
-    --ex-sb:          rgba(184, 200, 255, 0.22);
-    --ex-sb-hover:    #3e7ad9;
+    --ex-sb:          rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
+    --ex-sb-hover:    rgb(var(--moon-accent-rgb, 62, 122, 217));
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -139,7 +139,7 @@ main { display: block; }
     padding: 16px 20px;
     margin-bottom: 14px;
     border-radius: var(--ex-radius);
-    background: linear-gradient(120deg, rgba(195, 33, 120, 0.16), rgba(116, 21, 93, 0.10));
+    background: linear-gradient(120deg, rgba(var(--brand-rgb, 195, 33, 120), 0.16), rgba(var(--brand-deep-rgb, 116, 21, 93), 0.10));
     border: 1px solid var(--ex-chip-line);
     text-decoration: none;
     cursor: pointer;
@@ -151,7 +151,7 @@ main { display: block; }
 }
 .web-tile.active {
     border-color: var(--ex-accent);
-    background: linear-gradient(120deg, rgba(195, 33, 120, 0.28), rgba(116, 21, 93, 0.16));
+    background: linear-gradient(120deg, rgba(var(--brand-rgb, 195, 33, 120), 0.28), rgba(var(--brand-deep-rgb, 116, 21, 93), 0.16));
     box-shadow: 0 0 0 1px var(--ex-accent-soft);
 }
 .web-tile-icon {
@@ -450,7 +450,8 @@ main { display: block; }
     text-decoration: none;
     transition: transform 0.001s ease-out;
 }
-.game-card.is-tilting { will-change: transform; z-index: 2; }
+/* Наклон — Float3D (.f3d-on, пока карточка «живая»): поверх соседей */
+.game-card.f3d-on { z-index: 2; }
 .game-card:focus-visible { outline: 2px solid var(--ex-accent-hi); outline-offset: 2px; }
 .game-card[hidden] { display: none; }
 
@@ -502,30 +503,8 @@ main { display: block; }
 }
 
 
-/* Блик: скользит за курсором через --dx, задаёт tilt-IIFE */
-.gc-inner::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        115deg,
-        transparent 0%,
-        rgba(255,255,255,0.10) 20%,
-        rgba(255,255,255,0.50) 40%,
-        rgba(255,255,255,0.10) 60%,
-        transparent 80%
-    );
-    background-size: 200% 100%;
-    background-position: calc(50% + var(--dx, 0%)) 0;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
-    z-index: 2;
-    mix-blend-mode: overlay;
-    border-radius: inherit;
-}
-.game-card.is-tilting .gc-inner::after,
-.game-card:hover .gc-inner::after { opacity: 1; }
+/* Блик за курсором теперь рисует Float3D (.f3d-glare внутри .gc-inner),
+   его яркость — общая настройка --f3d-glare в swad/css/float3d.css. */
 
 .game-image {
     position: relative;

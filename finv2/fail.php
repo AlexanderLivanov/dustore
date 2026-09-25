@@ -31,7 +31,7 @@ $display_message = $messages[$reason] ?? $messages['unknown'];
         }
 
         body {
-            background: linear-gradient(#14041d, #400c4a, #74155d, #c32178);
+            background: linear-gradient(#14041d, #400c4a, rgb(var(--brand-deep-rgb, 116, 21, 93)), rgb(var(--brand-rgb, 195, 33, 120)));
             color: white;
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -109,9 +109,9 @@ $display_message = $messages[$reason] ?? $messages['unknown'];
         }
 
         .btn:hover {
-            background: #e62e8a;
+            background: rgb(var(--brand-hi-rgb, 230, 46, 138));
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(195, 33, 120, 0.4);
+            box-shadow: 0 5px 15px rgba(var(--brand-rgb, 195, 33, 120), 0.4);
         }
 
         .btn-secondary {

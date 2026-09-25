@@ -311,14 +311,14 @@ body.moonlight-theme {
 }
 
 body.moonlight-theme {
-    --ac-line:      rgba(184, 200, 255, 0.11);
-    --ac-line-hi:   rgba(184, 200, 255, 0.22);
-    --ac-text:      #eaf0ff;
-    --ac-muted:     rgba(184, 200, 255, 0.55);
-    --ac-dim:       rgba(184, 200, 255, 0.32);
-    --ac-accent:    #3e7ad9;
-    --ac-accent-hi: #5690f0;
-    --ac-soft:      rgba(62, 122, 217, 0.2);
+    --ac-line:      rgba(var(--moon-ink-rgb, 184, 200, 255), 0.11);
+    --ac-line-hi:   rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
+    --ac-text:      rgb(var(--moon-ink-rgb, 234, 240, 255));
+    --ac-muted:     rgba(var(--moon-ink-rgb, 184, 200, 255), 0.55);
+    --ac-dim:       rgba(var(--moon-ink-rgb, 184, 200, 255), 0.32);
+    --ac-accent:    rgb(var(--moon-accent-rgb, 62, 122, 217));
+    --ac-accent-hi: rgb(var(--moon-hi-rgb, 86, 144, 240));
+    --ac-soft:      rgba(var(--moon-accent-rgb, 62, 122, 217), 0.2);
 }
 
 /* ── Боковая колонка ────────────────────────────────────────────────────────
@@ -505,7 +505,7 @@ body.moonlight-theme {
     background: #0d0316;
     box-shadow: inset 0 0 0 1px var(--ac-line);
 }
-body.moonlight-theme .viewer-wrap { background: #070c18; }
+body.moonlight-theme .viewer-wrap { background: rgb(var(--moon-deep-rgb, 7, 12, 24)); }
 .viewer-wrap canvas { width: 100%; height: 100%; display: block; }
 
 .viewer-loading {
@@ -599,7 +599,7 @@ body.moonlight-theme .viewer-wrap { background: #070c18; }
 /* ── Описание, теги, состав ─────────────────────────────────────────────── */
 .desc { font-size: .92rem; line-height: 1.75; color: rgba(242, 236, 246, .82); }
 .desc p { margin-bottom: 12px; }
-body.moonlight-theme .desc { color: rgba(234, 240, 255, .82); }
+body.moonlight-theme .desc { color: rgba(var(--moon-ink-rgb, 234, 240, 255), .82); }
 
 .tags-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag {
@@ -667,7 +667,7 @@ body.moonlight-theme .desc { color: rgba(234, 240, 255, .82); }
 .rv-stars { font-size: .76rem; color: #f5b942; margin-top: 2px; }
 .rv-date { font-size: .74rem; color: var(--ac-dim); flex-shrink: 0; }
 .rv-text { font-size: .88rem; line-height: 1.65; color: rgba(242, 236, 246, .82); white-space: pre-wrap; word-break: break-word; }
-body.moonlight-theme .rv-text { color: rgba(234, 240, 255, .82); }
+body.moonlight-theme .rv-text { color: rgba(var(--moon-ink-rgb, 234, 240, 255), .82); }
 
 .rv-dev-reply {
     margin-top: 12px;
@@ -750,7 +750,7 @@ body.moonlight-theme .rv-text { color: rgba(234, 240, 255, .82); }
 }
 .offer-box { max-width: 640px; padding: 24px; font-size: .88rem; line-height: 1.7; }
 body.moonlight-theme .modal-box,
-body.moonlight-theme .offer-box { background: #101728; }
+body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23, 40)); }
 
 .modal-top {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;

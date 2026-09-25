@@ -160,7 +160,7 @@ $error = $_GET['err'] ?? null;
         .user-name { font-size: 13px; font-weight: 500; }
 
         .alert-err {
-            background: rgba(255,61,113,.1); border: 1px solid rgba(255,61,113,.2);
+            background: rgba(var(--brand-hi-rgb, 255, 61, 113), .1); border: 1px solid rgba(var(--brand-hi-rgb, 255, 61, 113), .2);
             color: var(--err); padding: 12px 16px; border-radius: var(--r);
             font-size: 13px; margin-bottom: 16px;
         }
@@ -174,7 +174,7 @@ $error = $_GET['err'] ?? null;
             cursor: pointer; overflow: hidden;
         }
 
-        .studio-card:hover { border-color: rgba(195,33,120,.4); background: var(--elev); }
+        .studio-card:hover { border-color: rgba(var(--brand-rgb, 195, 33, 120), .4); background: var(--elev); }
         .studio-card.current { border-color: var(--p); }
 
         .studio-card form { display: contents; }
@@ -207,7 +207,7 @@ $error = $_GET['err'] ?? null;
         .studio-role {
             font-size: 10px; font-weight: 700; letter-spacing: .04em;
             padding: 2px 8px; border-radius: 6px;
-            background: rgba(195,33,120,.15); color: var(--pl);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .15); color: var(--pl);
             white-space: nowrap;
         }
 

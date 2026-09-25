@@ -34,8 +34,8 @@ if (!isset($parsed['host']) || !str_ends_with($parsed['host'], $allowed_host)) {
     http_response_code(403); exit('Invalid source');
 }
 
-$safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $game['name']);
-$filename  = $safe_name . '-android.apk';
+require_once __DIR__ . '/../../m/lib.php';          // m_file_slug: кириллица → латиница, а не «_______»
+$filename  = m_file_slug((string)$game['name'], 'game-' . (int)$game['id']) . '-android.apk';
 
 header('Content-Type: application/vnd.android.package-archive');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -56,6 +56,13 @@ $stream = @fopen($s3_url, 'rb', false, $ctx);
 if (!$stream) {
     http_response_code(502);
     exit('Storage unavailable');
+}
+/* Размер из ответа хранилища. Без Content-Length ни браузер (уведомление
+   загрузки на Android), ни страница игры (кнопка с процентом) не знали,
+   сколько осталось, — показывалась бесконечная «крутилка». */
+foreach (array_reverse($http_response_header ?? []) as $hl) {
+    if (preg_match('/^Content-Length:\s*(\d+)/i', $hl, $m)) { header('Content-Length: ' . $m[1]); break; }
+    if (stripos($hl, 'HTTP/') === 0) break;          // заголовки последнего ответа после редиректов
 }
 
 try {

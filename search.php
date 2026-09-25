@@ -83,7 +83,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .container1 h1 {
             font-size: 2.5rem;
             font-weight: 600;
-            background: linear-gradient(135deg, #fff, #ffb6e0);
+            background: linear-gradient(135deg, #fff, rgb(var(--brand-hi-rgb, 255, 182, 224)));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
@@ -154,7 +154,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: var(--primary);
             color: white;
             border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(195, 33, 120, 0.3);
+            box-shadow: 0 4px 12px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
         }
 
         /* Поисковое поле */
@@ -180,7 +180,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .search-input:focus {
             border-color: var(--primary);
             background: rgba(0, 0, 0, 0.5);
-            box-shadow: 0 0 0 3px rgba(195, 33, 120, 0.2);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 195, 33, 120), 0.2);
         }
 
         .search-input::placeholder {
@@ -279,8 +279,8 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         .card:hover {
             transform: translateY(-8px) scale(1.02);
-            border-color: rgba(195, 33, 120, 0.4);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(195, 33, 120, 0.2);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(var(--brand-rgb, 195, 33, 120), 0.2);
         }
 
         /* Псевдоэлемент для красивого свечения */
@@ -290,7 +290,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             inset: 0;
             border-radius: inherit;
             padding: 1px;
-            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(195,33,120,0.2));
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(var(--brand-rgb, 195, 33, 120), 0.2));
             -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
@@ -317,7 +317,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             border-radius: 50%;
             overflow: hidden;
             background: rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(195, 33, 120, 0.4);
+            border: 2px solid rgba(var(--brand-rgb, 195, 33, 120), 0.4);
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }

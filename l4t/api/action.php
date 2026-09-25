@@ -19,6 +19,7 @@ require_once __DIR__ . '/../../swad/config.php';
 require_once __DIR__ . '/../../swad/controllers/l4t/_csrf.php';
 require_once __DIR__ . '/../lib/extras.php';
 require_once __DIR__ . '/../lib/match.php';
+require_once __DIR__ . '/../lib/market.php';
 
 function out(array $d, int $code = 200): void
 {
@@ -33,7 +34,7 @@ $isGet   = $_SERVER['REQUEST_METHOD'] === 'GET';
 $in      = $isGet ? $_GET : (json_decode((string)file_get_contents('php://input'), true) ?: $_POST);
 $op      = (string)($in['op'] ?? '');
 
-$public = ['people'];                                         // доступно гостям
+$public = ['people', 'quotes', 'book', 'offer_view'];                                         // доступно гостям
 if (!$uid && !in_array($op, $public, true)) out(['ok' => false, 'error' => 'Нужно войти в аккаунт'], 401);
 if (!$isGet) csrf_guard_json($in);
 
@@ -44,6 +45,7 @@ foreach ([$main, $l4t] as $c) $c->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_E
 
 $x = new L4TX($main, $l4t);
 $m = new L4TMatch($x, $main);
+$mk = new L4TMarket($x, $main);
 $i = fn(string $k) => (int)($in[$k] ?? 0);
 $s = fn(string $k) => (string)($in[$k] ?? '');
 
@@ -61,6 +63,146 @@ try {
             $sp = $x->row($main, "SELECT host_user_id FROM sprints WHERE id = ?", [$i('sprint_id')]);
             if (!$sp || (!$isAdmin && (int)$sp['host_user_id'] !== $uid)) out(['ok' => false, 'error' => 'Нет доступа'], 403);
             out(['ok' => true, 'items' => $m->queue($i('sprint_id'))]);
+
+        /* ── рынок: чтение (публично) ────────────────────────────── */
+        case 'quotes':
+            out(['ok' => true, 'quotes' => $mk->quotes(), 'tape' => $mk->tape(), 'summary' => $mk->summary()]);
+
+        case 'book':
+            $slug = $s('skill');
+            if (!isset($x->skills()[$slug])) out(['ok' => false, 'error' => 'Нет такого навыка'], 404);
+            out(['ok' => true, 'book' => $mk->book($slug, $uid)]);
+
+        case 'offer_view':                       // просмотр предложения из стакана: раз в сессию
+            $oid = $i('id');
+            if ($oid > 0 && empty($_SESSION['l4t_ov'][$oid])) {
+                $_SESSION['l4t_ov'][$oid] = 1;
+                $l4t->prepare("UPDATE offers SET views = views + 1 WHERE id = ? AND user_id <> ?")->execute([$oid, $uid]);
+            }
+            out(['ok' => true]);
+
+        case 'my_orders':                        // для «Предложить задачу» / «Предложить себя»
+            $needs = array_values(array_filter($mk->needs(), fn($n) => $n['user_id'] === $uid));
+            $offs  = array_values(array_filter($mk->myOffers($uid), fn($o) => $o['stage'] === 'active'));
+            out(['ok' => true, 'needs' => array_map(fn($n) => ['id' => $n['id'], 'title' => $n['title']], $needs),
+                 'offers' => array_map(fn($o) => ['id' => $o['id'], 'title' => $o['title']], $offs)]);
+
+        /* ── мои позиции: рабочее место ─────────────────────────── */
+        case 'pos_list':
+            $mk->sweep();
+            out(['ok' => true, 'items' => $mk->myPositions($uid), 'invites' => $mk->invitesFor($uid)]);
+
+        case 'pos_view':                         // кандидаты + данные для правки
+            $side = $s('side') === 'offer' ? 'offer' : 'need';
+            $id = $i('id');
+            if ($side === 'need') {
+                $b = $x->row($l4t, "SELECT * FROM bids WHERE id = ? AND bidder_id = ?", [$id, $uid]);
+                if (!$b || !empty($b['deleted_at'])) out(['ok' => false, 'error' => 'Заявка не найдена'], 404);
+                $c = $mk->candidates($uid, $id);
+                $edit = ['id' => (int)$b['id'], 'role' => $b['search_role'], 'spec' => $b['search_spec'] ?? '', 'exp' => $b['experience'] ?? '',
+                         'cond' => $b['conditions'] ?? '', 'goal' => $b['goal'] ?? '', 'details' => $b['details'] ?? '',
+                         'owner_type' => $b['owner_type'] ?? 'user', 'owner_id' => (int)($b['owner_id'] ?? 0),
+                         'skills' => $x->bidSkills([$id])[$id] ?? [], 'kind' => $b['kind'] ?? 'task', 'pay_type' => $b['pay_type'] ?? 'money',
+                         'budget_min' => $b['budget_min'] ?? '', 'budget_max' => $b['budget_max'] ?? '', 'duration_days' => $b['duration_days'] ?? '',
+                         'lifetime_days' => (int)($b['lifetime_days'] ?? 30)];
+                $row = $b; $title = (string)$b['search_role'];
+                $card = $c ? $mk->card($c['need']) : null;
+            } else {
+                $o = $x->row($l4t, "SELECT * FROM offers WHERE id = ? AND user_id = ?", [$id, $uid]);
+                if (!$o || !empty($o['deleted_at'])) out(['ok' => false, 'error' => 'Предложение не найдено'], 404);
+                $c = $mk->offerCandidates($uid, $id);
+                $norm = $mk->offerById($id);
+                $edit = $norm + ['lifetime_days' => (int)($o['lifetime_days'] ?? 30)];
+                $row = $o; $title = (string)$o['title'];
+                $card = $mk->card($norm);
+            }
+            $live = $row['stage'] === 'active' && (!$row['expires_at'] || strtotime((string)$row['expires_at']) > time());
+            out(['ok' => true, 'side' => $side, 'id' => $id, 'title' => $title, 'card' => $card, 'edit' => $edit,
+                 'live' => $live, 'left' => $live ? L4TMarket::left($row['expires_at']) : null, 'lifetime' => (int)($row['lifetime_days'] ?? 30),
+                 'reason' => $live ? null : ($row['close_reason'] ?? ($row['stage'] === 'active' ? 'expired' : 'owner')),
+                 'mod_reason' => $row['mod_reason'] ?? null, 'created' => date('d.m.Y', strtotime((string)$row['created_at'])),
+                 'views' => (int)($row['views'] ?? 0),
+                 'lists' => $c['lists'] ?? [], 'total' => $c['total'] ?? 0]);
+
+        case 'pos_extend':
+            $mk->extend($uid, $s('side'), $i('id'), $i('days'));
+            out(['ok' => true]);
+
+        case 'pos_close':
+            $s('side') === 'offer' ? $mk->setOfferStage($uid, $i('id'), 'closed') : $mk->setNeedStage($uid, $i('id'), 'closed');
+            out(['ok' => true]);
+
+        case 'pos_delete':
+            $mk->remove($uid, $s('side'), $i('id'));
+            out(['ok' => true]);
+
+        case 'invite':
+            $mk->invite($uid, $i('bid_id'), $i('user_id'));
+            out(['ok' => true]);
+
+        case 'invite_answer':
+            $mk->answerInvite($uid, $i('bid_id'), !empty($in['yes']));
+            out(['ok' => true]);
+
+        case 'respond_hide':                     // «не подходит» для самоотклика
+            $x->setRespondStatus($uid, $i('id'), 'отклонён');
+            out(['ok' => true]);
+
+        case 'respond_accept':
+            $x->setRespondStatus($uid, $i('id'), 'принят');
+            out(['ok' => true]);
+
+        /* ── «Для тебя»: свайпы ─────────────────────────────────── */
+        case 'deck':
+            $mk->sweep();
+            out(['ok' => true, 'items' => $mk->deck($uid), 'offers' => array_map(fn($o) => ['id' => $o['id'], 'title' => $o['title']],
+                 array_values(array_filter($mk->offers(), fn($o) => $o['user_id'] === $uid)))]);
+
+        case 'swipe':
+            out(['ok' => true] + $mk->swipe($uid, $i('bid_id'), $s('dir'), $s('message'), $i('offer_id')));
+
+        case 'swipe_undo':
+            $mk->swipeUndo($uid, $i('bid_id'));
+            out(['ok' => true]);
+
+        case 'cand_hide':
+            $mk->hidePair($uid, $i('bid_id'), $i('offer_id'));
+            out(['ok' => true]);
+
+        case 'need_card':                        // «Подробнее» из колоды / стакана
+            $n = $mk->needById($i('id'));
+            if (!$n) out(['ok' => false, 'error' => 'Заявка уже снята'], 404);
+            out(['ok' => true, 'card' => $mk->card($n, $uid), 'left' => L4TMarket::left($n['expires'])]);
+
+        /* ── модерация ──────────────────────────────────────────── */
+        case 'mod_list':
+            if (!$isAdmin) out(['ok' => false, 'error' => 'Нет доступа'], 403);
+            $mk->sweep();
+            out(['ok' => true, 'items' => $mk->adminList($s('filter') ?: 'all', mb_substr(trim($s('q')), 0, 60)), 'reasons' => L4TMarket::MOD_REASONS]);
+
+        case 'moderate':
+            if (!$isAdmin) out(['ok' => false, 'error' => 'Нет доступа'], 403);
+            $mk->moderate($uid, $s('side'), $i('id'), $s('action'), $s('reason'));
+            out(['ok' => true]);
+
+        /* ── рынок: запись ──────────────────────────────────────── */
+        case 'offer_save':
+            $id = $mk->saveOffer($uid, $in, $i('id'));
+            out(['ok' => true, 'id' => $id]);
+
+        case 'offer_stage':
+            $mk->setOfferStage($uid, $i('id'), $s('stage'));
+            out(['ok' => true]);
+
+        case 'need_stage':
+            $mk->setNeedStage($uid, $i('id'), $s('stage'));
+            out(['ok' => true]);
+
+        case 'match_answer':
+            out(['ok' => true] + $mk->answer($uid, $i('id'), !empty($in['yes'])));
+
+        case 'propose':
+            out(['ok' => true] + $mk->propose($uid, $i('bid_id'), $i('offer_id')));
 
         /* ── навыки и профиль ───────────────────────────────────── */
         case 'skills_save':

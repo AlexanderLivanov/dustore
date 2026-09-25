@@ -225,7 +225,7 @@ $default_plat = min(50, (int)round($game_price * 0.08));
     display:flex; align-items:center; justify-content:center;
     transition:.18s; z-index:5;
 }
-.pm-x:hover { background:rgba(195,33,120,.25); color:#fff; }
+.pm-x:hover { background:rgba(var(--brand-rgb, 195, 33, 120), .25); color:#fff; }
 
 /* ── TOP ── */
 .pm-top {
@@ -244,7 +244,7 @@ $default_plat = min(50, (int)round($game_price * 0.08));
     border:1px solid rgba(255,255,255,.1);
 }
 .pm-cover-ph {
-    background: rgba(195,33,120,.08);
+    background: rgba(var(--brand-rgb, 195, 33, 120), .08);
     display:flex; align-items:center; justify-content:center; font-size:1.3rem;
 }
 .pm-game-name { font-weight:700; font-size:.95rem; color:#fff; }
@@ -287,7 +287,7 @@ $default_plat = min(50, (int)round($game_price * 0.08));
     background: rgba(255,255,255,.06);
     margin-bottom: 10px;
 }
-.pm-track-dev  { background: linear-gradient(to right, #c32178, #9b1760); transition:width .12s; }
+.pm-track-dev  { background: linear-gradient(to right, rgb(var(--brand-rgb, 195, 33, 120)), rgb(var(--brand-rgb, 155, 23, 96))); transition:width .12s; }
 .pm-track-plat { background: linear-gradient(to right, #7c3aed, #a78bfa); transition:width .12s; }
 
 .pm-slider {
@@ -300,18 +300,18 @@ $default_plat = min(50, (int)round($game_price * 0.08));
     -webkit-appearance: none;
     width:24px; height:24px; border-radius:50%;
     background:#fff;
-    border:3px solid #c32178;
-    box-shadow: 0 2px 12px rgba(195,33,120,.45), 0 0 0 4px rgba(195,33,120,.1);
+    border:3px solid rgb(var(--brand-rgb, 195, 33, 120));
+    box-shadow: 0 2px 12px rgba(var(--brand-rgb, 195, 33, 120), .45), 0 0 0 4px rgba(var(--brand-rgb, 195, 33, 120), .1);
     cursor: grab;
     transition: transform .15s, box-shadow .15s;
 }
 .pm-slider::-webkit-slider-thumb:active {
     cursor:grabbing; transform:scale(1.25);
-    box-shadow: 0 4px 24px rgba(195,33,120,.65), 0 0 0 8px rgba(195,33,120,.12);
+    box-shadow: 0 4px 24px rgba(var(--brand-rgb, 195, 33, 120), .65), 0 0 0 8px rgba(var(--brand-rgb, 195, 33, 120), .12);
 }
 .pm-slider::-moz-range-thumb {
     width:24px; height:24px; border-radius:50%;
-    background:#fff; border:3px solid #c32178; cursor:grab;
+    background:#fff; border:3px solid rgb(var(--brand-rgb, 195, 33, 120)); cursor:grab;
 }
 
 .pm-track-labels {
@@ -344,9 +344,9 @@ $default_plat = min(50, (int)round($game_price * 0.08));
     text-transform:uppercase; margin-bottom:10px; width:fit-content;
 }
 .pm-half-chip--dev {
-    background: rgba(195,33,120,.12);
-    border: 1px solid rgba(195,33,120,.25);
-    color: #e88fc0;
+    background: rgba(var(--brand-rgb, 195, 33, 120), .12);
+    border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25);
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
 }
 .pm-half-chip--plat {
     background: rgba(124,58,237,.12);
@@ -394,13 +394,13 @@ $default_plat = min(50, (int)round($game_price * 0.08));
     display:flex; align-items:center; justify-content:center; gap:8px;
     width:100%; padding:13px 20px;
     border:none; border-radius:12px;
-    background: linear-gradient(135deg,#c32178,#74155d);
+    background: linear-gradient(135deg,rgb(var(--brand-rgb, 195, 33, 120)),rgb(var(--brand-deep-rgb, 116, 21, 93)));
     color:#fff; font-weight:700; font-size:.92rem;
     cursor:pointer; font-family:inherit;
-    box-shadow: 0 4px 18px rgba(195,33,120,.35);
+    box-shadow: 0 4px 18px rgba(var(--brand-rgb, 195, 33, 120), .35);
     transition: box-shadow .18s, transform .12s;
 }
-.pm-btn-pay:hover { box-shadow: 0 6px 26px rgba(195,33,120,.52); }
+.pm-btn-pay:hover { box-shadow: 0 6px 26px rgba(var(--brand-rgb, 195, 33, 120), .52); }
 .pm-btn-pay:active { transform:scale(.97); }
 
 .pm-btn-ghost {
@@ -419,8 +419,8 @@ $default_plat = min(50, (int)round($game_price * 0.08));
 }
 .pm-spinner {
     width:18px; height:18px; flex-shrink:0;
-    border:2px solid rgba(195,33,120,.2);
-    border-top-color:#c32178; border-radius:50%;
+    border:2px solid rgba(var(--brand-rgb, 195, 33, 120), .2);
+    border-top-color:rgb(var(--brand-rgb, 195, 33, 120)); border-radius:50%;
     animation:pmSpin .75s linear infinite;
 }
 @keyframes pmSpin { to { transform:rotate(360deg); } }

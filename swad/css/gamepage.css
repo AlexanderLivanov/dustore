@@ -101,15 +101,15 @@ h2:after {
 }
 
 .btn:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 5px 15px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 .add-to-cart-btn:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 5px 15px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 .btn-secondary {
@@ -118,7 +118,7 @@ h2:after {
 }
 
 .btn-secondary:hover {
-    background: rgba(195, 33, 120, 0.1);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.1);
 }
 
 /* Стили для страницы игры */
@@ -478,7 +478,7 @@ h2:after {
     overflow-y: auto;
     position: relative;
     border: 2px solid var(--primary);
-    box-shadow: 0 10px 30px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 10px 30px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
     animation: slideUp 0.3s ease;
 }
 
@@ -497,7 +497,7 @@ h2:after {
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
 }
 
 .close {
@@ -513,12 +513,12 @@ h2:after {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(195, 33, 120, 0.3);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 .close:hover {
     color: var(--primary);
-    background: rgba(195, 33, 120, 0.5);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.5);
     transform: rotate(90deg);
 }
 
@@ -565,8 +565,8 @@ h2:after {
 }
 
 .offer-content div:last-child {
-    background: rgba(195, 33, 120, 0.1);
-    border-left: 4px solid #e62e8a;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.1);
+    border-left: 4px solid rgb(var(--brand-hi-rgb, 230, 46, 138));
 }
 
 /* Анимации */
@@ -733,15 +733,15 @@ body.moonlight-theme .add-to-cart-btn {
 }
 
 body.moonlight-theme .btn:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 5px 15px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 body.moonlight-theme .add-to-cart-btn:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 5px 15px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 body.moonlight-theme .btn-secondary {
@@ -750,7 +750,7 @@ body.moonlight-theme .btn-secondary {
 }
 
 body.moonlight-theme .btn-secondary:hover {
-    background: rgba(195, 33, 120, 0.1);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.1);
 }
 
 /* Стили для страницы игры */
@@ -1109,7 +1109,7 @@ body.moonlight-theme .modal-content {
     overflow-y: auto;
     position: relative;
     border: 2px solid var(--primary);
-    box-shadow: 0 10px 30px rgba(195, 33, 120, 0.3);
+    box-shadow: 0 10px 30px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
     animation: slideUp 0.3s ease;
 }
 
@@ -1128,7 +1128,7 @@ body.moonlight-theme .modal-content::-webkit-scrollbar-thumb {
 }
 
 body.moonlight-theme .modal-content::-webkit-scrollbar-thumb:hover {
-    background: #e62e8a;
+    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
 }
 
 body.moonlight-theme .close {
@@ -1144,12 +1144,12 @@ body.moonlight-theme .close {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(195, 33, 120, 0.3);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 body.moonlight-theme .close:hover {
     color: var(--primary);
-    background: rgba(195, 33, 120, 0.5);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.5);
     transform: rotate(90deg);
 }
 
@@ -1196,8 +1196,8 @@ body.moonlight-theme .offer-content div {
 }
 
 body.moonlight-theme .offer-content div:last-child {
-    background: rgba(195, 33, 120, 0.1);
-    border-left: 4px solid #e62e8a;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.1);
+    border-left: 4px solid rgb(var(--brand-hi-rgb, 230, 46, 138));
 }
 
 /* Адаптивность для модального окна */

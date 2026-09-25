@@ -255,6 +255,12 @@ final class GPI
             ['id' => 'l4t_responds', 'p' => 'community', 'label' => 'Отклики L4T', 'fmt' => 'int', 'type' => 'flow', 'k' => 2,
              'src' => [['db' => 'l4t', 't' => 'responds', 'd' => 'created_at']],
              'hint' => 'Заявка без откликов — мёртвая. Отклики показывают, работает ли биржа как рынок.'],
+            ['id' => 'l4t_offers', 'p' => 'community', 'label' => 'Предложения L4T', 'fmt' => 'int', 'type' => 'flow', 'k' => 2,
+             'src' => [['db' => 'l4t', 't' => 'offers', 'd' => 'created_at']],
+             'hint' => 'Специалисты, выставившие свою работу на рынок («Я могу»). Вторая половина стакана.'],
+            ['id' => 'l4t_deals', 'p' => 'community', 'label' => 'Сделки на рынке L4T', 'fmt' => 'int', 'type' => 'flow', 'k' => 1,
+             'src' => [['db' => 'l4t', 't' => 'matches', 'd' => 'dealt_at']],
+             'hint' => 'Пары «спрос × предложение», где обе стороны сказали «да».'],
             ['id' => 'time_to_team', 'p' => 'community', 'label' => 'Время до команды', 'fmt' => 'hours', 'type' => 'ttt', 'k' => 6, 'invert' => true,
              'hint' => 'Медиана часов от публикации заявки до первого принятого отклика. Меньше — лучше: северная звезда L4T.'],
 

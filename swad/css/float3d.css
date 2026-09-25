@@ -1,0 +1,204 @@
+/* =============================================================================
+   FLOAT3D — наклон за курсором + содержимое, парящее над поверхностью
+   JS: swad/js/float3d.js. Живая настройка на любой странице: Alt+Shift+F (или ?f3d).
+
+   ЕДИНСТВЕННОЕ МЕСТО НАСТРОЕК — блок :root ниже (+ профиль карточек под ним).
+   Все кнопки и карточки сайта берут значения отсюда. Не переопределяй эти
+   переменные в CSS отдельных страниц: иначе ползунок в панели «не работает»
+   на этих элементах — у них своё значение, и оно сильнее унаследованного.
+
+   JS пишет на элемент три числа, всё остальное считается здесь:
+     --f3d-nx, --f3d-ny  ∈ [-1..1]  где курсор (сглажено пружиной)
+     --f3d-lift          ∈ [0..1+]  насколько содержимое «оторвалось» (с перелётом)
+   Модель: курсор — это фонарик. Поверхность прогибается под ним, блик
+   собирается вокруг него, тень от парящего содержимого отбегает от него.
+   ============================================================================= */
+
+:root {
+    --f3d-perspective: 1200px;
+    --f3d-tilt: 11.5deg;
+    --f3d-hover-scale: 1.08;
+    --f3d-hover-rise: -3px;
+    --f3d-depth: 10px;
+    --f3d-drift: 2px;
+    --f3d-badge-depth: 1.6;
+    --f3d-shadow-offset: 2px;
+    --f3d-shadow-blur: 4px;
+    --f3d-shadow-opacity: 0.55;
+    --f3d-glare: 0.08;
+    --f3d-tilt-stiffness: 900;
+    --f3d-tilt-damping: 27;
+    --f3d-lift-stiffness: 900;
+    --f3d-lift-damping: 30;
+    --f3d-press: 0;
+}
+
+/* Профиль «карточка»: карточка в разы больше кнопки, поэтому своё только то,
+   что зависит от размера. Всё остальное наследуется из :root. */
+.f3d--card {
+    --f3d-perspective: 1200px;
+    --f3d-tilt: 14deg;
+    --f3d-hover-scale: 1.03;
+    --f3d-hover-rise: -8px;
+    --f3d-depth: 10px;
+    --f3d-drift: 1.5px;
+    --f3d-shadow-offset: 2px;
+    --f3d-glare: 0.08;
+    --f3d-lift-damping: 26;
+}
+
+/* ── Механика (менять не нужно) ─────────────────────────────────────────── */
+
+/* Неактивный элемент обнуляет свои числа: иначе кнопка внутри наклонённой
+   карточки унаследовала бы движение карточки */
+.f3d:not(.f3d-on) {
+    --f3d-nx: 0;
+    --f3d-ny: 0;
+    --f3d-lift: 0;
+}
+
+:where(.f3d) {
+    position: relative;           /* :where — нулевая специфичность, сайт перебьёт */
+}
+
+/* Сила эффекта — настройка пользователя (шестерёнка в профиле → «Эффекты»).
+   Два множителя 0..2 кладёт на <html> float3d.js: для кнопок и для карточек;
+   1 — ровно как задано выше, 0 — эффект выключен. Масштабируется всё, что
+   отвечает за «сколько» (наклон, высота, сдвиги, тень, блик, подъём), а
+   физика — нет: характер движения остаётся тем, что задан в токенах.
+   Считается на самом элементе: у каждого свой профиль и свой множитель.
+
+   Наклон и высота берутся через √k: главное, что видит глаз, — сдвиг
+   надписи ≈ высота · tan(наклон), и если умножить на k оба сомножителя,
+   сдвиг вырастет в k², а ползунок станет «нелинейным» (к 50% эффект почти
+   пропадает, к 200% — взлетает вчетверо). С √k·√k сдвиг растёт ровно в k раз. */
+.f3d { --f3d-power: var(--f3d-user-buttons, 1); }
+.f3d.f3d--card { --f3d-power: var(--f3d-user-cards, 1); }
+
+.f3d {
+    --_tilt: calc(var(--f3d-tilt) * sqrt(var(--f3d-power)));
+    --_depth: calc(var(--f3d-depth) * sqrt(var(--f3d-power)));
+    --_drift: calc(var(--f3d-drift) * var(--f3d-power));
+    --_rise: calc(var(--f3d-hover-rise) * var(--f3d-power));
+    --_grow: calc((var(--f3d-hover-scale) - 1) * var(--f3d-power));
+    --_shadow: calc(var(--f3d-shadow-offset) * var(--f3d-power));
+    --_shadow-a: calc(var(--f3d-shadow-opacity) * min(var(--f3d-power), 1));
+    --_glare: calc(var(--f3d-glare) * var(--f3d-power));
+}
+
+:where(.f3d.f3d-on) {
+    z-index: 1;                   /* наклонённый и увеличенный — поверх соседей */
+}
+
+/* Поверхность. Transform есть только пока элемент «живой»; в покое — none,
+   и браузер рисует текст как обычно, резким.
+   !important — Float3D владеет transform'ом элемента, пока тот активен:
+   иначе его перебил бы, например, .platform-card:hover { transform: … }.
+   transform-style: flat — парящий слой рисует глубину сам (см. ниже), чужой
+   preserve-3d на элементе удвоил бы перспективу. */
+.f3d.f3d-on {
+    transform:
+        perspective(var(--f3d-perspective))
+        translateY(calc(var(--f3d-lift) * var(--_rise)))
+        rotateX(calc(var(--f3d-ny) * var(--_tilt) * -1))
+        rotateY(calc(var(--f3d-nx) * var(--_tilt)))
+        scale(calc(1 + var(--_grow) * var(--f3d-lift))) !important;
+    transform-style: flat !important;
+    will-change: transform;
+}
+
+/* Слой-обёртка содержимого кнопки. У flex-кнопки он повторяет её раскладку
+   (gap, выравнивание, направление) и растягивается на всю кнопку —
+   расположение детей не меняется ни на пиксель. */
+.f3d-layer {
+    display: inline-block;
+}
+
+.f3d-layer--flex {
+    display: flex;
+    flex: 1 1 auto;
+    align-self: stretch;
+    min-width: 0;
+    flex-direction: inherit;
+    flex-wrap: inherit;
+    align-items: inherit;
+    justify-content: inherit;
+    gap: inherit;
+}
+
+/* ── Парение (эмуляция глубины) ─────────────────────────────────────────────
+   Точка на высоте z над поверхностью, наклонённой на угол φ, после поворота
+   оказывается там же, где точка в самой плоскости, сдвинутая на z·tan φ.
+   Поэтому слой не поднимаем в настоящем 3D (его бы схлопнул любой overflow
+   или opacity у предков — а у карточек они есть), а сдвигаем на z·tan φ и
+   «приближаем» своей перспективой. После поворота поверхности картинка
+   та же, что в настоящем 3D, но работает внутри чего угодно.
+
+   Тень — drop-shadow того же слоя, но сдвинутая НАЗАД на смещение слоя:
+   она остаётся на поверхности, а содержимое уезжает от неё — по этому
+   расхождению глаз и считывает высоту. */
+.f3d-float { --_k: 1; }
+.f3d-badge { --_k: var(--f3d-badge-depth); }
+
+.f3d-on :is(.f3d-float, .f3d-badge) {
+    --_z: calc(var(--f3d-lift) * var(--_depth) * var(--_k));
+    --_ox: calc(var(--_z) * tan(var(--f3d-nx) * var(--_tilt)) + var(--f3d-nx) * var(--_drift));
+    --_oy: calc(var(--_z) * tan(var(--f3d-ny) * var(--_tilt)) + var(--f3d-ny) * var(--_drift));
+    transform: perspective(var(--f3d-perspective)) translate3d(var(--_ox), var(--_oy), var(--_z));
+    filter: drop-shadow(
+        calc(var(--f3d-lift) * var(--f3d-nx) * var(--_shadow) * -1 - var(--_ox))
+        calc(var(--f3d-lift) * (.5 - var(--f3d-ny)) * var(--_shadow) - var(--_oy))
+        var(--f3d-shadow-blur)
+        rgb(0 0 0 / calc(var(--_shadow-a) * var(--f3d-lift))));
+}
+
+/* ── Блик-«фонарик» на поверхности ──────────────────────────────────────── */
+.f3d-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.f3d-on .f3d-glare {
+    opacity: clamp(0, var(--f3d-lift), 1);
+    background: radial-gradient(
+        circle at calc((var(--f3d-nx) + 1) * 50%) calc((var(--f3d-ny) + 1) * 50%),
+        rgb(255 255 255 / var(--_glare)) 0%,
+        rgb(255 255 255 / 0) 70%);
+}
+
+/* ── Рентген (кнопка в панели) ──────────────────────────────────────────────
+   Кнопки замирают «поднятыми» и медленно поворачиваются боком: слой с
+   надписью поднимается над поверхностью уже по-настоящему, в 3D, — видно,
+   что это отдельная плоскость. Карточки не участвуют: их парящее название
+   внутри overflow, настоящее 3D там схлопывается, а крутящаяся карточка
+   на полэкрана только мешает смотреть. */
+@keyframes f3d-orbit {
+    from { transform: perspective(500px) rotateX(-40deg) rotateZ(-18deg); }
+    to   { transform: perspective(500px) rotateX(-40deg) rotateZ(18deg); }
+}
+
+.f3d-xray .f3d:not(.f3d--card) {
+    --f3d-lift: 1 !important;
+    --f3d-nx: 0 !important;
+    --f3d-ny: 0 !important;
+    transform-style: preserve-3d;
+    animation: f3d-orbit 3.2s ease-in-out infinite alternate;
+    outline: 1px dashed rgb(255 255 255 / .35);
+}
+
+.f3d-xray .f3d:not(.f3d--card) > .f3d-layer,
+.f3d-xray .f3d:not(.f3d--card) > .f3d-badge {
+    transform: translateZ(calc(var(--f3d-depth) * var(--_k)));
+    filter: none;
+    outline: 1px solid rgb(255 91 168 / .9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .f3d-xray .f3d:not(.f3d--card) {
+        animation: none;
+        transform: perspective(500px) rotateX(-40deg) rotateZ(-14deg);
+    }
+}

@@ -1,0 +1,374 @@
+<?php
+/**
+ * devs/notifications.php — уведомления платформы (только администраторы).
+ *
+ *   • аналитика: у скольких включены пуши, какие устройства, доставка, прочитанность;
+ *   • рассылка: каналы галочками (сайт / пуш / почта), адресаты — все, с пушами,
+ *     разработчики, админы или список ников/ID; своя иконка и ссылка;
+ *   • история рассылок.
+ *
+ * Сайт и пуш — это вставки в БД, они мгновенные. Почта медленная (SMTP на
+ * каждое письмо), поэтому уходит в фоне через devs/broadcast_mail.php, а
+ * страница показывает прогресс.
+ *
+ * POST обрабатывается ДО вывода и заканчивается редиректом (Post/Redirect/Get):
+ * иначе F5 после отправки повторял рассылку всем адресатам.
+ */
+if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../swad/config.php';
+require_once __DIR__ . '/../swad/controllers/user.php';
+require_once __DIR__ . '/../swad/controllers/csrf.php';
+require_once __DIR__ . '/../swad/controllers/loopback.php';
+require_once __DIR__ . '/../chat/push_helpers.php';
+require_once __DIR__ . '/../chat/_bridge.php';
+require_once __DIR__ . '/broadcast_lib.php';
+
+const BC_AUDIENCES = [
+    'push'   => 'С включёнными пушами',
+    'all'    => 'Все пользователи',
+    'devs'   => 'Разработчики (владельцы студий)',
+    'admins' => 'Администраторы',
+    'list'   => 'Список ников или ID',
+];
+
+/** Таблицы рассылок (devs/broadcast_lib.php) + колонка иконки у очереди пушей. */
+function bc_schema_all(PDO $db): void {
+    bc_schema($db);
+    if (!push_has_icon_column($db)) {
+        try { $db->exec("ALTER TABLE push_outbox ADD COLUMN icon VARCHAR(255) NULL"); } catch (Throwable $e) { }
+    }
+}
+
+/** ID получателей по типу аудитории. */
+function bc_audience(PDO $db, string $aud, string $list): array {
+    switch ($aud) {
+        case 'all':    $ids = $db->query("SELECT id FROM users")->fetchAll(PDO::FETCH_COLUMN); break;
+        case 'push':   $ids = $db->query("SELECT DISTINCT user_id FROM push_subscriptions")->fetchAll(PDO::FETCH_COLUMN); break;
+        case 'devs':   $ids = $db->query("SELECT DISTINCT owner_id FROM studios WHERE owner_id > 0")->fetchAll(PDO::FETCH_COLUMN); break;
+        case 'admins': $ids = $db->query("SELECT id FROM users WHERE global_role = -1")->fetchAll(PDO::FETCH_COLUMN); break;
+        case 'list':
+            $ids = [];
+            $names = [];
+            foreach (preg_split('/[\s,;]+/u', $list, -1, PREG_SPLIT_NO_EMPTY) as $t) {
+                $t = ltrim($t, '@');
+                if (ctype_digit($t)) $ids[] = (int)$t; else $names[] = $t;
+            }
+            if ($names) {
+                $in = implode(',', array_fill(0, count($names), '?'));
+                $q = $db->prepare("SELECT id FROM users WHERE username IN ($in)");
+                $q->execute($names);
+                $ids = array_merge($ids, $q->fetchAll(PDO::FETCH_COLUMN));
+            }
+            if ($ids) {        // только существующие
+                $in = implode(',', array_fill(0, count($ids), '?'));
+                $q = $db->prepare("SELECT id FROM users WHERE id IN ($in)");
+                $q->execute(array_map('intval', $ids));
+                $ids = $q->fetchAll(PDO::FETCH_COLUMN);
+            }
+            break;
+        default: $ids = [];
+    }
+    return array_values(array_unique(array_map('intval', $ids)));
+}
+
+/* ── Отправка (до любого вывода) ──────────────────────────────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // та же проверка, что в includes/header.php, плюс роль — из свежих данных checkAuth()
+    if ((new User())->checkAuth() > 0 || (int)($_SESSION['USERDATA']['global_role'] ?? 0) !== -1) {
+        http_response_code(403); exit('Доступно только администраторам платформы');
+    }
+    $meId = (int)$_SESSION['USERDATA']['id'];
+    $db0  = (new Database())->connect();
+    $db0->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    bc_schema_all($db0);
+
+    /* «Остановить»: флаг читает фоновый обработчик (раз в 10 писем) и выходит.
+       email_done ставим сразу — если процесс уже убит, строка не будет вечно «идёт». */
+    if (isset($_POST['stop'])) {
+        if (csrf_valid()) {
+            $db0->prepare("UPDATE broadcasts SET email_stop = 1, email_done = 1 WHERE id = ?")->execute([(int)$_POST['stop']]);
+            $_SESSION['bc_flash'] = ['msg' => 'Рассылка #' . (int)$_POST['stop'] . ' остановлена: новых писем не будет.', 'err' => '', 'form' => null];
+        } else {
+            $_SESSION['bc_flash'] = ['msg' => '', 'err' => 'Сессия устарела — обновите страницу.', 'form' => null];
+        }
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'), true, 303);
+        exit;
+    }
+
+    $title = trim((string)($_POST['title'] ?? ''));
+    $body  = trim((string)($_POST['body'] ?? ''));
+    $url   = trim((string)($_POST['url'] ?? ''));
+    $icon  = trim((string)($_POST['icon'] ?? ''));
+    $aud   = array_key_exists($_POST['audience'] ?? '', BC_AUDIENCES) ? $_POST['audience'] : 'push';
+    $list  = (string)($_POST['list'] ?? '');
+    $ch    = array_values(array_intersect(['site', 'push', 'email'], (array)($_POST['ch'] ?? [])));
+    $test  = isset($_POST['test']);
+    $mVerified = !empty($_POST['email_verified']);
+    $mWarmup   = !empty($_POST['email_warmup']);
+    $mLimit    = max(0, (int)($_POST['email_limit'] ?? 0));
+    if ($mWarmup && $mLimit === 0) $mLimit = BC_WARMUP_START;
+
+    // ссылки только свои (/...) или https — никакого javascript: в пуше
+    $safeUrl = fn(string $u) => $u === '' || $u[0] === '/' || preg_match('~^https://~i', $u);
+    $msg = ''; $err = '';
+
+    if (!csrf_valid())                             $err = 'Сессия устарела — обновите страницу.';
+    elseif ($title === '' || $body === '')         $err = 'Нужны заголовок и текст.';
+    elseif (mb_strlen($title) > 120)               $err = 'Заголовок длиннее 120 символов.';
+    elseif (!$ch)                                  $err = 'Выберите хотя бы один канал.';
+    elseif (!$safeUrl($url) || !$safeUrl($icon))   $err = 'Ссылка и иконка — только путь на сайте (/...) или https://';
+    else {
+        $ids = $test ? [$meId] : bc_audience($db0, $aud, $list);
+        if (!$ids) {
+            $err = 'Получателей не нашлось.';
+        } else {
+            $n = ['site' => 0, 'push' => 0, 'email' => 0];
+            if (in_array('site', $ch, true)) {
+                $ins = $db0->prepare("INSERT INTO notifications (user_id, title, message, action, status, date) VALUES (?, ?, ?, ?, 'unread', NOW())");
+                foreach ($ids as $id) { $ins->execute([$id, $title, $body, $url ?: null]); $n['site']++; }
+            }
+            if (in_array('push', $ch, true)) {
+                // клик по пушу: своя ссылка, иначе лента «Уведомления» (если туда тоже писали) или главная
+                $pushUrl = $url ?: (in_array('site', $ch, true) ? '/chat/?system=1' : '/');
+                foreach ($ids as $id) if (push_enqueue_user($db0, $id, $title, $body, $pushUrl, $icon ?: null)) $n['push']++;
+            }
+            $queue = [];
+            if (in_array('email', $ch, true)) {
+                // очередь замораживаем сейчас: с почтой, без отписки, [подтверждённые], активные первыми
+                $queue = bc_mail_queue($db0, $ids, $test ? false : $mVerified);
+                $n['email'] = count($queue);
+            }
+            $db0->prepare("INSERT INTO broadcasts (created_by, title, body, url, icon, channels, audience, recipients, n_users, n_site, n_push, n_email, email_done,
+                                                   email_queue, email_verified_only, email_day_limit, email_warmup)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$meId, $title, $body, $url ?: null, $icon ?: null, implode(',', $ch), $test ? 'test' : $aud,
+                           json_encode($ids), count($ids), $n['site'], $n['push'], $n['email'], $n['email'] ? 0 : 1,
+                           json_encode($queue), $mVerified ? 1 : 0, $test ? 0 : $mLimit, $mWarmup && !$test ? 1 : 0]);
+            $bid = (int)$db0->lastInsertId();
+            if ($n['email']) {
+                loopback_fire('/devs/broadcast_mail.php', json_encode(['secret' => bridge_secret(), 'id' => $bid]), 'application/json');
+            }
+            $parts = [];
+            if (in_array('site', $ch, true))  $parts[] = "на сайт — {$n['site']}";
+            if (in_array('push', $ch, true))  $parts[] = "пушей в очереди — {$n['push']}";
+            if (in_array('email', $ch, true)) $parts[] = "писем — {$n['email']}" . ($mLimit && !$test ? ", не больше {$mLimit} в день" . ($mWarmup ? ' с удвоением' : '') : '') . ' (уходят в фоне)';
+            $msg = ($test ? 'Тест себе: ' : 'Рассылка #' . $bid . ': ') . count($ids) . ' получ.; ' . implode(', ', $parts) . '.';
+        }
+    }
+    // при ошибке вернём введённое в форму, при успехе — чистая форма
+    $_SESSION['bc_flash'] = ['msg' => $msg, 'err' => $err, 'form' => $err ? $_POST : null];
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'), true, 303);
+    exit;
+}
+
+$page_title = 'Уведомления';
+$active_nav = 'notifications';
+require_once(__DIR__ . '/includes/header.php');
+
+if (!$is_admin) {
+    echo '<div class="alert alert-err"><span class="material-icons" style="font-size:16px;vertical-align:middle;">lock</span> Доступно только администраторам платформы.</div>';
+    require_once __DIR__ . '/includes/footer.php';
+    exit();
+}
+
+$flash = $_SESSION['bc_flash'] ?? ['msg' => '', 'err' => '', 'form' => null];
+unset($_SESSION['bc_flash']);
+$msg  = $flash['msg'];
+$err  = $flash['err'];
+$form = $flash['form'] ?? [];
+
+$conn = $db->connect();
+$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+bc_schema_all($conn);
+
+/* ── Аналитика ────────────────────────────────────────────────────────── */
+$one = fn(string $sql) => (int)$conn->query($sql)->fetchColumn();
+$usersTotal  = $one("SELECT COUNT(*) FROM users");
+$usersPush   = $one("SELECT COUNT(DISTINCT user_id) FROM push_subscriptions");
+$usersEmail  = $one("SELECT COUNT(*) FROM users WHERE email LIKE '%@%' AND email_optout = 0");
+$usersVerified = $one("SELECT COUNT(*) FROM users WHERE email LIKE '%@%' AND email_optout = 0 AND email_verified = 1");
+$usersOptout = $one("SELECT COUNT(*) FROM users WHERE email_optout = 1");
+$devices     = $one("SELECT COUNT(DISTINCT endpoint) FROM push_subscriptions");
+$pct = fn(int $a, int $b) => $b ? round($a * 100 / $b) : 0;
+
+$byService = [];
+foreach ($conn->query("SELECT endpoint, COUNT(DISTINCT user_id) u FROM push_subscriptions GROUP BY endpoint")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+    $h = (string)parse_url($r['endpoint'], PHP_URL_HOST);
+    $k = str_contains($h, 'apple') ? 'iPhone / Safari' : (str_contains($h, 'mozilla') ? 'Firefox' : (str_contains($h, 'windows') || str_contains($h, 'notify.windows') ? 'Edge / Windows' : (str_contains($h, 'google') ? 'Chrome / Android' : 'Другие')));
+    $byService[$k] = ($byService[$k] ?? 0) + 1;
+}
+arsort($byService);
+
+$q7 = $conn->query("SELECT status, COUNT(*) n FROM push_outbox WHERE created_at >= NOW() - INTERVAL 7 DAY GROUP BY status")->fetchAll(PDO::FETCH_KEY_PAIR);
+$sent7 = (int)($q7['sent'] ?? 0); $fail7 = (int)($q7['failed'] ?? 0); $pend = $one("SELECT COUNT(*) FROM push_outbox WHERE status='pending'");
+$n7    = $conn->query("SELECT COUNT(*) total, SUM(status='read') rd FROM notifications WHERE date >= NOW() - INTERVAL 7 DAY")->fetch(PDO::FETCH_ASSOC);
+
+$history = $conn->query("SELECT b.*, u.username FROM broadcasts b LEFT JOIN users u ON u.id = b.created_by ORDER BY b.id DESC LIMIT 15")->fetchAll(PDO::FETCH_ASSOC);
+$audCounts = [];
+foreach (array_keys(BC_AUDIENCES) as $a) if ($a !== 'list') $audCounts[$a] = count(bc_audience($conn, $a, ''));
+$h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+?>
+
+<?php if ($msg): ?><div class="alert alert-ok"><?= $h($msg) ?></div><?php endif; ?>
+<?php if ($err): ?><div class="alert alert-err"><?= $h($err) ?></div><?php endif; ?>
+
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="stat-icon"><span class="material-icons">notifications_active</span></div>
+        <div class="stat-num"><?= $usersPush ?> <small style="font-size:13px;color:var(--tm)">/ <?= $usersTotal ?></small></div>
+        <div class="stat-label">Включили пуши · <?= $pct($usersPush, $usersTotal) ?>%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><span class="material-icons">devices</span></div>
+        <div class="stat-num"><?= $devices ?></div>
+        <div class="stat-label">Устройств с подпиской</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><span class="material-icons">send</span></div>
+        <div class="stat-num"><?= $sent7 ?></div>
+        <div class="stat-label">Пушей за 7 дней · доставлено <?= $pct($sent7, $sent7 + $fail7) ?>%<?= $pend ? " · в очереди {$pend}" : '' ?></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><span class="material-icons">mark_email_read</span></div>
+        <div class="stat-num"><?= (int)$n7['total'] ?></div>
+        <div class="stat-label">На сайте за 7 дней · прочитано <?= $pct((int)$n7['rd'], (int)$n7['total']) ?>%</div>
+    </div>
+</div>
+
+<div class="grid-2" style="grid-template-columns:1.4fr 1fr;align-items:start;margin-bottom:20px;">
+    <form class="card" method="post" id="bcForm">
+        <div class="card-title"><span class="material-icons">campaign</span>Новая рассылка</div>
+        <?= csrf_field() ?>
+        <div class="field"><label>Заголовок</label><input name="title" maxlength="120" required placeholder="Например: Хэллоуин на Dustore" value="<?= $h($form['title'] ?? '') ?>"></div>
+        <div class="field"><label>Текст</label><textarea name="body" required placeholder="Коротко: в пуш влезает ~140 символов"><?= $h($form['body'] ?? '') ?></textarea></div>
+        <div class="grid-2">
+            <div class="field"><label>Ссылка по клику (необязательно)</label><input name="url" placeholder="/explore или https://…" value="<?= $h($form['url'] ?? '') ?>"></div>
+            <div class="field"><label>Иконка пуша (необязательно)</label><input name="icon" placeholder="/m/icons/icon-192.png" value="<?= $h($form['icon'] ?? '') ?>"></div>
+        </div>
+
+        <div class="field"><label>Каналы</label>
+            <div class="bc-ch">
+                <label><input type="checkbox" name="ch[]" value="site" checked> <span class="material-icons">web</span>На сайт</label>
+                <label><input type="checkbox" name="ch[]" value="push" checked> <span class="material-icons">notifications</span>Пуш</label>
+                <label><input type="checkbox" name="ch[]" value="email"> <span class="material-icons">mail</span>Почта</label>
+            </div>
+            <div class="bc-mail" id="bcMail" hidden>
+                <label class="bc-opt"><input type="checkbox" name="email_verified" value="1" <?= ($form ? !empty($form['email_verified']) : true) ? 'checked' : '' ?>> Только подтверждённые адреса — меньше возвратов, выше доверие почтовиков (<?= $usersVerified ?>)</label>
+                <div class="bc-opt-row">
+                    <label>Не больше писем в день <input type="number" name="email_limit" min="0" step="1" placeholder="без лимита" value="<?= $h($form['email_limit'] ?? '') ?>"></label>
+                    <label class="bc-opt"><input type="checkbox" name="email_warmup" value="1" <?= !empty($form['email_warmup']) ? 'checked' : '' ?>> Прогрев: лимит ×2 каждый день (с <?= BC_WARMUP_START ?>, если лимит пуст)</label>
+                </div>
+                <p class="bc-note">Первыми получают самые активные — кто заходил недавно. Отписавшиеся пропускаются, в каждом письме ссылка «Отписаться». Набрали дневной лимит — продолжение завтра в <?= BC_MAIL_RESUME_AT ?>. Скорость — ~1 письмо в секунду через ящик хостинга; для тысяч писем регулярно лучше сервис рассылок.</p>
+            </div>
+        </div>
+
+        <div class="field"><label>Кому</label>
+            <select name="audience" id="bcAud">
+                <?php foreach (BC_AUDIENCES as $k => $label): ?>
+                    <option value="<?= $k ?>"<?= ($form['audience'] ?? 'push') === $k ? ' selected' : '' ?>><?= $h($label) ?><?= isset($audCounts[$k]) ? ' — ' . $audCounts[$k] : '' ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="field" id="bcList" hidden><label>Ники или ID через запятую или пробел</label><textarea name="list" placeholder="@vasya, petya, 42"><?= $h($form['list'] ?? '') ?></textarea></div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-p" type="submit" name="send" value="1"><span class="material-icons" style="font-size:16px">send</span>Отправить</button>
+            <button class="btn btn-g" type="submit" name="test" value="1"><span class="material-icons" style="font-size:16px">person</span>Сначала себе</button>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="card-title"><span class="material-icons">pie_chart</span>Где включены пуши</div>
+        <?php if (!$byService): ?><p style="color:var(--tm);font-size:13px;">Подписок пока нет.</p><?php endif; ?>
+        <?php foreach ($byService as $k => $v): ?>
+            <div class="bc-bar"><span><?= $h($k) ?></span><b><?= $v ?></b><i style="--w:<?= $pct($v, $devices) ?>%"></i></div>
+        <?php endforeach; ?>
+        <div class="card-title" style="margin-top:18px;"><span class="material-icons">info</span>Охват каналов</div>
+        <div class="bc-bar"><span>Пуш</span><b><?= $usersPush ?></b><i style="--w:<?= $pct($usersPush, $usersTotal) ?>%"></i></div>
+        <div class="bc-bar"><span>Почта</span><b><?= $usersEmail ?></b><i style="--w:<?= $pct($usersEmail, $usersTotal) ?>%"></i></div>
+        <div class="bc-bar"><span>Почта подтверждена</span><b><?= $usersVerified ?></b><i style="--w:<?= $pct($usersVerified, $usersTotal) ?>%"></i></div>
+        <div class="bc-bar"><span>Отписались от рассылок</span><b><?= $usersOptout ?></b><i style="--w:<?= $pct($usersOptout, $usersTotal) ?>%"></i></div>
+        <div class="bc-bar"><span>Сайт</span><b><?= $usersTotal ?></b><i style="--w:100%"></i></div>
+        <p style="color:var(--tm);font-size:12px;margin-top:10px;line-height:1.5;">Звук пуша задаёт система устройства — сайт его не выбирает. В открытом чате играет звук из настроек чата.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title"><span class="material-icons">history</span>История рассылок</div>
+    <?php if (!$history): ?><p style="color:var(--tm);font-size:13px;">Рассылок ещё не было.</p><?php else: ?>
+    <div style="overflow-x:auto;">
+    <table class="bc-table">
+        <tr><th>#</th><th>Когда</th><th>Заголовок</th><th>Кому</th><th>Сайт</th><th>Пуш</th><th>Почта</th><th>Автор</th></tr>
+        <?php foreach ($history as $b): ?>
+        <tr>
+            <td><?= (int)$b['id'] ?></td>
+            <td><?= $h(date('d.m H:i', strtotime($b['created_at']))) ?></td>
+            <td title="<?= $h($b['body']) ?>"><?= $h(mb_strimwidth($b['title'], 0, 48, '…')) ?></td>
+            <td><?= $h(BC_AUDIENCES[$b['audience']] ?? ($b['audience'] === 'test' ? 'Тест себе' : $b['audience'])) ?> · <?= (int)$b['n_users'] ?></td>
+            <td><?= str_contains($b['channels'], 'site') ? (int)$b['n_site'] : '—' ?></td>
+            <td><?= str_contains($b['channels'], 'push') ? (int)$b['n_push'] : '—' ?></td>
+            <td><?php if (!str_contains($b['channels'], 'email')): ?>—<?php else: ?>
+                <?= (int)$b['email_sent'] ?>/<?= (int)$b['n_email'] ?>
+                <?= (int)$b['email_fail'] ? ' <span class="badge badge-err">' . (int)$b['email_fail'] . ' ошиб.</span>' : '' ?>
+                <?php if (!empty($b['email_stop'])): ?> <span class="badge badge-draft">остановлено</span>
+                <?php elseif (!(int)$b['email_done'] && !empty($b['email_next_at'])): ?> <span class="badge badge-draft">продолжит <?= $h(date('d.m H:i', strtotime($b['email_next_at']))) ?></span>
+                    <form method="post" class="bc-stop"><?= csrf_field() ?><button class="btn btn-d" name="stop" value="<?= (int)$b['id'] ?>" onclick="return confirm('Остановить рассылку? Оставшиеся письма не уйдут.')">Остановить</button></form>
+                <?php elseif (!(int)$b['email_done']): ?> <span class="badge badge-rev">идёт</span>
+                    <form method="post" class="bc-stop"><?= csrf_field() ?><button class="btn btn-d" name="stop" value="<?= (int)$b['id'] ?>" onclick="return confirm('Остановить отправку писем?')">Остановить</button></form>
+                <?php endif; ?>
+                <?php if ((int)($b['email_day_limit'] ?? 0) > 0 && !empty($b['email_day'])): ?><div class="bc-sub">день <?= (int)$b['email_day_n'] ?> · сегодня <?= (int)$b['email_day_sent'] ?>/<?= (int)$b['email_day_limit'] ?><?= (int)$b['email_warmup'] ? ' · прогрев' : '' ?></div><?php endif; ?>
+                <?php if ((int)($b['email_skip'] ?? 0) > 0): ?><div class="bc-sub">пропущено <?= (int)$b['email_skip'] ?> (отписались)</div><?php endif; ?>
+                <?php if (!empty($b['email_error'])): ?><div class="bc-err" title="<?= $h($b['email_error']) ?>"><?= $h(mb_strimwidth($b['email_error'], 0, 90, '…')) ?></div><?php endif; ?>
+            <?php endif; ?></td>
+            <td><?= $h($b['username'] ?? '') ?></td>
+        </tr>
+        <?php endforeach; ?>
+    </table>
+    </div>
+    <?php endif; ?>
+</div>
+
+<style>
+.bc-ch { display: flex; gap: 8px; flex-wrap: wrap; }
+.bc-ch label { display: inline-flex !important; align-items: center; gap: 6px; margin: 0 !important; padding: 8px 12px; border-radius: 10px;
+    background: var(--elev); border: 1px solid var(--bd); color: var(--tt) !important; font-size: 13px !important; cursor: pointer; }
+.bc-ch label:has(input:checked) { border-color: rgba(var(--brand-rgb, 195, 33, 120), .6); background: rgba(var(--brand-rgb, 195, 33, 120), .12); }
+.bc-ch input { width: auto !important; accent-color: rgb(var(--brand-rgb, 195, 33, 120)); }
+.bc-ch .material-icons { font-size: 16px; }
+.bc-bar { position: relative; display: flex; justify-content: space-between; padding: 7px 10px; margin-bottom: 6px; border-radius: 8px; background: var(--elev); font-size: 13px; overflow: hidden; }
+.bc-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); background: rgba(var(--brand-rgb, 195, 33, 120), .18); }
+.bc-bar span, .bc-bar b { position: relative; }
+.bc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bc-table th { text-align: left; color: var(--tm); font-weight: 500; font-size: 11px; padding: 6px 8px; border-bottom: 1px solid var(--bd); }
+.bc-table td { padding: 8px; border-bottom: 1px solid var(--bd); white-space: nowrap; vertical-align: top; }
+.bc-note { margin-top: 8px; color: var(--tm); font-size: 11px; line-height: 1.5; }
+.bc-stop { display: inline; margin-left: 6px; }
+.bc-stop .btn { padding: 3px 10px; font-size: 11px; }
+.bc-mail { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--elev); border: 1px solid var(--bd); }
+.bc-opt { display: flex !important; align-items: flex-start; gap: 8px; margin: 0 0 8px !important; color: var(--tt) !important; font-size: 12px !important; line-height: 1.4; cursor: pointer; }
+.bc-opt input { width: auto !important; margin-top: 2px; accent-color: rgb(var(--brand-rgb, 195, 33, 120)); }
+.bc-opt-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.bc-opt-row > label:not(.bc-opt) { display: flex !important; align-items: center; gap: 8px; margin: 0 0 8px !important; font-size: 12px !important; color: var(--tt) !important; }
+.bc-opt-row input[type=number] { width: 110px !important; padding: 5px 8px !important; }
+.bc-sub { margin-top: 3px; color: var(--tm); font-size: 11px; }
+.bc-err { margin-top: 4px; max-width: 320px; white-space: normal; color: #ff8fa6; font-size: 11px; line-height: 1.4; }
+@media (max-width: 900px) { .stats-grid { grid-template-columns: 1fr 1fr !important; } .grid-2 { grid-template-columns: 1fr !important; } }
+</style>
+<script>
+(() => {
+  const aud = document.getElementById('bcAud'), list = document.getElementById('bcList');
+  const sync = () => { list.hidden = aud.value !== 'list'; };
+  aud.addEventListener('change', sync); sync();
+  const em = document.querySelector('input[name="ch[]"][value=email]'), box = document.getElementById('bcMail');
+  const syncMail = () => { box.hidden = !em.checked; };
+  em.addEventListener('change', syncMail); syncMail();
+  document.getElementById('bcForm').addEventListener('submit', e => {
+    if (e.submitter && e.submitter.name === 'test') return;
+    const opt = aud.options[aud.selectedIndex].text;
+    if (!confirm('Отправить рассылку: ' + opt + '?')) e.preventDefault();
+  });
+})();
+</script>
+
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

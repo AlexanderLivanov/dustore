@@ -364,9 +364,9 @@ if ($filterGame > 0) {
         }
 
         .filter-tab.active {
-            background: rgba(195, 33, 120, .12);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .12);
             color: var(--p);
-            border-color: rgba(195, 33, 120, .3);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .3);
         }
 
         /* ── Список игр ── */
@@ -392,13 +392,13 @@ if ($filterGame > 0) {
         }
 
         .game-row:hover {
-            border-color: rgba(195, 33, 120, .3);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .3);
             transform: translateY(-1px);
         }
 
         .game-row.selected {
             border-color: var(--p);
-            background: rgba(195, 33, 120, .05);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .05);
         }
 
         .game-cover-sm {
@@ -587,9 +587,9 @@ if ($filterGame > 0) {
         }
 
         .pagination .current {
-            background: rgba(195, 33, 120, .12);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .12);
             color: var(--p);
-            border-color: rgba(195, 33, 120, .3);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .3);
         }
 
         @media (max-width:900px) {

@@ -219,7 +219,7 @@ function format_last_seen(int $ts): string
             white-space:nowrap; backdrop-filter:blur(6px);
             transition:background .2s,transform .2s; z-index:2;
         }
-        .edit-profile-btn:hover { background:rgba(195,33,120,.75); transform:translateX(-50%) translateY(-2px); }
+        .edit-profile-btn:hover { background:rgba(var(--brand-rgb, 195, 33, 120), .75); transform:translateX(-50%) translateY(-2px); }
         .edit-profile-btn svg { flex-shrink:0; }
         /* ── Кнопка «написать» рядом с кнопкой дружбы ──────────────────── */
         .friend-msg-btn {
@@ -230,18 +230,18 @@ function format_last_seen(int $ts): string
             height: 32px;
             flex-shrink: 0;
             border-radius: 15px;
-            background: rgba(195, 33, 120, .16);
-            border: 1px solid #c32178;
+            background: rgba(var(--brand-rgb, 195, 33, 120), .16);
+            border: 1px solid rgb(var(--brand-rgb, 195, 33, 120));
             color: #fff;
             text-decoration: none;
             transition: background .16s ease, transform .1s ease;
             margin-right: 10px;
         }
-        .friend-msg-btn:hover { background: #c32178; }
+        .friend-msg-btn:hover { background: rgb(var(--brand-rgb, 195, 33, 120)); }
         .friend-msg-btn:active { transform: translateY(1px); }
         .friend-msg-btn.is-hidden { display: none; }
-        body.moonlight-theme .friend-msg-btn { background: rgba(62,122,217,.2); border-color: #3e7ad9; }
-        body.moonlight-theme .friend-msg-btn:hover { background: #3e7ad9; }
+        body.moonlight-theme .friend-msg-btn { background: rgba(var(--moon-accent-rgb, 62, 122, 217), .2); border-color: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
+        body.moonlight-theme .friend-msg-btn:hover { background: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
 
         .friend-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -251,11 +251,11 @@ function format_last_seen(int $ts): string
             gap: 12px; margin-bottom: 12px;
         }
         .friends-find {
-            font-size: .84em; color: #e6379a; text-decoration: none;
-            border-bottom: 1px dashed rgba(230, 55, 154, .5);
+            font-size: .84em; color: rgb(var(--brand-hi-rgb, 230, 55, 154)); text-decoration: none;
+            border-bottom: 1px dashed rgba(var(--brand-hi-rgb, 230, 55, 154), .5);
         }
         .friends-find:hover { color: #fff; border-bottom-color: #fff; }
-        body.moonlight-theme .friends-find { color: #5690f0; border-bottom-color: rgba(86,144,240,.5); }
+        body.moonlight-theme .friends-find { color: rgb(var(--moon-hi-rgb, 86, 144, 240)); border-bottom-color: rgba(var(--moon-hi-rgb, 86, 144, 240), .5); }
 
         .friends-search {
             position: relative; display: flex; align-items: center;
@@ -265,8 +265,8 @@ function format_last_seen(int $ts): string
             border-radius: 10px;
             transition: border-color .16s ease;
         }
-        .friends-search:focus-within { border-color: #c32178; }
-        body.moonlight-theme .friends-search:focus-within { border-color: #3e7ad9; }
+        .friends-search:focus-within { border-color: rgb(var(--brand-rgb, 195, 33, 120)); }
+        body.moonlight-theme .friends-search:focus-within { border-color: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
         .friends-search .fs-ico { color: #888; display: flex; flex-shrink: 0; }
         .friends-search input {
             flex: 1; min-width: 0; padding: 10px 0;
@@ -301,10 +301,11 @@ function format_last_seen(int $ts): string
                              alt="Аватар" class="user-avatar">
                     </div>
                     <?php if ($is_owner): ?>
-                    <a href="/me" class="edit-profile-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M14.647 4.081a.724.724 0 0 0 1.08.448c2.439-1.485 5.23 1.305 3.745 3.744a.724.724 0 0 0 .447 1.08c2.775.673 2.775 4.62 0 5.294a.724.724 0 0 0-.448 1.08c1.485 2.439-1.305 5.23-3.744 3.745a.724.724 0 0 0-1.08.447c-.673 2.775-4.62 2.775-5.294 0a.724.724 0 0 0-1.08-.448c-2.439 1.485-5.23-1.305-3.745-3.744a.724.724 0 0 0-.447-1.08c-2.775-.673-2.775-4.62 0-5.294a.724.724 0 0 0 .448-1.08c-1.485-2.439 1.305-5.23 3.744-3.745a.722.722 0 0 0 1.08-.447c.673-2.775 4.62-2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0-6"/>
+                    <?php /* Открывает окно «Изменить профиль» (swad/static/elements/profile_edit.php).
+                             href — на случай, если скрипт не успел: #edit-profile тоже открывает окно. */ ?>
+                    <a href="#edit-profile" class="edit-profile-btn" role="button" data-open-profile-edit aria-haspopup="dialog" aria-controls="profileEdit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                         </svg>
                         Изменить профиль
                     </a>
@@ -452,7 +453,26 @@ function format_last_seen(int $ts): string
                         </a>
                     </div>
                 <?php endif; ?>
+
+                <?php /* Шестерёнка у правого края — только владельцу профиля: открывает окно
+                         «Настройки» (swad/static/elements/user_settings.php, подключено ниже).
+                         data-f3d — сама шестерёнка тоже наклоняется за курсором. */ ?>
+                <?php if ($is_owner): ?>
+                    <button type="button" class="us-gear" data-open-settings data-f3d
+                            aria-haspopup="dialog" aria-controls="userSettings" aria-expanded="false"
+                            title="Настройки" aria-label="Настройки">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M14.647 4.081a.724.724 0 0 0 1.08.448c2.439-1.485 5.23 1.305 3.745 3.744a.724.724 0 0 0 .447 1.08c2.775.673 2.775 4.62 0 5.294a.724.724 0 0 0-.448 1.08c1.485 2.439-1.305 5.23-3.744 3.745a.724.724 0 0 0-1.08.447c-.673 2.775-4.62 2.775-5.294 0a.724.724 0 0 0-1.08-.448c-2.439 1.485-5.23-1.305-3.745-3.744a.724.724 0 0 0-.447-1.08c-2.775-.673-2.775-4.62 0-5.294a.724.724 0 0 0 .448-1.08c-1.485-2.439 1.305-5.23 3.744-3.745a.722.722 0 0 0 1.08-.447c.673-2.775 4.62-2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0-6" />
+                        </svg>
+                    </button>
+                <?php endif; ?>
             </div>
+
+            <?php if ($is_owner) {
+                require_once('swad/static/elements/user_settings.php');
+                $pe_user = $user;
+                require_once('swad/static/elements/profile_edit.php');
+            } ?>
 
             <?php
             $games_main   = array_slice($games, 0, 6);
@@ -750,33 +770,64 @@ function format_last_seen(int $ts): string
                     <?php if ($is_owner): ?>
                     <h2 class="section-title">Безопасность и аккаунт</h2>
                     <div style="display:grid;gap:20px;">
+                        <?php /* Формы уходят в swad/controllers/account_security.php через fetch (скрипт ниже)
+                                 и показывают ответ прямо в форме. Раньше они слали POST на /me,
+                                 и после отправки человека выкидывало на старую страницу аккаунта. */ ?>
                         <div style="background:rgba(255,255,255,.03);padding:20px;border-radius:10px;">
                             <?php $owner_data = $_SESSION['USERDATA']; ?>
                             <?php if (empty($owner_data['email'])): ?>
                             <h3 style="margin-top:0;">Привязка почты</h3>
                             <p style="color:#888;font-size:.9em;">Для тех, кто скучает по 2007</p>
-                            <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+                            <form method="POST" action="/swad/controllers/account_security.php" data-account-form style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
                                 <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="bind_email">
+                                <p class="us-msg" role="alert"></p>
                                 <input type="email" name="email" required placeholder="Email" autocomplete="email" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="password" required placeholder="Пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <button name="bind_email" style="padding:10px 20px;background:#12556d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
+                                <input type="password" name="password" required minlength="8" placeholder="Пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <input type="password" name="confirm_password" required minlength="8" placeholder="Повторите пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <button style="padding:10px 20px;background:#12556d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
                             </form>
                             <?php else: ?>
                             <h3 style="margin-top:0;">Почта</h3>
                             <p>Email: <b><?= htmlspecialchars($owner_data['email']) ?></b></p>
-                            <?php if (!$owner_data['email_verified']): ?>
+                            <?php if (empty($owner_data['email_verified'])): ?>
                             <div style="color:#f4a53a;background:rgba(244,165,58,.1);border:1px solid rgba(244,165,58,.3);padding:10px;border-radius:8px;margin-bottom:15px;">⚠️ Почта не подтверждена</div>
                             <?php endif; ?>
                             <h3>Смена пароля</h3>
-                            <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+                            <form method="POST" action="/swad/controllers/account_security.php" data-account-form style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
                                 <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="change_password">
+                                <p class="us-msg" role="alert"></p>
                                 <input type="password" name="current_password" required placeholder="Текущий пароль" autocomplete="current-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="new_password" required placeholder="Новый пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <button name="change_password" style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Обновить пароль</button>
+                                <input type="password" name="new_password" required minlength="8" placeholder="Новый пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <input type="password" name="confirm_password" required minlength="8" placeholder="Повторите пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <button style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Обновить пароль</button>
                             </form>
                             <?php endif; ?>
+                        </div>
+
+                        <?php /* Перенесено со старой страницы /me — больше этих данных нигде не было */ ?>
+                        <div style="background:rgba(255,255,255,.03);padding:20px;border-radius:10px;">
+                            <h3 style="margin-top:0;">Об аккаунте</h3>
+                            <?php if (!empty($owner_data['telegram_id']) && (int)$owner_data['telegram_id'] > 0): ?>
+                            <?php /* Отрицательный telegram_id — старый temp_id анонима, показывать его незачем */ ?>
+                            <p>Telegram ID: <?= htmlspecialchars((string)$owner_data['telegram_id']) ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($owner_data['telegram_username'])): ?>
+                            <p>Telegram: <a href="https://t.me/<?= rawurlencode((string)$owner_data['telegram_username']) ?>" target="_blank" rel="noopener" style="color:#ff5ba8;">@<?= htmlspecialchars((string)$owner_data['telegram_username']) ?></a></p>
+                            <?php endif; ?>
+                            <p>Тип учётной записи:
+                                <?php
+                                /* printUserPrivileges() на неизвестной роли печатает «Неверный идентификатор» —
+                                   для обычного пользователя это выглядит как ошибка в аккаунте */
+                                $roleName = $curr_user->getRoleName($curr_user->getUserRole($userID, "global"));
+                                if (in_array($roleName, ['creator', 'user', 'employee', 'owner', 'moder', 'admin'], true)) {
+                                    $curr_user->printUserPrivileges($roleName);
+                                } else {
+                                    echo 'Обычный пользователь';
+                                }
+                                ?>
+                            </p>
                         </div>
 
                         <div style="background:rgba(255,255,255,.03);padding:20px;border-radius:10px;">
@@ -810,6 +861,39 @@ function format_last_seen(int $ts): string
         </div><!-- /.profile-right -->
     </div>
 </section>
+
+<?php if ($is_owner): ?>
+<script>
+// Формы «Безопасности»: отправка без перехода, ответ — прямо в форме
+document.querySelectorAll('[data-account-form]').forEach((form) => {
+    const msg = form.querySelector('.us-msg');
+    const btn = form.querySelector('button');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        msg.className = 'us-msg';
+        msg.textContent = '';
+        let data;
+        try {
+            // getAttribute, а не form.action: в форме есть поле name="action",
+            // и form.action вернул бы это поле, а не адрес (DOM clobbering)
+            const res = await fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': form.elements.csrf.value },
+                body: new FormData(form),
+            });
+            data = await res.json();
+        } catch (err) {
+            data = { ok: false, error: 'Нет связи с сервером, попробуйте ещё раз' };
+        }
+        msg.className = 'us-msg ' + (data.ok ? 'is-ok' : 'is-error');
+        msg.textContent = data.ok ? data.message : (data.error || 'Не получилось');
+        if (data.ok) form.querySelectorAll('input[type="password"]').forEach((i) => { i.value = ''; });
+        btn.disabled = false;
+    });
+});
+</script>
+<?php endif; ?>
 
 <!-- Модалка достижений -->
 <div class="modal" id="achievementModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);backdrop-filter:blur(10px);z-index:1000;align-items:center;justify-content:center;">
@@ -932,20 +1016,6 @@ document.querySelectorAll('.acceptFriend').forEach(btn => {
 });
 </script>
 
-<script>
-// ── 3D-наклон вкладок ────────────────────────────────────────────────────
-(function() {
-    document.querySelectorAll('.profile-left .tab-button').forEach(btn => {
-        btn.addEventListener('mousemove', e => {
-            const r = btn.getBoundingClientRect();
-            const nx = ((e.clientX-r.left)/r.width)*2-1;
-            const ny = ((e.clientY-r.top)/r.height)*2-1;
-            btn.style.transform = `perspective(400px) rotateX(${-8*ny}deg) rotateY(${8*nx}deg) translateY(-3px) scale(1.06)`;
-        });
-        btn.addEventListener('mouseleave', () => { btn.style.transform=''; });
-    });
-})();
-</script>
 
 <script>
 // ── Карусель ─────────────────────────────────────────────────────────────
@@ -1012,20 +1082,8 @@ document.querySelectorAll('.showcase-tab').forEach(tab => {
 </script>
 
 <script>
-// ── 3D-наклон кнопок ─────────────────────────────────────────────────────
-(function() {
-    ['#friendActionBtn','.showcase-tab','.profile-left .tab-button'].forEach(sel=>{
-        document.querySelectorAll(sel).forEach(btn=>{
-            btn.style.transformStyle='preserve-3d';
-            btn.style.willChange='transform';
-            btn.addEventListener('mousemove',e=>{
-                const r=btn.getBoundingClientRect();
-                btn.style.transform=`perspective(400px) rotateX(${-15*((e.clientY-r.top)/r.height*2-1)}deg) rotateY(${15*((e.clientX-r.left)/r.width*2-1)}deg) translateY(-3px) scale(1.04)`;
-            });
-            btn.addEventListener('mouseleave',()=>{btn.style.transform='';});
-        });
-    });
-})();
+// ── 3D-наклон кнопок и вкладок — Float3D, общие настройки сайта (swad/css/float3d.css)
+window.Float3D?.register('#friendActionBtn, .showcase-tab, .profile-left .tab-button');
 </script>
 </body>
 </html>

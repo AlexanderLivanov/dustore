@@ -265,9 +265,9 @@ $CARDS = [
         z-index: -1;
         pointer-events: none;
         background:
-            radial-gradient(900px 520px at 78% -8%, rgba(195, 33, 120, .28), transparent 65%),
+            radial-gradient(900px 520px at 78% -8%, rgba(var(--brand-rgb, 195, 33, 120), .28), transparent 65%),
             radial-gradient(700px 460px at 8% 12%, rgba(123, 92, 255, .16), transparent 62%),
-            linear-gradient(180deg, #14041d 0%, #22072a 42%, #4a0e3c 78%, #74155d 100%);
+            linear-gradient(180deg, #14041d 0%, #22072a 42%, rgb(var(--brand-deep-rgb, 74, 14, 60)) 78%, rgb(var(--brand-deep-rgb, 116, 21, 93)) 100%);
     }
 
     /* Всё под неймспейсом .dst-st — ничего не течёт в глобальные стили сайта. */
@@ -327,7 +327,7 @@ $CARDS = [
     }
 
     .dst-st .frame:hover {
-        background: rgba(195, 33, 120, .45);
+        background: rgba(var(--brand-rgb, 195, 33, 120), .45);
     }
 
     /* ---------- шапка ---------- */
@@ -640,7 +640,7 @@ $CARDS = [
         position: absolute;
         top: 0;
         bottom: 0;
-        background: rgba(195, 33, 120, .17);
+        background: rgba(var(--brand-rgb, 195, 33, 120), .17);
         border-left: 2px solid var(--p);
         border-right: 2px solid var(--p);
         cursor: grab;
@@ -717,7 +717,7 @@ $CARDS = [
         position: absolute;
         inset: 0 auto 0 0;
         width: var(--w, 0%);
-        background: linear-gradient(90deg, rgba(195, 33, 120, .34), rgba(195, 33, 120, .04));
+        background: linear-gradient(90deg, rgba(var(--brand-rgb, 195, 33, 120), .34), rgba(var(--brand-rgb, 195, 33, 120), .04));
         z-index: 0;
     }
 

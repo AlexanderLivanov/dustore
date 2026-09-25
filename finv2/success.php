@@ -118,7 +118,7 @@ $isPaid = $order && $order['status'] === 'succeeded';
         body::before {
             width: 500px;
             height: 500px;
-            background: radial-gradient(circle, rgba(116, 21, 93, .35), transparent 70%);
+            background: radial-gradient(circle, rgba(var(--brand-deep-rgb, 116, 21, 93), .35), transparent 70%);
             top: -100px;
             left: -100px;
         }
@@ -255,7 +255,7 @@ $isPaid = $order && $order['status'] === 'succeeded';
             width: 56px;
             height: 56px;
             border-radius: 10px;
-            background: linear-gradient(135deg, rgba(195, 33, 120, .2), rgba(116, 21, 93, .2));
+            background: linear-gradient(135deg, rgba(var(--brand-rgb, 195, 33, 120), .2), rgba(var(--brand-deep-rgb, 116, 21, 93), .2));
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -420,14 +420,14 @@ $isPaid = $order && $order['status'] === 'succeeded';
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #c32178, #74155d);
+            background: linear-gradient(135deg, rgb(var(--brand-rgb, 195, 33, 120)), rgb(var(--brand-deep-rgb, 116, 21, 93)));
             color: #fff;
             box-shadow: 0 4px 20px var(--primary-glow);
         }
 
         .btn-primary:hover {
-            box-shadow: 0 6px 28px rgba(195, 33, 120, .55);
-            background: linear-gradient(135deg, #e02e8e, #8c1a70);
+            box-shadow: 0 6px 28px rgba(var(--brand-rgb, 195, 33, 120), .55);
+            background: linear-gradient(135deg, rgb(var(--brand-hi-rgb, 224, 46, 142)), rgb(var(--brand-rgb, 140, 26, 112)));
         }
 
         .btn-ghost {

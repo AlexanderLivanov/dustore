@@ -116,7 +116,7 @@ $CATS = [
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(ellipse 80% 60% at 10% 60%, rgba(195, 33, 120, .12) 0%, transparent 55%)
+            background: radial-gradient(ellipse 80% 60% at 10% 60%, rgba(var(--brand-rgb, 195, 33, 120), .12) 0%, transparent 55%)
         }
 
         .page-hero .container {
@@ -127,15 +127,15 @@ $CATS = [
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(195, 33, 120, .12);
-            border: 1px solid rgba(195, 33, 120, .25);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .12);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25);
             border-radius: 100px;
             padding: 4px 14px;
             font-size: .7rem;
             font-weight: 700;
             letter-spacing: .08em;
             text-transform: uppercase;
-            color: #e88fc0;
+            color: rgb(var(--brand-hi-rgb, 232, 143, 192));
             margin-bottom: 14px
         }
 
@@ -193,9 +193,9 @@ $CATS = [
         }
 
         .tab-nav a.active .cnt {
-            background: rgba(195, 33, 120, .2);
-            border-color: rgba(195, 33, 120, .35);
-            color: #e88fc0
+            background: rgba(var(--brand-rgb, 195, 33, 120), .2);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .35);
+            color: rgb(var(--brand-hi-rgb, 232, 143, 192))
         }
 
         /* Layout */
@@ -224,7 +224,7 @@ $CATS = [
         }
 
         .ac:hover {
-            border-color: rgba(195, 33, 120, .35);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .35);
             box-shadow: 0 8px 32px rgba(0, 0, 0, .4)
         }
 
@@ -338,7 +338,7 @@ $CATS = [
         }
 
         .btn-dl:hover {
-            background: #d42485
+            background: rgb(var(--brand-rgb, 212, 36, 133))
         }
 
         .btn-dl.outline {
@@ -349,7 +349,7 @@ $CATS = [
 
         .btn-dl.outline:hover {
             border-color: var(--pr);
-            color: #e88fc0
+            color: rgb(var(--brand-hi-rgb, 232, 143, 192))
         }
 
         .btn-rm {
@@ -405,8 +405,8 @@ $CATS = [
         }
 
         .cb-font {
-            background: rgba(236, 72, 153, .7);
-            color: #fbcfe8
+            background: rgba(var(--brand-hi-rgb, 236, 72, 153), .7);
+            color: rgb(var(--brand-hi-rgb, 251, 207, 232))
         }
 
         .cb-script {
@@ -425,8 +425,8 @@ $CATS = [
         }
 
         .cb-vfx {
-            background: rgba(195, 33, 120, .7);
-            color: #f5b8da
+            background: rgba(var(--brand-rgb, 195, 33, 120), .7);
+            color: rgb(var(--brand-hi-rgb, 245, 184, 218))
         }
 
         .cb-video {
@@ -520,7 +520,7 @@ $CATS = [
         }
 
         .empty a {
-            color: #e88fc0;
+            color: rgb(var(--brand-hi-rgb, 232, 143, 192));
             text-decoration: none
         }
 
