@@ -51,6 +51,12 @@ function bc_schema(PDO $db): void {
         email_fail  INT NOT NULL DEFAULT 0,
         email_done  TINYINT NOT NULL DEFAULT 0
     ) DEFAULT CHARSET=utf8mb4");
+    // колонки второй версии: кнопка «Остановить» и текст последней ошибки SMTP
+    foreach (['email_stop' => "TINYINT NOT NULL DEFAULT 0", 'email_error' => "VARCHAR(255) NULL"] as $col => $def) {
+        if (!$db->query("SHOW COLUMNS FROM broadcasts LIKE '{$col}'")->fetch()) {
+            try { $db->exec("ALTER TABLE broadcasts ADD COLUMN {$col} {$def}"); } catch (Throwable $e) { }
+        }
+    }
     if (!push_has_icon_column($db)) {
         try { $db->exec("ALTER TABLE push_outbox ADD COLUMN icon VARCHAR(255) NULL"); } catch (Throwable $e) { }
     }
@@ -98,6 +104,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $db0  = (new Database())->connect();
     $db0->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     bc_schema($db0);
+
+    /* «Остановить»: флаг читает фоновый обработчик (раз в 10 писем) и выходит.
+       email_done ставим сразу — если процесс уже убит, строка не будет вечно «идёт». */
+    if (isset($_POST['stop'])) {
+        if (csrf_valid()) {
+            $db0->prepare("UPDATE broadcasts SET email_stop = 1, email_done = 1 WHERE id = ?")->execute([(int)$_POST['stop']]);
+            $_SESSION['bc_flash'] = ['msg' => 'Рассылка #' . (int)$_POST['stop'] . ' остановлена: новых писем не будет.', 'err' => '', 'form' => null];
+        } else {
+            $_SESSION['bc_flash'] = ['msg' => '', 'err' => 'Сессия устарела — обновите страницу.', 'form' => null];
+        }
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'), true, 303);
+        exit;
+    }
 
     $title = trim((string)($_POST['title'] ?? ''));
     $body  = trim((string)($_POST['body'] ?? ''));
@@ -249,6 +268,7 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
                 <label><input type="checkbox" name="ch[]" value="push" checked> <span class="material-icons">notifications</span>Пуш</label>
                 <label><input type="checkbox" name="ch[]" value="email"> <span class="material-icons">mail</span>Почта</label>
             </div>
+            <p class="bc-note">Почта уходит через ящик хостинга, ~1 письмо в секунду: 4 000 писем — больше часа, и лимиты хостинга на число писем в час/сутки никто не отменял. Для массовых рассылок подключите сервис рассылок (свой домен, SPF/DKIM, отписка).</p>
         </div>
 
         <div class="field"><label>Кому</label>
@@ -294,7 +314,15 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
             <td><?= $h(BC_AUDIENCES[$b['audience']] ?? ($b['audience'] === 'test' ? 'Тест себе' : $b['audience'])) ?> · <?= (int)$b['n_users'] ?></td>
             <td><?= str_contains($b['channels'], 'site') ? (int)$b['n_site'] : '—' ?></td>
             <td><?= str_contains($b['channels'], 'push') ? (int)$b['n_push'] : '—' ?></td>
-            <td><?php if (!str_contains($b['channels'], 'email')): ?>—<?php else: ?><?= (int)$b['email_sent'] ?>/<?= (int)$b['n_email'] ?><?= (int)$b['email_fail'] ? ' <span class="badge badge-err">' . (int)$b['email_fail'] . ' ошиб.</span>' : '' ?><?= !(int)$b['email_done'] ? ' <span class="badge badge-rev">идёт</span>' : '' ?><?php endif; ?></td>
+            <td><?php if (!str_contains($b['channels'], 'email')): ?>—<?php else: ?>
+                <?= (int)$b['email_sent'] ?>/<?= (int)$b['n_email'] ?>
+                <?= (int)$b['email_fail'] ? ' <span class="badge badge-err">' . (int)$b['email_fail'] . ' ошиб.</span>' : '' ?>
+                <?php if (!empty($b['email_stop'])): ?> <span class="badge badge-draft">остановлено</span>
+                <?php elseif (!(int)$b['email_done']): ?> <span class="badge badge-rev">идёт</span>
+                    <form method="post" class="bc-stop"><?= csrf_field() ?><button class="btn btn-d" name="stop" value="<?= (int)$b['id'] ?>" onclick="return confirm('Остановить отправку писем?')">Остановить</button></form>
+                <?php endif; ?>
+                <?php if (!empty($b['email_error'])): ?><div class="bc-err" title="<?= $h($b['email_error']) ?>"><?= $h(mb_strimwidth($b['email_error'], 0, 90, '…')) ?></div><?php endif; ?>
+            <?php endif; ?></td>
             <td><?= $h($b['username'] ?? '') ?></td>
         </tr>
         <?php endforeach; ?>
@@ -315,7 +343,11 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 .bc-bar span, .bc-bar b { position: relative; }
 .bc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .bc-table th { text-align: left; color: var(--tm); font-weight: 500; font-size: 11px; padding: 6px 8px; border-bottom: 1px solid var(--bd); }
-.bc-table td { padding: 8px; border-bottom: 1px solid var(--bd); white-space: nowrap; }
+.bc-table td { padding: 8px; border-bottom: 1px solid var(--bd); white-space: nowrap; vertical-align: top; }
+.bc-note { margin-top: 8px; color: var(--tm); font-size: 11px; line-height: 1.5; }
+.bc-stop { display: inline; margin-left: 6px; }
+.bc-stop .btn { padding: 3px 10px; font-size: 11px; }
+.bc-err { margin-top: 4px; max-width: 320px; white-space: normal; color: #ff8fa6; font-size: 11px; line-height: 1.4; }
 @media (max-width: 900px) { .stats-grid { grid-template-columns: 1fr 1fr !important; } .grid-2 { grid-template-columns: 1fr !important; } }
 </style>
 <script>

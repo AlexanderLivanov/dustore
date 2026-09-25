@@ -41,6 +41,54 @@ function sendMail(string $send_to, string $subject, string $data, string $params
     }
 }
 
+/**
+ * Почтальон для рассылок: ОДНО SMTP-соединение на все письма (SMTPKeepAlive).
+ *
+ * sendMail() на каждое письмо заново соединяется, делает STARTTLS и AUTH —
+ * на тысячах писем это медленно и для хостинга выглядит как подбор пароля:
+ * он начинает отказывать. А таймаут PHPMailer по умолчанию — 300 секунд,
+ * так что каждое отвергнутое письмо висело по пять минут.
+ * Креды те же, что у sendMail(): EMAIL_PASSWD из swad/pass.php.
+ *
+ *   $m = mailer_batch();  foreach (...) { mailer_send($m, $to, $subj, $html); }  $m->smtpClose();
+ */
+function mailer_batch(): PHPMailer
+{
+    $mail = new PHPMailer(true);
+    $mail->CharSet       = 'UTF-8';
+    $mail->isSMTP();
+    $mail->Host          = 'sm21.hosting.reg.ru';
+    $mail->SMTPAuth      = true;
+    $mail->Username      = 'dusty@dustore.ru';
+    $mail->Password      = EMAIL_PASSWD;
+    $mail->SMTPSecure    = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port          = 587;
+    $mail->SMTPKeepAlive = true;
+    $mail->Timeout       = 15;
+    $mail->setFrom('dusty@dustore.ru', 'Менеджер Дасти');
+    $mail->isHTML(true);
+    return $mail;
+}
+
+/** Одно письмо через открытое соединение. null — отправлено, иначе текст ошибки SMTP. */
+function mailer_send(PHPMailer $mail, string $to, string $subject, string $html): ?string
+{
+    try {
+        $mail->clearAddresses();
+        $mail->addAddress($to);
+        $mail->Subject = $subject;
+        $mail->Body    = $html;
+        $mail->send();
+        return null;
+    } catch (Exception $e) {
+        $err = $mail->ErrorInfo ?: $e->getMessage();
+        // после отказа сервер ждёт новую транзакцию; если соединение умерло,
+        // следующий send() откроет его заново
+        try { $mail->getSMTPInstance()->reset(); } catch (Throwable $t) { $mail->smtpClose(); }
+        return $err;
+    }
+}
+
 if (!function_exists('buildEmail')) {
     function buildEmail(string $title, string $bodyHtml, string $btnText = '', string $btnUrl = ''): string
     {
