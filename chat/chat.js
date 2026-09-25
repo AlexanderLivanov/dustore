@@ -1125,22 +1125,27 @@ $('#soundInput').addEventListener('change', async e => {
 
 /* Уведомления: разрешение спрашиваем только по кнопке — браузеры (и iOS
    в особенности) показывают запрос лишь в ответ на явный жест. */
-function renderPushState() {
+async function renderPushState() {
   const st = $('#pushState'), btn = $('#pushBtn');
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   btn.hidden = true;
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+  // Раньше «Включены ✓» рисовалось по одному разрешению. Разрешение есть, а
+  // подписки нет (не сохранилась, сменили ключ, почистили данные) — и человек
+  // видел галочку при мёртвых пушах. Теперь смотрим на саму подписку.
+  const state = window.pushState ? await window.pushState() : 'unsupported';
+  if (state === 'unsupported') {
     st.textContent = iOS && !standalone ? 'На iPhone уведомления работают, если добавить Dustore на экран «Домой»' : 'Браузер не поддерживает уведомления';
     return;
   }
-  if (Notification.permission === 'granted') { st.textContent = 'Включены ✓'; return; }
-  if (Notification.permission === 'denied')  { st.textContent = 'Запрещены в настройках браузера'; return; }
+  if (state === 'on')     { st.textContent = 'Включены ✓'; return; }
+  if (state === 'denied') { st.textContent = 'Запрещены в настройках браузера'; return; }
   st.textContent = 'Выключены'; btn.hidden = false;
 }
 $('#pushBtn').addEventListener('click', async () => {
-  if (!window.VAPID_PUBLIC) { toast('Пуши не настроены на сервере', true); return; }
-  if (window.initPush) await window.initPush();
+  if (!window.initPush) return;
+  const r = await window.initPush();
+  if (!r.ok) toast(r.reason, true);
   renderPushState();
 });
 
@@ -1225,7 +1230,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 (async function init() {
   loadSettings();
   // разрешение уже дано раньше — тихо обновляем подписку, без запроса
-  if (window.initPush && window.VAPID_PUBLIC && 'Notification' in window && Notification.permission === 'granted') window.initPush();
+  if (window.initPush && window.VAPID_PUBLIC && 'Notification' in window && Notification.permission === 'granted') window.initPush().then(r => r.ok || console.warn('[push]', r.reason));
   await loadList();
   startListTimer();
   connectWS();

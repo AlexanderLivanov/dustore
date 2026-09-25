@@ -250,11 +250,10 @@ if (sw) {
       setUI(false, 'Выключены на этом устройстве');
       return;
     }
-    if (typeof window.initPush !== 'function' || !window.VAPID_PUBLIC) { toast('Уведомления ещё не настроены на сервере'); return; }
-    await window.initPush();                    // спрашивает разрешение — только по жесту
-    const s = await current().catch(() => null);
-    if (s) { setUI(true, 'Приходят на это устройство'); toast('Уведомления включены'); }
-    else setUI(false, Notification.permission === 'denied' ? 'Запрещены в настройках браузера' : 'Не удалось включить');
+    if (typeof window.initPush !== 'function') { toast('Уведомления ещё не настроены на сервере'); return; }
+    const r = await window.initPush();          // спрашивает разрешение — только по жесту
+    if (r.ok) { setUI(true, 'Приходят на это устройство'); toast('Уведомления включены'); }
+    else { setUI(false, r.reason); toast(r.reason); }
   });
 }
 })();
