@@ -2,10 +2,12 @@
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-// localhost-эндпоинт: воркер ходит на 127.0.0.1, и Database выбрал бы LOCAL-креды.
-// По умолчанию — боевые (dustore.ru); для локальной отладки воркер шлёт site=127.0.0.1
-// (переменная PUSH_SITE в pwa/push-worker.js), иначе подписки и очередь окажутся в разных БД.
-$_SERVER['HTTP_HOST'] = in_array($_GET['site'] ?? '', ['127.0.0.1', 'localhost'], true) ? $_GET['site'] : 'dustore.ru';
+// Креды БД Database выбирает по Host запроса, как для любой страницы. Воркер ходит
+// по имени сайта (https://dustore.ru, соединение через 127.0.0.1), поэтому Host
+// здесь настоящий: на проде — dustore.ru, на локальной копии — localhost.
+// Раньше Host подменялся, а для локалки был ?site= из PUSH_SITE, — и забытый в
+// шелле PUSH_SITE=127.0.0.1 молча переключал боевой воркер на LOCAL-креды
+// (root без пароля → «Access denied for user 'root'»).
 
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/_bridge.php';

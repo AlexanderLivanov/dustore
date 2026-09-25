@@ -17,7 +17,8 @@
  *   OUTBOX_URL     — https://dustore.ru/chat/push_outbox.php (по умолчанию)
  *   OUTBOX_CONNECT — куда физически подключаться, по умолчанию 127.0.0.1;
  *                    пустая строка — обычный DNS
- *   PUSH_SITE      — 127.0.0.1 / localhost для локальной копии: outbox возьмёт LOCAL-креды БД
+ *   Локальная копия: OUTBOX_URL=http://localhost/chat/push_outbox.php — по Host
+ *   outbox сам возьмёт LOCAL-креды БД.
  *
  * Сгенерировать ключи: npx web-push generate-vapid-keys
  */
@@ -74,7 +75,9 @@ const BRIDGE_SECRET = readSecret();
    Apache выберет vhost dustore.ru по SNI и Host, PHP увидит REMOTE_ADDR 127.0.0.1. */
 const OUTBOX_URL = process.env.OUTBOX_URL || 'https://dustore.ru/chat/push_outbox.php';
 const OUTBOX_CONNECT = process.env.OUTBOX_CONNECT ?? '127.0.0.1';
-const SITE = process.env.PUSH_SITE ? '&site=' + encodeURIComponent(process.env.PUSH_SITE) : '';
+if (process.env.PUSH_SITE) {
+    console.warn('[config] PUSH_SITE больше не используется и игнорируется: креды БД outbox выбирает по имени сайта в OUTBOX_URL');
+}
 
 if (!VAPID_PUBLIC || !VAPID_PRIVATE || !BRIDGE_SECRET) {
     console.error('Нет VAPID-ключей: задай VAPID_PUBLIC/VAPID_PRIVATE в env или в одном из файлов (см. шапку push-worker.js)');
@@ -139,7 +142,7 @@ function call(method, url, body) {
 }
 
 async function fetchJobs() {
-    const res = await call('GET', `${OUTBOX_URL}?secret=${encodeURIComponent(BRIDGE_SECRET)}${SITE}`);
+    const res = await call('GET', `${OUTBOX_URL}?secret=${encodeURIComponent(BRIDGE_SECRET)}`);
     if (res.status >= 300 && res.status < 400) {
         state('redirect', res.status, '→', res.location,
             '— outbox должен отвечать сразу: после редиректа запрос уйдёт не с 127.0.0.1 и PHP ответит 403');
@@ -195,7 +198,7 @@ async function drain() {
 }
 
 async function post(body) {
-    const res = await call('POST', OUTBOX_URL + (SITE ? '?' + SITE.slice(1) : ''), JSON.stringify({ secret: BRIDGE_SECRET, ...body }));
+    const res = await call('POST', OUTBOX_URL, JSON.stringify({ secret: BRIDGE_SECRET, ...body }));
     if (res.status !== 200) console.error('[outbox] POST', res.status, JSON.stringify(body).slice(0, 80));
 }
 
