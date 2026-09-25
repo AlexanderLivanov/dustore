@@ -503,12 +503,17 @@ $stmt->execute([
                         </button>
                     <?php else: ?>
                         <?php
-                        /* profile_picture лежит прямо в сессии (её пишут и upload_avatar.php,
-                           и me.php при каждом обновлении фото) — отдельный SELECT ради иконки
+                        /* profile_picture лежит прямо в сессии (её пишет upload_avatar.php
+                           при каждом обновлении фото) — отдельный SELECT ради иконки
                            в хедере не нужен. Без фото — прежняя svg-заглушка человечка. */
                         $__hdrAvatar = trim((string)($_SESSION['USERDATA']['profile_picture'] ?? ''));
+                        /* Ник при регистрации необязателен (почта, Telegram без username), а профиль
+                           открывается только по нику. Без ника — на /me: там окно выбора ника. */
+                        $__hdrNick    = (string)($_SESSION['USERDATA']['username'] ?? '');
+                        $__hdrProfile = $__hdrNick !== '' ? '/player/' . rawurlencode($__hdrNick) : '/me';
+                        $__hdrLabel   = $__hdrNick !== '' ? $__hdrNick : ($_SESSION['USERDATA']['first_name'] ?? 'Профиль');
                         ?>
-                        <button class="button" onclick="location.href='/player/<?= htmlspecialchars($_SESSION['USERDATA']['username']) ?>'">
+                        <button class="button" data-profile-btn onclick="location.href='<?= htmlspecialchars($__hdrProfile) ?>'">
                             <?php if ($__hdrAvatar !== ''): ?>
                                 <img class="header-avatar" src="<?= htmlspecialchars($__hdrAvatar) ?>" alt="" width="22" height="22">
                             <?php else: ?>
@@ -518,7 +523,7 @@ $stmt->execute([
                                     <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
                                 </svg>
                             <?php endif; ?>
-                            <span class="header-profile-label"><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></span>
+                            <span class="header-profile-label"><?= htmlspecialchars((string)$__hdrLabel) ?></span>
                         </button>
                     <?php endif; ?>
                 </div>
@@ -1795,12 +1800,12 @@ $stmt->execute([
                 if (chip && menu && right) {
                     const home = right.parentNode;
                     const mq = window.matchMedia('(max-width: 900px)');
-                    const profileBtn = right.querySelector('.button[onclick*="/player/"], .button[onclick*="/login"]');
+                    const profileBtn = right.querySelector('.button[data-profile-btn], .button[onclick*="/login"]');
                     // Ищем подпись по классу: в кнопке есть служебные span'ы Float3D (слой, тень-копия),
                     // и textContent по любому из них снёс бы аватарку
                     const profileLabel = profileBtn ? (profileBtn.querySelector('.header-profile-label') || profileBtn) : null;
                     const profileName = profileLabel ? profileLabel.textContent.trim() : '';
-                    const isAuth = !!(profileBtn && profileBtn.getAttribute('onclick').indexOf('/player/') !== -1);
+                    const isAuth = !!(profileBtn && profileBtn.hasAttribute('data-profile-btn'));
 
                     chip.addEventListener('click', function(e) {
                         e.stopPropagation();

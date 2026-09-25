@@ -301,10 +301,11 @@ function format_last_seen(int $ts): string
                              alt="Аватар" class="user-avatar">
                     </div>
                     <?php if ($is_owner): ?>
-                    <a href="/me" class="edit-profile-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M14.647 4.081a.724.724 0 0 0 1.08.448c2.439-1.485 5.23 1.305 3.745 3.744a.724.724 0 0 0 .447 1.08c2.775.673 2.775 4.62 0 5.294a.724.724 0 0 0-.448 1.08c1.485 2.439-1.305 5.23-3.744 3.745a.724.724 0 0 0-1.08.447c-.673 2.775-4.62 2.775-5.294 0a.724.724 0 0 0-1.08-.448c-2.439 1.485-5.23-1.305-3.745-3.744a.724.724 0 0 0-.447-1.08c-2.775-.673-2.775-4.62 0-5.294a.724.724 0 0 0 .448-1.08c-1.485-2.439 1.305-5.23 3.744-3.745a.722.722 0 0 0 1.08-.447c.673-2.775 4.62-2.775 5.294 0zm-2.647 4.919a3 3 0 1 0 0 6a3 3 0 0 0 0-6"/>
+                    <?php /* Открывает окно «Изменить профиль» (swad/static/elements/profile_edit.php).
+                             href — на случай, если скрипт не успел: #edit-profile тоже открывает окно. */ ?>
+                    <a href="#edit-profile" class="edit-profile-btn" role="button" data-open-profile-edit aria-haspopup="dialog" aria-controls="profileEdit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                         </svg>
                         Изменить профиль
                     </a>
@@ -467,7 +468,11 @@ function format_last_seen(int $ts): string
                 <?php endif; ?>
             </div>
 
-            <?php if ($is_owner) require_once('swad/static/elements/user_settings.php'); ?>
+            <?php if ($is_owner) {
+                require_once('swad/static/elements/user_settings.php');
+                $pe_user = $user;
+                require_once('swad/static/elements/profile_edit.php');
+            } ?>
 
             <?php
             $games_main   = array_slice($games, 0, 6);
@@ -765,33 +770,64 @@ function format_last_seen(int $ts): string
                     <?php if ($is_owner): ?>
                     <h2 class="section-title">Безопасность и аккаунт</h2>
                     <div style="display:grid;gap:20px;">
+                        <?php /* Формы уходят в swad/controllers/account_security.php через fetch (скрипт ниже)
+                                 и показывают ответ прямо в форме. Раньше они слали POST на /me,
+                                 и после отправки человека выкидывало на старую страницу аккаунта. */ ?>
                         <div style="background:rgba(255,255,255,.03);padding:20px;border-radius:10px;">
                             <?php $owner_data = $_SESSION['USERDATA']; ?>
                             <?php if (empty($owner_data['email'])): ?>
                             <h3 style="margin-top:0;">Привязка почты</h3>
                             <p style="color:#888;font-size:.9em;">Для тех, кто скучает по 2007</p>
-                            <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+                            <form method="POST" action="/swad/controllers/account_security.php" data-account-form style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
                                 <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="bind_email">
+                                <p class="us-msg" role="alert"></p>
                                 <input type="email" name="email" required placeholder="Email" autocomplete="email" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="password" required placeholder="Пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <button name="bind_email" style="padding:10px 20px;background:#12556d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
+                                <input type="password" name="password" required minlength="8" placeholder="Пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <input type="password" name="confirm_password" required minlength="8" placeholder="Повторите пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <button style="padding:10px 20px;background:#12556d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Привязать почту</button>
                             </form>
                             <?php else: ?>
                             <h3 style="margin-top:0;">Почта</h3>
                             <p>Email: <b><?= htmlspecialchars($owner_data['email']) ?></b></p>
-                            <?php if (!$owner_data['email_verified']): ?>
+                            <?php if (empty($owner_data['email_verified'])): ?>
                             <div style="color:#f4a53a;background:rgba(244,165,58,.1);border:1px solid rgba(244,165,58,.3);padding:10px;border-radius:8px;margin-bottom:15px;">⚠️ Почта не подтверждена</div>
                             <?php endif; ?>
                             <h3>Смена пароля</h3>
-                            <form method="POST" action="/me" style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+                            <form method="POST" action="/swad/controllers/account_security.php" data-account-form style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
                                 <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="change_password">
+                                <p class="us-msg" role="alert"></p>
                                 <input type="password" name="current_password" required placeholder="Текущий пароль" autocomplete="current-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="new_password" required placeholder="Новый пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <input type="password" name="confirm_password" required placeholder="Повторите пароль" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
-                                <button name="change_password" style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Обновить пароль</button>
+                                <input type="password" name="new_password" required minlength="8" placeholder="Новый пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <input type="password" name="confirm_password" required minlength="8" placeholder="Повторите пароль" autocomplete="new-password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:white;">
+                                <button style="padding:10px 20px;background:#c32178;color:white;border:none;border-radius:8px;cursor:pointer;font-size:.95em;">Обновить пароль</button>
                             </form>
                             <?php endif; ?>
+                        </div>
+
+                        <?php /* Перенесено со старой страницы /me — больше этих данных нигде не было */ ?>
+                        <div style="background:rgba(255,255,255,.03);padding:20px;border-radius:10px;">
+                            <h3 style="margin-top:0;">Об аккаунте</h3>
+                            <?php if (!empty($owner_data['telegram_id']) && (int)$owner_data['telegram_id'] > 0): ?>
+                            <?php /* Отрицательный telegram_id — старый temp_id анонима, показывать его незачем */ ?>
+                            <p>Telegram ID: <?= htmlspecialchars((string)$owner_data['telegram_id']) ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($owner_data['telegram_username'])): ?>
+                            <p>Telegram: <a href="https://t.me/<?= rawurlencode((string)$owner_data['telegram_username']) ?>" target="_blank" rel="noopener" style="color:#ff5ba8;">@<?= htmlspecialchars((string)$owner_data['telegram_username']) ?></a></p>
+                            <?php endif; ?>
+                            <p>Тип учётной записи:
+                                <?php
+                                /* printUserPrivileges() на неизвестной роли печатает «Неверный идентификатор» —
+                                   для обычного пользователя это выглядит как ошибка в аккаунте */
+                                $roleName = $curr_user->getRoleName($curr_user->getUserRole($userID, "global"));
+                                if (in_array($roleName, ['creator', 'user', 'employee', 'owner', 'moder', 'admin'], true)) {
+                                    $curr_user->printUserPrivileges($roleName);
+                                } else {
+                                    echo 'Обычный пользователь';
+                                }
+                                ?>
+                            </p>
                         </div>
 
                         <div style="background:rgba(255,255,255,.03);padding:20px;border-radius:10px;">
@@ -825,6 +861,39 @@ function format_last_seen(int $ts): string
         </div><!-- /.profile-right -->
     </div>
 </section>
+
+<?php if ($is_owner): ?>
+<script>
+// Формы «Безопасности»: отправка без перехода, ответ — прямо в форме
+document.querySelectorAll('[data-account-form]').forEach((form) => {
+    const msg = form.querySelector('.us-msg');
+    const btn = form.querySelector('button');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        msg.className = 'us-msg';
+        msg.textContent = '';
+        let data;
+        try {
+            // getAttribute, а не form.action: в форме есть поле name="action",
+            // и form.action вернул бы это поле, а не адрес (DOM clobbering)
+            const res = await fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': form.elements.csrf.value },
+                body: new FormData(form),
+            });
+            data = await res.json();
+        } catch (err) {
+            data = { ok: false, error: 'Нет связи с сервером, попробуйте ещё раз' };
+        }
+        msg.className = 'us-msg ' + (data.ok ? 'is-ok' : 'is-error');
+        msg.textContent = data.ok ? data.message : (data.error || 'Не получилось');
+        if (data.ok) form.querySelectorAll('input[type="password"]').forEach((i) => { i.value = ''; });
+        btn.disabled = false;
+    });
+});
+</script>
+<?php endif; ?>
 
 <!-- Модалка достижений -->
 <div class="modal" id="achievementModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);backdrop-filter:blur(10px);z-index:1000;align-items:center;justify-content:center;">
