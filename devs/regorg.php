@@ -27,20 +27,8 @@ $error_msg = '';
 // ── Fire-and-forget: вызываем notify_worker.php без ожидания ответа ───────
 function dispatchNotifications(array $params): void
 {
-    $body = http_build_query($params);
-    $len  = strlen($body);
-    $req  = "POST /devs/notify_worker.php HTTP/1.1\r\n"
-        . "Host: localhost\r\n"
-        . "Content-Type: application/x-www-form-urlencoded\r\n"
-        . "Content-Length: {$len}\r\n"
-        . "Connection: close\r\n\r\n"
-        . $body;
-
-    $sock = @fsockopen('127.0.0.1', 80, $errno, $errstr, 0.2);
-    if (!$sock) return;
-    stream_set_blocking($sock, false); // не ждём ответа вообще
-    fwrite($sock, $req);
-    fclose($sock);
+    require_once __DIR__ . '/../swad/controllers/loopback.php';
+    loopback_fire('/devs/notify_worker.php', http_build_query($params));
 }
 
 // ── POST: создание студии ─────────────────────────────────────────────────
