@@ -13,6 +13,14 @@ if ($myId <= 0) { http_response_code(401); exit('{"ok":false}'); }
 
 $sub = json_decode(file_get_contents('php://input'), true) ?: [];
 $endpoint = (string)($sub['endpoint'] ?? '');
+
+// выключатель «Уведомления» в профиле мобилки: убираем именно это устройство
+if (!empty($sub['unsubscribe'])) {
+    if ($endpoint === '') exit('{"ok":false,"error":"bad_sub"}');
+    $db = (new Database())->connect('dustore');
+    $db->prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?")->execute([$endpoint, $myId]);
+    exit('{"ok":true}');
+}
 $p256dh   = (string)($sub['keys']['p256dh'] ?? '');
 $auth     = (string)($sub['keys']['auth'] ?? '');
 if ($endpoint === '' || $p256dh === '' || $auth === '') exit('{"ok":false,"error":"bad_sub"}');

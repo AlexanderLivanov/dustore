@@ -316,11 +316,39 @@ body.moonlight-theme .menu { background: rgba(16, 23, 40, .96); }
 .b-time { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px; font-size: 0.66rem; color: var(--ch-dim); }
 .msg.mine .b-time { color: rgba(255, 255, 255, 0.7); }
 
-/* ── Галочки прочтения ── */
-.ticks { display: inline-flex; flex: none; color: rgba(255, 255, 255, 0.6); }
-.ticks .tick-b { opacity: 0; transition: opacity .25s ease; }
-.ticks.read { color: #fff; }
-.ticks.read .tick-b { opacity: 1; }
+/* ── Статусы своего сообщения ──
+   Раньше «прочитано» отличалось от «отправлено» только белым против 60% белого
+   на розовом пузыре — на глаз почти не различимо. Теперь три явных состояния:
+   ✓ (тускло) → ✓✓ (тускло) → ✓✓ цветные с лёгким свечением. Цвет «прочитано»
+   берём контрастный к пузырю: холодный циан на розовом, тёплый на студийном. */
+.ticks { display: inline-flex; align-items: center; flex: none; color: rgba(255, 255, 255, 0.62); --tick-read: #8ff7ff; }
+.ticks svg { overflow: visible; }
+.ticks .tick-b { opacity: 0; transform: translateX(-3px); transition: opacity .25s ease, transform .25s ease; }
+.ticks.dlv .tick-b, .ticks.read .tick-b { opacity: 1; transform: none; }
+.ticks.read { color: var(--tick-read); filter: drop-shadow(0 0 3px rgba(143, 247, 255, .55)); }
+.room.is-studio .ticks { --tick-read: #fff4b8; }
+.room.is-studio .ticks.read { filter: drop-shadow(0 0 3px rgba(255, 236, 150, .6)); }
+body.moonlight-theme .ticks { --tick-read: #b8fff0; }
+.ticks.clock { color: rgba(255, 255, 255, .7); }
+.ticks.clock .clock-h { transform-origin: 8px 8px; animation: tick-spin 1.6s linear infinite; }
+@keyframes tick-spin { to { transform: rotate(360deg); } }
+.ticks.fail { width: 15px; height: 15px; border-radius: 50%; justify-content: center; background: var(--ch-danger); color: #fff; font-weight: 800; font-size: .66rem; }
+@media (prefers-reduced-motion: reduce) { .ticks.clock .clock-h { animation: none; } }
+
+/* в списке бесед: статус последнего своего сообщения рядом со временем */
+.c-time { display: inline-flex; align-items: center; gap: 4px; }
+.c-time .ticks { color: var(--ch-dim); --tick-read: var(--ch-accent-hi); }
+.c-time .ticks.read { filter: none; }
+.card.studio .c-time .ticks { --tick-read: var(--ch-studio); }
+
+/* оптимистичная отправка */
+.msg.pending .bubble { opacity: .78; }
+.msg.pending.failed .bubble { opacity: 1; box-shadow: inset 0 0 0 1.5px var(--ch-danger); }
+.msg.pending .quote, .msg.pending .m-img { pointer-events: none; }
+.m-fail { display: inline-flex; gap: 4px; flex: none; }
+.m-fail button { width: 28px; height: 28px; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    background: rgba(255, 107, 138, .16); color: var(--ch-danger); font-size: 1.05rem; line-height: 1; }
+.m-fail button:hover { background: var(--ch-danger); color: #fff; }
 
 /* ── Действия у сообщения: «⋯» при наведении, иконка свайпа ── */
 .m-more { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; display: grid; place-items: center;
@@ -614,3 +642,37 @@ html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
 @media (max-width: 480px) { :root { --ch-header: 58px; } }
 
 @media (prefers-reduced-motion: reduce) { .profile, .toast { transition: none; } .re-art { animation: none; } }
+
+/* ════════════════════ ОБОИ ════════════════════
+   Фон треда рисуется инлайн-стилем (пресет или фото). Чтобы на любой картинке
+   читалось: входящие пузыри плотнее и с blur, разделители дней — «пилюли». */
+.room.has-wp .thread { background-color: #0b0512; }
+.room.has-wp .msg.them .bubble { background: rgba(22, 10, 32, .82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+body.moonlight-theme .room.has-wp .msg.them .bubble { background: rgba(10, 16, 32, .84); }
+.room.has-wp .day { align-self: center; padding: 3px 11px; border-radius: 999px; color: #fff; font-weight: 600;
+    background: rgba(10, 4, 16, .55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.room.has-wp .day::before, .room.has-wp .day::after { display: none; }
+.room.has-wp .more-btn, .room.has-wp .thread > .empty { background: rgba(10, 4, 16, .6); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; }
+.room.has-wp .thread > .empty { padding: 12px 18px; border-radius: 16px; }
+
+.wp-card { width: min(460px, 100%); }
+.wp-preview { height: 150px; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
+    background: #0b0512 radial-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px) 0 0 / 22px 22px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.wp-b { max-width: 70%; padding: 7px 12px; border-radius: 16px; font-size: .8rem; line-height: 1.35; }
+.wp-b.them { align-self: flex-start; background: rgba(22, 10, 32, .82); border-bottom-left-radius: 5px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.wp-b.mine { align-self: flex-end; background: var(--ch-bubble-out); color: #fff; border-bottom-right-radius: 5px; }
+.wp-scope { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 14px 0 12px; padding: 4px; border-radius: 12px; background: var(--ch-inset); }
+.wp-scope button { padding: 8px 10px; border: 0; border-radius: 9px; background: none; color: var(--ch-muted); font: inherit; font-size: .84rem; font-weight: 600; cursor: pointer; }
+.wp-scope button.on { background: var(--ch-grad); color: #fff; }
+.wp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.wp-tile { display: flex; flex-direction: column; gap: 5px; padding: 0; border: 0; background: none; color: var(--ch-muted); font: inherit; font-size: .7rem; cursor: pointer; text-align: center; }
+.wp-tile i { display: grid; place-items: center; aspect-ratio: 3 / 4; border-radius: 12px; background: var(--ch-inset); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); transition: box-shadow .15s ease, transform .15s ease; }
+.wp-tile:hover i { transform: translateY(-2px); }
+.wp-tile.on i { box-shadow: 0 0 0 2px var(--ch-accent-hi), 0 6px 18px -8px var(--ch-accent); }
+.wp-tile.on { color: var(--ch-text); }
+.wp-tile.add i { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18); border: 1px dashed transparent; color: var(--ch-accent-hi); }
+.wp-tile.none i { background: #0b0512 radial-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px) 0 0 / 10px 10px; }
+.wp-note { margin: 10px 0 0; font-size: .76rem; color: var(--ch-dim); min-height: 1em; }
+.wp-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; }
+.wp-link { margin-right: auto; padding: 0; border: 0; background: none; color: var(--ch-muted); font: inherit; font-size: .82rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.wp-link:hover { color: var(--ch-text); }

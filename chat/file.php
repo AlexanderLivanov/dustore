@@ -5,7 +5,7 @@ declare(strict_types=1);
  *
  * Отдаёт файл только тому, у кого есть право: владельцу загрузки (например,
  * свой звук уведомлений или только что загруженная картинка) либо участнику
- * беседы, в которой вложение отправлено. Сам файл не проксируем — редирект
+ * беседы, в которой вложение отправлено или стоит обоями. Сам файл не проксируем — редирект
  * на подписанную ссылку в S3, живущую 10 минут.
  *
  * Редирект кэшируется браузером на 5 минут (private): картинки в треде при
@@ -41,6 +41,14 @@ if (!$allowed) {
                         WHERE m.file_id = ? AND m.deleted_at IS NULL");
     $q->execute([$id]);
     $convs = $q->fetchAll(PDO::FETCH_ASSOC);
+    // …или стоит обоями беседы (таблица появляется миграцией v3)
+    try {
+        $w = $db->prepare("SELECT DISTINCT w.conversation_id, c.type, c.studio_id
+                             FROM conversation_wallpapers w JOIN conversations c ON c.id = w.conversation_id
+                            WHERE w.file_id = ?");
+        $w->execute([$id]);
+        $convs = array_merge($convs, $w->fetchAll(PDO::FETCH_ASSOC));
+    } catch (PDOException $e) { }
     if ($convs) {
         $p = $db->prepare("SELECT 1 FROM conversation_participants WHERE conversation_id=? AND user_id=? LIMIT 1");
         $studios = null;

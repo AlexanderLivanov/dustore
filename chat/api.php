@@ -34,6 +34,20 @@ function chat_v2(PDO $db): bool {
 }
 $V2 = chat_v2($db);
 
+/** v3: «доставлено» + обои. Тот же приём, что и у v2: включается миграцией. */
+function chat_v3(PDO $db): bool {
+    if (($_SESSION['chat_v3'] ?? false) === true) return true;
+    try {
+        $db->query("SELECT last_delivered_message_id FROM conversation_participants LIMIT 0");
+        $db->query("SELECT studio_last_delivered_id FROM conversations LIMIT 0");
+        $db->query("SELECT 1 FROM conversation_wallpapers LIMIT 0");
+    } catch (PDOException $e) {
+        return false;
+    }
+    return $_SESSION['chat_v3'] = true;
+}
+$V3 = $V2 && chat_v3($db);
+
 function out($d): void { echo json_encode($d, JSON_UNESCAPED_UNICODE); exit; }
 
 if (empty($_SESSION['USERDATA'])) out(['ok' => false, 'error' => 'auth']);
@@ -47,6 +61,40 @@ $db->prepare("UPDATE users SET last_activity=NOW()
 
 $myStudioIds = get_user_studio_ids($db, $myId);
 $action      = $_POST['action'] ?? $_GET['action'] ?? '';
+
+/**
+ * «Доставлено» = клиент получателя скачал беседу до этого сообщения.
+ * Двигаем указатель, когда получатель вообще онлайн на сайте: хедер опрашивает
+ * unread_total, открыт список чатов или тред. Как в TG: две серые галочки —
+ * «дошло до устройства», две яркие — «открыл и увидел».
+ * Один UPDATE…JOIN на все беседы разом, трогает только отставшие строки.
+ * Троттлинг через сессию — не чаще раза в 4 секунды на пользователя.
+ */
+function mark_delivered(PDO $db, int $myId, array $myStudioIds, bool $force = false): void {
+    $now = time();
+    if (!$force && ($_SESSION['chat_dlv_at'] ?? 0) > $now - 4) return;
+    $_SESSION['chat_dlv_at'] = $now;
+    $db->prepare("UPDATE conversation_participants p JOIN conversations c ON c.id = p.conversation_id
+                     SET p.last_delivered_message_id = c.last_message_id
+                   WHERE p.user_id = ? AND c.last_message_id IS NOT NULL
+                     AND COALESCE(p.last_delivered_message_id, 0) < c.last_message_id")->execute([$myId]);
+    if ($myStudioIds) {
+        $in = implode(',', array_fill(0, count($myStudioIds), '?'));
+        $db->prepare("UPDATE conversations SET studio_last_delivered_id = last_message_id
+                       WHERE type='studio' AND studio_id IN ($in) AND last_message_id IS NOT NULL
+                         AND COALESCE(studio_last_delivered_id, 0) < last_message_id")->execute($myStudioIds);
+    }
+}
+if ($V3 && in_array($action, ['list', 'unread_total', 'thread'], true)) {
+    mark_delivered($db, $myId, $myStudioIds, $action === 'thread');
+}
+
+/** Статус своего последнего сообщения для карточки списка: sent|delivered|read. */
+function tick_state(int $msgId, int $delivered, int $read): string {
+    if ($read >= $msgId) return 'read';
+    if ($delivered >= $msgId) return 'delivered';
+    return 'sent';
+}
 
 /* =================== резолверы бесед =================== */
 function resolve_dm(PDO $db, int $a, int $b): int {
@@ -88,7 +136,7 @@ function send_notification(PDO $db, int $userId, string $text, string $title = '
     $db->prepare("INSERT INTO notifications(user_id,title,message,action,status,date) VALUES(?,?,?,?,'unread',NOW())")
        ->execute([$userId, $title, $text, $link]);
     $nid=(int)$db->lastInsertId();
-    if (function_exists('push_enqueue_user')) push_enqueue_user($db, $userId, 'Уведомление · Dustore', $text);
+    if (function_exists('push_enqueue_user')) push_enqueue_user($db, $userId, $title !== 'Dustore' ? $title : 'Уведомление · Dustore', $text, '/chat/?system=1');
     if (function_exists('ws_notify')) ws_notify(ensure_system_conv($db,$userId), [$userId]);
     return $nid;
 }
@@ -143,11 +191,15 @@ if ($action === 'list') {
         $inC = implode(',', array_fill(0, count($convIds), '?'));
 
         // 2 запрос: клиент каждой беседы
-        $cst = $db->prepare("SELECT conversation_id, user_id FROM conversation_participants
+        $dlvCol = $GLOBALS['V3'] ? ', last_delivered_message_id AS dlv' : ', 0 AS dlv';
+        $cst = $db->prepare("SELECT conversation_id, user_id, last_read_message_id AS rd{$dlvCol} FROM conversation_participants
                               WHERE conversation_id IN ($inC) AND role='customer'");
         $cst->execute($convIds);
-        $custOf = [];
-        foreach ($cst->fetchAll(PDO::FETCH_ASSOC) as $r) $custOf[(int)$r['conversation_id']] = (int)$r['user_id'];
+        $custOf = []; $ptrOf = [];
+        foreach ($cst->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $custOf[(int)$r['conversation_id']] = (int)$r['user_id'];
+            $ptrOf[(int)$r['conversation_id']]  = [(int)$r['dlv'], (int)$r['rd']];
+        }
 
         // 3 запрос: непрочитанное одним GROUP BY вместо запроса на беседу
         $ust = $db->prepare("
@@ -177,14 +229,15 @@ if ($action === 'list') {
                 'name'   => $users[$cust]['username'] ?? ('user#' . $cust),
                 'avatar' => $users[$cust]['avatar'] ?? null,
                 'tag'    => $studios[(int)$r['studio_id']]['name'] ?? null,
-            ], $myId, $unreadOf[$cid] ?? 0);
+            ], $myId, $unreadOf[$cid] ?? 0, $ptrOf[$cid] ?? [0, 0]);
         }
     } else {
         ensure_system_conv($db, $myId);   // блок «Уведомления» всегда есть
+        $sDlv = $V3 ? ', c.studio_last_delivered_id' : ', 0 AS studio_last_delivered_id';
 
         $st = $db->prepare("
             SELECT c.id, c.type, c.studio_id, c.last_message_id, c.last_message_at,
-                   p.last_read_message_id,
+                   p.last_read_message_id, c.studio_last_read_id{$sDlv},
                    m.sender_id AS l_sender, m.body AS l_body, m.created_at AS l_at, m.deleted_at AS l_del{$lFile}
               FROM conversations c
               JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = ?
@@ -200,11 +253,16 @@ if ($action === 'list') {
         $inC = implode(',', array_fill(0, count($convIds), '?'));
 
         // собеседники всех личных бесед одним запросом
-        $ost = $db->prepare("SELECT conversation_id, user_id FROM conversation_participants
+        // заодно их указатели «доставлено/прочитано» — для галочек в карточке
+        $dlvCol = $V3 ? ', last_delivered_message_id AS dlv' : ', 0 AS dlv';
+        $ost = $db->prepare("SELECT conversation_id, user_id, last_read_message_id AS rd{$dlvCol} FROM conversation_participants
                               WHERE conversation_id IN ($inC) AND user_id <> ?");
         $ost->execute([...$convIds, $myId]);
-        $peerOf = [];
-        foreach ($ost->fetchAll(PDO::FETCH_ASSOC) as $r) $peerOf[(int)$r['conversation_id']] = (int)$r['user_id'];
+        $peerOf = []; $ptrOf = [];
+        foreach ($ost->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $peerOf[(int)$r['conversation_id']] = (int)$r['user_id'];
+            $ptrOf[(int)$r['conversation_id']]  = [(int)$r['dlv'], (int)$r['rd']];
+        }
 
         // непрочитанное одним GROUP BY
         $ust = $db->prepare("
@@ -246,21 +304,27 @@ if ($action === 'list') {
             }
             // «Уведомления» живут в таблице notifications, а не в messages
             if ($r['type'] === 'system') { $cards[] = system_card($db, $cid, $peer, $myId); continue; }
-            $cards[] = build_card($r, $peer, $myId, $unreadOf[$cid] ?? 0);
+            // в беседе со студией «собеседник» — вся команда, её указатели в conversations
+            $ptr = $r['type'] === 'studio'
+                ? [(int)($r['studio_last_delivered_id'] ?? 0), (int)($r['studio_last_read_id'] ?? 0)]
+                : ($ptrOf[$cid] ?? [0, 0]);
+            $cards[] = build_card($r, $peer, $myId, $unreadOf[$cid] ?? 0, $ptr);
         }
     }
     out(['ok' => true, 'conversations' => $cards]);
 }
 
 /** Последнее сообщение уже приехало в строке ($r['l_*']) — БД больше не трогаем. */
-function build_card(array $r, array $peer, int $myId, int $unread): array {
+function build_card(array $r, array $peer, int $myId, int $unread, array $ptr = [0, 0]): array {
     $last = null;
     if (!empty($r['last_message_id']) && $r['l_at'] !== null) {
         $f = $GLOBALS['lastFiles'][(int)($r['l_file'] ?? 0)] ?? null;
+        $mine = (int)$r['l_sender'] === $myId;
         $last = [
             'body' => $r['l_del'] ? 'сообщение удалено' : preview_text((string)msg_decrypt((string)$r['l_body']), $f),
             'at'   => $r['l_at'],
-            'mine' => (int)$r['l_sender'] === $myId,
+            'mine' => $mine,
+            'state'=> $mine ? tick_state((int)$r['last_message_id'], $ptr[0], $ptr[1]) : null,
         ];
     }
     return ['id' => (int)$r['id'], 'type' => $r['type'], 'peer' => $peer,
@@ -315,7 +379,11 @@ if ($action === 'unread_total') {
             ON p.conversation_id = m.conversation_id AND p.user_id = ? AND p.archived = 0
          WHERE m.id > p.last_read_message_id AND m.sender_id <> ? AND m.deleted_at IS NULL");
     $st->execute([$myId, $myId]);
-    out(['ok' => true, 'total' => (int)$st->fetchColumn()]);
+    $total = (int)$st->fetchColumn();
+    // непрочитанные уведомления — отдельно: мобильное меню и значок приложения показывают сумму
+    $nq = $db->prepare("SELECT COUNT(*) FROM notifications WHERE user_id=? AND status='unread'");
+    $nq->execute([$myId]);
+    out(['ok' => true, 'total' => $total, 'notifications' => (int)$nq->fetchColumn()]);
 }
 
 /* =================== ACTION: search_users =================== */
@@ -370,6 +438,10 @@ if ($action === 'thread') {
     $before = (int)($_REQUEST['before_id'] ?? 0);
     $LIMIT  = 60;
     $hasMore = false;
+    /* seen=0 — вкладка в фоне / окно без фокуса. Раньше поллинг фоновой вкладки
+       отмечал всё прочитанным: у собеседника загорались «прочитано», хотя
+       человек ничего не видел. Теперь в фоне — только «доставлено». */
+    $seen = (string)($_REQUEST['seen'] ?? '1') !== '0';
 
     /* «Уведомления»: тред собирается из таблицы notifications. Пагинация та же
        (after_id / before_id), только по notifications.id. Открыл вкладку —
@@ -392,7 +464,7 @@ if ($action === 'thread') {
             $rows = array_reverse($rows);
         }
         $msgs = array_map('notif_as_msg', $rows);
-        $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
+        if ($seen) $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
         out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId)]);
     }
 
@@ -425,34 +497,47 @@ if ($action === 'thread') {
     $msgs = enrich_messages($db, $cid, $rows, $myId, $V2);
     // ФИКС прочтения: отмечаем по НАСТОЯЩЕМУ последнему id беседы, обе ветки указателя
     $trueMax=(int)$c['last_message_id'];
-    if($trueMax>0){
+    if($trueMax>0 && $seen){
         if($c['_part']) $db->prepare("UPDATE conversation_participants SET last_read_message_id=GREATEST(COALESCE(last_read_message_id,0),?)
                                        WHERE conversation_id=? AND user_id=?")->execute([$trueMax,$cid,$myId]);
         if($c['_isStudioStaff']) $db->prepare("UPDATE conversations SET studio_last_read_id=GREATEST(COALESCE(studio_last_read_id,0),?) WHERE id=?")->execute([$trueMax,$cid]);
     }
     out(['ok'=>true,'messages'=>$msgs,'has_more'=>$hasMore,'header'=>thread_header($db,$c,$myId),
-         'pins'=>$V2 ? conv_pins($db,$cid) : []]);
+         'pins'=>$V2 ? conv_pins($db,$cid) : [],
+         'wallpaper'=>$V3 ? conv_wallpaper($db,$cid,$myId) : null]);
+}
+/**
+ * Указатели собеседника: [доставлено, прочитано]. «Прочитано» всегда
+ * подразумевает «доставлено», поэтому доставленное = max из двух.
+ */
+function peer_ptrs(PDO $db, int $cid, int $peerUser): array {
+    $dlv = $GLOBALS['V3'] ? 'last_delivered_message_id' : '0';
+    $q = $db->prepare("SELECT last_read_message_id, {$dlv} FROM conversation_participants WHERE conversation_id=? AND user_id=?");
+    $q->execute([$cid, $peerUser]);
+    $r = $q->fetch(PDO::FETCH_NUM) ?: [0, 0];
+    return [max((int)$r[1], (int)$r[0]), (int)$r[0]];
 }
 function thread_header(PDO $db, array $c, int $myId): array {
-    if($c['type']==='system') return ['kind'=>'system','peer_id'=>0,'studio'=>false,'name'=>'Уведомления','avatar'=>null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>0];
+    $cid = (int)$c['id'];
+    if($c['type']==='system') return ['kind'=>'system','peer_id'=>0,'studio'=>false,'name'=>'Уведомления','avatar'=>null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>0,'peer_last_delivered_id'=>0];
     if($c['type']==='studio'){
         $s=(get_studios_meta($db,[(int)$c['studio_id']]))[(int)$c['studio_id']] ?? [];
         if($c['_isStudioStaff']){
-            $cust=customer_of($db,(int)$c['id']); $u=(get_users_meta($db,[$cust]))[$cust] ?? [];
+            $cust=customer_of($db,$cid); $u=(get_users_meta($db,[$cust]))[$cust] ?? [];
             $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$cust]); $seen=$la->fetchColumn() ?: null;
-            $pr=$db->prepare("SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=? AND user_id=?");
-            $pr->execute([(int)$c['id'],$cust]); $peerRead=(int)($pr->fetchColumn() ?: 0);
-            return ['kind'=>'user','peer_id'=>$cust,'studio'=>true,'name'=>$u['username'] ?? ('user#'.$cust),'avatar'=>$u['avatar'] ?? null,'tag'=>$s['name'] ?? null,'last_seen'=>$seen,'peer_last_read_id'=>$peerRead];
+            [$dlv,$rd]=peer_ptrs($db,$cid,$cust);
+            return ['kind'=>'user','peer_id'=>$cust,'studio'=>true,'name'=>$u['username'] ?? ('user#'.$cust),'avatar'=>$u['avatar'] ?? null,'tag'=>$s['name'] ?? null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
         }
-        return ['kind'=>'studio','peer_id'=>(int)$c['studio_id'],'studio'=>true,'name'=>$s['name'] ?? ('studio#'.$c['studio_id']),'avatar'=>$s['logo'] ?? null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>(int)($c['studio_last_read_id'] ?? 0)];
+        $rd=(int)($c['studio_last_read_id'] ?? 0);
+        $dlv=max($rd,(int)($c['studio_last_delivered_id'] ?? 0));
+        return ['kind'=>'studio','peer_id'=>(int)$c['studio_id'],'studio'=>true,'name'=>$s['name'] ?? ('studio#'.$c['studio_id']),'avatar'=>$s['logo'] ?? null,'tag'=>null,'last_seen'=>null,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
     }
     $o=$db->prepare("SELECT user_id FROM conversation_participants WHERE conversation_id=? AND user_id<>? LIMIT 1");
-    $o->execute([(int)$c['id'],$myId]); $peer=(int)$o->fetchColumn();
+    $o->execute([$cid,$myId]); $peer=(int)$o->fetchColumn();
     $u=(get_users_meta($db,[$peer]))[$peer] ?? [];
     $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$peer]); $seen=$la->fetchColumn() ?: null;
-    $pr=$db->prepare("SELECT last_read_message_id FROM conversation_participants WHERE conversation_id=? AND user_id=?");
-    $pr->execute([(int)$c['id'],$peer]); $peerRead=(int)($pr->fetchColumn() ?: 0);
-    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$peerRead];
+    [$dlv,$rd]=peer_ptrs($db,$cid,$peer);
+    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
 }
 
 /* =================== ACTION: send =================== */
@@ -635,12 +720,12 @@ function message_with_access(PDO $db, int $mid, int $myId, array $myStudioIds): 
  * Шаг 1 загрузки: запись pending + подписанные PUT-ссылки (файл и превью). */
 if ($action === 'upload_init') {
     need_v2($V2);
-    $purpose = ($_POST['purpose'] ?? 'chat') === 'sound' ? 'sound' : 'chat';
+    $purpose = in_array($_POST['purpose'] ?? 'chat', ['sound', 'wallpaper'], true) ? $_POST['purpose'] : 'chat';
     $name = trim((string)($_POST['name'] ?? 'file'));
     $name = mb_substr($name !== '' ? $name : 'file', 0, 200);
     $size = (int)($_POST['size'] ?? 0);
     $mime = strtolower(trim((string)($_POST['mime'] ?? ''))) ?: 'application/octet-stream';
-    $max  = $purpose === 'sound' ? CHAT_SOUND_MAX : CHAT_FILE_MAX;
+    $max  = ['sound' => CHAT_SOUND_MAX, 'wallpaper' => CHAT_WALLPAPER_MAX][$purpose] ?? CHAT_FILE_MAX;
     if ($size <= 0) out(['ok' => false, 'error' => 'empty']);
     if ($size > $max) out(['ok' => false, 'error' => 'too_big', 'max' => $max]);
     $kind = chat_kind_for($mime, $purpose);
@@ -766,6 +851,77 @@ if ($action === 'mark_all_read') {
         $db->prepare("UPDATE notifications SET status='read' WHERE user_id=? AND status='unread'")->execute([$myId]);
     }
     out(['ok' => true]);
+}
+
+/* =================== ОБОИ БЕСЕДЫ ===================
+ * Две записи на беседу максимум с точки зрения одного человека:
+ *   user_id=0  — общие, их ставит любой участник и видят оба;
+ *   user_id=me — личные, перекрывают общие только у меня.
+ * Пресеты рисуются CSS-градиентами на клиенте (ноль байт трафика),
+ * своё фото — обычный chat_files(kind=image), доступ через file.php.
+ */
+const CHAT_WP_PRESETS = ['aurora', 'dunes', 'synth', 'stars', 'mesh', 'noir', 'sunset', 'ocean', 'none'];
+
+function conv_wallpaper(PDO $db, int $cid, int $myId): array {
+    $q = $db->prepare("SELECT user_id, preset, file_id, dim, set_by, UNIX_TIMESTAMP(updated_at) AS ts
+                         FROM conversation_wallpapers WHERE conversation_id=? AND user_id IN (0, ?)");
+    $q->execute([$cid, $myId]);
+    $rows = [];
+    foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) $rows[(int)$r['user_id'] === 0 ? 'shared' : 'mine'] = $r;
+    $files = chat_files_by_ids($db, array_column($rows, 'file_id'));
+    $dto = function (?array $r) use ($files, $myId): ?array {
+        if (!$r) return null;
+        $f = $files[(int)($r['file_id'] ?? 0)] ?? null;
+        if (!$f && !$r['preset']) return null;   // файл пропал — считаем, что обоев нет
+        return ['preset' => $f ? null : $r['preset'], 'file_id' => $f ? (int)$f['id'] : null, 'url' => $f ? '/chat/file.php?id=' . (int)$f['id'] : null,
+                'thumb' => $f ? chat_file_dto($f)['thumb'] : null,
+                'dim' => (int)$r['dim'], 'by_me' => (int)$r['set_by'] === $myId, 'ts' => (int)$r['ts']];
+    };
+    $mine = $dto($rows['mine'] ?? null); $shared = $dto($rows['shared'] ?? null);
+    $active = $mine ?? $shared;
+    return ['active' => ($active && $active['preset'] !== 'none') ? $active : null,
+            'scope'  => $mine ? 'mine' : ($shared ? 'shared' : null),
+            'mine'   => $mine, 'shared' => $shared];
+}
+
+function need_v3(bool $v3): void {
+    if (!$v3) out(['ok' => false, 'error' => 'migration', 'message' => 'Нужно прогнать chat/migrate_v2.php']);
+}
+
+if ($action === 'wallpaper_set' || $action === 'wallpaper_reset') {
+    need_v3($V3);
+    $cid = (int)($_POST['conversation_id'] ?? 0);
+    $c = conv_access($db, $cid, $myId, $myStudioIds); if (!$c) out(['ok' => false, 'error' => 'forbidden']);
+    if ($c['type'] === 'system') out(['ok' => false, 'error' => 'readonly']);
+    $shared = ($_POST['scope'] ?? 'shared') !== 'mine';
+    $owner  = $shared ? 0 : $myId;
+
+    if ($action === 'wallpaper_reset') {
+        $db->prepare("DELETE FROM conversation_wallpapers WHERE conversation_id=? AND user_id=?")->execute([$cid, $owner]);
+    } else {
+        $preset = (string)($_POST['preset'] ?? '');
+        $fileId = (int)($_POST['file_id'] ?? 0);
+        $dim    = max(0, min(80, (int)($_POST['dim'] ?? 0)));
+        if ($fileId > 0) {
+            $fs = $db->prepare("SELECT 1 FROM chat_files WHERE id=? AND owner_id=? AND kind='image' AND status='ready'");
+            $fs->execute([$fileId, $myId]);
+            if (!$fs->fetchColumn()) out(['ok' => false, 'error' => 'bad_file']);
+            $preset = null;
+        } elseif (!in_array($preset, CHAT_WP_PRESETS, true)) {
+            out(['ok' => false, 'error' => 'bad_preset']);
+        } elseif ($preset === 'none' && $shared) {
+            // «без обоев для обоих» — это просто удаление общей записи
+            $db->prepare("DELETE FROM conversation_wallpapers WHERE conversation_id=? AND user_id=0")->execute([$cid]);
+            $preset = null;
+        }
+        if ($preset !== null || $fileId > 0) {
+            $db->prepare("REPLACE INTO conversation_wallpapers(conversation_id,user_id,preset,file_id,dim,set_by) VALUES(?,?,?,?,?,?)")
+               ->execute([$cid, $owner, $preset, $fileId ?: null, $dim, $myId]);
+        }
+    }
+    // общие обои меняют картинку у собеседника — толкнём его клиент
+    if ($shared && function_exists('ws_notify')) ws_notify($cid, ws_recipients($db, $cid, $myId));
+    out(['ok' => true, 'wallpaper' => conv_wallpaper($db, $cid, $myId)]);
 }
 
 /* =================== ACTION: settings / save_settings ===================

@@ -24,6 +24,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 const CHAT_FILE_MAX   = 50 * 1024 * 1024;   // 50 МБ
 const CHAT_SOUND_MAX  = 200 * 1024;         // 200 КБ
+const CHAT_WALLPAPER_MAX = 8 * 1024 * 1024;  // 8 МБ
 const CHAT_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const CHAT_SOUND_MIME = ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/aac', 'audio/mp4'];
 
@@ -58,6 +59,7 @@ function chat_new_key(string $name): string {
 /** Тип вложения по MIME. null — тип не принимаем для этой цели. */
 function chat_kind_for(string $mime, string $purpose): ?string {
     if ($purpose === 'sound') return in_array($mime, CHAT_SOUND_MIME, true) ? 'sound' : null;
+    if ($purpose === 'wallpaper') return in_array($mime, CHAT_IMAGE_MIME, true) ? 'image' : null;
     if (in_array($mime, CHAT_IMAGE_MIME, true)) return 'image';
     // исполняемое и html не принимаем: с подписанной ссылки браузер мог бы его отрисовать
     if (preg_match('~^(text/html|application/xhtml|image/svg)~', $mime)) return null;

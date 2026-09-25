@@ -60,12 +60,30 @@ class NotificationCenter
                     ':action' => $action
                 ]);
             }
-
-            return true;
         } catch (PDOException $e) {
             error_log("Error sending notifications: " . $e->getMessage());
             return false;
         }
+
+        /* Системный пуш на телефон/десктоп. Раньше уведомления только ложились
+           в таблицу и ждали, пока человек сам зайдёт на сайт. Пуш — «best
+           effort»: сбой очереди не должен ломать само уведомление, поэтому
+           отдельный try и вне транзакции записи. Клик ведёт во вкладку
+           «Уведомления» чата (на телефоне SW сам перепишет адрес на /m/chat). */
+        try {
+            $helpers = __DIR__ . '/../../chat/push_helpers.php';
+            if (is_file($helpers)) {
+                require_once $helpers;
+                if (function_exists('push_enqueue_user')) {
+                    foreach (array_unique(array_map('intval', (array)$user_ids)) as $uid) {
+                        push_enqueue_user($this->db, $uid, (string)$title, (string)$message, '/chat/?system=1');
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('[NotificationCenter] push: ' . $e->getMessage());
+        }
+        return true;
     }
 
     // Отметить уведомление как прочитанное

@@ -42,6 +42,8 @@ const ICON = {
   read:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l5 5L18 6"/><path d="M12 16l1 1L23 6"/></svg>',
   gear:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   file:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  retry: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>',
+  wall: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>',
   more:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
 };
 const avShape = p => p && p.kind === 'system' ? 'sys' : (p && p.kind === 'studio' ? 'sq' : 'round');
@@ -80,7 +82,8 @@ function toast(msg, err) {
 const state = {
   tab: 'personal', convId: 0, lastId: 0, firstId: 0, hasMore: false,
   draft: null, header: null, isSystem: false, listTimer: null, threadTimer: null,
-  peerLastRead: 0,
+  peerLastRead: 0, peerDelivered: 0,
+  wallpaper: null,          // что пришло с сервера: { active, scope, mine, shared }
   msgs: new Map(),          // id → сообщение (для меню, копирования, ответа)
   pins: [], pinIdx: 0,
   replyTo: null,            // { id, name, text }
@@ -160,6 +163,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { clearInterval(state.listTimer); clearInterval(state.threadTimer); }
   else { loadList(); if (state.convId) pollThread(); startListTimer(); startThreadTimer(); }
 });
+/* «Прочитано» ставим, только когда человек реально смотрит: вкладка видна И окно
+   в фокусе. Иначе сервер отметит лишь «доставлено». Вернулся в окно — сразу
+   дёргаем тред, чтобы собеседник увидел яркие галочки без задержки поллинга. */
+const isSeen = () => (document.visibilityState === 'visible' && document.hasFocus() ? 1 : 0);
+window.addEventListener('focus', () => { if (state.convId && state.lastId) pollThread(); });
 
 async function connectWS() {
   try {
@@ -207,7 +215,7 @@ async function loadList() {
               data-peer='${esc(JSON.stringify(c.peer))}' data-studio="${c.type === 'studio' ? 1 : 0}" data-system="${isSys ? 1 : 0}">
       <div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>
       <div class="c-main">
-        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span><span class="c-time">${c.ts ? fmtTime(c.ts) : ''}</span></div>
+        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span><span class="c-time">${c.last?.state ? `<span class="ticks ${c.last.state === 'delivered' ? 'dlv' : c.last.state}">${TICK_SVG}</span>` : ''}${c.ts ? fmtTime(c.ts) : ''}</span></div>
         <div class="c-last">${last}</div>
         ${c.peer.tag ? `<div class="c-tag">→ ${esc(c.peer.tag)}</div>` : ''}
       </div>
@@ -232,7 +240,8 @@ function showRoom(on) {
 function openConv(id, peer, isStudio, draft, isSystem) {
   state.convId = id; state.lastId = 0; state.firstId = 0; state.hasMore = false;
   state.draft = draft || null; state.isSystem = !!isSystem; state.header = { peer, isStudio };
-  state.msgs.clear(); state.pins = []; state.pinIdx = 0; state._pinSig = ''; state.peerLastRead = 0;
+  state.msgs.clear(); state.pins = []; state.pinIdx = 0; state._pinSig = ''; state.peerLastRead = 0; state.peerDelivered = 0;
+  applyWallpaper(null);
   cancelReply(); clearAtts();
 
   $('#room').classList.toggle('is-studio', !!isStudio);
@@ -241,6 +250,7 @@ function openConv(id, peer, isStudio, draft, isSystem) {
   $('#profile').classList.remove('open');
   $('#menu').hidden = true;
   $('#delConv').hidden = !!isSystem;
+  $('#wpOpen').hidden = !!isSystem || id <= 0;
   showRoom(true);
   renderPins();
 
@@ -261,7 +271,14 @@ function openConv(id, peer, isStudio, draft, isSystem) {
 function applyHeader(h) {
   if (!h) return;
   state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind };
+  if (state.header.peer && state.header.peer.name === '…' && h.name) {
+    state.header.peer = { kind: h.kind, id: h.peer_id, name: h.name, avatar: h.avatar };
+    $('#rhName').textContent = h.name;
+    $('#rhAv').className = 'av ' + avShape(state.header.peer); $('#rhAv').innerHTML = avatarHTML(state.header.peer);
+    $('#room').classList.toggle('is-studio', !!h.studio);
+  }
   state.peerLastRead = h.peer_last_read_id || 0;
+  state.peerDelivered = Math.max(h.peer_last_delivered_id || 0, state.peerLastRead);
   let sub;
   if (h.kind === 'system') sub = 'системные уведомления';
   else if (h.kind === 'studio') sub = 'официальный канал студии';
@@ -272,10 +289,13 @@ function applyHeader(h) {
 }
 
 async function loadInitial() {
-  const r = await api('thread', { conversation_id: state.convId });
+  const cid = state.convId;
+  const r = await api('thread', { conversation_id: cid, seen: isSeen() });
+  if (cid !== state.convId) return;          // пока грузили, открыли другой диалог
   if (!r.ok) { toast('Не удалось открыть диалог', true); return; }
   applyHeader(r.header);
   setPins(r.pins);
+  applyWallpaper(r.wallpaper);
   state.hasMore = !!r.has_more;
 
   const th = $('#thread');
@@ -286,6 +306,8 @@ async function loadInitial() {
   if (!r.messages.length) {
     th.innerHTML = `<div class="empty">${state.isSystem ? 'Уведомлений пока нет' : 'Сообщений пока нет — напишите первым'}</div>`;
   }
+  // неотправленное в этот диалог переживает переключение между чатами
+  [inflight, ...outbox, ...failed.values()].filter(p => p && p.convId === cid).forEach(paintPending);
   th.scrollTop = th.scrollHeight;
   loadList();
 }
@@ -309,10 +331,12 @@ async function loadOlder() {
    галочки «прочитано» не синели, пока собеседник не напишет сам. */
 async function pollThread() {
   if (!state.convId || !state.lastId) return;
-  const r = await api('thread', { conversation_id: state.convId, after_id: state.lastId });
-  if (!r.ok) return;
+  const cid = state.convId;
+  const r = await api('thread', { conversation_id: cid, after_id: state.lastId, seen: isSeen() });
+  if (!r.ok || cid !== state.convId) return;
   applyHeader(r.header);
   if (r.pins) setPins(r.pins);
+  if (r.wallpaper !== undefined) applyWallpaper(r.wallpaper, true);
   if (!r.messages.length) return;
   const th = $('#thread');
   const atBottom = th.scrollHeight - th.scrollTop - th.clientHeight < 80;
@@ -342,7 +366,11 @@ function appendMessages(msgs, where) {
   } else {
     let html = '', lastDay = th.dataset.lastDay || '';
     msgs.forEach(m => {
-      if (th.querySelector(`.msg[data-id="${m.id}"]`)) return;   // уже отрисовано (своё отправленное)
+      if (th.querySelector(`.msg[data-id="${m.id}"]`)) {        // уже отрисовано поллингом раньше ответа send
+        if (m.tmp) th.querySelector(`.msg[data-tmp="${m.tmp}"]`)?.remove();
+        return;
+      }
+      if (m.mine && m.tmp) { const p = th.querySelector(`.msg[data-tmp="${m.tmp}"]`); if (p) { p.outerHTML = renderMsg(m); state.lastId = Math.max(state.lastId, m.id); return; } }
       const day = fmtDay(m.at);
       if (!state.isSystem && day !== lastDay) { html += `<div class="day">${day}</div>`; lastDay = day; }
       html += renderMsg(m);
@@ -358,9 +386,19 @@ const TICK_SVG = '<svg viewBox="0 0 16 11" width="15" height="11" fill="none" ar
   + '<path class="tick-a" d="M1 5.3L4.2 8.5L9.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
   + '<path class="tick-b" d="M5.5 5.3L8.7 8.5L15 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
   + '</svg>';
-const renderTicks = id => `<span class="ticks${state.peerLastRead >= id ? ' read' : ''}" data-mid="${id}">${TICK_SVG}</span>`;
+/* Статусы своего сообщения, как в TG:
+     часики  — ещё летит на сервер      ! — не ушло, тап = повторить
+     ✓       — сервер принял           ✓✓ тусклые — дошло до устройства собеседника
+     ✓✓ яркие — собеседник открыл диалог и увидел */
+const CLOCK_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.4"/><path class="clock-h" d="M8 4.6V8l2.2 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+const tickState = id => state.peerLastRead >= id ? 'read' : state.peerDelivered >= id ? 'dlv' : 'sent';
+const TICK_LABEL = { sent: 'Отправлено', dlv: 'Доставлено', read: 'Прочитано' };
+const renderTicks = id => { const t = tickState(id); return `<span class="ticks ${t}" data-mid="${id}" title="${TICK_LABEL[t]}">${TICK_SVG}</span>`; };
 function updateReadTicks() {
-  document.querySelectorAll('#thread .ticks').forEach(el => el.classList.toggle('read', state.peerLastRead >= +el.dataset.mid));
+  document.querySelectorAll('#thread .ticks[data-mid]').forEach(el => {
+    const t = tickState(+el.dataset.mid);
+    if (!el.classList.contains(t)) { el.className = 'ticks ' + t; el.title = TICK_LABEL[t]; }
+  });
 }
 
 function renderFile(f) {
@@ -420,10 +458,12 @@ async function jumpTo(id) {
 
 $('#thread').addEventListener('click', e => {
   if (e.target.closest('#moreBtn')) { loadOlder(); return; }
+  const rt = e.target.closest('.m-retry'); if (rt) { retryPending(rt.closest('.msg').dataset.tmp); return; }
+  const dr = e.target.closest('.m-drop'); if (dr) { dropPending(dr.closest('.msg').dataset.tmp); return; }
   const q = e.target.closest('.quote'); if (q) { jumpTo(+q.dataset.jump); return; }
   const img = e.target.closest('.m-img'); if (img) { openLightbox(img.dataset.full, img.dataset.name); return; }
   const more = e.target.closest('.m-more');
-  if (more) { const r = more.getBoundingClientRect(); openMsgMenu(+more.closest('.msg').dataset.id, r.left, r.bottom); }
+  if (more) { const r = more.getBoundingClientRect(); openMsgMenu(+more.closest('.msg[data-id]')?.dataset.id, r.left, r.bottom); }
 });
 
 /* ── Лайтбокс ── */
@@ -469,7 +509,7 @@ function swipeRelease(msg, dx) {
 const thread = $('#thread');
 thread.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'touch' || state.isSystem) return;
-  const msg = e.target.closest('.msg'); if (!msg || msg.querySelector('.gone')) return;
+  const msg = e.target.closest('.msg[data-id]'); if (!msg || msg.querySelector('.gone')) return;
   sw = { msg, x: e.clientX, y: e.clientY, dx: 0, axis: null, id: e.pointerId };
   clearTimeout(lpTimer);
   lpTimer = setTimeout(() => {               // долгий тап = наше меню, не системное
@@ -498,7 +538,7 @@ thread.addEventListener('pointercancel', endSwipe);
 let wheel = null;
 thread.addEventListener('wheel', e => {
   if (state.isSystem || Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 1.2) return;
-  const msg = e.target.closest('.msg'); if (!msg || msg.querySelector('.gone')) return;
+  const msg = e.target.closest('.msg[data-id]'); if (!msg || msg.querySelector('.gone')) return;
   e.preventDefault();
   if (!wheel || wheel.msg !== msg) { if (wheel) swipeRelease(wheel.msg, 0); wheel = { msg, acc: 0, done: false }; }
   if (wheel.done) return;
@@ -555,7 +595,7 @@ function closeCtx() { $('#ctx').hidden = true; }
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#ctx')) closeCtx(); }, true);
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  closeCtx(); $('#lightbox').hidden = true; $('#settings').hidden = true;
+  closeCtx(); $('#lightbox').hidden = true; $('#settings').hidden = true; closeWallpaper();
   if (state.replyTo) cancelReply();
 });
 thread.addEventListener('scroll', closeCtx, { passive: true });
@@ -572,7 +612,7 @@ function openMsgMenu(id, x, y) {
   openCtx(items, x, y);
 }
 thread.addEventListener('contextmenu', e => {
-  const msg = e.target.closest('.msg');
+  const msg = e.target.closest('.msg[data-id]');
   if (!msg || e.target.closest('a')) return;          // по ссылке — обычное меню браузера на ПК
   e.preventDefault();
   if (!isTouch) openMsgMenu(+msg.dataset.id, e.clientX, e.clientY);
@@ -747,53 +787,124 @@ room.addEventListener('drop', e => {
 });
 
 /* ════════════════════════ ОТПРАВКА ═══════════════════════════════════════
+   Оптимистичная очередь, как в TG: пузырь с часиками появляется мгновенно,
+   поле ввода сразу свободно — можно писать следующее, пока летит предыдущее.
+   Очередь строго последовательная (порядок сообщений = порядок набора).
+   Не ушло — пузырь краснеет, ↻ повторяет, ✕ убирает.
    Несколько вложений = несколько сообщений (подпись и ответ — у первого).
    Антифлуд сервера — 5 сообщений за 5 секунд; упёрлись — ждём и повторяем. */
-let sending = false;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const outbox = [];                 // очередь на отправку
+const failed = new Map();          // tmp → неотправленное
+let pumping = false, tmpSeq = 0, inflight = null;
 
-async function send() {
+function renderPending(p) {
+  const quote = p.reply ? `<div class="quote"><b>${esc(p.reply.name)}</b><span>${esc(p.reply.text)}</span></div>` : '';
+  let media = '';
+  if (p.att) media = p.att.kind === 'image' && p.att.preview
+    ? `<div class="m-img"><img src="${esc(p.att.preview)}" alt="" draggable="false"></div>`
+    : `<div class="m-file"><span class="mf-ic">${ICON.file}</span><span class="mf-main"><span class="mf-name">${esc(p.att.name)}</span><span class="mf-size">${fmtSize(p.att.size)}</span></span></div>`;
+  const onlyImg = p.att && p.att.kind === 'image' && !p.body && !p.reply;
+  const text = p.body ? `<div class="b-text">${linkify(esc(p.body))}</div>` : '';
+  const bad = p.status === 'failed';
+  const mark = bad ? '<span class="ticks fail" title="Не отправлено">!</span>' : `<span class="ticks clock" title="Отправляется">${CLOCK_SVG}</span>`;
+  return `<div class="msg mine pending${bad ? ' failed' : ''}" data-tmp="${p.tmp}">
+    <div class="bubble${onlyImg ? ' media' : ''}">${quote}${media}${text}<span class="b-time">${fmtTime(new Date())}${mark}</span></div>
+    ${bad ? `<span class="m-fail"><button type="button" class="m-retry" aria-label="Повторить">${ICON.retry}</button><button type="button" class="m-drop" aria-label="Убрать">&times;</button></span>` : ''}
+  </div>`;
+}
+function paintPending(p) {
+  const el = document.querySelector(`#thread .msg[data-tmp="${p.tmp}"]`);
+  if (el) el.outerHTML = renderPending(p);
+  else if (p.convId && p.convId === state.convId) {
+    const th = $('#thread');
+    th.querySelector(':scope > .empty')?.remove();
+    th.insertAdjacentHTML('beforeend', renderPending(p));
+    th.scrollTop = th.scrollHeight;
+  }
+}
+
+function send() {
   const inp = $('#input');
   const body = inp.value.trim();
   const ready = state.atts.filter(a => a.status === 'ready');
-  if (sending || (!body && !ready.length) || (!state.convId && !state.draft)) return;
+  if ((!body && !ready.length) || (!state.convId && !state.draft)) return;
   if (state.atts.some(a => a.status === 'uploading')) { toast('Дождитесь загрузки файлов'); return; }
 
-  sending = true; autosize();
-  const backup = inp.value, reply = state.replyTo;
-  inp.value = ''; autosize();
-  const items = ready.length ? ready.map((a, i) => ({ file_id: a.dto.id, body: i === 0 ? body : '' })) : [{ body }];
+  const target = state.convId > 0 ? { conversation_id: state.convId }
+    : (state.draft.to ? { to: state.draft.to } : { studio: state.draft.studio });
+  const reply = state.replyTo;
+  const parts = ready.length ? ready.map((a, i) => ({ att: a, body: i === 0 ? body : '' })) : [{ att: null, body }];
+  parts.forEach((x, i) => {
+    const p = {
+      tmp: 't' + (++tmpSeq), convId: state.convId, target, body: x.body, status: 'pending',
+      file_id: x.att ? x.att.dto.id : 0,
+      att: x.att ? { kind: x.att.dto.kind, name: x.att.dto.name, size: x.att.dto.size, preview: x.att.preview } : null,
+      reply: i === 0 && reply ? reply : null, backup: i === 0 ? inp.value : '',
+    };
+    outbox.push(p);
+    paintPending(p);
+  });
+  // композер свободен сразу; blob-превью живёт до ответа сервера
+  state.atts = state.atts.filter(a => !ready.includes(a)); renderAtts();
+  inp.value = ''; cancelReply(); autosize();
+  pump();
+}
 
-  for (let i = 0; i < items.length; i++) {
-    const target = state.convId > 0 ? { conversation_id: state.convId }
-      : (state.draft.to ? { to: state.draft.to } : { studio: state.draft.studio });
-    const params = { ...target, body: items[i].body };
-    if (items[i].file_id) params.file_id = items[i].file_id;
-    if (i === 0 && reply) params.reply_to = reply.id;
+async function pump() {
+  if (pumping) return;
+  pumping = true;
+  while (outbox.length) {
+    const p = inflight = outbox.shift();
+    const params = { ...p.target, body: p.body };
+    if (p.file_id) params.file_id = p.file_id;
+    if (p.reply) params.reply_to = p.reply.id;
     let r = await api('send', params, 'POST');
-    for (let t = 0; !r.ok && r.error === 'too_fast' && t < 3; t++) { await sleep(1200); r = await api('send', params, 'POST'); }
-    if (!r.ok) {
-      if (i === 0) { inp.value = backup; }
-      const why = r.error === 'too_fast' ? 'Слишком часто, подождите секунду'
-                : r.error === 'network'  ? 'Нет соединения'
-                : r.error === 'too_long' ? 'Сообщение длиннее 4000 символов'
-                : 'Не удалось отправить';
-      toast(why, true);
-      break;
+    for (let t = 0; !r.ok && (r.error === 'too_fast' || r.error === 'network') && t < 3; t++) {
+      await sleep(r.error === 'network' ? 2000 : 1200);
+      r = await api('send', params, 'POST');
     }
-    if (i === 0) cancelReply();
-    const sent = state.atts.find(a => a.dto && a.dto.id === items[i].file_id);
-    if (sent) { if (sent.preview) URL.revokeObjectURL(sent.preview); state.atts = state.atts.filter(a => a !== sent); renderAtts(); }
-    if (!state.convId) {
-      state.convId = r.conversation_id; state.lastId = 0; state.firstId = 0; state.draft = null;
-      await loadInitial(); startThreadTimer();
-    } else {
-      appendMessages([r.message], 'beforeend');
+    inflight = null;
+    if (!r.ok) { failPending(p, r.error); continue; }
+    if (p.att && p.att.preview) URL.revokeObjectURL(p.att.preview);
+    if (!p.convId) {
+      // первое сообщение нового диалога: беседа появилась — открываем её по-настоящему
+      outbox.forEach(q => { if (!q.convId && JSON.stringify(q.target) === JSON.stringify(p.target)) { q.convId = r.conversation_id; q.target = { conversation_id: r.conversation_id }; } });
+      if (!state.convId && state.draft) {
+        state.convId = r.conversation_id; state.lastId = 0; state.firstId = 0; state.draft = null;
+        await loadInitial(); startThreadTimer();
+        outbox.forEach(paintPending);
+      }
+    } else if (p.convId === state.convId) {
+      appendMessages([{ ...r.message, tmp: p.tmp }], 'beforeend');
+      const th = $('#thread'); th.scrollTop = th.scrollHeight;
     }
-    $('#thread').scrollTop = $('#thread').scrollHeight;
   }
-  sending = false; autosize();
+  pumping = false;
   loadList();
+}
+
+function failPending(p, err) {
+  const why = err === 'too_fast' ? 'Слишком часто, подождите секунду'
+            : err === 'network'  ? 'Нет соединения — сообщение не ушло'
+            : err === 'too_long' ? 'Сообщение длиннее 4000 символов'
+            : 'Не удалось отправить';
+  toast(why, true);
+  if (!p.convId) {                       // черновик диалога: пузыря нет — вернём текст в поле
+    if (p.backup && !$('#input').value) { $('#input').value = p.backup; autosize(); }
+    return;
+  }
+  p.status = 'failed'; failed.set(p.tmp, p); paintPending(p);
+}
+function retryPending(tmp) {
+  const p = failed.get(tmp); if (!p) return;
+  failed.delete(tmp); p.status = 'pending'; paintPending(p);
+  outbox.push(p); pump();
+}
+function dropPending(tmp) {
+  const p = failed.get(tmp); failed.delete(tmp);
+  if (p?.att?.preview) URL.revokeObjectURL(p.att.preview);
+  document.querySelector(`#thread .msg[data-tmp="${tmp}"]`)?.remove();
 }
 
 function autosize() {
@@ -801,7 +912,7 @@ function autosize() {
   t.style.height = 'auto';
   t.style.height = Math.min(t.scrollHeight, 140) + 'px';
   const hasReady = state.atts.some(a => a.status === 'ready');
-  $('#send').disabled = sending || (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
+  $('#send').disabled = (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
 }
 $('#input').addEventListener('input', autosize);
 $('#input').addEventListener('keydown', e => {
@@ -823,7 +934,135 @@ $('#menuBtn').addEventListener('click', e => { e.stopPropagation(); $('#menu').h
 document.addEventListener('click', () => { $('#menu').hidden = true; });
 $('#menu').addEventListener('click', e => e.stopPropagation());
 $('#markRead').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) markRead(state.convId); });
+$('#wpOpen').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) openWallpaper(); });
 $('#delConv').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) deleteConv(state.convId); });
+
+/* ════════════════════════ ОБОИ ═══════════════════════════════════════════
+   Пресеты — чистый CSS (слои градиентов): ноль запросов, ноль байт, чёткие
+   на любом DPI. Свои фото — обычное вложение chat_files через file.php.
+   Общие обои видят оба, личные перекрывают общие только у тебя. Затемнение —
+   отдельный слой поверх картинки, чтобы пузыри читались на любом фото. */
+const WP = {
+  aurora: { img: 'radial-gradient(60% 50% at 18% 12%, rgba(230,55,154,.42), transparent 70%), radial-gradient(55% 45% at 88% 82%, rgba(34,211,238,.28), transparent 70%), linear-gradient(160deg, #1d0628, #0b0512)', size: 'cover' },
+  dunes:  { img: 'radial-gradient(120% 55% at 25% 108%, #b4532f 0 44%, transparent 44.5%), radial-gradient(110% 50% at 85% 112%, #7c2d3f 0 46%, transparent 46.5%), radial-gradient(30% 22% at 70% 28%, rgba(255,200,120,.55), transparent 70%), linear-gradient(180deg, #2a0d33 0%, #7d2f47 55%, #d9794b 100%)', size: 'cover' },
+  synth:  { img: 'linear-gradient(rgba(230,55,154,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(230,55,154,.22) 1px, transparent 1px), radial-gradient(90% 60% at 50% 0%, #4a0f5c, #0c0414 70%)', size: '32px 32px, 32px 32px, cover' },
+  stars:  { img: 'radial-gradient(1.2px 1.2px at 22px 34px, #fff, transparent), radial-gradient(1px 1px at 92px 128px, rgba(255,255,255,.75), transparent), radial-gradient(1.6px 1.6px at 158px 62px, #fff, transparent), radial-gradient(1px 1px at 118px 184px, rgba(255,255,255,.6), transparent), radial-gradient(1px 1px at 190px 150px, rgba(255,210,240,.8), transparent), linear-gradient(180deg, #0a0618, #1d0b31)', size: '130px 130px, 170px 170px, 150px 150px, 110px 110px, 190px 190px, cover' },
+  mesh:   { img: 'radial-gradient(40% 40% at 15% 25%, rgba(245,185,66,.35), transparent 70%), radial-gradient(45% 45% at 80% 20%, rgba(195,33,120,.45), transparent 70%), radial-gradient(50% 50% at 60% 90%, rgba(62,122,217,.4), transparent 70%), linear-gradient(135deg, #140a22, #0d0a18)', size: 'cover' },
+  noir:   { img: 'radial-gradient(120% 80% at 50% 0%, #2a2630, #0b0a0e 70%)', size: 'cover' },
+  sunset: { img: 'radial-gradient(28% 20% at 50% 72%, rgba(255,214,140,.7), transparent 70%), linear-gradient(180deg, #1f0833 0%, #6d1a5a 42%, #d9566e 78%, #f5b942 100%)', size: 'cover' },
+  ocean:  { img: 'radial-gradient(70% 50% at 28% 18%, rgba(34,211,238,.3), transparent 70%), radial-gradient(60% 40% at 80% 90%, rgba(62,122,217,.35), transparent 70%), linear-gradient(170deg, #04202b, #062f44 50%, #0a1426)', size: 'cover' },
+};
+const WP_NAMES = { aurora: 'Аврора', dunes: 'Дюны', synth: 'Синтвейв', stars: 'Звёзды', mesh: 'Туманность', noir: 'Нуар', sunset: 'Закат', ocean: 'Океан' };
+
+/** { preset | url, dim } → стили фона. null — без обоев (родной паттерн треда). */
+function wpStyle(w) {
+  if (!w || w.preset === 'none' || (!w.preset && !w.url)) return null;
+  const d = (w.dim || 0) / 100;
+  const shade = `linear-gradient(rgba(6,2,10,${d}), rgba(6,2,10,${d}))`;
+  if (w.url) return { backgroundImage: `${shade}, url("${w.url}")`, backgroundSize: 'auto, cover', backgroundPosition: 'center' };
+  const p = WP[w.preset]; if (!p) return null;
+  return { backgroundImage: `${shade}, ${p.img}`, backgroundSize: 'auto, ' + p.size, backgroundPosition: 'center' };
+}
+function paintBg(el, w) {
+  const st = wpStyle(w);
+  el.style.backgroundImage = st ? st.backgroundImage : '';
+  el.style.backgroundSize = st ? st.backgroundSize : '';
+  el.style.backgroundPosition = st ? st.backgroundPosition : '';
+  return !!st;
+}
+const wpSig = w => w ? JSON.stringify([w.scope, w.active && [w.active.preset, w.active.url, w.active.dim, w.active.ts]]) : '';
+
+function applyWallpaper(w, fromPoll) {
+  const prev = state.wallpaper;
+  if (fromPoll && wpSig(prev) === wpSig(w)) return;
+  state.wallpaper = w || null;
+  const on = paintBg($('#thread'), w && w.active);
+  $('#room').classList.toggle('has-wp', on);
+  // собеседник поменял ОБЩИЕ обои, пока диалог открыт — скажем, откуда красота
+  if (fromPoll && prev && w?.shared && !w.shared.by_me && !w.mine
+      && JSON.stringify(prev.shared) !== JSON.stringify(w.shared)) toast('Собеседник сменил обои чата');
+}
+
+const wpSel = { scope: 'shared', preset: null, url: null, file_id: 0, dim: 0 };
+function openWallpaper() {
+  const w = state.wallpaper || {};
+  const cur = w.mine || w.shared || null;
+  wpSel.scope = w.mine ? 'mine' : 'shared';
+  wpSel.preset = cur ? cur.preset : 'none';
+  wpSel.url = cur ? cur.url : null; wpSel.file_id = cur ? (cur.file_id || 0) : 0;
+  wpSel.dim = cur ? cur.dim : 0;
+  $('#wpDim').value = wpSel.dim;
+  renderWallpaper();
+  $('#wpModal').hidden = false;
+}
+function closeWallpaper() { $('#wpModal').hidden = true; }
+function renderWallpaper() {
+  const w = state.wallpaper || {};
+  document.querySelectorAll('.wp-scope button').forEach(b => b.classList.toggle('on', b.dataset.scope === wpSel.scope));
+  const tiles = Object.keys(WP).map(k => `<button type="button" class="wp-tile${!wpSel.url && wpSel.preset === k ? ' on' : ''}" data-preset="${k}"><i></i><span>${WP_NAMES[k]}</span></button>`);
+  const own = wpSel.url
+    ? `<button type="button" class="wp-tile on" data-own="1"><i></i><span>Своё фото</span></button>`
+    : '';
+  $('#wpGrid').innerHTML = own + tiles.join('')
+    + `<button type="button" class="wp-tile add" data-upload="1"><i>${ICON.wall}</i><span>Загрузить фото</span></button>`
+    + `<button type="button" class="wp-tile none${!wpSel.url && wpSel.preset === 'none' ? ' on' : ''}" data-preset="none"><i></i><span>Без обоев</span></button>`;
+  $('#wpGrid').querySelectorAll('.wp-tile[data-preset]').forEach(t => { if (t.dataset.preset !== 'none') paintBg(t.querySelector('i'), { preset: t.dataset.preset }); });
+  const ownTile = $('#wpGrid').querySelector('[data-own] i'); if (ownTile) paintBg(ownTile, { url: wpSel.url });
+  paintBg($('#wpPreview'), { preset: wpSel.url ? null : wpSel.preset, url: wpSel.url, dim: wpSel.dim });
+  const peerName = state.header?.peer?.name || 'собеседник';
+  $('#wpNote').textContent = wpSel.scope === 'shared'
+    ? `${peerName} тоже увидит эти обои${w.mine ? ' (ваши личные сейчас их перекрывают — они будут заменены)' : ''}.`
+    : 'Видите только вы. Общие обои собеседника не меняются.';
+  $('#wpResetMine').hidden = !w.mine;
+}
+$('#wpModal').addEventListener('click', e => { if (e.target.id === 'wpModal') closeWallpaper(); });
+$('#wpClose').addEventListener('click', closeWallpaper);
+document.querySelector('.wp-scope').addEventListener('click', e => {
+  const b = e.target.closest('button[data-scope]'); if (!b) return;
+  wpSel.scope = b.dataset.scope; renderWallpaper();
+});
+$('#wpGrid').addEventListener('click', e => {
+  const t = e.target.closest('.wp-tile'); if (!t) return;
+  if (t.dataset.upload) { $('#wpInput').click(); return; }
+  if (t.dataset.own) return;
+  wpSel.preset = t.dataset.preset; wpSel.url = null; wpSel.file_id = 0;
+  renderWallpaper();
+});
+$('#wpDim').addEventListener('input', e => { wpSel.dim = +e.target.value; paintBg($('#wpPreview'), { preset: wpSel.url ? null : wpSel.preset, url: wpSel.url, dim: wpSel.dim }); });
+$('#wpInput').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { toast('Нужна картинка JPG, PNG, WebP или GIF', true); return; }
+  if (f.size > 8 * 1024 * 1024) { toast('Фото до 8 МБ', true); return; }
+  const add = $('#wpGrid').querySelector('[data-upload] span'); if (add) add.textContent = 'Загружаю…';
+  try {
+    const dto = await uploadFile(f, 'wallpaper', pct => { if (add) add.textContent = Math.round(pct * 100) + '%'; });
+    wpSel.url = dto.url; wpSel.file_id = dto.id; wpSel.preset = null;
+    if (!wpSel.dim) { wpSel.dim = 30; $('#wpDim').value = 30; }   // на фото без затемнения пузыри тонут
+    renderWallpaper();
+  } catch (err) {
+    toast(err?.error === 'too_big' ? 'Фото до 8 МБ' : 'Не удалось загрузить фото', true);
+    renderWallpaper();
+  }
+});
+$('#wpApply').addEventListener('click', async () => {
+  const p = { conversation_id: state.convId, scope: wpSel.scope, dim: wpSel.dim };
+  if (wpSel.file_id) p.file_id = wpSel.file_id; else p.preset = wpSel.preset || 'none';
+  const r = await api('wallpaper_set', p, 'POST');
+  if (!r.ok) { toast(r.error === 'migration' ? 'Обои появятся после обновления чата' : 'Не удалось сохранить обои', true); return; }
+  // личные «без обоев» не должны перекрывать выбранные общие: если выбрали для обоих — личные сбрасываем
+  if (wpSel.scope === 'shared' && state.wallpaper?.mine) {
+    const rr = await api('wallpaper_reset', { conversation_id: state.convId, scope: 'mine' }, 'POST');
+    if (rr.ok) r.wallpaper = rr.wallpaper;
+  }
+  applyWallpaper(r.wallpaper);
+  closeWallpaper();
+  toast(wpSel.scope === 'shared' ? 'Обои установлены для обоих' : 'Обои установлены для вас');
+});
+$('#wpResetMine').addEventListener('click', async () => {
+  const r = await api('wallpaper_reset', { conversation_id: state.convId, scope: 'mine' }, 'POST');
+  if (r.ok) { applyWallpaper(r.wallpaper); openWallpaper(); }
+});
 
 /* ════════════════════════ НАСТРОЙКИ ══════════════════════════════════════ */
 async function loadSettings() {
@@ -991,9 +1230,17 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   startListTimer();
   connectWS();
 
+  if (AUTO.system) {
+    const card = document.querySelector('.card[data-system="1"]');
+    if (card) { card.click(); return; }
+  }
   if (AUTO.conversation) {
     const card = document.querySelector(`.card[data-id="${AUTO.conversation}"]`);
     if (card) { card.click(); return; }
+    // беседы нет в личных (например, обращение в студию из пуша сотруднику) —
+    // открываем напрямую: имя и аватар подтянет шапка треда
+    openConv(AUTO.conversation, { kind: 'user', name: '…' }, false);
+    return;
   }
   if (AUTO.to || AUTO.studio) {
     const r = await api('start', AUTO.to ? { to: AUTO.to } : { studio: AUTO.studio });

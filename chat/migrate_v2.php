@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 /**
- * chat/migrate_v2.php — миграция чата v2 (файлы, ответы, пины, настройки звука).
+ * chat/migrate_v2.php — миграция чата v2 (файлы, ответы, пины, настройки звука)
+ *                       и v3 (статус «доставлено», обои бесед).
  *
  * Только аддитивно (правило общей БД v2/v3): новые таблицы и nullable-колонки,
  * никаких переименований и удалений. Идемпотентно: перед каждым шагом смотрим
@@ -81,6 +82,34 @@ step('таблица chat_user_settings', has_table($db, $schema, 'chat_user_set
         updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"));
 
-// кэш «v2 включён» живёт в сессии — сбросим, чтобы фичи включились сразу
-if (!$cli) unset($_SESSION['chat_v2']);
+/* ── v3: «доставлено» ─────────────────────────────────────────────
+   Отдельный указатель рядом с last_read: до какого id сообщения клиент
+   собеседника уже ДОКАЧАЛ беседу (открыт сайт, список, хедер) — даже если
+   сам диалог не открыт. Для студийных бесед — общий на всю команду студии. */
+step('conversation_participants.last_delivered_message_id',
+    has_column($db, $schema, 'conversation_participants', 'last_delivered_message_id'),
+    fn() => $db->exec("ALTER TABLE conversation_participants ADD COLUMN last_delivered_message_id INT NULL"));
+step('conversations.studio_last_delivered_id',
+    has_column($db, $schema, 'conversations', 'studio_last_delivered_id'),
+    fn() => $db->exec("ALTER TABLE conversations ADD COLUMN studio_last_delivered_id INT NULL"));
+
+/* ── v3: обои ─────────────────────────────────────────────────────
+   user_id = 0 — общие обои беседы (видят оба), user_id = N — личные,
+   перекрывают общие только для N. preset='none' в личной записи —
+   «у меня без обоев», даже если общие есть. */
+step('таблица conversation_wallpapers', has_table($db, $schema, 'conversation_wallpapers'), fn() => $db->exec("
+    CREATE TABLE conversation_wallpapers (
+        conversation_id INT NOT NULL,
+        user_id         INT NOT NULL DEFAULT 0,
+        preset          VARCHAR(32) NULL,
+        file_id         INT UNSIGNED NULL,
+        dim             TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        set_by          INT NOT NULL,
+        updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (conversation_id, user_id),
+        KEY idx_file (file_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"));
+
+// кэш «v2/v3 включён» живёт в сессии — сбросим, чтобы фичи включились сразу
+if (!$cli) unset($_SESSION['chat_v2'], $_SESSION['chat_v3']);
 echo "Готово.\n";
