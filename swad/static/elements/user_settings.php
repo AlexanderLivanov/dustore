@@ -213,7 +213,7 @@
         font: inherit;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 8px 20px -8px rgba(195, 33, 120, .8);
+        box-shadow: 0 8px 20px -8px rgba(var(--brand-rgb, 195, 33, 120), .8);
     }
 
     .us-demo-card {
@@ -226,16 +226,16 @@
     }
 
     body.moonlight-theme .us-demo-card {
-        background: #101728;
+        background: rgb(var(--moon-raised-rgb, 16, 23, 40));
     }
 
     .us-demo-cover {
         height: 62px;
-        background: linear-gradient(160deg, #14041d 0%, #400c4a 45%, #74155d 78%, #c32178 100%);
+        background: linear-gradient(160deg, #14041d 0%, #400c4a 45%, rgb(var(--brand-deep-rgb, 116, 21, 93)) 78%, rgb(var(--brand-rgb, 195, 33, 120)) 100%);
     }
 
     body.moonlight-theme .us-demo-cover {
-        background: linear-gradient(160deg, #050a14 0%, #13244a 50%, #2d4f9a 100%);
+        background: linear-gradient(160deg, rgb(var(--moon-deep-rgb, 5, 10, 20)) 0%, rgb(var(--moon-raised-rgb, 19, 36, 74)) 50%, rgb(var(--moon-accent-rgb, 45, 79, 154)) 100%);
     }
 
     .us-demo-body {

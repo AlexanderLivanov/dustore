@@ -219,7 +219,7 @@ function format_last_seen(int $ts): string
             white-space:nowrap; backdrop-filter:blur(6px);
             transition:background .2s,transform .2s; z-index:2;
         }
-        .edit-profile-btn:hover { background:rgba(195,33,120,.75); transform:translateX(-50%) translateY(-2px); }
+        .edit-profile-btn:hover { background:rgba(var(--brand-rgb, 195, 33, 120), .75); transform:translateX(-50%) translateY(-2px); }
         .edit-profile-btn svg { flex-shrink:0; }
         /* ── Кнопка «написать» рядом с кнопкой дружбы ──────────────────── */
         .friend-msg-btn {
@@ -230,18 +230,18 @@ function format_last_seen(int $ts): string
             height: 32px;
             flex-shrink: 0;
             border-radius: 15px;
-            background: rgba(195, 33, 120, .16);
-            border: 1px solid #c32178;
+            background: rgba(var(--brand-rgb, 195, 33, 120), .16);
+            border: 1px solid rgb(var(--brand-rgb, 195, 33, 120));
             color: #fff;
             text-decoration: none;
             transition: background .16s ease, transform .1s ease;
             margin-right: 10px;
         }
-        .friend-msg-btn:hover { background: #c32178; }
+        .friend-msg-btn:hover { background: rgb(var(--brand-rgb, 195, 33, 120)); }
         .friend-msg-btn:active { transform: translateY(1px); }
         .friend-msg-btn.is-hidden { display: none; }
-        body.moonlight-theme .friend-msg-btn { background: rgba(62,122,217,.2); border-color: #3e7ad9; }
-        body.moonlight-theme .friend-msg-btn:hover { background: #3e7ad9; }
+        body.moonlight-theme .friend-msg-btn { background: rgba(var(--moon-accent-rgb, 62, 122, 217), .2); border-color: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
+        body.moonlight-theme .friend-msg-btn:hover { background: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
 
         .friend-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -251,11 +251,11 @@ function format_last_seen(int $ts): string
             gap: 12px; margin-bottom: 12px;
         }
         .friends-find {
-            font-size: .84em; color: #e6379a; text-decoration: none;
-            border-bottom: 1px dashed rgba(230, 55, 154, .5);
+            font-size: .84em; color: rgb(var(--brand-hi-rgb, 230, 55, 154)); text-decoration: none;
+            border-bottom: 1px dashed rgba(var(--brand-hi-rgb, 230, 55, 154), .5);
         }
         .friends-find:hover { color: #fff; border-bottom-color: #fff; }
-        body.moonlight-theme .friends-find { color: #5690f0; border-bottom-color: rgba(86,144,240,.5); }
+        body.moonlight-theme .friends-find { color: rgb(var(--moon-hi-rgb, 86, 144, 240)); border-bottom-color: rgba(var(--moon-hi-rgb, 86, 144, 240), .5); }
 
         .friends-search {
             position: relative; display: flex; align-items: center;
@@ -265,8 +265,8 @@ function format_last_seen(int $ts): string
             border-radius: 10px;
             transition: border-color .16s ease;
         }
-        .friends-search:focus-within { border-color: #c32178; }
-        body.moonlight-theme .friends-search:focus-within { border-color: #3e7ad9; }
+        .friends-search:focus-within { border-color: rgb(var(--brand-rgb, 195, 33, 120)); }
+        body.moonlight-theme .friends-search:focus-within { border-color: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
         .friends-search .fs-ico { color: #888; display: flex; flex-shrink: 0; }
         .friends-search input {
             flex: 1; min-width: 0; padding: 10px 0;

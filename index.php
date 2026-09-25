@@ -1881,13 +1881,13 @@ mobile_redirect_if_needed();
             }
 
             body.moonlight-theme .quick-access-container {
-                --qa-top: #182238;
-                --qa-bot: #101829;
-                --qa-line: rgba(184, 200, 255, 0.17);
-                --qa-text: #eaf0ff;
-                --qa-muted: rgba(184, 200, 255, 0.48);
-                --qa-accent: #3e7ad9;
-                --qa-hover: rgba(62, 122, 217, 0.24);
+                --qa-top: rgb(var(--moon-raised-rgb, 24, 34, 56));
+                --qa-bot: rgb(var(--moon-raised-rgb, 16, 24, 41));
+                --qa-line: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.17);
+                --qa-text: rgb(var(--moon-ink-rgb, 234, 240, 255));
+                --qa-muted: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.48);
+                --qa-accent: rgb(var(--moon-accent-rgb, 62, 122, 217));
+                --qa-hover: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.24);
             }
 
             /* ── Панель: позиционирование, тень, появление ──────────────────────────── */
@@ -2020,7 +2020,7 @@ mobile_redirect_if_needed();
             }
 
             .quick-menu-toggle:hover {
-                background: #e62e8a;
+                background: rgb(var(--brand-hi-rgb, 230, 46, 138));
                 transform: scale(1.05);
             }
 
@@ -2040,7 +2040,7 @@ mobile_redirect_if_needed();
             }
 
             body.moonlight-theme .quick-menu-toggle:hover {
-                background: #5690f069;
+                background: rgba(var(--moon-hi-rgb, 86, 144, 240), 0.412);
             }
 
             @media (max-width: 600px) {

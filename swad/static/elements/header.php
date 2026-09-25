@@ -123,6 +123,8 @@ $stmt->execute([
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header_mobile.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/float3d.css') ?>">
     <script src="<?= asset_url('/swad/js/float3d.js') ?>"></script>
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/theme-madness.css') ?>">
+    <script src="<?= asset_url('/swad/js/hell.js') ?>" defer></script>
     <link rel="shortcut icon" href="../img/logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/style.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/notifications.css') ?>">
@@ -146,14 +148,14 @@ $stmt->execute([
             background: rgba(20, 4, 29, 0.97);
             backdrop-filter: blur(20px);
 
-            border: 1px solid rgba(195, 33, 120, .25);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25);
             border-radius: 14px;
 
             padding: 8px;
 
             box-shadow:
                 0 15px 40px rgba(0, 0, 0, .5),
-                0 0 25px rgba(195, 33, 120, .15);
+                0 0 25px rgba(var(--brand-rgb, 195, 33, 120), .15);
 
             z-index: 999999;
             animation: menuOpen .12s ease;
@@ -182,7 +184,7 @@ $stmt->execute([
         }
 
         .context-menu-item:hover {
-            background: rgba(195, 33, 120, .18);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .18);
         }
 
         .context-menu-icon {
@@ -204,7 +206,7 @@ $stmt->execute([
             background:
                 linear-gradient(90deg,
                     transparent,
-                    rgba(195, 33, 120, .35),
+                    rgba(var(--brand-rgb, 195, 33, 120), .35),
                     transparent);
         }
 
@@ -446,7 +448,7 @@ $stmt->execute([
                 </a>
             </li>
             <li>
-                <a class="theme-dropdown__item" style="display: none;" href="#" data-theme="madness" role="menuitem">
+                <a class="theme-dropdown__item" href="#" data-theme="madness" role="menuitem">
                     <span class="theme-dropdown__swatch" data-theme="madness"></span>
                     Madness
                 </a>
@@ -1662,7 +1664,7 @@ $stmt->execute([
             const logos = {
                 pinksparkle: '/swad/static/img/LogoV3-Appolo_mini.png',
                 moonlight:   '/swad/static/img/LogoV3-Moonlight_mini.png',
-               // madness:     '/swad/static/img/LogoV3-Madness.png'
+                madness:     '/swad/static/img/LogoV3-Madness.png'
             };
 
         const icons = {
@@ -1688,7 +1690,9 @@ $stmt->execute([
 
         const VALID = ['pinksparkle', 'moonlight', 'madness'];
 
-        function applyTheme(theme) {
+        // source: 'user' — тему выбрали в меню (а не восстановили при загрузке):
+        // по нему hell.js решает, показывать ли «зажигание»
+        function applyTheme(theme, source) {
             document.body.classList.remove('moonlight-theme', 'madness-theme');
 
             if (theme === 'moonlight') {
@@ -1711,7 +1715,7 @@ $stmt->execute([
             // что тема переключилась — им не нужно пересчитывать всё каждый кадр.
             try {
                 window.dispatchEvent(new CustomEvent('dustore:themechange', {
-                    detail: { theme: theme }
+                    detail: { theme: theme, source: source || 'load' }
                 }));
             } catch (e) {}
         }
@@ -1740,7 +1744,7 @@ $stmt->execute([
                 const theme = this.dataset.theme;
                 if (VALID.indexOf(theme) === -1) return;
                 localStorage.setItem('dustore_theme', theme);
-                applyTheme(theme);
+                applyTheme(theme, 'user');
                 themeDropdown.classList.remove('open');
                 themeBtn.setAttribute('aria-expanded', 'false');
             });

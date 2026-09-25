@@ -266,7 +266,7 @@ $isEmbed = !empty($_GET['embed']);
         .gp-donate-link:hover{color:#fff;}
         .gp-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
         .gp-badge{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;
-            letter-spacing:.04em;background:rgba(195,33,120,.15);border:1px solid rgba(195,33,120,.3);color:#e88fc0;}
+            letter-spacing:.04em;background:rgba(var(--brand-rgb, 195, 33, 120), .15);border:1px solid rgba(var(--brand-rgb, 195, 33, 120), .3);color:rgb(var(--brand-hi-rgb, 232, 143, 192));}
         .gp-stats{display:flex;gap:20px;flex-wrap:wrap;}
         .gp-stat{text-align:center;}
         .gp-stat-val{font-size:1.05rem;font-weight:700;color:#fff;line-height:1;}
@@ -274,14 +274,14 @@ $isEmbed = !empty($_GET['embed']);
 
         /* Нудж «оставить оценку» под кнопкой скачивания — показывается JS-ом после клика по скачиванию/запуску. */
         .gp-review-nudge{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;
-            border-radius:10px;background:rgba(195,33,120,.1);border:1px solid rgba(195,33,120,.28);
+            border-radius:10px;background:rgba(var(--brand-rgb, 195, 33, 120), .1);border:1px solid rgba(var(--brand-rgb, 195, 33, 120), .28);
             font-size:.82rem;color:#e5d9e0;animation:gpNudgeIn .35s ease both;}
         .gp-review-nudge[hidden]{display:none;}
         @keyframes gpNudgeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
         .gp-review-nudge .rev-stars{display:flex;gap:2px;}
         .gp-review-nudge .rev-stars span{font-size:18px;color:rgba(255,255,255,.25);cursor:pointer;transition:color .15s;}
         .gp-review-nudge .rev-stars span.highlighted,.gp-review-nudge .rev-stars span:hover{color:#fbbf24;}
-        .gp-review-nudge-link{margin-left:auto;color:#e88fc0;text-decoration:none;font-weight:600;white-space:nowrap;}
+        .gp-review-nudge-link{margin-left:auto;color:rgb(var(--brand-hi-rgb, 232, 143, 192));text-decoration:none;font-weight:600;white-space:nowrap;}
         @media(max-width:540px){.gp-header{flex-direction:column;align-items:flex-start;padding-top:16px;}
             .gp-cover{width:90px;height:90px;}}
         /* ── MAIN ── */
@@ -294,7 +294,7 @@ $isEmbed = !empty($_GET['embed']);
 .rv-down-active{background:rgba(255,80,80,.12);border-color:rgba(255,80,80,.35);color:#ff7070;}
 .review-edit-btn{background:transparent;border:none;cursor:pointer;font-size:1rem;opacity:.6;transition:opacity .15s;}
 .review-edit-btn:hover{opacity:1;}
-.review-you{font-size:.68rem;background:rgba(195,33,120,.18);color:#e88fc0;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700;}
+.review-you{font-size:.68rem;background:rgba(var(--brand-rgb, 195, 33, 120), .18);color:rgb(var(--brand-hi-rgb, 232, 143, 192));padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700;}
 .rev-stars span{font-size:20px;color:rgba(255,255,255,.2);cursor:pointer;transition:color .15s;}
 .rev-stars span.highlighted{color:#fbbf24;}
 .rev-edit-actions{display:flex;gap:8px;margin-top:10px;}
@@ -329,15 +329,15 @@ $isEmbed = !empty($_GET['embed']);
         .review-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;}
         .review-name{font-weight:600;font-size:.9rem;color:#fff;}
         a.review-name{text-decoration:none;transition:color .15s;}
-        a.review-name:hover{color:#e88fc0;text-decoration:underline;}
+        a.review-name:hover{color:rgb(var(--brand-hi-rgb, 232, 143, 192));text-decoration:underline;}
         .review-author a{line-height:0;}
         .review-rating{font-size:.8rem;color:#fbbf24;margin-top:2px;}
         .review-date{font-size:.75rem;color:var(--muted);flex-shrink:0;}
         .review-text{font-size:.88rem;color:rgba(255,255,255,.7);line-height:1.6;white-space:pre-line;}
-        .review-dev-reply{margin-top:10px;padding:10px 14px;background:rgba(116,21,93,.12);
+        .review-dev-reply{margin-top:10px;padding:10px 14px;background:rgba(var(--brand-deep-rgb, 116, 21, 93), .12);
             border-left:3px solid var(--primary-d);border-radius:0 8px 8px 0;
             font-size:.84rem;color:rgba(255,255,255,.65);line-height:1.55;white-space:pre-line;}
-        .review-dev-badge{font-size:.75rem;font-weight:700;color:#e88fc0;
+        .review-dev-badge{font-size:.75rem;font-weight:700;color:rgb(var(--brand-hi-rgb, 232, 143, 192));
             display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;}
         .review-dev-meta{font-weight:500;color:var(--muted);}
         .review-form{background:var(--surface);border:1px solid var(--border);
@@ -377,9 +377,9 @@ $isEmbed = !empty($_GET['embed']);
             font-family:inherit;margin-bottom:8px;}
         .gp-btn:last-child{margin-bottom:0;}
         .gp-btn:active{transform:scale(.97);}
-        .gp-btn-primary{background:linear-gradient(135deg,#c32178,#74155d);color:#fff;
-            box-shadow:0 4px 20px rgba(195,33,120,.3);}
-        .gp-btn-primary:hover{box-shadow:0 6px 28px rgba(195,33,120,.5);}
+        .gp-btn-primary{background:linear-gradient(135deg,rgb(var(--brand-rgb, 195, 33, 120)),rgb(var(--brand-deep-rgb, 116, 21, 93)));color:#fff;
+            box-shadow:0 4px 20px rgba(var(--brand-rgb, 195, 33, 120), .3);}
+        .gp-btn-primary:hover{box-shadow:0 6px 28px rgba(var(--brand-rgb, 195, 33, 120), .5);}
         .gp-btn-secondary{background:transparent;border:1px solid var(--border);color:rgba(255,255,255,.7);}
         .gp-btn-secondary:hover{background:var(--surface);color:#fff;}
         .gp-meta-row{font-size:.8rem;color:var(--muted);line-height:1.8;}

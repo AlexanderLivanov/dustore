@@ -191,8 +191,8 @@ if (!$selected && $games) $selected = $games[0];
         .lib-row:hover { background: rgba(255, 255, 255, .05); }
 
         .lib-row.active {
-            background: rgba(195, 33, 120, .16);
-            border-left-color: #c32178;
+            background: rgba(var(--brand-rgb, 195, 33, 120), .16);
+            border-left-color: rgb(var(--brand-rgb, 195, 33, 120));
         }
 
         .lib-row-cover {
@@ -236,7 +236,7 @@ if (!$selected && $games) $selected = $games[0];
             height: 80vh;
             border-radius: 18px;
             overflow: hidden;
-            background: linear-gradient(160deg, #14041d 0%, #400c4a 45%, #74155d 78%, #c32178 100%);
+            background: linear-gradient(160deg, #14041d 0%, #400c4a 45%, rgb(var(--brand-deep-rgb, 116, 21, 93)) 78%, rgb(var(--brand-rgb, 195, 33, 120)) 100%);
             box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .06) inset;
         }
 
@@ -273,7 +273,7 @@ if (!$selected && $games) $selected = $games[0];
             padding: 11px 20px;
             border-radius: 999px;
             border: 0;
-            background: #c32178;
+            background: rgb(var(--brand-rgb, 195, 33, 120));
             color: #fff;
             font-size: 13px;
             font-weight: 800;
@@ -282,7 +282,7 @@ if (!$selected && $games) $selected = $games[0];
             transition: background .2s, transform .15s;
         }
 
-        .lib-btn:hover { background: #e62e8a; }
+        .lib-btn:hover { background: rgb(var(--brand-hi-rgb, 230, 46, 138)); }
         .lib-btn:active { transform: scale(.97); }
 
         /* ── Заготовка запуска через лаунчер ── живёт под панелью игры,
@@ -361,7 +361,7 @@ if (!$selected && $games) $selected = $games[0];
 
         .lib-coll-card[data-rarity="1"] { border-color: #00ff00; box-shadow: 0 0 20px rgba(0, 255, 0, .25); }
         .lib-coll-card[data-rarity="2"] { border-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, .3); }
-        .lib-coll-card[data-rarity="3"] { border-color: #800080; box-shadow: 0 0 24px rgba(128, 0, 128, .35); }
+        .lib-coll-card[data-rarity="3"] { border-color: rgb(var(--brand-deep-rgb, 128, 0, 128)); box-shadow: 0 0 24px rgba(var(--brand-deep-rgb, 128, 0, 128), .35); }
         .lib-coll-card[data-rarity="4"] { border-color: #ffd700; box-shadow: 0 0 28px rgba(255, 215, 0, .45); }
 
         .lib-coll-title { font-weight: 700; font-size: .88em; margin-bottom: 8px; }

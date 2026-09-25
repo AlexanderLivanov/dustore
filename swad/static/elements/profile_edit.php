@@ -155,7 +155,7 @@ $pe_name = trim(($pe_user['first_name'] ?? '') . ' ' . ($pe_user['last_name'] ??
     .pe-avatar:hover,
     .pe-avatar:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 2px var(--us-accent-hi), 0 0 22px rgba(195, 33, 120, .45);
+        box-shadow: 0 0 0 2px var(--us-accent-hi), 0 0 22px rgba(var(--brand-rgb, 195, 33, 120), .45);
     }
 
     .pe-avatar img {

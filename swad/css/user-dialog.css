@@ -28,9 +28,9 @@
 }
 
 .us-gear:hover {
-    background: rgba(195, 33, 120, .28);
-    border-color: rgba(255, 91, 168, .55);
-    box-shadow: 0 0 18px rgba(195, 33, 120, .45);
+    background: rgba(var(--brand-rgb, 195, 33, 120), .28);
+    border-color: rgba(var(--brand-hi-rgb, 255, 91, 168), .55);
+    box-shadow: 0 0 18px rgba(var(--brand-rgb, 195, 33, 120), .45);
 }
 
 .us-gear:hover svg,
@@ -39,7 +39,7 @@
 }
 
 .us-gear:focus-visible {
-    outline: 2px solid #ff5ba8;
+    outline: 2px solid rgb(var(--brand-hi-rgb, 255, 91, 168));
     outline-offset: 3px;
 }
 
@@ -64,9 +64,9 @@
 }
 
 body.moonlight-theme .us-dialog {
-    --us-accent: #4a78d8;
-    --us-accent-hi: #8fb3ff;
-    background: rgba(8, 12, 24, .92);
+    --us-accent: rgb(var(--moon-hi-rgb, 74, 120, 216));
+    --us-accent-hi: rgb(var(--moon-hi-rgb, 143, 179, 255));
+    background: rgba(var(--moon-deep-rgb, 8, 12, 24), .92);
 }
 
 .us-dialog[open] {

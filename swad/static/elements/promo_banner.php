@@ -267,7 +267,7 @@ if ($promo):
         }
 
         body.moonlight-theme.pb-flown::before {
-            background: #050a14;
+            background: rgb(var(--moon-deep-rgb, 5, 10, 20));
         }
 
         body.pb-flown main::after {
@@ -290,9 +290,9 @@ if ($promo):
 
         body.moonlight-theme.pb-flown main::after {
             background: linear-gradient(90deg,
-                rgba(86, 144, 240, 0) 0%,
-                rgba(86, 144, 240, 0.95) 50%,
-                rgba(86, 144, 240, 0) 100%);
+                rgba(var(--moon-hi-rgb, 86, 144, 240), 0) 0%,
+                rgba(var(--moon-hi-rgb, 86, 144, 240), 0.95) 50%,
+                rgba(var(--moon-hi-rgb, 86, 144, 240), 0) 100%);
             box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension, 0) * 0.7));
         }
 
@@ -317,9 +317,9 @@ if ($promo):
 
         body.moonlight-theme:not(.pb-flown) .pb-card::before {
             background: linear-gradient(90deg,
-                rgba(86, 144, 240, 0) 0%,
-                rgba(86, 144, 240, 0.95) 50%,
-                rgba(86, 144, 240, 0) 100%);
+                rgba(var(--moon-hi-rgb, 86, 144, 240), 0) 0%,
+                rgba(var(--moon-hi-rgb, 86, 144, 240), 0.95) 50%,
+                rgba(var(--moon-hi-rgb, 86, 144, 240), 0) 100%);
             box-shadow: 0 0 12px rgba(86, 144, 240, calc(var(--pb-tension-down, 0) * 0.7));
         }
 

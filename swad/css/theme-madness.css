@@ -1,0 +1,227 @@
+/* =============================================================================
+   ТЕМА MADNESS — «Адское пекло» (swad/css/theme-madness.css)
+   Живые эффекты — swad/js/hell.js (угли, искры за курсором, вспышки по клику,
+   «зажигание» при выборе темы). Огонь внизу главной — hellfire в index.php.
+
+   Как устроено. Madness навешивает на <body> два класса: moonlight-theme и
+   madness-theme, то есть берёт всю тёмную раскладку лунной темы. Цвета лунной
+   темы и фирменный розовый во всех CSS записаны через токены с фолбэком:
+       rgba(var(--moon-accent-rgb, 62, 122, 217), .2)
+       rgb(var(--brand-rgb, 195, 33, 120))
+   Без токенов — исходный цвет (Moonlight и PinkSparkle не меняются ни на пиксель),
+   а здесь токены получают адские значения — и перекрашивается весь сайт сразу.
+   Роли токенов:
+     --moon-ink     бледный текст        --brand       основной фирменный
+     --moon-hi      светлый акцент       --brand-hi    ховер, яркие детали
+     --moon-accent  акцент               --brand-deep  тёмный фирменный
+     --moon-line    линии, рамки
+     --moon-raised  приподнятые панели
+     --moon-deep    глубокий фон
+   ============================================================================= */
+
+body.madness-theme {
+    /* Палитра: уголь, запёкшаяся кровь, жар, пепел */
+    --moon-ink-rgb: 243, 217, 200;       /* пепельно-костяной вместо голубого */
+    --moon-hi-rgb: 255, 122, 46;         /* раскалённый оранжевый */
+    --moon-accent-rgb: 224, 52, 26;      /* пламя */
+    --moon-line-rgb: 86, 22, 14;
+    --moon-raised-rgb: 30, 8, 7;
+    --moon-deep-rgb: 10, 3, 3;
+
+    --brand-rgb: 210, 35, 15;            /* кровь с огнём */
+    --brand-hi-rgb: 255, 106, 31;        /* жар */
+    --brand-deep-rgb: 92, 10, 6;         /* запёкшаяся кровь */
+
+    /* Переменные, объявленные на :root, токены не видят (там их ещё нет) —
+       переопределяем их прямо здесь */
+    --primary: #d2230f;
+    --hell-glow: 255, 70, 12;
+
+    /* Витрина (explore.css) */
+    --ex-page: linear-gradient(180deg, #0a0202 0%, #140404 55%, #2a0705 100%);
+    --ex-page-fixed: none;
+    --ex-card: #150504;
+    --ex-cover: #0b0202;
+    --ex-text: #f6e3d6;
+    --ex-muted: rgba(246, 227, 214, .52);
+    --ex-dim: rgba(246, 227, 214, .32);
+    --ex-accent: #d2230f;
+    --ex-accent-hi: #ff6a1f;
+    --ex-accent-soft: rgba(210, 35, 15, .2);
+    --ex-sb: rgba(255, 106, 31, .28);
+    --ex-sb-hover: #ff6a1f;
+
+    /* Фон: чернота с жаром снизу, как будто под страницей горит */
+    background:
+        radial-gradient(120% 60% at 50% 115%, rgba(var(--hell-glow), .22) 0%, rgba(var(--hell-glow), .06) 45%, transparent 70%),
+        radial-gradient(80% 50% at 50% -10%, rgba(92, 10, 6, .35) 0%, transparent 70%),
+        #070202 !important;
+    background-attachment: fixed !important;
+    color: #f6e3d6;
+    accent-color: #d2230f;
+}
+
+body.madness-theme ::selection {
+    background: #d2230f;
+    color: #fff;
+}
+
+/* Скроллбар тлеет */
+body.madness-theme {
+    scrollbar-color: #7a1a0c #0a0202;
+}
+
+body.madness-theme ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ff6a1f, #7a1a0c);
+    border-radius: 8px;
+}
+
+body.madness-theme ::-webkit-scrollbar-track {
+    background: #0a0202;
+}
+
+/* ── Хедер: раскалённая кромка снизу ─────────────────────────────────────── */
+body.madness-theme .header__bg,
+body.madness-theme .header.scrolled .header__bg,
+body.madness-theme .header:hover .header__bg {
+    background-color: rgba(12, 3, 3, .55);
+}
+
+body.madness-theme .header::before,
+body.madness-theme .header::after,
+body.madness-theme .center-floating-block {
+    box-shadow: 0 1px 0 0 rgba(var(--hell-glow), .35), 0 10px 26px -14px rgba(var(--hell-glow), .7);
+}
+
+/* Логотип с рогами дышит жаром */
+body.madness-theme .image img {
+    filter: drop-shadow(0 0 10px rgba(var(--hell-glow), .45));
+    animation: hellBreath 3.4s ease-in-out infinite;
+}
+
+body.madness-theme .image:hover img {
+    filter: drop-shadow(0 0 18px rgba(var(--hell-glow), .85)) saturate(1.2);
+}
+
+@keyframes hellBreath {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(var(--hell-glow), .35)); }
+    50%      { filter: drop-shadow(0 0 16px rgba(var(--hell-glow), .65)); }
+}
+
+/* ── Заголовки светятся, как надписи над пеклом ──────────────────────────── */
+body.madness-theme :is(h1, h2, .game-title, .pb-content h1) {
+    text-shadow: 0 0 14px rgba(var(--hell-glow), .35), 0 0 2px rgba(255, 180, 120, .4);
+}
+
+body.madness-theme a:not([class]):hover {
+    color: #ff8a3d;
+}
+
+/* ── Float3D: тень парящей надписи становится отсветом лавы ──────────────────
+   В обычных темах под надписью лежит тень. Здесь свет идёт снизу, из пекла:
+   «тень» раскалена и светится, а блик на поверхности — тёплый. Чем выше
+   надпись поднята, тем сильнее её подсвечивает. */
+body.madness-theme .f3d-on :is(.f3d-float, .f3d-badge) {
+    filter: drop-shadow(
+        calc(var(--f3d-lift) * var(--f3d-nx) * var(--_shadow) * -1 - var(--_ox))
+        calc(var(--f3d-lift) * (.5 - var(--f3d-ny)) * var(--_shadow) - var(--_oy))
+        calc(var(--f3d-shadow-blur) * 1.6)
+        rgba(var(--hell-glow), calc(var(--_shadow-a) * var(--f3d-lift) * 1.2)));
+}
+
+body.madness-theme .f3d-on .f3d-glare {
+    background: radial-gradient(
+        circle at calc((var(--f3d-nx) + 1) * 50%) calc((var(--f3d-ny) + 1) * 50%),
+        rgba(255, 150, 70, calc(var(--_glare) * 1.4)) 0%,
+        rgba(255, 60, 10, 0) 70%);
+}
+
+/* ── Кнопки: тлеющие угли, на наведении раскаляются ──────────────────────────
+   Двойной класс — чтобы перебить лунные правила .btn из pages.css: тот может
+   подключаться позже этого файла, и при равной специфичности победил бы он. */
+body.madness-theme.moonlight-theme :is(.btn, .vote-btn) {
+    background: linear-gradient(180deg, #5c1008 0%, #2a0604 100%);
+    border: 1px solid rgba(255, 110, 40, .38);
+    color: #ffe3d2;
+    box-shadow: inset 0 1px 0 rgba(255, 180, 120, .16), 0 6px 18px -8px rgba(var(--hell-glow), .55);
+}
+
+body.madness-theme.moonlight-theme :is(.btn, .vote-btn):hover {
+    background: linear-gradient(180deg, #8f1d0c 0%, #3d0805 100%);
+    border-color: rgba(255, 150, 70, .6);
+}
+
+body.madness-theme :is(.btn, .vote-btn, .us-btn--primary):hover {
+    box-shadow: 0 0 0 1px rgba(255, 140, 60, .5), 0 10px 26px -8px rgba(var(--hell-glow), .75);
+}
+
+/* Кнопки хедера: тёмное стекло, но на наведении подсвечены снизу жаром */
+body.madness-theme.moonlight-theme .header .button:hover {
+    background-color: rgba(255, 80, 20, .16);
+}
+
+/* ── Окна пользователя: угольная панель ──────────────────────────────────── */
+body.madness-theme .us-dialog {
+    background: rgba(14, 4, 4, .94);
+    border-color: rgba(var(--hell-glow), .28);
+    box-shadow: 0 40px 100px -30px #000, 0 0 60px -20px rgba(var(--hell-glow), .45);
+}
+
+body.madness-theme .us-dialog::backdrop {
+    background: radial-gradient(120% 80% at 50% 110%, rgba(var(--hell-glow), .18), rgba(4, 1, 1, .72) 60%);
+}
+
+/* ── Живой слой hell.js: угли, искры, вспышки ────────────────────────────────
+   Поверх контента, но под хедером (z-index 10) и окнами (top layer).
+   pointer-events: none — все клики проходят насквозь. */
+.hell-layer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.hell-layer[hidden] {
+    display: none;
+}
+
+/* «Зажигание» при выборе темы: стена пламени снизу вверх и тут же опадает */
+.hell-ignite {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    pointer-events: none;
+    background:
+        radial-gradient(140% 60% at 50% 100%, rgba(255, 240, 190, .95) 0%, rgba(255, 150, 40, .9) 22%, transparent 60%),
+        linear-gradient(to top, rgba(255, 110, 20, .92) 0%, rgba(210, 25, 0, .8) 35%, rgba(60, 0, 0, 0) 80%);
+    mix-blend-mode: screen;
+    -webkit-mask-image: linear-gradient(to top, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 55%, transparent 100%);
+    animation: hellIgnite 1.4s linear forwards;
+}
+
+/* Тайминг — на каждом отрезке свой: timing-function у самой анимации применялся бы
+   к каждому отрезку одинаково, и резкий старт затухания съедал пламя за 0.2 с */
+@keyframes hellIgnite {
+    0%   { transform: translateY(100%); opacity: 1;  animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+    28%  { transform: translateY(0);    opacity: 1;  animation-timing-function: ease-in-out; }
+    52%  { transform: translateY(-3%);  opacity: .9; animation-timing-function: ease-in; }
+    100% { transform: translateY(-12%); opacity: 0; }
+}
+
+/* ── Огонь внизу главной (index.php) показываем только в этой теме ───────── */
+.hellfire-bg {
+    display: none;
+}
+
+body.madness-theme .hellfire-bg {
+    display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.madness-theme .image img {
+        animation: none;
+    }
+}
