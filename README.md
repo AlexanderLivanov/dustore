@@ -251,7 +251,7 @@ sudo systemctl reload apache2
 
 Цепочка: браузер → `chat/push_subscribe.php` → очередь `push_outbox` → воркер на Node → push-сервис браузера → `sw.js`.
 
-**Ключи и секрет.** PHP и воркер должны читать один и тот же файл:
+**Ключи.** Сайт и воркер ищут их в одних и тех же местах, по порядку: env, `PUSH_ENV_FILE`, `../dustore-push.env` над папкой сайта, `api/push/.env`, `/etc/dustore/push.env`. Секрет моста можно не заводить: без него обе стороны выводят его из приватного ключа.
 
 ```bash
 npx web-push generate-vapid-keys        # обе строки — из одного вывода!
@@ -260,9 +260,6 @@ sudo tee /etc/dustore/push.env > /dev/null <<'EOF'
 VAPID_PUBLIC=...
 VAPID_PRIVATE=...
 VAPID_SUBJECT=mailto:admin@dustore.ru
-# Воркер ходит в outbox по имени сайта, но через 127.0.0.1 (OUTBOX_CONNECT):
-# на голом http://127.0.0.1 может ответить другой сайт сервера
-OUTBOX_URL=https://dustore.ru/chat/push_outbox.php
 EOF
 openssl rand -hex 32 | sudo tee /etc/dustore/bridge.secret > /dev/null
 sudo chgrp www-data /etc/dustore/push.env /etc/dustore/bridge.secret
@@ -309,7 +306,12 @@ After=network.target apache2.service
 [Service]
 User=www-data
 WorkingDirectory=/var/www/html/dustore.ru
-EnvironmentFile=/etc/dustore/push.env
+# Ключи воркер читает сам — из тех же файлов и в том же порядке, что сайт
+# (chat/_push_config.php). EnvironmentFile не нужен: env у воркера главнее
+# файлов, и ключи могли бы разъехаться с сайтом.
+# В outbox воркер ходит по имени сайта, но через 127.0.0.1: на голом
+# http://127.0.0.1 может ответить другой сайт сервера. Свой домен — так:
+# Environment=OUTBOX_URL=https://ваш-домен/chat/push_outbox.php
 ExecStart=/usr/bin/node pwa/push-worker.js
 Restart=always
 
