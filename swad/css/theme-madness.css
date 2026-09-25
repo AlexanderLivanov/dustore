@@ -20,37 +20,23 @@
    ============================================================================= */
 
 body.madness-theme {
-    /* Палитра: уголь, запёкшаяся кровь, жар, пепел */
-    --moon-ink-rgb: 243, 217, 200;       /* пепельно-костяной вместо голубого */
-    --moon-hi-rgb: 255, 122, 46;         /* раскалённый оранжевый */
-    --moon-accent-rgb: 224, 52, 26;      /* пламя */
-    --moon-line-rgb: 86, 22, 14;
-    --moon-raised-rgb: 30, 8, 7;
-    --moon-deep-rgb: 10, 3, 3;
+    /* Палитра: уголь, кровь, пепел. Красный — спокойный, кровяной, без оранжевого */
+    --moon-ink-rgb: 238, 224, 218;       /* пепельный вместо голубого */
+    --moon-hi-rgb: 196, 70, 74;          /* светлая кровь — мелкие акценты */
+    --moon-accent-rgb: 150, 30, 36;      /* кровь */
+    --moon-line-rgb: 72, 22, 24;
+    --moon-raised-rgb: 30, 10, 11;
+    --moon-deep-rgb: 10, 4, 4;
 
-    --brand-rgb: 210, 35, 15;            /* кровь с огнём */
-    --brand-hi-rgb: 255, 106, 31;        /* жар */
-    --brand-deep-rgb: 92, 10, 6;         /* запёкшаяся кровь */
+    --brand-rgb: 150, 30, 36;            /* кровь */
+    --brand-hi-rgb: 181, 42, 48;         /* алая кровь */
+    --brand-deep-rgb: 74, 10, 14;        /* запёкшаяся кровь */
 
     /* Переменные, объявленные на :root, токены не видят (там их ещё нет) —
        переопределяем их прямо здесь */
-    --primary: #d2230f;
-    --hell-heat: 255, 70, 12;            /* жар — только в фоне страницы */
-    --hell-scarlet: #ff2a1a;             /* алый — крупный текст, названия, заголовки */
-
-    /* Витрина (explore.css) */
-    --ex-page: linear-gradient(180deg, #0a0202 0%, #140404 55%, #2a0705 100%);
-    --ex-page-fixed: none;
-    --ex-card: #150504;
-    --ex-cover: #0b0202;
-    --ex-text: #f6e3d6;
-    --ex-muted: rgba(246, 227, 214, .52);
-    --ex-dim: rgba(246, 227, 214, .32);
-    --ex-accent: #d2230f;
-    --ex-accent-hi: #ff6a1f;
-    --ex-accent-soft: rgba(210, 35, 15, .2);
-    --ex-sb: rgba(255, 106, 31, .28);
-    --ex-sb-hover: #ff6a1f;
+    --primary: #961e24;
+    --hell-heat: 120, 16, 20;            /* тёмный багровый отсвет — только в фоне страницы */
+    --hell-blood: #b52a30;               /* алый кровяной — названия, заголовки, «Бесплатно» */
 
     /* Фон: чернота с жаром снизу, как будто под страницей горит */
     background:
@@ -59,26 +45,46 @@ body.madness-theme {
         #070202 !important;
     background-attachment: fixed !important;
     color: #f6e3d6;
-    accent-color: #d2230f;
+    accent-color: #961e24;
+}
+
+/* Витрина (explore.css). Двойной класс обязателен: explore.css объявляет те же
+   --ex-* в правиле body.moonlight-theme и подключается позже этого файла —
+   при равной специфичности его значения побеждали, и карточки оставались
+   тёмно-красными вместо серых. */
+body.madness-theme.moonlight-theme {
+    --ex-page: linear-gradient(180deg, #0a0202 0%, #140404 55%, #2a0705 100%);
+    --ex-page-fixed: none;
+    --ex-card: rgba(58, 58, 62, .6);     /* карточки игр — серые, полупрозрачные */
+    --ex-cover: #141416;
+    --ex-text: #f6e3d6;
+    --ex-muted: rgba(246, 227, 214, .52);
+    --ex-dim: rgba(246, 227, 214, .32);
+    --ex-accent: #961e24;
+    --ex-accent-hi: #b52a30;
+    --ex-accent-soft: rgba(150, 30, 36, .2);
+    --ex-free: #b52a30;                  /* «Бесплатно» — тем же алым */
+    --ex-sb: rgba(181, 42, 48, .3);
+    --ex-sb-hover: #b52a30;
 }
 
 body.madness-theme ::selection {
-    background: #d2230f;
+    background: #961e24;
     color: #fff;
 }
 
 /* Скроллбар тлеет */
 body.madness-theme {
-    scrollbar-color: #7a1a0c #0a0202;
+    scrollbar-color: #6e1419 #0a0404;
 }
 
 body.madness-theme ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #ff6a1f, #7a1a0c);
+    background: linear-gradient(180deg, #b52a30, #4a0a0e);
     border-radius: 8px;
 }
 
 body.madness-theme ::-webkit-scrollbar-track {
-    background: #0a0202;
+    background: #0a0404;
 }
 
 /* ── Хедер: серый ────────────────────────────────────────────────────────────
@@ -96,19 +102,36 @@ body.madness-theme :is(.header, #userMenu) {
 body.madness-theme .header__bg,
 body.madness-theme .header.scrolled .header__bg,
 body.madness-theme .header:hover .header__bg {
-    background-color: rgba(38, 38, 41, .94);
+    background-color: rgba(38, 38, 41, .66);
 }
 
-/* ── Крупный текст, названия, заголовки — алые ──────────────────────────────
+/* Кнопки хедера — кровяные, полупрозрачные, с белым текстом и иконками */
+body.madness-theme.moonlight-theme .header .button {
+    background-color: rgba(181, 42, 48, .7);
+    color: #fff;
+}
+
+body.madness-theme.moonlight-theme .header .button:hover {
+    background-color: rgba(181, 42, 48, .85);
+    color: #fff;
+}
+
+/* Голографический блик логотипа вырезан маской по форме ОБЫЧНОГО логотипа;
+   у логотипа с рогами другая форма, и маска вылезала за его края */
+body.madness-theme .image::after {
+    display: none;
+}
+
+/* ── Крупный текст, названия, заголовки — алые, кровяного оттенка ─────────────
    Без свечения — чистый цвет. !important — у заголовков на страницах свои цвета
    с разной специфичностью, а тема должна перекрасить их все. Не трогаем хедер и
    кнопки: у .vote-btn класс pixel-title — это шрифт, а не заголовок. */
 body.madness-theme :is(h1, h2, h3, [class$="-title"], [class*="-title "], .user-name, .jv-jam-name, .ac-name):not(.header *, #userMenu *, .btn, .vote-btn, button) {
-    color: var(--hell-scarlet) !important;
+    color: var(--hell-blood) !important;
 }
 
 body.madness-theme a:not([class]):hover {
-    color: #ff8a3d;
+    color: #d0474c;
 }
 
 /* ── Кнопки: тёмно-красные, без свечения ─────────────────────────────────────
@@ -117,15 +140,15 @@ body.madness-theme a:not([class]):hover {
    Тень — обычная тёмная: розовый «ореол» .btn:hover из pages.css в этой теме
    стал бы красным свечением. */
 body.madness-theme.moonlight-theme :is(.btn, .vote-btn) {
-    background: linear-gradient(180deg, #5c1008 0%, #2a0604 100%);
-    border: 1px solid rgba(255, 110, 40, .38);
+    background: linear-gradient(180deg, #5a1216 0%, #2a0709 100%);
+    border: 1px solid rgba(181, 42, 48, .45);
     color: #ffe3d2;
     box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .6);
 }
 
 body.madness-theme.moonlight-theme :is(.btn, .vote-btn):hover {
-    background: linear-gradient(180deg, #8f1d0c 0%, #3d0805 100%);
-    border-color: rgba(255, 150, 70, .6);
+    background: linear-gradient(180deg, #7d1a1f 0%, #3a0a0d 100%);
+    border-color: rgba(200, 70, 74, .6);
     box-shadow: 0 6px 16px -4px rgba(0, 0, 0, .7);
 }
 
