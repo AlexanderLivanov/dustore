@@ -89,7 +89,9 @@
     replyTo: null,            // { id, name, text }
     atts: [],                 // вложения в композере
     settings: { sound: 'dust', volume: 70, custom: null }, v2: true,
+    convs: [], filter: 'all',  // последний список с сервера и активный фильтр (только мобильная вёрстка)
   };
+  const MOBILE = !!CFG.mobile;
 
   /* ════════════════════════ ЗВУК ═══════════════════════════════════════════
      Четыре фирменных звука синтезируются WebAudio (ни файлов, ни лицензий),
@@ -219,6 +221,18 @@
   }
 
   /* ════════════════════════ СПИСОК БЕСЕД ═══════════════════════════════════ */
+  const PIN_SVG = '<svg class="c-pin" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z"/></svg>';
+  const FILTERS = [['all', 'Все'], ['dm', 'Личные'], ['studio', 'Студии'], ['unread', 'Непрочитанные']];
+  const isOnline = p => !!(p && p.seen && lastSeen(p.seen) === 'в сети');
+  /* «Уведомления» — не беседа: в фильтрах «Личные» и «Студии» её нет */
+  function inFilter(c, f) {
+    if (f === 'unread') return (c.unread || 0) > 0;
+    if (c.peer.kind === 'system') return f === 'all';
+    if (f === 'dm') return c.peer.kind === 'user' && c.type !== 'studio';
+    if (f === 'studio') return c.type === 'studio' || c.peer.kind === 'studio';
+    return true;
+  }
+
   async function loadList() {
     const r = await api('list', { tab: state.tab });
     const box = $('#list');
@@ -227,10 +241,19 @@
     const total = r.conversations.reduce((a, c) => a + (c.unread || 0), 0);
     if (prevTotal !== null && total > prevTotal) ping();
     prevTotal = total;
+    state.convs = r.conversations;
+    paintList();
+  }
 
-    if (!r.conversations.length) { box.innerHTML = '<div class="empty">Здесь появятся ваши диалоги</div>'; return; }
+  function paintList() {
+    const box = $('#list');
+    const all = state.convs;
+    if (MOBILE) { paintChips(); paintRecent(); }
+    if (!all.length) { box.innerHTML = '<div class="empty">Здесь появятся ваши диалоги</div>'; return; }
+    const shown = MOBILE ? all.filter(c => inFilter(c, state.filter)) : all;
+    if (!shown.length) { box.innerHTML = '<div class="empty">В этом разделе пока пусто</div>'; return; }
 
-    box.innerHTML = r.conversations.map(c => {
+    box.innerHTML = shown.map(c => {
       const badge = c.unread ? `<span class="badge">${c.unread > 99 ? '99+' : c.unread}</span>` : '<span></span>';
       const active = c.id === state.convId ? ' active' : '';
       const isSys = c.peer.kind === 'system';
@@ -238,18 +261,58 @@
       const last = isSys
         ? (c.last ? esc(c.last.body) : 'нет уведомлений')
         : (c.last ? (c.last.mine ? '<span class="me">Вы: </span>' : '') + esc(c.last.body) : '<i>нет сообщений</i>');
+      /* только телефон: точка «в сети», плашка «студия», значок закрепа у «Уведомлений» */
+      const av = `<div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>`;
+      const avCell = MOBILE ? `<div class="av-w">${av}${isOnline(c.peer) ? '<i class="on" title="в сети"></i>' : ''}</div>` : av;
+      const pill = MOBILE && c.peer.kind === 'studio' ? '<span class="c-pill">студия</span>' : '';
+      const time = `<span class="c-time">${c.last?.state ? `<span class="ticks ${c.last.state === 'delivered' ? 'dlv' : c.last.state}">${TICK_SVG}</span>` : ''}${c.ts ? fmtTime(c.ts) : ''}</span>`;
+      /* на телефоне правая колонка как в макете: время сверху, закреп и счётчик снизу */
+      const end = MOBILE ? `<span class="c-end">${time}<span class="c-bot">${isSys ? PIN_SVG : ''}${badge}</span></span>` : badge;
       return `<button type="button" class="card${cls}${active}" data-id="${c.id}" data-unread="${c.unread || 0}"
               data-peer='${esc(JSON.stringify(c.peer))}' data-studio="${c.type === 'studio' ? 1 : 0}" data-system="${isSys ? 1 : 0}">
-      <div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>
+      ${avCell}
       <div class="c-main">
-        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span><span class="c-time">${c.last?.state ? `<span class="ticks ${c.last.state === 'delivered' ? 'dlv' : c.last.state}">${TICK_SVG}</span>` : ''}${c.ts ? fmtTime(c.ts) : ''}</span></div>
+        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span>${pill}${MOBILE ? '' : time}</div>
         <div class="c-last">${last}</div>
         ${c.peer.tag ? `<div class="c-tag">→ ${esc(c.peer.tag)}</div>` : ''}
       </div>
-      ${badge}
+      ${end}
     </button>`;
     }).join('');
   }
+
+  /* Фильтры-«чипы» над списком (телефон): считают непрочитанное по разделу */
+  function paintChips() {
+    const box = $('#chips'); if (!box) return;
+    box.innerHTML = FILTERS.map(([k, label]) => {
+      const n = k === 'unread' ? 0 : state.convs.filter(c => inFilter(c, k)).reduce((a, c) => a + (c.unread || 0), 0);
+      return `<button type="button" class="chip${state.filter === k ? ' on' : ''}" data-f="${k}">${label}${n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</button>`;
+    }).join('');
+  }
+  $('#chips')?.addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    state.filter = b.dataset.f;
+    paintList();
+  });
+
+  /* Лента «Недавние»: те, кто написал (кольцо) и кто сейчас в сети (точка). Быстрый вход
+     в беседу одним тапом — вместо «историй» из макета, у нас их нет. */
+  function paintRecent() {
+    const box = $('#recent'); if (!box) return;
+    const cs = state.convs.filter(c => c.peer.kind !== 'system' && c.id > 0);
+    const score = c => (c.unread ? 2 : 0) + (isOnline(c.peer) ? 1 : 0);
+    const top = cs.map((c, i) => ({ c, i })).sort((a, b) => score(b.c) - score(a.c) || a.i - b.i).slice(0, 12).map(x => x.c);
+    box.hidden = top.length < 2 || state.filter !== 'all';
+    box.innerHTML = box.hidden ? '' : top.map(c =>
+      `<button type="button" class="rc${c.unread ? ' hot' : ''}" data-id="${c.id}">
+        <span class="ring"><span class="av ${avShape(c.peer)}">${avatarHTML(c.peer)}</span>${isOnline(c.peer) ? '<i class="on"></i>' : ''}</span>
+        <span class="rc-n">${esc(c.peer.name)}</span></button>`).join('');
+  }
+  $('#recent')?.addEventListener('click', e => {
+    const b = e.target.closest('.rc'); if (!b) return;
+    const c = state.convs.find(x => x.id === +b.dataset.id); if (!c) return;
+    openConv(c.id, c.peer, c.type === 'studio', null, false);
+  });
   $('#list').addEventListener('click', e => {
     const el = e.target.closest('.card'); if (!el) return;
     openConv(+el.dataset.id, JSON.parse(el.dataset.peer), el.dataset.studio === '1', null, el.dataset.system === '1');
@@ -280,6 +343,7 @@
     $('#wpOpen').hidden = !!isSystem || id <= 0;
     showRoom(true);
     renderPins();
+    syncQuick();
 
     const th = $('#thread');
     th.innerHTML = ''; th.dataset.lastDay = '';
@@ -511,8 +575,9 @@
     $('#rbText').textContent = text.length > 120 ? text.slice(0, 119) + '…' : text;
     $('#replyBar').hidden = false;
     $('#input').focus();
+    syncQuick();
   }
-  function cancelReply() { state.replyTo = null; $('#replyBar').hidden = true; }
+  function cancelReply() { state.replyTo = null; $('#replyBar').hidden = true; syncQuick(); }
   $('#rbX').addEventListener('click', cancelReply);
 
   /* Свайп вправо на тач-экране (как в Telegram) и горизонтальный жест тачпада.
@@ -783,6 +848,7 @@
   function renderAtts() {
     const tray = $('#attachTray');
     tray.hidden = !state.atts.length;
+    syncQuick();
     tray.innerHTML = state.atts.map(a => `<div class="att ${a.status}" data-key="${a.key}">
       ${a.preview ? `<img src="${a.preview}" alt="" draggable="false">` : `<span class="att-ic">${ICON.file}</span>`}
       <span class="att-main"><span class="att-name">${esc(a.file.name)}</span>
@@ -946,7 +1012,18 @@
     t.style.height = Math.min(t.scrollHeight, 140) + 'px';
     const hasReady = state.atts.some(a => a.status === 'ready');
     $('#send').disabled = (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
+    syncQuick();
   }
+
+  /* Быстрые ответы над композером (телефон): видны, пока поле пустое, нет цитаты и вложений */
+  function syncQuick() {
+    const q = $('#quick'); if (!q) return;
+    q.hidden = !(state.convId || state.draft) || state.isSystem || !!$('#input').value || !!state.replyTo || state.atts.length > 0;
+  }
+  $('#quick')?.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $('#input').value = b.dataset.q; autosize(); send();
+  });
   $('#input').addEventListener('input', autosize);
   $('#input').addEventListener('keydown', e => {
     // на телефоне Enter = перенос строки, отправка — кнопкой (как в TG)
@@ -1249,6 +1326,7 @@
     openConv(0, { kind: 'user', id: u.id, name: u.username, avatar: u.avatar }, false, { to: u.id }, false);
   });
   $('#emptyNew').addEventListener('click', () => { $('#app').classList.remove('show-room'); searchInput.focus(); });
+  $('#newChat')?.addEventListener('click', () => { searchInput.focus(); searchInput.scrollIntoView({ block: 'nearest' }); });   // телефон: карандаш в шапке = «новый чат» через поиск
 
   /* ── Вкладки ── */
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
