@@ -4,6 +4,7 @@ require_once('swad/config.php');
 require_once('swad/controllers/game.php');
 require_once __DIR__ . '/swad/controllers/deplex_web.php';
 require_once __DIR__ . '/swad/controllers/trailer_embed.php';
+require_once __DIR__ . '/swad/controllers/og.php';
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -233,6 +234,7 @@ $isEmbed = !empty($_GET['embed']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dustore — <?= htmlspecialchars($game['name']) ?></title>
+    <?= strtolower((string)$game['status']) === 'published' && empty($game['hidden']) ? og_game($game) : '' ?>
     <link rel="stylesheet" href="/swad/css/gamepage.css">
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <script src="/swad/js/CartManager.js"></script>
@@ -246,7 +248,7 @@ $isEmbed = !empty($_GET['embed']);
             --radius:14px;--sidebar-w:320px;
         }
         /* ── BANNER ── */
-        .gp-banner{width:100%;height:320px;background-size:cover;background-position:center;position:relative;flex-shrink:0;}
+        .gp-banner{width:100%;height:320px;background-size:cover;background-position:center;background-repeat:no-repeat;position:relative;flex-shrink:0;}
         .gp-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--dark) 100%);}
         @media(max-width:768px){.gp-banner{height:200px;}}
         /* ── LAYOUT ── */
