@@ -2,8 +2,10 @@
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-// localhost-эндпоинт: заставляем Database выбрать PRODUCTION-креды, а не LOCAL
-$_SERVER['HTTP_HOST'] = 'dustore.ru';
+// localhost-эндпоинт: воркер ходит на 127.0.0.1, и Database выбрал бы LOCAL-креды.
+// По умолчанию — боевые (dustore.ru); для локальной отладки воркер шлёт site=127.0.0.1
+// (переменная PUSH_SITE в pwa/push-worker.js), иначе подписки и очередь окажутся в разных БД.
+$_SERVER['HTTP_HOST'] = in_array($_GET['site'] ?? '', ['127.0.0.1', 'localhost'], true) ? $_GET['site'] : 'dustore.ru';
 
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/_bridge.php';
@@ -14,7 +16,10 @@ if (!in_array($ip, ['127.0.0.1', '::1'], true)) { http_response_code(403); exit(
 $secret = $_GET['secret'] ?? '';
 $in = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') { $in = json_decode(file_get_contents('php://input'), true) ?: []; $secret = $in['secret'] ?? $secret; }
+if (bridge_secret() === '') { http_response_code(503); exit('{"ok":false,"error":"no_config"}'); }   // пустой секрет = открытая дверь
 if (!hash_equals(bridge_secret(), (string)$secret)) { http_response_code(403); exit('{"ok":false}'); }
+// пульс воркера — по нему /chat/push_check.php понимает, что Node-процесс жив
+@touch(sys_get_temp_dir() . '/dustore_push_worker.beat');
 
 $db = (new Database())->connect('dustore');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -31,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($in['ack'])) {
     $id = (int)$in['ack'];
     $status = ($in['status'] ?? '') === 'sent' ? 'sent' : 'failed';
     if ($status === 'sent') $db->prepare("UPDATE push_outbox SET status='sent' WHERE id=?")->execute([$id]);
-    else $db->prepare("UPDATE push_outbox SET attempts=attempts+1, status=IF(attempts+1>=3,'failed','pending') WHERE id=?")->execute([$id]);
+    else $db->prepare("UPDATE push_outbox SET attempts=attempts+1, status=IF(attempts>=3,'failed','pending') WHERE id=?")->execute([$id]);
     exit('{"ok":true}');
 }
 

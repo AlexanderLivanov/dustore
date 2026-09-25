@@ -10,6 +10,8 @@ declare(strict_types=1);
  */
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../../swad/config.php';
+require_once __DIR__ . '/../lib.php';
+m_restore_session();
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 

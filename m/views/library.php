@@ -2,7 +2,7 @@
 /** m/views/library.php — мои игры и вишлист. */
 $title = 'Мои игры — Dustore';
 if (!$uid) {
-    echo m_empty('lock', 'Войдите в аккаунт', 'Здесь будут ваши игры и вишлист', ['Войти', '/login?backUrl=/m/library']);
+    echo m_empty('lock', 'Войдите в аккаунт', 'Здесь будут ваши игры и вишлист', ['Войти', '/m/login?back=/m/library']);
     return;
 }
 $tab = ($_GET['tab'] ?? '') === 'wishlist' ? 'wishlist' : 'games';

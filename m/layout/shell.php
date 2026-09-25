@@ -49,7 +49,7 @@ $ava = trim((string)($user['profile_picture'] ?? ''));
         <?php if ($ava): ?><img src="<?= h($ava) ?>" alt="" draggable="false"><?php else: ?><i class="ti ti-user"></i><?php endif; ?>
       </a>
     <?php else: ?>
-      <a class="pill-btn" href="/login?backUrl=<?= h(urlencode($_SERVER['REQUEST_URI'] ?? '/m/')) ?>">Войти</a>
+      <a class="pill-btn" href="/m/login?back=<?= h(rawurlencode($_SERVER['REQUEST_URI'] ?? '/m/')) ?>">Войти</a>
     <?php endif; ?>
   </div>
 </header>

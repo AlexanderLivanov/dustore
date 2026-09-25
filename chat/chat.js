@@ -1125,6 +1125,11 @@ $('#soundInput').addEventListener('change', async e => {
 
 /* Уведомления: разрешение спрашиваем только по кнопке — браузеры (и iOS
    в особенности) показывают запрос лишь в ответ на явный жест. */
+const PUSH_WHY = {
+  no_key: 'Пуши не настроены на сервере (нет VAPID-ключа)', denied: 'Уведомления запрещены в настройках браузера',
+  sw: 'Не запустился service worker', subscribe: 'Браузер не выдал подписку', server: 'Сервер не сохранил подписку',
+  unsupported: 'Браузер не поддерживает уведомления',
+};
 function renderPushState() {
   const st = $('#pushState'), btn = $('#pushBtn');
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
@@ -1140,8 +1145,9 @@ function renderPushState() {
 }
 $('#pushBtn').addEventListener('click', async () => {
   if (!window.VAPID_PUBLIC) { toast('Пуши не настроены на сервере', true); return; }
-  if (window.initPush) await window.initPush();
+  const r = window.initPush ? await window.initPush() : { ok: false, reason: 'unsupported' };
   renderPushState();
+  if (!r.ok) toast(PUSH_WHY[r.reason] || 'Не удалось включить уведомления', true);
 });
 
 /* ── Профиль ── */

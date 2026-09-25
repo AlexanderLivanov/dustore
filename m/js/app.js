@@ -88,7 +88,7 @@ let deferred = null;
 const installEl = $('#install');
 const installHidden = () => (+store.get('m_install_x') || 0) > Date.now() - 14 * 864e5;
 function showInstall(hint) {
-  if (!installEl || standalone || installHidden() || ['game', 'chat'].includes(M.page)) return;
+  if (!installEl || standalone || installHidden() || ['game', 'chat', 'login'].includes(M.page)) return;
   if (hint) $('#installHint').textContent = hint;
   installEl.hidden = false;
 }
@@ -192,7 +192,7 @@ if (desc && descMore && desc.scrollHeight > desc.clientHeight + 4) {
 // Вишлист: оптимистично + идемпотентно (шлём желаемое состояние, а не «переключи»)
 const wish = $('#wishBtn');
 wish?.addEventListener('click', async () => {
-  if (!M.user) { location.href = '/login?backUrl=' + encodeURIComponent(location.pathname); return; }
+  if (!M.user) { location.href = '/m/login?back=' + encodeURIComponent(location.pathname); return; }
   const on = !wish.classList.contains('on');
   const paint = v => { wish.classList.toggle('on', v); wish.setAttribute('aria-pressed', v); wish.querySelector('i').className = 'ti ti-heart' + (v ? '-filled' : ''); };
   paint(on); navigator.vibrate?.(8);
@@ -251,10 +251,11 @@ if (sw) {
       return;
     }
     if (typeof window.initPush !== 'function' || !window.VAPID_PUBLIC) { toast('Уведомления ещё не настроены на сервере'); return; }
-    await window.initPush();                    // спрашивает разрешение — только по жесту
-    const s = await current().catch(() => null);
-    if (s) { setUI(true, 'Приходят на это устройство'); toast('Уведомления включены'); }
-    else setUI(false, Notification.permission === 'denied' ? 'Запрещены в настройках браузера' : 'Не удалось включить');
+    const r = await window.initPush();          // спрашивает разрешение — только по жесту
+    const WHY = { no_key: 'Пуши не настроены на сервере (нет VAPID-ключа)', denied: 'Запрещены в настройках браузера',
+                  sw: 'Не запустился service worker', subscribe: 'Браузер не выдал подписку', server: 'Сервер не сохранил подписку' };
+    if (r.ok) { setUI(true, 'Приходят на это устройство'); toast('Уведомления включены'); }
+    else setUI(false, WHY[r.reason] || 'Не удалось включить');
   });
 }
 })();

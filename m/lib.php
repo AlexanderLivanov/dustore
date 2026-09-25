@@ -18,6 +18,34 @@ require_once __DIR__ . '/../swad/controllers/game.php';
 
 const M_COVER_FALLBACK = 'data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 200%22%3E%3Crect width=%22320%22 height=%22200%22 fill=%22%231b0a26%22/%3E%3Cpath d=%22M136 80h48v40h-48z%22 fill=%22none%22 stroke=%22%236b5478%22 stroke-width=%223%22/%3E%3Ccircle cx=%22150%22 cy=%2294%22 r=%226%22 fill=%22%236b5478%22/%3E%3C/svg%3E';
 
+/**
+ * Восстановить сессию по куке auth_token — то же, что десктоп делает в
+ * header.php через User::checkAuth().
+ *
+ * Почему это критично именно для PWA: PHPSESSID — сессионная кука, и iOS
+ * выбрасывает её, как только система выгрузила приложение. auth_token живёт
+ * 30 дней и остаётся. Без восстановления /m считал человека гостем, кнопка
+ * «Войти» вела на /login, а login.php, видя auth_token, сразу отправлял
+ * обратно — кнопка «не работала», а /m/chat уходил в бесконечный редирект.
+ * Теперь у мобилки ещё и свой вход (/m/login), на десктопный /login она не ходит.
+ */
+function m_restore_session(): void {
+    if (!empty($_SESSION['USERDATA']['id']) || empty($_COOKIE['auth_token'])) return;
+    try {
+        require_once __DIR__ . '/../swad/controllers/user.php';
+        $code = (new User())->checkAuth();
+    } catch (Throwable $e) {
+        error_log('[m] restore session: ' . $e->getMessage());
+        $code = -1;
+    }
+    // токен есть, а пользователя по нему нет (или сбой) — гасим куку, иначе
+    // login.php будет вечно отфутболивать назад и войти станет невозможно
+    if (($code === 3 || $code === -1) && !empty($_COOKIE['auth_token'])) {   // 2 — checkAuth уже погасил сам
+        setcookie('auth_token', '', time() - 3600, '/');
+        unset($_COOKIE['auth_token']);
+    }
+}
+
 function h($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 /** Путь к ассету с версией по mtime — кэш сбрасывается сам при каждом деплое. */
