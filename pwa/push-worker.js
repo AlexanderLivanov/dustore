@@ -7,12 +7,16 @@
  *   VAPID_PRIVATE  — приватный VAPID ключ (только здесь, на сервере!)
  *   VAPID_SUBJECT  — mailto:you@dustore.ru  (или https://dustore.ru)
  *   BRIDGE_SECRET  — общий секрет для localhost-эндпоинта
- *   OUTBOX_URL     — http://127.0.0.1/chat/push_outbox.php
+ *   OUTBOX_URL     — https://dustore.ru/chat/push_outbox.php (по умолчанию)
+ *   OUTBOX_CONNECT — куда физически подключаться, по умолчанию 127.0.0.1;
+ *                    пустая строка — обычный DNS
  *
  * Сгенерировать ключи: npx web-push generate-vapid-keys
  */
 const webpush = require('web-push');
 const fs = require('fs');
+const http = require('http');
+const https = require('https');
 
 // секрет: тот же файл, что читает PHP (bridge_secret()); фолбэк — env
 function readSecret() {
@@ -23,7 +27,11 @@ function readSecret() {
 
 const { VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT } = process.env;
 const BRIDGE_SECRET = readSecret();
-const OUTBOX_URL = process.env.OUTBOX_URL || 'http://127.0.0.1/chat/push_outbox.php';
+/* На 127.0.0.1:80 у сервера отвечает другой сайт (default vhost), и outbox
+   оттуда — 404. Поэтому адрес — боевое имя, а соединение прибиваем к петле:
+   Apache выберет vhost dustore.ru по SNI и Host, PHP увидит REMOTE_ADDR 127.0.0.1. */
+const OUTBOX_URL = process.env.OUTBOX_URL || 'https://dustore.ru/chat/push_outbox.php';
+const OUTBOX_CONNECT = process.env.OUTBOX_CONNECT ?? '127.0.0.1';
 
 if (!VAPID_PUBLIC || !VAPID_PRIVATE || !VAPID_SUBJECT || !BRIDGE_SECRET) {
     console.error('Нужны: VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT (env) и секрет (файл /etc/dustore/bridge.secret или env BRIDGE_SECRET)');
@@ -57,21 +65,53 @@ function checkKey(siteKey) {
     }
 }
 
+/* http(s).request, а не fetch: только так можно подменить адрес подключения,
+   сохранив имя в SNI и Host. Секрет едет по петле, поэтому сертификат самих
+   себя не проверяем — origin-сертификат (Cloudflare и т.п.) проверку и не прошёл бы. */
+function call(method, url, body) {
+    const u = new URL(url);
+    const family = OUTBOX_CONNECT.includes(':') ? 6 : 4;
+    const pin = OUTBOX_CONNECT ? {
+        lookup: (host, opts, cb) => (opts && opts.all)
+            ? cb(null, [{ address: OUTBOX_CONNECT, family }])
+            : cb(null, OUTBOX_CONNECT, family),
+        rejectUnauthorized: false,
+    } : {};
+    return new Promise((resolve, reject) => {
+        const req = (u.protocol === 'https:' ? https : http).request(u, {
+            method,
+            timeout: 10000,
+            headers: body ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } : {},
+            ...pin,
+        }, res => {
+            let text = '';
+            res.setEncoding('utf8');
+            res.on('data', c => text += c);
+            res.on('end', () => resolve({ status: res.statusCode, location: res.headers.location, text }));
+        });
+        req.on('timeout', () => req.destroy(new Error('timeout')));
+        req.on('error', reject);
+        req.end(body);
+    });
+}
+
 async function fetchJobs() {
-    const res = await fetch(`${OUTBOX_URL}?secret=${encodeURIComponent(BRIDGE_SECRET)}`, { redirect: 'manual' });
+    const res = await call('GET', `${OUTBOX_URL}?secret=${encodeURIComponent(BRIDGE_SECRET)}`);
     if (res.status >= 300 && res.status < 400) {
-        state('redirect', res.status, '→', res.headers.get('location'),
-            '— outbox должен отвечать по http://127.0.0.1 без редиректа: после него REMOTE_ADDR уже не 127.0.0.1 и PHP ответит 403');
+        state('redirect', res.status, '→', res.location,
+            '— outbox должен отвечать сразу: после редиректа запрос уйдёт не с 127.0.0.1 и PHP ответит 403');
         return [];
     }
-    const text = await res.text();
     let r;
-    try { r = JSON.parse(text); } catch {
-        state('not-json', res.status, text.slice(0, 120).replace(/\s+/g, ' '), '— на 127.0.0.1 отвечает не тот сайт (vhost) или PHP упал');
+    try { r = JSON.parse(res.text); } catch {
+        state('not-json', res.status, res.text.slice(0, 120).replace(/\s+/g, ' '), '— отвечает не тот сайт (vhost) или PHP упал');
         return [];
     }
-    if (!res.ok || !r.ok) {
-        state('refused', res.status, text.slice(0, 120), res.status === 403 ? '— не тот секрет (/etc/dustore/bridge.secret) или запрос пришёл не с 127.0.0.1' : '');
+    if (res.status !== 200 || !r.ok) {
+        const hint = res.status === 403 ? '— не тот секрет (/etc/dustore/bridge.secret) или запрос пришёл не с 127.0.0.1'
+                   : res.status === 404 ? '— это не dustore: проверь OUTBOX_URL / OUTBOX_CONNECT'
+                   : '';
+        state('refused', res.status, res.text.slice(0, 120), hint);
         return [];
     }
     state('ok');
@@ -111,14 +151,9 @@ async function drain() {
 }
 
 async function post(body) {
-    const res = await fetch(OUTBOX_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: BRIDGE_SECRET, ...body }),
-        redirect: 'manual',
-    });
-    if (!res.ok) console.error('[outbox] POST', res.status, JSON.stringify(body).slice(0, 80));
+    const res = await call('POST', OUTBOX_URL, JSON.stringify({ secret: BRIDGE_SECRET, ...body }));
+    if (res.status !== 200) console.error('[outbox] POST', res.status, JSON.stringify(body).slice(0, 80));
 }
 
-console.log('push-worker запущен, outbox:', OUTBOX_URL, 'vapid:', VAPID_PUBLIC.slice(0, 16) + '…');
+console.log('push-worker запущен, outbox:', OUTBOX_URL + (OUTBOX_CONNECT ? ' через ' + OUTBOX_CONNECT : ''), 'vapid:', VAPID_PUBLIC.slice(0, 16) + '…');
 drain();

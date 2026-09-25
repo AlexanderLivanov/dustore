@@ -260,11 +260,16 @@ sudo tee /etc/dustore/push.env > /dev/null <<'EOF'
 VAPID_PUBLIC=...
 VAPID_PRIVATE=...
 VAPID_SUBJECT=mailto:admin@dustore.ru
+# Воркер ходит в outbox по имени сайта, но через 127.0.0.1 (OUTBOX_CONNECT):
+# на голом http://127.0.0.1 может ответить другой сайт сервера
+OUTBOX_URL=https://dustore.ru/chat/push_outbox.php
 EOF
 openssl rand -hex 32 | sudo tee /etc/dustore/bridge.secret > /dev/null
 sudo chgrp www-data /etc/dustore/push.env /etc/dustore/bridge.secret
 sudo chmod 640 /etc/dustore/push.env /etc/dustore/bridge.secret
 ```
+
+Фоновые скрипты сайт вызывает у самого себя так же, по имени через петлю. На своём домене задайте Apache `SetEnv LOOPBACK_URL https://ваш-домен`.
 
 **Таблицы:**
 

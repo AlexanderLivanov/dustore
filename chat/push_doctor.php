@@ -144,7 +144,7 @@ foreach (['push_subscriptions', 'push_outbox'] as $t) {
 }
 if (!in_array('push_subscriptions', $tables, true) || !in_array('push_outbox', $tables, true)) exit(1);
 
-$cols = $db->query("SELECT COLUMN_NAME, COLUMN_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT, EXTRA
+$cols = $db->query("SELECT COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE, COLUMN_DEFAULT, EXTRA
                       FROM information_schema.COLUMNS
                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'push_subscriptions'")->fetchAll(PDO::FETCH_ASSOC);
 $byName = array_column($cols, null, 'COLUMN_NAME');
@@ -160,7 +160,17 @@ foreach ($cols as $c) {
     }
 }
 $uniq = $db->query("SHOW INDEX FROM push_subscriptions WHERE Column_name = 'endpoint' AND Non_unique = 0")->fetchAll();
-$uniq ? ok('Уникальный индекс по endpoint есть') : warn('Нет UNIQUE по endpoint: ON DUPLICATE KEY не срабатывает, одно устройство копится строками и получает пуш N раз');
+$dups = (int)$db->query("SELECT COUNT(*) - COUNT(DISTINCT endpoint) FROM push_subscriptions")->fetchColumn();
+if ($uniq) {
+    ok('Уникальный индекс по endpoint есть');
+} else {
+    // Полный индекс по VARCHAR(n) влезает в лимит InnoDB (3072 байта), только если n*4 <= 3072
+    $type = strtolower((string)($byName['endpoint']['DATA_TYPE'] ?? ''));
+    $key  = ($type === 'varchar' && $len && $len * 4 <= 3072) ? 'endpoint' : 'endpoint(' . min($len ?: 512, 512) . ')';
+    warn("Нет UNIQUE по endpoint" . ($dups ? ", дублей уже {$dups}" : '') . '. Код больше не плодит копии, но индекс стоит добавить:');
+    echo "      DELETE s1 FROM push_subscriptions s1 JOIN push_subscriptions s2 ON s1.endpoint = s2.endpoint AND s1.id < s2.id;\n";
+    echo "      ALTER TABLE push_subscriptions ADD UNIQUE KEY uq_endpoint ({$key});\n";
+}
 
 head('4. Подписки и очередь');
 $subs = $db->query("SELECT endpoint FROM push_subscriptions")->fetchAll(PDO::FETCH_COLUMN);
@@ -178,7 +188,8 @@ $by = array_column($st, null, 'status');
 echo '    очередь: ' . ($st ? implode(', ', array_map(fn($r) => "{$r['status']} {$r['n']}", $st)) : 'пусто') . "\n";
 if (!empty($by['pending'])) {
     $age = (int)$by['pending']['age'];
-    $age > 30 ? bad("Старейшая задача ждёт {$age} с — воркер не забирает очередь (не запущен или не достучался до outbox, см. п.5)")
+    $age > 30 ? bad("Старейшая задача ждёт {$age} с — воркер не забирает очередь (не запущен или не достучался до outbox, см. п.5). "
+                    . 'Задачи старше часа outbox при первом же опросе пометит failed — пачки старых пушей не будет')
               : ok('Очередь разбирается');
 }
 if (!empty($by['sent'])) ok('Последняя успешная отправка: ' . $by['sent']['newest']);
@@ -188,12 +199,26 @@ if (!empty($by['failed'])) {
 
 /* ─── 5. Outbox глазами воркера ──────────────────────────────────────────── */
 head('5. Outbox глазами воркера');
-$url = getenv('OUTBOX_URL') ?: 'http://127.0.0.1/chat/push_outbox.php';
+// Тот же маршрут, что у воркера: боевое имя, соединение прибито к петле
+$url  = getenv('OUTBOX_URL') ?: 'https://dustore.ru/chat/push_outbox.php';
+$pin  = getenv('OUTBOX_CONNECT');
+$pin  = $pin === false ? '127.0.0.1' : $pin;
+$uu   = parse_url($url);
+$port = (int)($uu['port'] ?? (($uu['scheme'] ?? '') === 'https' ? 443 : 80));
+echo "    как ходит воркер: {$url}" . ($pin !== '' ? " через {$pin}" : '') . "\n";
 if (!function_exists('curl_init')) {
     warn('Нет ext-curl — проверь руками: curl -si "' . $url . '?secret=…"');
 } else {
     $ch = curl_init($url . '?secret=' . rawurlencode(bridge_secret()));
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 5, CURLOPT_HEADER => true]);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 5, CURLOPT_HEADER => true,
+                            CURLOPT_NOPROXY => '*']);          // воркер ходит напрямую, http_proxy из env ему не указ
+    if ($pin !== '') {
+        curl_setopt_array($ch, [
+            CURLOPT_RESOLVE => ["{$uu['host']}:{$port}:{$pin}"],
+            CURLOPT_SSL_VERIFYPEER => false,        // по петле, как у воркера
+            CURLOPT_SSL_VERIFYHOST => 0,
+        ]);
+    }
     $raw  = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $hs   = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
@@ -212,7 +237,9 @@ if (!function_exists('curl_init')) {
         } elseif (!is_array($j)) {
             bad("{$url} → {$code}, но не JSON: {$snip} — на 127.0.0.1 отвечает другой vhost или PHP упал");
         } elseif (empty($j['ok'])) {
-            bad("{$url} → {$code} {$snip} — секрет не совпал или запрос пришёл не с 127.0.0.1");
+            bad("{$url} → {$code} {$snip} — " . ($code === 404
+                ? 'отвечает не dustore: на этом адресе другой vhost. Задай воркеру OUTBOX_URL с именем сайта'
+                : 'секрет не совпал или запрос пришёл не с 127.0.0.1'));
         } else {
             ok("{$url} отвечает воркеру, задач в выдаче: " . count($j['jobs'] ?? []));
             if (isset($j['vapid']) && $j['vapid'] !== $site) {
@@ -232,6 +259,9 @@ if ($ps === '') {
     $worker = array_filter($lines, fn($l) => str_contains($l, 'push-worker'));
     $legacy = array_filter($lines, fn($l) => str_contains($l, 'api/push') || preg_match('#push/index\.js#', $l));
     $worker ? ok('push-worker запущен: ' . trim((string)reset($worker))) : bad('push-worker.js не запущен — очередь никто не разбирает. systemctl status <юнит> / node pwa/push-worker.js');
+    if ($worker && preg_match('/^\s*\d+\s+root\s/', (string)reset($worker))) {
+        warn('Воркер запущен от root вручную: после перезагрузки сервера он не поднимется. Оформи службой systemd (README, раздел «Пуш-уведомления»)');
+    }
     if ($legacy) warn('Жив старый сервер api/push/index.js (:3001): ' . trim((string)reset($legacy)) . ' — после этого обновления он больше не нужен');
 }
 

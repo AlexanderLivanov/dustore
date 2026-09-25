@@ -63,20 +63,8 @@ $payload = http_build_query([
     'email'    => $user['email']    ?? '',
     'user_id'  => $userId,
 ]);
-$len = strlen($payload);
-$req = "POST /expert/notify_expert.php HTTP/1.1\r\n"
-    . "Host: localhost\r\n"
-    . "Content-Type: application/x-www-form-urlencoded\r\n"
-    . "Content-Length: {$len}\r\n"
-    . "Connection: close\r\n\r\n"
-    . $payload;
-
-$sock = @fsockopen('127.0.0.1', 80, $errno, $errstr, 0.2);
-if ($sock) {
-    stream_set_blocking($sock, false);
-    fwrite($sock, $req);
-    fclose($sock);
-}
+require_once __DIR__ . '/../swad/controllers/loopback.php';
+loopback_fire('/expert/notify_expert.php', $payload);
 // Если сокет не открылся — просто идём дальше, письмо не критично
 
 header("Location: thanks");

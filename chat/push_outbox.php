@@ -36,11 +36,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($in['ack'])) {
     exit('{"ok":true}');
 }
 
+// Протухшее не шлём. Если воркер лежал (а он лежал неделями), очередь копит
+// сотни задач, и на подъёме человеку прилетела бы пачка пушей про давно
+// прочитанные сообщения. Они и так есть в ленте «Уведомления».
+const PUSH_STALE_MIN = 60;
+$db->exec("UPDATE push_outbox SET status='failed'
+            WHERE status='pending' AND created_at < NOW() - INTERVAL " . PUSH_STALE_MIN . " MINUTE");
+
 // выдать pending с подписками
 $jobs = $db->query("SELECT id, user_id, title, body, url FROM push_outbox
                      WHERE status='pending' ORDER BY id ASC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
 $out = [];
-$subStmt = $db->prepare("SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id=?");
+// По одной строке на устройство: без UNIQUE по endpoint каждый заход в чат
+// добавлял копию, и телефон получал один пуш N раз
+$subStmt = $db->prepare("SELECT id, endpoint, p256dh, auth FROM push_subscriptions
+                          WHERE id IN (SELECT MAX(id) FROM push_subscriptions WHERE user_id=? GROUP BY endpoint)");
 foreach ($jobs as $j) {
     $subStmt->execute([(int)$j['user_id']]);
     $subs = array_map(fn($s) => [
