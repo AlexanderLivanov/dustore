@@ -344,15 +344,6 @@ sudo -u www-data php chat/push_doctor.php --send=<ваш user_id>
 - **Хотите в команду** — ищем PHP- и JS-разработчиков, дизайнеров и тестировщиков. Пишите в [Telegram](https://t.me/dustore_official).
 - **Pull request'ы** — всегда рады. Небольшие и с понятным описанием вливаются быстрее.
 
-## 👥 Команда
-
-| | |
-|---|---|
-| **Эш (Eshward Williams)** | Основатель и CEO — [@dgscorp](https://t.me/dgscorp) |
-| **Александр Ливанов** | Ведущий программист — [@indepcode](https://t.me/indepcode) |
-| **Александр Партикевич** | Арт-директор — [@Aleksandr_MotionGraphics](https://t.me/Aleksandr_MotionGraphics) |
-| **Остин** | Кот. Помогает программистам — без него бы тут ничего не работало |
-
 ## 📄 Лицензия
 
 [Apache License 2.0](LICENSE)
