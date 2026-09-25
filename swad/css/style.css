@@ -8,11 +8,11 @@
 
 
 ::selection {
-    background: #c32178;
+    background: rgb(var(--brand-rgb, 195, 33, 120));
     color: #fff;
 }
 ::-moz-selection {
-    background: #c32178;
+    background: rgb(var(--brand-rgb, 195, 33, 120));
     color: #fff;
 }
 
@@ -55,7 +55,7 @@
 }
 
 #game-search-submit:hover {
-    background-color: #c32178;
+    background-color: rgb(var(--brand-rgb, 195, 33, 120));
     color: white;
     font-family: 'Tiny5', 'Gill Sans';
     transition: all .1s;
@@ -84,7 +84,7 @@
 /* Стили для верхнего баннера */
 .top-banner {
     position: relative;
-    background: linear-gradient(90deg, #ff5722, #e91e63, #9c27b0);
+    background: linear-gradient(90deg, #ff5722, rgb(var(--brand-hi-rgb, 233, 30, 99)), #9c27b0);
     color: white;
     padding: 10px 20px;
     text-align: center;

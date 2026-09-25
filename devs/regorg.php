@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .step.active .step-num {
             background: var(--p);
             color: #fff;
-            box-shadow: 0 0 0 3px rgba(195, 33, 120, .25);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 195, 33, 120), .25);
         }
 
         .step.idle .step-num {
@@ -381,8 +381,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .alert-err {
-            background: rgba(255, 61, 113, .1);
-            border: 1px solid rgba(255, 61, 113, .2);
+            background: rgba(var(--brand-hi-rgb, 255, 61, 113), .1);
+            border: 1px solid rgba(var(--brand-hi-rgb, 255, 61, 113), .2);
             color: var(--err);
             padding: 12px 16px;
             border-radius: 10px;
@@ -405,8 +405,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .notice-info {
-            background: rgba(195, 33, 120, .07);
-            border: 1px solid rgba(195, 33, 120, .18);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .07);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .18);
             border-radius: 10px;
             padding: 12px 16px;
             font-size: 12px;

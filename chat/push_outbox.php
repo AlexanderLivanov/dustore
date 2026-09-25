@@ -9,6 +9,7 @@ $_SERVER['HTTP_HOST'] = in_array($_GET['site'] ?? '', ['127.0.0.1', 'localhost']
 
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/_bridge.php';
+require_once __DIR__ . '/_vapid.php';
 
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 if (!in_array($ip, ['127.0.0.1', '::1'], true)) { http_response_code(403); exit('{"ok":false}'); }
@@ -58,4 +59,7 @@ foreach ($jobs as $j) {
         'subscriptions' => $subs,
     ];
 }
-echo json_encode(['ok' => true, 'jobs' => $out], JSON_UNESCAPED_UNICODE);
+// vapid — ключ, который сайт раздаёт браузерам. Воркер сверяет его со своим:
+// если они разные, каждая отправка кончается 403, а снаружи это выглядит как
+// «пуши просто не приходят».
+echo json_encode(['ok' => true, 'vapid' => vapid_public_key(), 'jobs' => $out], JSON_UNESCAPED_UNICODE);

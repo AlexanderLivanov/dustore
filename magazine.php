@@ -28,20 +28,20 @@
         h1 {
             font-size: 3em;
             margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff006e, #00f5ff, #ffbe0b, #ff006e);
+            background: linear-gradient(45deg, rgb(var(--brand-hi-rgb, 255, 0, 110)), #00f5ff, #ffbe0b, rgb(var(--brand-hi-rgb, 255, 0, 110)));
             background-size: 300% 300%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             animation: titleGlow 4s ease-in-out infinite, gradientShift 6s ease-in-out infinite;
-            filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5));
+            filter: drop-shadow(0 0 20px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.5));
         }
 
         @keyframes titleGlow {
 
             0%,
             100% {
-                filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5));
+                filter: drop-shadow(0 0 20px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.5));
             }
 
             50% {
@@ -97,7 +97,7 @@
         }
 
         .effect-btn.active {
-            background: linear-gradient(135deg, #ff006e, #00f5ff);
+            background: linear-gradient(135deg, rgb(var(--brand-hi-rgb, 255, 0, 110)), #00f5ff);
             border-color: #ffbe0b;
             box-shadow: 0 0 20px rgba(0, 245, 255, 0.6);
         }
@@ -145,7 +145,7 @@
         .book:hover {
             filter: drop-shadow(0 15px 10px rgba(255, 0, 110, 0.));
             transform: rotateX(10deg) rotateY(-10deg) translateY(-5px) scale(1.05);
-            box-shadow: 0 20px 45px rgba(255, 0, 110, 0.4);
+            box-shadow: 0 20px 45px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.4);
         }
 
         .book::before {
@@ -222,7 +222,7 @@
 
         /* ===== ПОЛИХРОМНЫЙ ЭФФЕКТ ===== */
         .book-cover.polychrome {
-            background: linear-gradient(135deg, #ff006e 0%, #00f5ff 25%, #ffbe0b 50%, #8338ec 75%, #ff006e 100%);
+            background: linear-gradient(135deg, rgb(var(--brand-hi-rgb, 255, 0, 110)) 0%, #00f5ff 25%, #ffbe0b 50%, #8338ec 75%, rgb(var(--brand-hi-rgb, 255, 0, 110)) 100%);
             background-size: 400% 400%;
             animation: polyShift 4s ease infinite;
             position: relative;
@@ -282,11 +282,11 @@
             height: 100%;
             background:
                 linear-gradient(115deg,
-                    rgba(255, 0, 150, 0.3),
+                    rgba(var(--brand-hi-rgb, 255, 0, 150), 0.3),
                     rgba(0, 200, 255, 0.3),
                     rgba(255, 255, 0, 0.25),
                     rgba(0, 255, 200, 0.3),
-                    rgba(255, 0, 150, 0.3)),
+                    rgba(var(--brand-hi-rgb, 255, 0, 150), 0.3)),
                 repeating-linear-gradient(45deg,
                     rgba(255, 255, 255, 0.2) 0px,
                     rgba(255, 255, 255, 0.2) 2px,
@@ -327,7 +327,7 @@
 
         /* ===== НЕГАТИВНЫЙ ЭФФЕКТ ===== */
         .book-cover.negative {
-            background: linear-gradient(135deg, #ffff00 0%, #ff00ff 100%);
+            background: linear-gradient(135deg, #ffff00 0%, rgb(var(--brand-hi-rgb, 255, 0, 255)) 100%);
             filter: invert(1);
             position: relative;
         }
@@ -399,7 +399,7 @@
 
         /* Цветовые варианты для стандартного режима */
         .book.default .book-cover {
-            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+            background: linear-gradient(135deg, #8B0000 0%, rgb(var(--brand-rgb, 220, 20, 60)) 100%);
         }
 
         .book.default:nth-child(2) .book-cover {
@@ -490,9 +490,9 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255, 0, 110, 0.2);
-            border: 2px solid #ff006e;
-            color: #ff006e;
+            background: rgba(var(--brand-hi-rgb, 255, 0, 110), 0.2);
+            border: 2px solid rgb(var(--brand-hi-rgb, 255, 0, 110));
+            color: rgb(var(--brand-hi-rgb, 255, 0, 110));
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -505,10 +505,10 @@
         }
 
         .close-btn:hover {
-            background: #ff006e;
+            background: rgb(var(--brand-hi-rgb, 255, 0, 110));
             color: #fff;
             transform: rotate(90deg) scale(1.1);
-            box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
+            box-shadow: 0 0 20px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.6);
         }
 
         /* .modal-book {
@@ -516,7 +516,7 @@
             height: 200px;
             border-radius: 8px;
             margin-bottom: 30px;
-            box-shadow: 0 15px 40px rgba(255, 0, 110, 0.3);
+            box-shadow: 0 15px 40px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.3);
             animation: bookBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         } */
 
@@ -537,7 +537,7 @@
         .modal h2 {
             font-size: 2em;
             margin-bottom: 15px;
-            background: linear-gradient(45deg, #ff006e, #00f5ff);
+            background: linear-gradient(45deg, rgb(var(--brand-hi-rgb, 255, 0, 110)), #00f5ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -553,7 +553,7 @@
         .modal-btn {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, #ff006e, #00f5ff);
+            background: linear-gradient(135deg, rgb(var(--brand-hi-rgb, 255, 0, 110)), #00f5ff);
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -561,7 +561,7 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 0, 110, 0.3);
+            box-shadow: 0 4px 15px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.3);
         }
 
         .modal-btn:hover {

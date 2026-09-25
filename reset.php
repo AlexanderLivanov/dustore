@@ -112,8 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenValid) {
         .bg-canvas {
             position: fixed; inset: 0; z-index: 0;
             background:
-                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(195,33,120,0.12) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 80% at 80% 90%, rgba(100,20,80,0.10) 0%, transparent 60%),
+                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(var(--brand-rgb, 195, 33, 120), 0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 80% at 80% 90%, rgba(var(--brand-deep-rgb, 100, 20, 80), 0.10) 0%, transparent 60%),
                 var(--bg);
         }
         .bg-grid {
@@ -124,15 +124,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenValid) {
             mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
         }
         .orb { position: fixed; border-radius: 50%; filter: blur(80px); z-index: 0; pointer-events: none; animation: orb-drift 12s ease-in-out infinite alternate; }
-        .orb-1 { width: 400px; height: 400px; background: rgba(195,33,120,0.15); top: -100px; left: -100px; }
-        .orb-2 { width: 300px; height: 300px; background: rgba(100,0,60,0.1); bottom: -50px; right: -50px; animation-delay: -6s; }
+        .orb-1 { width: 400px; height: 400px; background: rgba(var(--brand-rgb, 195, 33, 120), 0.15); top: -100px; left: -100px; }
+        .orb-2 { width: 300px; height: 300px; background: rgba(var(--brand-deep-rgb, 100, 0, 60), 0.1); bottom: -50px; right: -50px; animation-delay: -6s; }
         @keyframes orb-drift { from { transform: translate(0,0) scale(1); } to { transform: translate(30px,20px) scale(1.1); } }
 
         .card {
             position: relative; z-index: 1; width: 420px;
             background: rgba(17,17,24,0.85); border: 1px solid var(--border);
             border-radius: 24px; backdrop-filter: blur(24px);
-            box-shadow: 0 0 0 1px rgba(195,33,120,0.08), 0 40px 80px rgba(0,0,0,0.6);
+            box-shadow: 0 0 0 1px rgba(var(--brand-rgb, 195, 33, 120), 0.08), 0 40px 80px rgba(0,0,0,0.6);
             overflow: hidden;
             animation: card-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
         }
@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenValid) {
             font-family: 'Inter', sans-serif; outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        input:focus { border-color: rgba(195,33,120,0.5); box-shadow: 0 0 0 3px rgba(195,33,120,0.08); }
+        input:focus { border-color: rgba(var(--brand-rgb, 195, 33, 120), 0.5); box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 195, 33, 120), 0.08); }
         input::placeholder { color: var(--muted); }
         input.input-error { border-color: rgba(255,77,109,0.6) !important; box-shadow: 0 0 0 3px rgba(255,77,109,0.1) !important; }
 
@@ -173,10 +173,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenValid) {
         .match-hint { font-size: 11px; margin-top: 5px; min-height: 16px; transition: color 0.2s; }
 
         .btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: var(--radius); color: #fff; font-size: 15px; font-weight: 600; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
-        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(195,33,120,0.3); }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(var(--brand-rgb, 195, 33, 120), 0.3); }
         .btn-primary:disabled { opacity: 0.5; cursor: default; transform: none; filter: none; box-shadow: none; }
         .btn-ghost { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s; margin-top: 10px; text-decoration: none; display: block; text-align: center; }
-        .btn-ghost:hover { border-color: rgba(195,33,120,0.4); color: var(--text); }
+        .btn-ghost:hover { border-color: rgba(var(--brand-rgb, 195, 33, 120), 0.4); color: var(--text); }
 
         .alert-error { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.25); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #ff8fa3; margin-bottom: 16px; }
 

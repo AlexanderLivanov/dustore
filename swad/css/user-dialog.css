@@ -1,0 +1,316 @@
+/* =============================================================================
+   USER DIALOGS — общий каркас окон пользователя (swad/css/user-dialog.css)
+   Окна: «Настройки» (swad/static/elements/user_settings.php) и
+   «Изменить профиль» (swad/static/elements/profile_edit.php).
+   Здесь — всё, что у них общее: <dialog>, шапка, секции, подвал, кнопки,
+   поля ввода, сообщения; плюс круглые кнопки-иконки, которые их открывают.
+   Своё у каждого окна — в его файле.
+   ============================================================================= */
+
+.us-gear {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .07);
+    color: #f8f9fa;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, box-shadow .2s;
+}
+
+.us-gear svg {
+    transition: transform .5s cubic-bezier(.3, 1.5, .5, 1);
+}
+
+.us-gear:hover {
+    background: rgba(var(--brand-rgb, 195, 33, 120), .28);
+    border-color: rgba(var(--brand-hi-rgb, 255, 91, 168), .55);
+    box-shadow: 0 0 18px rgba(var(--brand-rgb, 195, 33, 120), .45);
+}
+
+.us-gear:hover svg,
+.us-gear[aria-expanded="true"] svg {
+    transform: rotate(90deg);
+}
+
+.us-gear:focus-visible {
+    outline: 2px solid rgb(var(--brand-hi-rgb, 255, 91, 168));
+    outline-offset: 3px;
+}
+
+/* ── Окно ─────────────────────────────────────────────────────────────── */
+.us-dialog {
+    --us-accent: #c32178;
+    --us-accent-hi: #ff5ba8;
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(88vh, 760px);
+    /* Модальный <dialog> центрируется браузерным margin: auto, а глобальный
+       сброс сайта (* { margin: 0 }) его убивает — окно липло к углу. */
+    margin: auto;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 20px;
+    background: rgba(22, 8, 34, .92);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    color: #f8f9fa;
+    box-shadow: 0 40px 100px -30px rgba(0, 0, 0, .9);
+    overflow: auto;
+}
+
+body.moonlight-theme .us-dialog {
+    --us-accent: rgb(var(--moon-hi-rgb, 74, 120, 216));
+    --us-accent-hi: rgb(var(--moon-hi-rgb, 143, 179, 255));
+    background: rgba(var(--moon-deep-rgb, 8, 12, 24), .92);
+}
+
+.us-dialog[open] {
+    animation: usIn .28s cubic-bezier(.2, .8, .2, 1);
+}
+
+.us-dialog::backdrop {
+    background: rgba(6, 2, 12, .55);
+    backdrop-filter: blur(3px);
+    animation: usFade .28s ease;
+}
+
+@keyframes usIn {
+    from { opacity: 0; transform: translateY(10px) scale(.98); }
+}
+
+@keyframes usFade {
+    from { opacity: 0; }
+}
+
+.us-box {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+.us-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 22px 6px;
+}
+
+.us-head h2 {
+    margin: 0;
+    text-align: left;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+/* Глобальные правила pages.css рассчитаны на секции лендинга:
+   h2:after рисует декоративную полосу, section — отступы по 80px */
+.us-head h2::after {
+    content: none;
+}
+
+.us-section {
+    padding: 0;
+}
+
+.us-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+    color: #c9b8c4;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+}
+
+.us-close:hover {
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+}
+
+.us-body {
+    padding: 6px 22px 8px;
+}
+
+.us-section h3 {
+    margin: 10px 0 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--us-accent-hi);
+}
+
+.us-lead {
+    margin: 0 0 14px;
+    font-size: .88rem;
+    line-height: 1.5;
+    color: #c9b8c4;
+}
+
+.us-note {
+    margin: 0 0 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: .8rem;
+    line-height: 1.45;
+    color: #f1dbe8;
+    background: rgba(255, 255, 255, .06);
+    border: 1px dashed rgba(255, 255, 255, .16);
+}
+
+.us-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 22px 18px;
+}
+
+.us-status {
+    font-size: .78rem;
+    color: #8e7f8a;
+    transition: color .2s;
+}
+
+.us-status.is-saved {
+    color: #6fdc9b;
+}
+
+.us-btn {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    background: transparent;
+    color: #f8f9fa;
+    font: inherit;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: background .2s;
+}
+
+.us-btn:hover {
+    background: rgba(255, 255, 255, .1);
+}
+
+.us-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.us-btn--primary {
+    border-color: transparent;
+    background: var(--us-accent);
+    font-weight: 700;
+}
+
+.us-btn--primary:hover:not(:disabled) {
+    background: var(--us-accent-hi);
+    color: #1b0a26;
+}
+
+/* ── Поля ввода ────────────────────────────────────────────────────────── */
+.us-field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.us-field > label {
+    font-size: .8rem;
+    font-weight: 600;
+    color: #c9b8c4;
+}
+
+/* .us-dialog впереди — чтобы глобальные input { … } страниц (login.css и т.п.) не перебивали */
+.us-dialog .us-input {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .06);
+    color: #f8f9fa;
+    font: inherit;
+    font-size: .92rem;
+    transition: border-color .2s, background .2s;
+}
+
+.us-dialog .us-input::placeholder {
+    color: #8e7f8a;
+}
+
+.us-dialog .us-input:focus {
+    outline: none;
+    border-color: var(--us-accent-hi);
+    background: rgba(255, 255, 255, .09);
+}
+
+.us-dialog .us-input[aria-invalid="true"] {
+    border-color: #ff6b6b;
+}
+
+.us-hint {
+    font-size: .74rem;
+    color: #8e7f8a;
+}
+
+.us-hint.is-error {
+    color: #ff8a8a;
+}
+
+.us-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
+}
+
+@media (max-width: 520px) {
+    .us-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Сообщения ─────────────────────────────────────────────────────────── */
+.us-msg {
+    margin: 0 0 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: .84rem;
+    line-height: 1.45;
+}
+
+.us-msg:empty {
+    display: none;
+}
+
+.us-msg.is-error {
+    color: #ffb4b4;
+    background: rgba(255, 70, 70, .12);
+    border: 1px solid rgba(255, 70, 70, .35);
+}
+
+.us-msg.is-ok {
+    color: #a8f0c6;
+    background: rgba(60, 200, 120, .12);
+    border: 1px solid rgba(60, 200, 120, .35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .us-dialog[open],
+    .us-dialog::backdrop,
+    .us-gear svg {
+        animation: none;
+        transition: none;
+    }
+}
