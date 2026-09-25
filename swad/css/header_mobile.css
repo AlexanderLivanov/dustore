@@ -312,6 +312,12 @@
         /* гасим hover-tilt, привязанный к .header .button */
     }
 
+    /* Парящий слой (header.php) в панели не нужен: display: contents
+       возвращает детей прямо во flex кнопки — gap и flex у svg работают как раньше */
+    .user-menu .button > .float-layer {
+        display: contents;
+    }
+
     .user-menu .button:active {
         background: rgba(195, 33, 120, .22);
     }

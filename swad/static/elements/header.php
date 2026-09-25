@@ -770,9 +770,34 @@ $stmt->execute([
                 const items = document.querySelectorAll('.header .button, .version-badge');
                 if (!items.length) return;
 
+                /* Парящий слой. Всё содержимое кнопки переносим в <span class="float-layer">:
+                   кнопка — preserve-3d, слой в её 3D-пространстве поднят над поверхностью
+                   через translateZ (см. «ПАРЯЩИЙ СЛОЙ» в header.css). Перспектива из
+                   transform кнопки проецирует его сильнее, чем фон, — отсюда параллакс.
+                   Текстовый узел трансформировать нельзя, поэтому нужна обёртка.
+                   Абсолютные дети (бейджи) не переносим: слой с transform стал бы для них
+                   containing block, и top/right считались бы уже от него. */
+                function wrapFloatLayer(el) {
+                    if (el.querySelector(':scope > .float-layer')) return;
+                    const layer = document.createElement('span');
+                    layer.className = 'float-layer';
+                    Array.from(el.childNodes).forEach(node => {
+                        if (node.nodeType === Node.ELEMENT_NODE && getComputedStyle(node).position === 'absolute') {
+                            node.classList.add('float-badge');
+                            return;
+                        }
+                        layer.appendChild(node);
+                    });
+                    el.prepend(layer);
+                }
+
+                document.querySelectorAll('.header .button').forEach(wrapFloatLayer);
+
                 function resetTilt(el) {
                     el.style.transform = '';
                     el.style.removeProperty('--dx');
+                    el.style.removeProperty('--nx');
+                    el.style.removeProperty('--ny');
                 }
 
                 function handleMouseMove(e) {
@@ -796,6 +821,9 @@ $stmt->execute([
 
                     // Для блика (--dx)
                     el.style.setProperty('--dx', (nx * 50) + '%');
+                    // Для тени парящего слоя: она уходит от курсора
+                    el.style.setProperty('--nx', nx.toFixed(3));
+                    el.style.setProperty('--ny', ny.toFixed(3));
                 }
 
                 function handleMouseLeave(e) {
@@ -1767,7 +1795,8 @@ $stmt->execute([
             // pinksparkle = ни одного класса (дефолт)
 
             if (logoImg && logos[theme]) logoImg.src = logos[theme];
-            themeBtn.innerHTML = icons[theme] || icons.pinksparkle;
+            // Иконку кладём внутрь парящего слоя, если он уже есть, — иначе innerHTML его снесёт
+            (themeBtn.querySelector(':scope > .float-layer') || themeBtn).innerHTML = icons[theme] || icons.pinksparkle;
 
             document.querySelectorAll('.theme-dropdown__item').forEach(item => {
                 item.classList.toggle('is-active', item.dataset.theme === theme);
@@ -1867,7 +1896,9 @@ $stmt->execute([
                     const home = right.parentNode;
                     const mq = window.matchMedia('(max-width: 900px)');
                     const profileBtn = right.querySelector('.button[onclick*="/player/"], .button[onclick*="/login"]');
-                    const profileLabel = profileBtn ? (profileBtn.querySelector('span') || profileBtn) : null;
+                    // :not(.float-layer) — первый span в кнопке теперь обёртка парящего слоя,
+                    // а textContent по ней снёс бы и аватарку
+                    const profileLabel = profileBtn ? (profileBtn.querySelector('span:not(.float-layer)') || profileBtn) : null;
                     const profileName = profileLabel ? profileLabel.textContent.trim() : '';
                     const isAuth = !!(profileBtn && profileBtn.getAttribute('onclick').indexOf('/player/') !== -1);
 
