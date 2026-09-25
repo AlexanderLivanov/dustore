@@ -580,7 +580,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
      - комната на весь экран, шапка и композер — с учётом «чёлки» и
        домашней полоски (safe-area). */
 @media (max-width: 780px) {
-    .app { grid-template-columns: 1fr; gap: 0; padding: 0; height: calc(100dvh - var(--ch-header)); max-width: none; }
+    .app { grid-template-columns: 1fr; gap: 0; padding: 0; height: calc(var(--vvh, 100dvh) - var(--ch-header)); max-width: none; }
     .panel { border-radius: 0; box-shadow: none; }
     .room { display: none; }
     .app.show-room .side { display: none; }
@@ -591,7 +591,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
     body.chat-page:has(.app.show-room) { --ch-header: 0px; }
     body.chat-page:has(.app.show-room) > header,
     body.chat-page:has(.app.show-room) .header { display: none !important; }
-    .app.show-room { position: fixed; inset: 0; height: 100dvh; z-index: 900; }
+    /* Не 100dvh: в установленном PWA на iOS он бывает короче экрана, и композер
+       повисал над нижним краем. --vvh/--vvt — видимая область (visualViewport,
+       см. chat.js): с клавиатурой беседа сжимается над ней, а не уезжает вверх.
+       Без них — 100% вьюпорта, растяжка по фиксированному блоку. */
+    .app.show-room { position: fixed; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100%); z-index: 900; }
+    html.kb .composer-wrap { margin-bottom: 8px; }          /* над клавиатурой «домашняя полоска» не нужна */
 
     body { font-size: 13px; }
     .side-head { padding: 12px 12px 0; }

@@ -9,12 +9,13 @@ try { $genres = (new Game())->collectGenres(false, $f['web']); } catch (Throwabl
 
 /** Ссылка с изменённым параметром (остальные фильтры сохраняются). */
 function cat_url(array $patch): string {
-    $q = array_merge(array_intersect_key($_GET, array_flip(['genre', 'sort', 'price', 'web'])), $patch);
+    $q = array_merge(array_intersect_key($_GET, array_flip(['genre', 'sort', 'price', 'web', 'mobile'])), $patch);
     $q = array_filter($q, fn($v) => $v !== null && $v !== '' && $v !== false);
     return '/m/catalog' . ($q ? '?' . http_build_query($q) : '');
 }
 $apiQs = http_build_query(array_filter([
     'genre' => $f['genre'], 'sort' => $f['sort'], 'price' => $f['price_type'] !== 'all' ? $f['price_type'] : null, 'web' => $f['web'] ? 1 : null,
+    'mobile' => $f['platforms_any'] ? 1 : null,
 ]));
 ?>
 <div class="page-h">
@@ -30,6 +31,7 @@ $apiQs = http_build_query(array_filter([
   </div>
   <nav class="chips" aria-label="Фильтры">
     <a class="chip<?= $f['price_type'] === 'free' ? ' on' : '' ?>" href="<?= h(cat_url(['price' => $f['price_type'] === 'free' ? null : 'free'])) ?>"><i class="ti ti-gift"></i>Бесплатные</a>
+    <a class="chip<?= $f['platforms_any'] ? ' on' : '' ?>" href="<?= h(cat_url(['mobile' => $f['platforms_any'] ? null : 1])) ?>"><i class="ti ti-device-mobile"></i>Для телефона</a>
     <a class="chip<?= $f['web'] ? ' on' : '' ?>" href="<?= h(cat_url(['web' => $f['web'] ? null : 1, 'genre' => null])) ?>"><i class="ti ti-world"></i>В браузере</a>
     <?php if ($f['genre'] && !in_array($f['genre'], $genres, true)) array_unshift($genres, $f['genre']); ?>
     <?php foreach ($genres as $gname): $on = $f['genre'] !== null && mb_strtolower($gname) === mb_strtolower($f['genre']); ?>

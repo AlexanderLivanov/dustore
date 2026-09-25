@@ -5,6 +5,8 @@ $title = 'Dustore — инди-игры';
 $top   = m_games(['sort' => 'popularity', 'limit' => 13])['items'];   // 5 в герой + 8 в сетку (чётно для 2 колонок)
 $fresh = m_games(['sort' => 'date', 'limit' => 12])['items'];
 $free  = m_games(['sort' => 'popularity', 'price_type' => 'free', 'limit' => 12])['items'];
+/* Человек держит телефон — первым показываем то, во что на нём можно играть прямо сейчас */
+$phone = m_games(['sort' => 'popularity', 'platforms_any' => ['android', 'ios', 'web'], 'limit' => 12])['items'];
 try { $genres = array_slice((new Game())->collectGenres(false), 0, 14); } catch (Throwable $e) { $genres = []; }
 
 $hero = array_slice($top, 0, 5);
@@ -53,6 +55,8 @@ function m_rail(string $title, string $more, array $games): void {
   <div class="hero-dots" id="heroDots"><?php foreach ($hero as $i => $_): ?><i<?= $i ? '' : ' class="on"' ?>></i><?php endforeach; ?></div>
 </section>
 <?php endif; ?>
+
+<?php m_rail('Для телефона', '/m/catalog?mobile=1', $phone); ?>
 
 <?php if ($genres): ?>
 <nav class="chips" aria-label="Жанры">

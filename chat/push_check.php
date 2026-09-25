@@ -69,7 +69,7 @@ row((bool)$subs, '2. Подписки этого аккаунта',
 row($alive, '3. Node-воркер',
     $alive ? 'Жив, забирал очередь ' . (time() - $beat) . ' с назад'
            : ($beat ? 'Молчит уже ' . (time() - $beat) . ' с' : 'Ни разу не заходил') . ' — запустите: <code>cd pwa && npm i web-push && node push-worker.js</code>'
-           . ($admin ? '<br>Локально (БД на 127.0.0.1): <code>set PUSH_SITE=127.0.0.1</code> перед запуском' : ''));
+           . ($admin ? '<br>Локальная копия: <code>set OUTBOX_URL=http://localhost/chat/push_outbox.php</code> перед запуском' : ''));
 row($pending < 20, '4. Очередь', "Ожидают отправки: $pending" . ($pending >= 20 ? ' — копится, воркер не справляется или не запущен' : ''));
 ?>
 <form method="post"><input type="hidden" name="test" value="1"><button>Отправить тестовый пуш себе</button></form>

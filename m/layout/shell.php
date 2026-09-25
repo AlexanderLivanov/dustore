@@ -23,8 +23,8 @@ $ava = trim((string)($user['profile_picture'] ?? ''));
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dustore">
 <link rel="manifest" href="/m/manifest.json">
-<link rel="icon" href="/m/icons/icon-192.png">
-<link rel="apple-touch-icon" href="/m/icons/apple-180.png">
+<link rel="icon" href="/m/icons/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="/m/icons/apple-180.png?v=2">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.8.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="<?= m_asset('/m/css/app.css') ?>">
@@ -41,7 +41,7 @@ $ava = trim((string)($user['profile_picture'] ?? ''));
 
 <?php if (!$hideHead): ?>
 <header class="m-head">
-  <a class="m-logo" href="/m/" aria-label="Dustore — главная"><img src="/m/icons/logo.webp" alt="Dustore" width="56" height="40" draggable="false"></a>
+  <a class="m-logo" href="/m/" aria-label="Dustore — главная"><img src="/m/icons/logo-appolo.png" alt="Dustore" width="161" height="120" draggable="false"></a>
   <div class="m-head-act">
     <a class="ic-btn" href="/m/search" aria-label="Поиск"><i class="ti ti-search"></i></a>
     <?php if ($user): ?>
@@ -71,7 +71,7 @@ $ava = trim((string)($user['profile_picture'] ?? ''));
 </div>
 
 <div class="install" id="install" hidden>
-  <img src="/m/icons/icon-192.png" alt="" width="40" height="40">
+  <img src="/m/icons/icon-192.png?v=2" alt="" width="40" height="40">
   <div><b>Dustore на экран «Домой»</b><small id="installHint">Как приложение: быстрее и с уведомлениями</small></div>
   <button type="button" class="pill-btn" id="installBtn">Установить</button>
   <button type="button" class="x" id="installX" aria-label="Скрыть">&times;</button>

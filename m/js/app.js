@@ -182,6 +182,60 @@
     } catch (err) { }
   });
 
+  // Параллакс шапки: фон уезжает медленнее страницы. Только transform — без перерасчёта раскладки.
+  const heroImg = $('#gpHeroImg');
+  if (heroImg && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let ticking = false;
+    const hero = heroImg.parentElement;
+    const move = () => { ticking = false; const y = Math.min(scrollY, hero.offsetHeight); hero.style.setProperty('--py', (y * 0.45).toFixed(1) + 'px'); };
+    addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(move); } }, { passive: true });
+  }
+
+  /* APK с процентом на кнопке. Качаем сами (fetch + поток), чтобы показать
+     прогресс, затем отдаём файл системе — дальше обычный установщик Android.
+     Второй тап во время загрузки — отмена. Очень большие файлы и браузеры без
+     потоков качаются как раньше, штатной загрузкой. */
+  const apk = $('#apkBtn');
+  if (apk && window.ReadableStream && 'download' in HTMLAnchorElement.prototype) {
+    const label = apk.querySelector('.buy-l'), orig = label.textContent, src = apk.href;
+    const MAX = 600 * 1048576;
+    let ctrl = null, blobUrl = null;
+    apk.addEventListener('click', async e => {
+      if (blobUrl) return;                         // уже скачано — ссылка ведёт на файл
+      if ((+apk.dataset.size || 0) > MAX) return;
+      e.preventDefault();
+      if (ctrl) { ctrl.abort(); return; }
+      ctrl = new AbortController();
+      apk.classList.add('loading'); label.textContent = 'Скачивание… 0%';
+      try {
+        const r = await fetch(src, { signal: ctrl.signal, credentials: 'same-origin' });
+        if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
+        const total = +r.headers.get('Content-Length') || +apk.dataset.size || 0;
+        const reader = r.body.getReader(), parts = [];
+        let got = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          parts.push(value); got += value.length;
+          if (total) {
+            const pct = Math.min(100, Math.floor(got * 100 / total));
+            apk.style.setProperty('--p', pct + '%'); label.textContent = 'Скачивание… ' + pct + '%';
+          } else label.textContent = 'Скачивание… ' + (got / 1048576).toFixed(1) + ' МБ';
+        }
+        blobUrl = URL.createObjectURL(new Blob(parts, { type: 'application/vnd.android.package-archive' }));
+        apk.href = blobUrl; apk.download = apk.dataset.name || 'game.apk';
+        apk.classList.remove('loading'); apk.style.removeProperty('--p'); label.textContent = 'Установить';
+        navigator.vibrate?.(12);
+        apk.click();                               // файл уходит в «Загрузки», Android предложит установку
+        toast('Скачано — откройте файл, чтобы установить');
+      } catch (err) {
+        apk.classList.remove('loading'); apk.style.removeProperty('--p'); label.textContent = orig;
+        if (err.name === 'AbortError') toast('Загрузка отменена');
+        else { toast('Качаю обычной загрузкой'); location.href = src; }
+      } finally { ctrl = null; }
+    });
+  }
+
   // Описание: «Читать полностью», только если текст реально обрезан
   const desc = $('#gpDesc'), descMore = $('#gpMore');
   if (desc && descMore && desc.scrollHeight > desc.clientHeight + 4) {
@@ -211,8 +265,9 @@
   if (viewer) {
     const vt = viewer.querySelector('.viewer-track');
     const close = () => { viewer.hidden = true; document.body.classList.remove('lock'); };
-    $('#shots')?.addEventListener('click', e => {
-      const s = e.target.closest('.shot'); if (!s) return;
+    // и лента, и шапка (если в неё ушёл первый скриншот) открывают просмотр
+    document.addEventListener('click', e => {
+      const s = e.target.closest('.shot[data-i]'); if (!s) return;
       viewer.hidden = false; document.body.classList.add('lock');
       const img = vt.children[+s.dataset.i];
       vt.scrollTo({ left: img.offsetLeft, behavior: 'instant' });

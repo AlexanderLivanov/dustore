@@ -2,10 +2,12 @@
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-// localhost-эндпоинт: воркер ходит на 127.0.0.1, и Database выбрал бы LOCAL-креды.
-// По умолчанию — боевые (dustore.ru); для локальной отладки воркер шлёт site=127.0.0.1
-// (переменная PUSH_SITE в pwa/push-worker.js), иначе подписки и очередь окажутся в разных БД.
-$_SERVER['HTTP_HOST'] = in_array($_GET['site'] ?? '', ['127.0.0.1', 'localhost'], true) ? $_GET['site'] : 'dustore.ru';
+// Креды БД Database выбирает по Host запроса, как для любой страницы. Воркер ходит
+// по имени сайта (https://dustore.ru, соединение через 127.0.0.1), поэтому Host
+// здесь настоящий: на проде — dustore.ru, на локальной копии — localhost.
+// Раньше Host подменялся, а для локалки был ?site= из PUSH_SITE, — и забытый в
+// шелле PUSH_SITE=127.0.0.1 молча переключал боевой воркер на LOCAL-креды
+// (root без пароля → «Access denied for user 'root'»).
 
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/_bridge.php';
@@ -49,7 +51,9 @@ $db->exec("UPDATE push_outbox SET status='failed'
             WHERE status='pending' AND created_at < NOW() - INTERVAL " . PUSH_STALE_MIN . " MINUTE");
 
 // выдать pending с подписками
-$jobs = $db->query("SELECT id, user_id, title, body, url FROM push_outbox
+require_once __DIR__ . '/push_helpers.php';
+$iconCol = push_has_icon_column($db) ? ', icon' : '';
+$jobs = $db->query("SELECT id, user_id, title, body, url{$iconCol} FROM push_outbox
                      WHERE status='pending' ORDER BY id ASC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
 $out = [];
 // По одной строке на устройство: без UNIQUE по endpoint каждый заход в чат
@@ -65,7 +69,7 @@ foreach ($jobs as $j) {
     ], $subStmt->fetchAll(PDO::FETCH_ASSOC));
     $out[] = [
         'id' => (int)$j['id'],
-        'payload' => ['title' => $j['title'], 'body' => $j['body'], 'url' => $j['url']],
+        'payload' => ['title' => $j['title'], 'body' => $j['body'], 'url' => $j['url']] + (!empty($j['icon']) ? ['icon' => $j['icon']] : []),
         'subscriptions' => $subs,
     ];
 }

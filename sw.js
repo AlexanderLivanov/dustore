@@ -124,7 +124,7 @@ self.addEventListener('push', e => {
         }
         await self.registration.showNotification(d.title || 'Dustore', {
             body: d.body || '',
-            icon: '/swad/static/img/logo_new.png',
+            icon: d.icon || '/m/icons/icon-192.png',   // своя иконка — из рассылки в /devs/notifications
             tag: d.url || 'dustore-chat',        // по тегу на беседу: вторая беседа не затирает первую
             renotify: true,
             data: { url: d.url || '/chat/' }

@@ -165,9 +165,36 @@
   });
   /* «Прочитано» ставим, только когда человек реально смотрит: вкладка видна И окно
      в фокусе. Иначе сервер отметит лишь «доставлено». Вернулся в окно — сразу
-     дёргаем тред, чтобы собеседник увидел яркие галочки без задержки поллинга. */
-  const isSeen = () => (document.visibilityState === 'visible' && document.hasFocus() ? 1 : 0);
+     дёргаем тред, чтобы собеседник увидел яркие галочки без задержки поллинга.
+     На телефоне фокус окна — ненадёжный признак: в PWA и WebView document.hasFocus()
+     может вернуть false у видимой страницы, и тогда сообщения не читались вовсе.
+     Там достаточно того, что вкладка видна. */
+  const touch = matchMedia('(pointer: coarse)').matches;
+
+  /* Высота видимой области → CSS (--vvh, --vvt). На iOS клавиатура не сжимает
+     страницу, а сдвигает видимое окно: без этого беседа уезжала вверх вместе с
+     шапкой, а после закрытия клавиатуры композер оставался не у нижнего края. */
+  if (touch && window.visualViewport) {
+    const vv = visualViewport, root = document.documentElement;
+    const syncVV = () => {
+      root.style.setProperty('--vvh', vv.height + 'px');
+      root.style.setProperty('--vvt', vv.offsetTop + 'px');
+      root.classList.toggle('kb', innerHeight - vv.height > 120);
+    };
+    vv.addEventListener('resize', syncVV);
+    vv.addEventListener('scroll', syncVV);
+    syncVV();
+  }
+  let unseenFetch = false;               // был запрос с seen=0 — отметим, как только человек «появится»
+  const isSeen = () => {
+    const s = document.visibilityState === 'visible' && (touch || document.hasFocus()) ? 1 : 0;
+    if (!s) unseenFetch = true;
+    return s;
+  };
+  const catchUpSeen = () => { if (unseenFetch && isSeen() && state.convId && state.lastId) { unseenFetch = false; pollThread(); } };
   window.addEventListener('focus', () => { if (state.convId && state.lastId) pollThread(); });
+  document.addEventListener('pointerdown', catchUpSeen, { passive: true });
+  document.addEventListener('keydown', catchUpSeen);
 
   async function connectWS() {
     try {
