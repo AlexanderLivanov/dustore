@@ -21,6 +21,7 @@ require_once __DIR__ . '/../swad/controllers/csrf.php';
 require_once __DIR__ . '/../swad/controllers/loopback.php';
 require_once __DIR__ . '/../chat/push_helpers.php';
 require_once __DIR__ . '/../chat/_bridge.php';
+require_once __DIR__ . '/broadcast_lib.php';
 
 const BC_AUDIENCES = [
     'push'   => 'С включёнными пушами',
@@ -30,33 +31,9 @@ const BC_AUDIENCES = [
     'list'   => 'Список ников или ID',
 ];
 
-/** Таблица истории и колонка иконки у очереди пушей — создаём сами, один раз. */
-function bc_schema(PDO $db): void {
-    $db->exec("CREATE TABLE IF NOT EXISTS broadcasts (
-        id          INT AUTO_INCREMENT PRIMARY KEY,
-        created_by  INT NOT NULL,
-        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        title       VARCHAR(120) NOT NULL,
-        body        TEXT NOT NULL,
-        url         VARCHAR(255) NULL,
-        icon        VARCHAR(255) NULL,
-        channels    VARCHAR(32) NOT NULL,
-        audience    VARCHAR(16) NOT NULL,
-        recipients  MEDIUMTEXT NOT NULL,
-        n_users     INT NOT NULL DEFAULT 0,
-        n_site      INT NOT NULL DEFAULT 0,
-        n_push      INT NOT NULL DEFAULT 0,
-        n_email     INT NOT NULL DEFAULT 0,
-        email_sent  INT NOT NULL DEFAULT 0,
-        email_fail  INT NOT NULL DEFAULT 0,
-        email_done  TINYINT NOT NULL DEFAULT 0
-    ) DEFAULT CHARSET=utf8mb4");
-    // колонки второй версии: кнопка «Остановить» и текст последней ошибки SMTP
-    foreach (['email_stop' => "TINYINT NOT NULL DEFAULT 0", 'email_error' => "VARCHAR(255) NULL"] as $col => $def) {
-        if (!$db->query("SHOW COLUMNS FROM broadcasts LIKE '{$col}'")->fetch()) {
-            try { $db->exec("ALTER TABLE broadcasts ADD COLUMN {$col} {$def}"); } catch (Throwable $e) { }
-        }
-    }
+/** Таблицы рассылок (devs/broadcast_lib.php) + колонка иконки у очереди пушей. */
+function bc_schema_all(PDO $db): void {
+    bc_schema($db);
     if (!push_has_icon_column($db)) {
         try { $db->exec("ALTER TABLE push_outbox ADD COLUMN icon VARCHAR(255) NULL"); } catch (Throwable $e) { }
     }
@@ -103,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $meId = (int)$_SESSION['USERDATA']['id'];
     $db0  = (new Database())->connect();
     $db0->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    bc_schema($db0);
+    bc_schema_all($db0);
 
     /* «Остановить»: флаг читает фоновый обработчик (раз в 10 писем) и выходит.
        email_done ставим сразу — если процесс уже убит, строка не будет вечно «идёт». */
@@ -126,6 +103,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $list  = (string)($_POST['list'] ?? '');
     $ch    = array_values(array_intersect(['site', 'push', 'email'], (array)($_POST['ch'] ?? [])));
     $test  = isset($_POST['test']);
+    $mVerified = !empty($_POST['email_verified']);
+    $mWarmup   = !empty($_POST['email_warmup']);
+    $mLimit    = max(0, (int)($_POST['email_limit'] ?? 0));
+    if ($mWarmup && $mLimit === 0) $mLimit = BC_WARMUP_START;
 
     // ссылки только свои (/...) или https — никакого javascript: в пуше
     $safeUrl = fn(string $u) => $u === '' || $u[0] === '/' || preg_match('~^https://~i', $u);
@@ -151,16 +132,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pushUrl = $url ?: (in_array('site', $ch, true) ? '/chat/?system=1' : '/');
                 foreach ($ids as $id) if (push_enqueue_user($db0, $id, $title, $body, $pushUrl, $icon ?: null)) $n['push']++;
             }
+            $queue = [];
             if (in_array('email', $ch, true)) {
-                $in = implode(',', array_fill(0, count($ids), '?'));
-                $q = $db0->prepare("SELECT COUNT(*) FROM users WHERE id IN ($in) AND email LIKE '%@%'");
-                $q->execute($ids);
-                $n['email'] = (int)$q->fetchColumn();
+                // очередь замораживаем сейчас: с почтой, без отписки, [подтверждённые], активные первыми
+                $queue = bc_mail_queue($db0, $ids, $test ? false : $mVerified);
+                $n['email'] = count($queue);
             }
-            $db0->prepare("INSERT INTO broadcasts (created_by, title, body, url, icon, channels, audience, recipients, n_users, n_site, n_push, n_email, email_done)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+            $db0->prepare("INSERT INTO broadcasts (created_by, title, body, url, icon, channels, audience, recipients, n_users, n_site, n_push, n_email, email_done,
+                                                   email_queue, email_verified_only, email_day_limit, email_warmup)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
                 ->execute([$meId, $title, $body, $url ?: null, $icon ?: null, implode(',', $ch), $test ? 'test' : $aud,
-                           json_encode($ids), count($ids), $n['site'], $n['push'], $n['email'], $n['email'] ? 0 : 1]);
+                           json_encode($ids), count($ids), $n['site'], $n['push'], $n['email'], $n['email'] ? 0 : 1,
+                           json_encode($queue), $mVerified ? 1 : 0, $test ? 0 : $mLimit, $mWarmup && !$test ? 1 : 0]);
             $bid = (int)$db0->lastInsertId();
             if ($n['email']) {
                 loopback_fire('/devs/broadcast_mail.php', json_encode(['secret' => bridge_secret(), 'id' => $bid]), 'application/json');
@@ -168,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $parts = [];
             if (in_array('site', $ch, true))  $parts[] = "на сайт — {$n['site']}";
             if (in_array('push', $ch, true))  $parts[] = "пушей в очереди — {$n['push']}";
-            if (in_array('email', $ch, true)) $parts[] = "писем — {$n['email']} (уходят в фоне)";
+            if (in_array('email', $ch, true)) $parts[] = "писем — {$n['email']}" . ($mLimit && !$test ? ", не больше {$mLimit} в день" . ($mWarmup ? ' с удвоением' : '') : '') . ' (уходят в фоне)';
             $msg = ($test ? 'Тест себе: ' : 'Рассылка #' . $bid . ': ') . count($ids) . ' получ.; ' . implode(', ', $parts) . '.';
         }
     }
@@ -197,13 +180,15 @@ $form = $flash['form'] ?? [];
 $conn = $db->connect();
 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-bc_schema($conn);
+bc_schema_all($conn);
 
 /* ── Аналитика ────────────────────────────────────────────────────────── */
 $one = fn(string $sql) => (int)$conn->query($sql)->fetchColumn();
 $usersTotal  = $one("SELECT COUNT(*) FROM users");
 $usersPush   = $one("SELECT COUNT(DISTINCT user_id) FROM push_subscriptions");
-$usersEmail  = $one("SELECT COUNT(*) FROM users WHERE email LIKE '%@%'");
+$usersEmail  = $one("SELECT COUNT(*) FROM users WHERE email LIKE '%@%' AND email_optout = 0");
+$usersVerified = $one("SELECT COUNT(*) FROM users WHERE email LIKE '%@%' AND email_optout = 0 AND email_verified = 1");
+$usersOptout = $one("SELECT COUNT(*) FROM users WHERE email_optout = 1");
 $devices     = $one("SELECT COUNT(DISTINCT endpoint) FROM push_subscriptions");
 $pct = fn(int $a, int $b) => $b ? round($a * 100 / $b) : 0;
 
@@ -268,7 +253,14 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
                 <label><input type="checkbox" name="ch[]" value="push" checked> <span class="material-icons">notifications</span>Пуш</label>
                 <label><input type="checkbox" name="ch[]" value="email"> <span class="material-icons">mail</span>Почта</label>
             </div>
-            <p class="bc-note">Почта уходит через ящик хостинга, ~1 письмо в секунду: 4 000 писем — больше часа, и лимиты хостинга на число писем в час/сутки никто не отменял. Для массовых рассылок подключите сервис рассылок (свой домен, SPF/DKIM, отписка).</p>
+            <div class="bc-mail" id="bcMail" hidden>
+                <label class="bc-opt"><input type="checkbox" name="email_verified" value="1" <?= ($form ? !empty($form['email_verified']) : true) ? 'checked' : '' ?>> Только подтверждённые адреса — меньше возвратов, выше доверие почтовиков (<?= $usersVerified ?>)</label>
+                <div class="bc-opt-row">
+                    <label>Не больше писем в день <input type="number" name="email_limit" min="0" step="1" placeholder="без лимита" value="<?= $h($form['email_limit'] ?? '') ?>"></label>
+                    <label class="bc-opt"><input type="checkbox" name="email_warmup" value="1" <?= !empty($form['email_warmup']) ? 'checked' : '' ?>> Прогрев: лимит ×2 каждый день (с <?= BC_WARMUP_START ?>, если лимит пуст)</label>
+                </div>
+                <p class="bc-note">Первыми получают самые активные — кто заходил недавно. Отписавшиеся пропускаются, в каждом письме ссылка «Отписаться». Набрали дневной лимит — продолжение завтра в <?= BC_MAIL_RESUME_AT ?>. Скорость — ~1 письмо в секунду через ящик хостинга; для тысяч писем регулярно лучше сервис рассылок.</p>
+            </div>
         </div>
 
         <div class="field"><label>Кому</label>
@@ -295,6 +287,8 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
         <div class="card-title" style="margin-top:18px;"><span class="material-icons">info</span>Охват каналов</div>
         <div class="bc-bar"><span>Пуш</span><b><?= $usersPush ?></b><i style="--w:<?= $pct($usersPush, $usersTotal) ?>%"></i></div>
         <div class="bc-bar"><span>Почта</span><b><?= $usersEmail ?></b><i style="--w:<?= $pct($usersEmail, $usersTotal) ?>%"></i></div>
+        <div class="bc-bar"><span>Почта подтверждена</span><b><?= $usersVerified ?></b><i style="--w:<?= $pct($usersVerified, $usersTotal) ?>%"></i></div>
+        <div class="bc-bar"><span>Отписались от рассылок</span><b><?= $usersOptout ?></b><i style="--w:<?= $pct($usersOptout, $usersTotal) ?>%"></i></div>
         <div class="bc-bar"><span>Сайт</span><b><?= $usersTotal ?></b><i style="--w:100%"></i></div>
         <p style="color:var(--tm);font-size:12px;margin-top:10px;line-height:1.5;">Звук пуша задаёт система устройства — сайт его не выбирает. В открытом чате играет звук из настроек чата.</p>
     </div>
@@ -318,9 +312,13 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
                 <?= (int)$b['email_sent'] ?>/<?= (int)$b['n_email'] ?>
                 <?= (int)$b['email_fail'] ? ' <span class="badge badge-err">' . (int)$b['email_fail'] . ' ошиб.</span>' : '' ?>
                 <?php if (!empty($b['email_stop'])): ?> <span class="badge badge-draft">остановлено</span>
+                <?php elseif (!(int)$b['email_done'] && !empty($b['email_next_at'])): ?> <span class="badge badge-draft">продолжит <?= $h(date('d.m H:i', strtotime($b['email_next_at']))) ?></span>
+                    <form method="post" class="bc-stop"><?= csrf_field() ?><button class="btn btn-d" name="stop" value="<?= (int)$b['id'] ?>" onclick="return confirm('Остановить рассылку? Оставшиеся письма не уйдут.')">Остановить</button></form>
                 <?php elseif (!(int)$b['email_done']): ?> <span class="badge badge-rev">идёт</span>
                     <form method="post" class="bc-stop"><?= csrf_field() ?><button class="btn btn-d" name="stop" value="<?= (int)$b['id'] ?>" onclick="return confirm('Остановить отправку писем?')">Остановить</button></form>
                 <?php endif; ?>
+                <?php if ((int)($b['email_day_limit'] ?? 0) > 0 && !empty($b['email_day'])): ?><div class="bc-sub">день <?= (int)$b['email_day_n'] ?> · сегодня <?= (int)$b['email_day_sent'] ?>/<?= (int)$b['email_day_limit'] ?><?= (int)$b['email_warmup'] ? ' · прогрев' : '' ?></div><?php endif; ?>
+                <?php if ((int)($b['email_skip'] ?? 0) > 0): ?><div class="bc-sub">пропущено <?= (int)$b['email_skip'] ?> (отписались)</div><?php endif; ?>
                 <?php if (!empty($b['email_error'])): ?><div class="bc-err" title="<?= $h($b['email_error']) ?>"><?= $h(mb_strimwidth($b['email_error'], 0, 90, '…')) ?></div><?php endif; ?>
             <?php endif; ?></td>
             <td><?= $h($b['username'] ?? '') ?></td>
@@ -347,6 +345,13 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 .bc-note { margin-top: 8px; color: var(--tm); font-size: 11px; line-height: 1.5; }
 .bc-stop { display: inline; margin-left: 6px; }
 .bc-stop .btn { padding: 3px 10px; font-size: 11px; }
+.bc-mail { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--elev); border: 1px solid var(--bd); }
+.bc-opt { display: flex !important; align-items: flex-start; gap: 8px; margin: 0 0 8px !important; color: var(--tt) !important; font-size: 12px !important; line-height: 1.4; cursor: pointer; }
+.bc-opt input { width: auto !important; margin-top: 2px; accent-color: rgb(var(--brand-rgb, 195, 33, 120)); }
+.bc-opt-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.bc-opt-row > label:not(.bc-opt) { display: flex !important; align-items: center; gap: 8px; margin: 0 0 8px !important; font-size: 12px !important; color: var(--tt) !important; }
+.bc-opt-row input[type=number] { width: 110px !important; padding: 5px 8px !important; }
+.bc-sub { margin-top: 3px; color: var(--tm); font-size: 11px; }
 .bc-err { margin-top: 4px; max-width: 320px; white-space: normal; color: #ff8fa6; font-size: 11px; line-height: 1.4; }
 @media (max-width: 900px) { .stats-grid { grid-template-columns: 1fr 1fr !important; } .grid-2 { grid-template-columns: 1fr !important; } }
 </style>
@@ -355,6 +360,9 @@ $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
   const aud = document.getElementById('bcAud'), list = document.getElementById('bcList');
   const sync = () => { list.hidden = aud.value !== 'list'; };
   aud.addEventListener('change', sync); sync();
+  const em = document.querySelector('input[name="ch[]"][value=email]'), box = document.getElementById('bcMail');
+  const syncMail = () => { box.hidden = !em.checked; };
+  em.addEventListener('change', syncMail); syncMail();
   document.getElementById('bcForm').addEventListener('submit', e => {
     if (e.submitter && e.submitter.name === 'test') return;
     const opt = aud.options[aud.selectedIndex].text;

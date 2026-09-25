@@ -323,6 +323,12 @@ WantedBy=multi-user.target
 sudo systemctl enable --now dustore-push
 ```
 
+**Почтовые рассылки** из `/devs/notifications` с дневным лимитом продолжаются на следующий день сами — их подхватывает тот же воркер пушей. Если воркера нет, нужен cron:
+
+```bash
+echo '*/10 * * * * www-data php /var/www/html/dustore.ru/devs/broadcast_mail.php' | sudo tee /etc/cron.d/dustore-mail
+```
+
 **Проверка всей цепочки.** Скрипт находит сломанное звено и отправляет тестовый пуш:
 
 ```bash

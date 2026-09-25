@@ -43,6 +43,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($in['ack'])) {
     exit('{"ok":true}');
 }
 
+/* «Пинок» почтовых рассылок: продолжить те, у которых наступил следующий день
+   (дневной лимит / прогрев) или умер процесс. Воркер пушей и так ходит сюда
+   каждые 2 секунды — отдельный cron не нужен. Сам «пинок» — не чаще раза в
+   минуту, и что бы с ним ни случилось, выдачу пушей он не ломает. */
+try {
+    require_once __DIR__ . '/../devs/broadcast_lib.php';
+    require_once __DIR__ . '/../swad/controllers/loopback.php';
+    bc_mail_tick($db, fn(int $id) => loopback_fire('/devs/broadcast_mail.php',
+        json_encode(['secret' => bridge_secret(), 'id' => $id]), 'application/json'));
+} catch (Throwable $e) {
+    error_log('[push_outbox] broadcast tick: ' . $e->getMessage());
+}
+
 // Протухшее не шлём. Если воркер лежал (а он лежал неделями), очередь копит
 // сотни задач, и на подъёме человеку прилетела бы пачка пушей про давно
 // прочитанные сообщения. Они и так есть в ленте «Уведомления».

@@ -70,11 +70,16 @@ function mailer_batch(): PHPMailer
     return $mail;
 }
 
-/** Одно письмо через открытое соединение. null — отправлено, иначе текст ошибки SMTP. */
-function mailer_send(PHPMailer $mail, string $to, string $subject, string $html): ?string
+/**
+ * Одно письмо через открытое соединение. null — отправлено, иначе текст ошибки SMTP.
+ * $headers — доп. заголовки письма, например List-Unsubscribe: ['List-Unsubscribe' => '<https://…>'].
+ */
+function mailer_send(PHPMailer $mail, string $to, string $subject, string $html, array $headers = []): ?string
 {
     try {
         $mail->clearAddresses();
+        $mail->clearCustomHeaders();
+        foreach ($headers as $name => $value) $mail->addCustomHeader($name, $value);
         $mail->addAddress($to);
         $mail->Subject = $subject;
         $mail->Body    = $html;
