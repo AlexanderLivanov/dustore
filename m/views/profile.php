@@ -2,7 +2,7 @@
 /** m/views/profile.php — профиль, уведомления, настройки приложения. */
 $title = 'Профиль — Dustore';
 if (!$uid) {
-    echo m_empty('user', 'Вы не вошли', 'Войдите, чтобы видеть библиотеку, чаты и уведомления', ['Войти', '/login?backUrl=/m/profile']);
+    echo m_empty('user', 'Вы не вошли', 'Войдите, чтобы видеть библиотеку, чаты и уведомления', ['Войти', '/m/login?back=/m/profile']);
     return;
 }
 require_once __DIR__ . '/../../chat/_vapid.php';
@@ -27,7 +27,8 @@ try {
 $name = trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? '')) ?: ($u['username'] ?? 'Игрок');
 $ava  = trim((string)($u['profile_picture'] ?? ''));
 $footExtra = '<script>window.VAPID_PUBLIC = ' . json_encode(vapid_public_key()) . ';</script>'
-           . '<script src="' . m_asset('/pwa/push-client.js') . '"></script>';
+           . '<script src="' . m_asset('/pwa/push-client.js') . '"></script>'
+           . '<script src="' . m_asset('/m/js/auth.js') . '" defer></script>';
 ?>
 <section class="prof">
   <div class="prof-av"><?php if ($ava): ?><img src="<?= h($ava) ?>" alt="" draggable="false"><?php else: ?><?= h(mb_strtoupper(mb_substr($name, 0, 1))) ?><?php endif; ?></div>
@@ -48,6 +49,12 @@ $footExtra = '<script>window.VAPID_PUBLIC = ' . json_encode(vapid_public_key()) 
   </div>
   <a class="menu-i" href="/m/chat"><i class="ti ti-message-circle"></i><span>Чаты</span><i class="ti ti-chevron-right"></i></a>
   <a class="menu-i" href="/m/chat?system=1"><i class="ti ti-bell"></i><span>Лента уведомлений</span><i class="ti ti-chevron-right"></i></a>
+</div>
+
+<div class="menu-t">Вход без пароля</div>
+<div class="menu">
+  <div id="pkList"></div>
+  <button type="button" class="menu-i" id="pkAdd"><i class="ti ti-fingerprint"></i><span><b>Добавить Face ID / отпечаток</b><small id="pkHint">Passkey: вход в одно касание, без пароля</small></span><i class="ti ti-plus"></i></button>
 </div>
 
 <?php if ($studio): ?>

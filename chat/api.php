@@ -50,6 +50,11 @@ $V3 = $V2 && chat_v3($db);
 
 function out($d): void { echo json_encode($d, JSON_UNESCAPED_UNICODE); exit; }
 
+// сессия потерялась (PWA выгружено, PHPSESSID умер), а auth_token жив — восстанавливаем,
+// как header.php на десктопе; иначе чат в приложении внезапно «разлогинивается»
+if (empty($_SESSION['USERDATA']) && !empty($_COOKIE['auth_token'])) {
+    try { require_once __DIR__ . '/../swad/controllers/user.php'; (new User())->checkAuth(); } catch (Throwable $e) { }
+}
 if (empty($_SESSION['USERDATA'])) out(['ok' => false, 'error' => 'auth']);
 $me   = $_SESSION['USERDATA'];
 $myId = (int)($me['id'] ?? 0);
