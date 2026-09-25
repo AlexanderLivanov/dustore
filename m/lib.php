@@ -18,6 +18,34 @@ require_once __DIR__ . '/../swad/controllers/game.php';
 
 const M_COVER_FALLBACK = 'data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 200%22%3E%3Crect width=%22320%22 height=%22200%22 fill=%22%231b0a26%22/%3E%3Cpath d=%22M136 80h48v40h-48z%22 fill=%22none%22 stroke=%22%236b5478%22 stroke-width=%223%22/%3E%3Ccircle cx=%22150%22 cy=%2294%22 r=%226%22 fill=%22%236b5478%22/%3E%3C/svg%3E';
 
+/**
+ * Восстановить сессию по куке auth_token — то же, что десктоп делает в
+ * header.php через User::checkAuth().
+ *
+ * Почему это критично именно для PWA: PHPSESSID — сессионная кука, и iOS
+ * выбрасывает её, как только система выгрузила приложение. auth_token живёт
+ * 30 дней и остаётся. Без восстановления /m считал человека гостем, кнопка
+ * «Войти» вела на /login, а login.php, видя auth_token, сразу отправлял
+ * обратно — кнопка «не работала», а /m/chat уходил в бесконечный редирект.
+ * Теперь у мобилки ещё и свой вход (/m/login), на десктопный /login она не ходит.
+ */
+function m_restore_session(): void {
+    if (!empty($_SESSION['USERDATA']['id']) || empty($_COOKIE['auth_token'])) return;
+    try {
+        require_once __DIR__ . '/../swad/controllers/user.php';
+        $code = (new User())->checkAuth();
+    } catch (Throwable $e) {
+        error_log('[m] restore session: ' . $e->getMessage());
+        $code = -1;
+    }
+    // токен есть, а пользователя по нему нет (или сбой) — гасим куку, иначе
+    // login.php будет вечно отфутболивать назад и войти станет невозможно
+    if (($code === 3 || $code === -1) && !empty($_COOKIE['auth_token'])) {   // 2 — checkAuth уже погасил сам
+        setcookie('auth_token', '', time() - 3600, '/');
+        unset($_COOKIE['auth_token']);
+    }
+}
+
 function h($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 /** Путь к ассету с версией по mtime — кэш сбрасывается сам при каждом деплое. */
@@ -131,12 +159,35 @@ function m_cta(array $g, bool $owned): array {
         return ['label' => 'Купить · ' . m_price($g['price']), 'href' => '/g/' . $id, 'kind' => 'primary', 'icon' => 'shopping-bag', 'note' => 'Оплата откроется на сайте'];
     if ($file && in_array('web', $plat, true))
         return ['label' => 'Играть в браузере', 'href' => '/webplayer?id=' . $id, 'kind' => 'primary', 'icon' => 'player-play-filled', 'note' => null];
+    // iPhone не ставит APK: не даём скачать бесполезный файл
+    $ios = (bool)preg_match('/iPhone|iPad|iPod/i', $_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($file && in_array('android', $plat, true) && $ios && !in_array('ios', $plat, true))
+        return ['label' => 'Только для Android', 'href' => null, 'kind' => 'off', 'icon' => 'brand-android', 'note' => 'Добавьте в вишлист — скачаете с Android'];
     if ($file && in_array('android', $plat, true))
         return ['label' => 'Скачать APK', 'href' => '/swad/controllers/download_apk.php?game_id=' . $id, 'kind' => 'primary', 'icon' => 'brand-android', 'note' => 'Перед установкой разрешите установку из браузера'];
     if (!$file)
         return ['label' => 'Файл ещё не загружен', 'href' => null, 'kind' => 'off', 'icon' => 'clock', 'note' => null];
     return ['label' => 'Только для ПК', 'href' => null, 'kind' => 'off', 'icon' => 'device-desktop',
             'note' => 'Добавьте в вишлист — скачаете с компьютера'];
+}
+
+/**
+ * Имя файла латиницей: «Пыльные тропы» → Pylnye_tropy. Кириллицу в имени
+ * загрузки Chromium для blob-ссылок отбрасывает (файл называется «download»),
+ * а download_apk.php превращал её в строку подчёркиваний.
+ */
+function m_file_slug(string $name, string $fallback = 'game'): string {
+    static $map = ['а'=>'a','б'=>'b','в'=>'v','г'=>'g','д'=>'d','е'=>'e','ё'=>'e','ж'=>'zh','з'=>'z','и'=>'i','й'=>'y','к'=>'k','л'=>'l','м'=>'m',
+        'н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f','х'=>'h','ц'=>'ts','ч'=>'ch','ш'=>'sh','щ'=>'sch','ъ'=>'','ы'=>'y',
+        'ь'=>'','э'=>'e','ю'=>'yu','я'=>'ya'];
+    $out = '';
+    foreach (mb_str_split($name) as $ch) {
+        $lo = mb_strtolower($ch);
+        $t = $map[$lo] ?? $ch;
+        $out .= $lo !== $ch ? ucfirst($t) : $t;
+    }
+    $out = trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $out), '_');
+    return $out !== '' ? $out : $fallback;
 }
 
 /** Короткое «3 дня назад» для отзывов. */
@@ -175,6 +226,7 @@ function m_catalog_filters(array $q): array {
         'dir'        => $sort === 'price' ? 'asc' : 'desc',
         'price_type' => in_array($q['price'] ?? '', ['free', 'paid'], true) ? $q['price'] : 'all',
         'web'        => !empty($q['web']),
+        'platforms_any' => !empty($q['mobile']) ? ['android', 'ios', 'web'] : null,
         'limit'      => 24,
         'offset'     => max(0, (int)($q['offset'] ?? 0)),
     ];

@@ -160,7 +160,6 @@ function plural_users(int $n): string
         }
         .user-card:hover { box-shadow: inset 0 0 0 1px var(--ex-card-line-hi), 0 10px 26px rgba(0,0,0,.4); }
         .user-card:focus-visible { outline: 2px solid var(--ex-accent-hi); outline-offset: 2px; }
-        .user-card.is-tilting { will-change: transform; }
         .user-card[hidden] { display: none; }
 
         .user-avatar {
@@ -298,26 +297,10 @@ function plural_users(int $n): string
         more?.addEventListener('click', () => load(true));
         wrap.classList.toggle('has-value', input.value !== '');
 
-        /* Наклон карточек — тот же приём, что на витрине. Каскадную анимацию
-           появления убрал: при 100 карточках index * 80ms растягивало её
-           на восемь секунд. */
-        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-            let active = null;
-            document.addEventListener('mousemove', e => {
-                const el = e.target.closest('.user-card');
-                if (el !== active && active) { active.classList.remove('is-tilting'); active.style.transform = ''; active = null; }
-                if (!el) return;
-                if (active !== el) { active = el; el.classList.add('is-tilting'); }
-                const hw = el.offsetWidth / 2, hh = el.offsetHeight / 2;
-                if (!hw || !hh) return;
-                const r = el.getBoundingClientRect();
-                const lift = el.style.transform ? -6 : 0;
-                const nx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / hw));
-                const ny = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2 - lift)) / hh));
-                el.style.transform = 'perspective(800px) rotateX(' + (-8 * ny).toFixed(2) + 'deg) rotateY('
-                    + (8 * nx).toFixed(2) + 'deg) translateY(-6px) scale(1.02)';
-            });
-        }
+        /* Наклон карточек и парящее имя — Float3D, общие настройки сайта
+           (swad/css/float3d.css). Каскадную анимацию появления убрал: при
+           100 карточках index * 80ms растягивало её на восемь секунд. */
+        window.Float3D?.register('.user-card', { float: '.user-name', card: true });
     })();
     </script>
 </body>

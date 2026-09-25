@@ -121,6 +121,10 @@ $stmt->execute([
     <!-- /Yandex.Metrika counter -->
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header_mobile.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/float3d.css') ?>">
+    <script src="<?= asset_url('/swad/js/float3d.js') ?>"></script>
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/theme-madness.css') ?>">
+    <script src="<?= asset_url('/swad/js/hell.js') ?>" defer></script>
     <link rel="shortcut icon" href="../img/logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/style.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/notifications.css') ?>">
@@ -144,14 +148,14 @@ $stmt->execute([
             background: rgba(20, 4, 29, 0.97);
             backdrop-filter: blur(20px);
 
-            border: 1px solid rgba(195, 33, 120, .25);
+            border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), .25);
             border-radius: 14px;
 
             padding: 8px;
 
             box-shadow:
                 0 15px 40px rgba(0, 0, 0, .5),
-                0 0 25px rgba(195, 33, 120, .15);
+                0 0 25px rgba(var(--brand-rgb, 195, 33, 120), .15);
 
             z-index: 999999;
             animation: menuOpen .12s ease;
@@ -180,7 +184,7 @@ $stmt->execute([
         }
 
         .context-menu-item:hover {
-            background: rgba(195, 33, 120, .18);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .18);
         }
 
         .context-menu-icon {
@@ -202,7 +206,7 @@ $stmt->execute([
             background:
                 linear-gradient(90deg,
                     transparent,
-                    rgba(195, 33, 120, .35),
+                    rgba(var(--brand-rgb, 195, 33, 120), .35),
                     transparent);
         }
 
@@ -444,7 +448,7 @@ $stmt->execute([
                 </a>
             </li>
             <li>
-                <a class="theme-dropdown__item" style="display: none;" href="#" data-theme="madness" role="menuitem">
+                <a class="theme-dropdown__item" href="#" data-theme="madness" role="menuitem">
                     <span class="theme-dropdown__swatch" data-theme="madness"></span>
                     Madness
                 </a>
@@ -529,16 +533,21 @@ $stmt->execute([
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
                             </svg>
-                            <span>Войти в аккаунт</span>
+                            <span class="header-profile-label">Войти в аккаунт</span>
                         </button>
                     <?php else: ?>
                         <?php
-                        /* profile_picture лежит прямо в сессии (её пишут и upload_avatar.php,
-                           и me.php при каждом обновлении фото) — отдельный SELECT ради иконки
+                        /* profile_picture лежит прямо в сессии (её пишет upload_avatar.php
+                           при каждом обновлении фото) — отдельный SELECT ради иконки
                            в хедере не нужен. Без фото — прежняя svg-заглушка человечка. */
                         $__hdrAvatar = trim((string)($_SESSION['USERDATA']['profile_picture'] ?? ''));
+                        /* Ник при регистрации необязателен (почта, Telegram без username), а профиль
+                           открывается только по нику. Без ника — на /me: там окно выбора ника. */
+                        $__hdrNick    = (string)($_SESSION['USERDATA']['username'] ?? '');
+                        $__hdrProfile = $__hdrNick !== '' ? '/player/' . rawurlencode($__hdrNick) : '/me';
+                        $__hdrLabel   = $__hdrNick !== '' ? $__hdrNick : ($_SESSION['USERDATA']['first_name'] ?? 'Профиль');
                         ?>
-                        <button class="button" onclick="location.href='/player/<?= htmlspecialchars($_SESSION['USERDATA']['username']) ?>'">
+                        <button class="button" data-profile-btn onclick="location.href='<?= htmlspecialchars($__hdrProfile) ?>'">
                             <?php if ($__hdrAvatar !== ''): ?>
                                 <img class="header-avatar" src="<?= htmlspecialchars($__hdrAvatar) ?>" alt="" width="22" height="22">
                             <?php else: ?>
@@ -548,7 +557,7 @@ $stmt->execute([
                                     <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
                                 </svg>
                             <?php endif; ?>
-                            <span><?= htmlspecialchars($_SESSION['USERDATA']['username']) ?></span>
+                            <span class="header-profile-label"><?= htmlspecialchars((string)$__hdrLabel) ?></span>
                         </button>
                     <?php endif; ?>
                 </div>
@@ -615,43 +624,12 @@ $stmt->execute([
 
                  Если фича вернётся — раскомментируй разметку и верни
                  скрипт, но уже с проверкой, что элементы на странице есть. */ ?>
-        <!-- subscribe to push 19.01.2025 (c) Alexander Livanov -->
-        <script>
-            function urlBase64ToUint8Array(base64String) {
-                const padding = '='.repeat((4 - base64String.length % 4) % 4);
-                const base64 = (base64String + padding)
-                    .replace(/-/g, '+')
-                    .replace(/_/g, '/');
-
-                return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-            }
-
-            async function subscribeToPush() {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    const sub = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array("<?= VAPID_PUBLIC_KEY ?>")
-                    });
-
-                    console.log("Subscription object:", sub);
-
-                    const response = await fetch("/api/push/subscribe.php", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(sub)
-                    });
-
-                    const data = await response.json();
-                    console.log("Response from PHP:", data);
-                    alert("Подписка сохранена");
-                } catch (err) {
-                    console.error("Push subscription failed:", err);
-                }
-            }
-        </script>
+        <?php /* Подписка на пуши живёт в /pwa/push-client.js (чат, /m/chat, /m/profile).
+                 Здесь была её первая версия (19.01.2025): subscribeToPush() с ключом
+                 из константы VAPID_PUBLIC_KEY и записью в /api/push/subscribe.php.
+                 Её никто не вызывал, а ключ она брала не из того места, что
+                 push-client, — второй источник ключа, из-за которого пуши молча
+                 ломаются при смене ключей. Удалена. */ ?>
 
         <script>
             const header = document.querySelector('.header');
@@ -765,84 +743,14 @@ $stmt->execute([
                 imageContainer.addEventListener('mouseleave', resetTilt);
             });
 
-            (function() {
-                // Добавляем .version-badge в список
-                const items = document.querySelectorAll('.header .button, .version-badge');
-                if (!items.length) return;
-
-                /* Парящий слой. Всё содержимое кнопки переносим в <span class="float-layer">:
-                   кнопка — preserve-3d, слой в её 3D-пространстве поднят над поверхностью
-                   через translateZ (см. «ПАРЯЩИЙ СЛОЙ» в header.css). Перспектива из
-                   transform кнопки проецирует его сильнее, чем фон, — отсюда параллакс.
-                   Текстовый узел трансформировать нельзя, поэтому нужна обёртка.
-                   Абсолютные дети (бейджи) не переносим: слой с transform стал бы для них
-                   containing block, и top/right считались бы уже от него. */
-                function wrapFloatLayer(el) {
-                    if (el.querySelector(':scope > .float-layer')) return;
-                    const layer = document.createElement('span');
-                    layer.className = 'float-layer';
-                    Array.from(el.childNodes).forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE && getComputedStyle(node).position === 'absolute') {
-                            node.classList.add('float-badge');
-                            return;
-                        }
-                        layer.appendChild(node);
-                    });
-                    el.prepend(layer);
-                }
-
-                document.querySelectorAll('.header .button').forEach(wrapFloatLayer);
-
-                function resetTilt(el) {
-                    el.style.transform = '';
-                    el.style.removeProperty('--dx');
-                    el.style.removeProperty('--nx');
-                    el.style.removeProperty('--ny');
-                }
-
-                function handleMouseMove(e) {
-                    const el = e.currentTarget;
-                    const rect = el.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    const nx = (x / rect.width) * 2 - 1;
-                    const ny = (y / rect.height) * 2 - 1;
-
-                    const maxAngle = 15;
-                    const rotateY = maxAngle * nx;
-                    const rotateX = -maxAngle * ny;
-
-                    const translateY = -3;
-                    const scale = 1.1;
-
-                    el.style.transform =
-                        `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(${translateY}px) scale(${scale})`;
-
-                    // Для блика (--dx)
-                    el.style.setProperty('--dx', (nx * 50) + '%');
-                    // Для тени парящего слоя: она уходит от курсора
-                    el.style.setProperty('--nx', nx.toFixed(3));
-                    el.style.setProperty('--ny', ny.toFixed(3));
-                }
-
-                function handleMouseLeave(e) {
-                    resetTilt(e.currentTarget);
-                }
-
-                items.forEach(el => {
-                    el.addEventListener('mousemove', handleMouseMove);
-                    el.addEventListener('mouseleave', handleMouseLeave);
-                    // Добавляем класс is-tilting при наведении (для активации блика)
-                    el.addEventListener('mouseenter', function() {
-                        this.classList.add('is-tilting');
-                    });
-                    // Убираем класс при уходе
-                    el.addEventListener('mouseleave', function() {
-                        this.classList.remove('is-tilting');
-                    });
-                });
-            })();
+            /* Float3D — наклон за курсором + парящая надпись (swad/js/float3d.js).
+               Все настройки — блок :root в swad/css/float3d.css, подбирать вживую —
+               Alt+Shift+F на любой странице. Здесь — элементы, общие для всего сайта;
+               кнопки и карточки конкретных страниц подключаются на своих страницах. */
+            if (window.Float3D) {
+                Float3D.register('.header .button, .version-badge');
+                Float3D.register('.btn, .vote-btn');    // общие кнопки из pages.css
+            }
 
 
             window.addEventListener('load', function() {
@@ -1757,7 +1665,7 @@ $stmt->execute([
             const logos = {
                 pinksparkle: '/swad/static/img/LogoV3-Appolo_mini.png',
                 moonlight:   '/swad/static/img/LogoV3-Moonlight_mini.png',
-               // madness:     '/swad/static/img/LogoV3-Madness.png'
+                madness:     '/swad/static/img/LogoV3-Madness.png'
             };
 
         const icons = {
@@ -1783,7 +1691,9 @@ $stmt->execute([
 
         const VALID = ['pinksparkle', 'moonlight', 'madness'];
 
-        function applyTheme(theme) {
+        // source: 'user' — тему выбрали в меню (а не восстановили при загрузке):
+        // по нему hell.js решает, показывать ли «зажигание»
+        function applyTheme(theme, source) {
             document.body.classList.remove('moonlight-theme', 'madness-theme');
 
             if (theme === 'moonlight') {
@@ -1795,8 +1705,8 @@ $stmt->execute([
             // pinksparkle = ни одного класса (дефолт)
 
             if (logoImg && logos[theme]) logoImg.src = logos[theme];
-            // Иконку кладём внутрь парящего слоя, если он уже есть, — иначе innerHTML его снесёт
-            (themeBtn.querySelector(':scope > .float-layer') || themeBtn).innerHTML = icons[theme] || icons.pinksparkle;
+            // Иконку кладём внутрь парящего слоя Float3D, если он уже есть, — иначе innerHTML его снесёт
+            (themeBtn.querySelector('.f3d-layer') || themeBtn).innerHTML = icons[theme] || icons.pinksparkle;
 
             document.querySelectorAll('.theme-dropdown__item').forEach(item => {
                 item.classList.toggle('is-active', item.dataset.theme === theme);
@@ -1806,7 +1716,7 @@ $stmt->execute([
             // что тема переключилась — им не нужно пересчитывать всё каждый кадр.
             try {
                 window.dispatchEvent(new CustomEvent('dustore:themechange', {
-                    detail: { theme: theme }
+                    detail: { theme: theme, source: source || 'load' }
                 }));
             } catch (e) {}
         }
@@ -1835,7 +1745,7 @@ $stmt->execute([
                 const theme = this.dataset.theme;
                 if (VALID.indexOf(theme) === -1) return;
                 localStorage.setItem('dustore_theme', theme);
-                applyTheme(theme);
+                applyTheme(theme, 'user');
                 themeDropdown.classList.remove('open');
                 themeBtn.setAttribute('aria-expanded', 'false');
             });
@@ -1895,12 +1805,12 @@ $stmt->execute([
                 if (chip && menu && right) {
                     const home = right.parentNode;
                     const mq = window.matchMedia('(max-width: 900px)');
-                    const profileBtn = right.querySelector('.button[onclick*="/player/"], .button[onclick*="/login"]');
-                    // :not(.float-layer) — первый span в кнопке теперь обёртка парящего слоя,
-                    // а textContent по ней снёс бы и аватарку
-                    const profileLabel = profileBtn ? (profileBtn.querySelector('span:not(.float-layer)') || profileBtn) : null;
+                    const profileBtn = right.querySelector('.button[data-profile-btn], .button[onclick*="/login"]');
+                    // Ищем подпись по классу: в кнопке есть служебные span'ы Float3D (слой, тень-копия),
+                    // и textContent по любому из них снёс бы аватарку
+                    const profileLabel = profileBtn ? (profileBtn.querySelector('.header-profile-label') || profileBtn) : null;
                     const profileName = profileLabel ? profileLabel.textContent.trim() : '';
-                    const isAuth = !!(profileBtn && profileBtn.getAttribute('onclick').indexOf('/player/') !== -1);
+                    const isAuth = !!(profileBtn && profileBtn.hasAttribute('data-profile-btn'));
 
                     chip.addEventListener('click', function(e) {
                         e.stopPropagation();

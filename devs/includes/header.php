@@ -152,6 +152,7 @@ if ($is_moder) {
     $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => 'security'];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
+        $nav_items[] = ['id' => 'notifications', 'href' => '/devs/notifications', 'icon' => 'campaign', 'label' => 'Уведомления'];
     }
 }
 ?>
@@ -276,7 +277,7 @@ if ($is_moder) {
             height: 36px;
             border-radius: 9px;
             flex-shrink: 0;
-            background: linear-gradient(135deg, var(--p), #7a155d);
+            background: linear-gradient(135deg, var(--p), rgb(var(--brand-deep-rgb, 122, 21, 93)));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -302,7 +303,7 @@ if ($is_moder) {
         .sb-role {
             font-size: 10px;
             color: var(--p);
-            background: rgba(195, 33, 120, .15);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .15);
             padding: 1px 6px;
             border-radius: 4px;
             display: inline-block;
@@ -344,7 +345,7 @@ if ($is_moder) {
         }
 
         .nav-item.active {
-            background: rgba(195, 33, 120, .14);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .14);
             color: var(--pl);
         }
 
@@ -523,9 +524,9 @@ if ($is_moder) {
         }
 
         .icon-btn:hover {
-            background: rgba(195, 33, 120, .15);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .15);
             color: var(--pl);
-            border-color: rgba(195, 33, 120, .3);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .3);
         }
 
         .icon-btn .material-icons {
@@ -547,7 +548,7 @@ if ($is_moder) {
         }
 
         .ds-content::-webkit-scrollbar-thumb {
-            background: rgba(195, 33, 120, .3);
+            background: rgba(var(--brand-rgb, 195, 33, 120), .3);
             border-radius: 3px;
         }
 
@@ -604,7 +605,7 @@ if ($is_moder) {
         .field input:focus,
         .field select:focus,
         .field textarea:focus {
-            border-color: rgba(195, 33, 120, .5);
+            border-color: rgba(var(--brand-rgb, 195, 33, 120), .5);
         }
 
         .field textarea {
@@ -663,13 +664,13 @@ if ($is_moder) {
         }
 
         .btn-d {
-            background: rgba(255, 61, 113, .12);
+            background: rgba(var(--brand-hi-rgb, 255, 61, 113), .12);
             color: var(--err);
-            border: 1px solid rgba(255, 61, 113, .2);
+            border: 1px solid rgba(var(--brand-hi-rgb, 255, 61, 113), .2);
         }
 
         .btn-d:hover {
-            background: rgba(255, 61, 113, .2);
+            background: rgba(var(--brand-hi-rgb, 255, 61, 113), .2);
         }
 
         .btn .material-icons {
@@ -693,8 +694,8 @@ if ($is_moder) {
         }
 
         .alert-err {
-            background: rgba(255, 61, 113, .08);
-            border: 1px solid rgba(255, 61, 113, .2);
+            background: rgba(var(--brand-hi-rgb, 255, 61, 113), .08);
+            border: 1px solid rgba(var(--brand-hi-rgb, 255, 61, 113), .2);
             color: var(--err);
         }
 
@@ -727,7 +728,7 @@ if ($is_moder) {
         }
 
         .badge-err {
-            background: rgba(255, 61, 113, .1);
+            background: rgba(var(--brand-hi-rgb, 255, 61, 113), .1);
             color: var(--err);
         }
 

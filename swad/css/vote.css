@@ -42,33 +42,33 @@
     --jv-radius-sm:   9px;
 }
 
-html:has(body.moonlight-theme) { --jv-sb: rgba(184, 200, 255, 0.22); --jv-sb-hover: #3e7ad9; }
+html:has(body.moonlight-theme) { --jv-sb: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22); --jv-sb-hover: rgb(var(--moon-accent-rgb, 62, 122, 217)); }
 
 body.moonlight-theme {
-    --jv-page:        #070c18;
+    --jv-page:        rgb(var(--moon-deep-rgb, 7, 12, 24));
     --jv-shell:       linear-gradient(180deg, #00000030, #00000050);
-    --jv-shell-line:  rgba(184, 200, 255, 0.15);
+    --jv-shell-line:  rgba(var(--moon-ink-rgb, 184, 200, 255), 0.15);
     --jv-panel:       linear-gradient(180deg, #00000028, #00000048);
-    --jv-panel-line:  rgba(184, 200, 255, 0.10);
+    --jv-panel-line:  rgba(var(--moon-ink-rgb, 184, 200, 255), 0.10);
 
-    --jv-card:        #101728;
-    --jv-card-line:   rgba(184, 200, 255, 0.11);
-    --jv-card-line-hi:rgba(184, 200, 255, 0.24);
-    --jv-cover:       #080d18;
+    --jv-card:        rgb(var(--moon-raised-rgb, 16, 23, 40));
+    --jv-card-line:   rgba(var(--moon-ink-rgb, 184, 200, 255), 0.11);
+    --jv-card-line-hi:rgba(var(--moon-ink-rgb, 184, 200, 255), 0.24);
+    --jv-cover:       rgb(var(--moon-deep-rgb, 8, 13, 24));
 
-    --jv-text:        #eaf0ff;
-    --jv-muted:       rgba(184, 200, 255, 0.52);
-    --jv-dim:         rgba(184, 200, 255, 0.30);
+    --jv-text:        rgb(var(--moon-ink-rgb, 234, 240, 255));
+    --jv-muted:       rgba(var(--moon-ink-rgb, 184, 200, 255), 0.52);
+    --jv-dim:         rgba(var(--moon-ink-rgb, 184, 200, 255), 0.30);
 
-    --jv-accent:      #3e7ad9;
-    --jv-accent-hi:   #5690f0;
-    --jv-accent-soft: rgba(62, 122, 217, 0.22);
+    --jv-accent:      rgb(var(--moon-accent-rgb, 62, 122, 217));
+    --jv-accent-hi:   rgb(var(--moon-hi-rgb, 86, 144, 240));
+    --jv-accent-soft: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.22);
 
     --jv-chip:        rgba(255, 255, 255, 0.06);
-    --jv-chip-line:   rgba(184, 200, 255, 0.13);
+    --jv-chip-line:   rgba(var(--moon-ink-rgb, 184, 200, 255), 0.13);
 
-    --jv-sb:          rgba(184, 200, 255, 0.22);
-    --jv-sb-hover:    #3e7ad9;
+    --jv-sb:          rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
+    --jv-sb-hover:    rgb(var(--moon-accent-rgb, 62, 122, 217));
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

@@ -123,7 +123,7 @@ foreach ($all_items as $item) {
             text-align: center;
             margin-bottom: 40px;
             padding: 30px;
-            background: linear-gradient(135deg, rgba(255, 0, 110, 0.1), rgba(0, 245, 255, 0.1));
+            background: linear-gradient(135deg, rgba(var(--brand-hi-rgb, 255, 0, 110), 0.1), rgba(0, 245, 255, 0.1));
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -147,7 +147,7 @@ foreach ($all_items as $item) {
         .user-name {
             font-size: 2.5em;
             margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff006e, #00f5ff, #ffbe0b);
+            background: linear-gradient(45deg, rgb(var(--brand-hi-rgb, 255, 0, 110)), #00f5ff, #ffbe0b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -233,7 +233,7 @@ foreach ($all_items as $item) {
 
         .item-card:hover {
             transform: rotateX(10deg) rotateY(-10deg) translateY(-5px) scale(1.05);
-            box-shadow: 0 20px 45px rgba(255, 0, 110, 0.4);
+            box-shadow: 0 20px 45px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.4);
         }
 
         .item-cover {
@@ -298,8 +298,8 @@ foreach ($all_items as $item) {
         }
 
         .item-card[data-rarity="3"] .item-cover {
-            border: 2px solid #800080;
-            box-shadow: 0 0 30px rgba(128, 0, 128, 0.5);
+            border: 2px solid rgb(var(--brand-deep-rgb, 128, 0, 128));
+            box-shadow: 0 0 30px rgba(var(--brand-deep-rgb, 128, 0, 128), 0.5);
         }
 
         .item-card[data-rarity="4"] .item-cover {
@@ -309,7 +309,7 @@ foreach ($all_items as $item) {
 
         /* Специальные эффекты (можно хранить в purchased или отдельном поле) */
         .item-card[data-effect="polychrome"] .item-cover {
-            background: linear-gradient(135deg, #ff006e 0%, #00f5ff 25%, #ffbe0b 50%, #8338ec 75%, #ff006e 100%);
+            background: linear-gradient(135deg, rgb(var(--brand-hi-rgb, 255, 0, 110)) 0%, #00f5ff 25%, #ffbe0b 50%, #8338ec 75%, rgb(var(--brand-hi-rgb, 255, 0, 110)) 100%);
             background-size: 400% 400%;
             animation: polyShift 4s ease infinite;
         }
@@ -323,11 +323,11 @@ foreach ($all_items as $item) {
             height: 100%;
             background:
                 linear-gradient(115deg,
-                    rgba(255, 0, 150, 0.3),
+                    rgba(var(--brand-hi-rgb, 255, 0, 150), 0.3),
                     rgba(0, 200, 255, 0.3),
                     rgba(255, 255, 0, 0.25),
                     rgba(0, 255, 200, 0.3),
-                    rgba(255, 0, 150, 0.3));
+                    rgba(var(--brand-hi-rgb, 255, 0, 150), 0.3));
             background-size: 400% 400%;
             mix-blend-mode: screen;
             animation: holoFlow 8s ease-in-out infinite;
@@ -401,9 +401,9 @@ foreach ($all_items as $item) {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255, 0, 110, 0.2);
-            border: 2px solid #ff006e;
-            color: #ff006e;
+            background: rgba(var(--brand-hi-rgb, 255, 0, 110), 0.2);
+            border: 2px solid rgb(var(--brand-hi-rgb, 255, 0, 110));
+            color: rgb(var(--brand-hi-rgb, 255, 0, 110));
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -417,10 +417,10 @@ foreach ($all_items as $item) {
         }
 
         .close-btn:hover {
-            background: #ff006e;
+            background: rgb(var(--brand-hi-rgb, 255, 0, 110));
             color: #fff;
             transform: rotate(90deg) scale(1.1);
-            box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
+            box-shadow: 0 0 20px rgba(var(--brand-hi-rgb, 255, 0, 110), 0.6);
         }
 
         .no-items {

@@ -63,29 +63,29 @@
     --ch-radius-sm:   12px;
 }
 
-html:has(body.moonlight-theme) { --ch-sb: rgba(184, 200, 255, 0.22); }
+html:has(body.moonlight-theme) { --ch-sb: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22); }
 
 body.moonlight-theme {
-    --ch-page:        #070c18;
+    --ch-page:        rgb(var(--moon-deep-rgb, 7, 12, 24));
     --ch-panel:       rgba(255, 255, 255, 0.045);
     --ch-panel-2:     rgba(255, 255, 255, 0.07);
-    --ch-panel-line:  rgba(184, 200, 255, 0.13);
+    --ch-panel-line:  rgba(var(--moon-ink-rgb, 184, 200, 255), 0.13);
     --ch-inset:       rgba(0, 0, 0, 0.3);
 
-    --ch-text:        #eaf0ff;
-    --ch-muted:       rgba(184, 200, 255, 0.58);
-    --ch-dim:         rgba(184, 200, 255, 0.34);
+    --ch-text:        rgb(var(--moon-ink-rgb, 234, 240, 255));
+    --ch-muted:       rgba(var(--moon-ink-rgb, 184, 200, 255), 0.58);
+    --ch-dim:         rgba(var(--moon-ink-rgb, 184, 200, 255), 0.34);
 
-    --ch-accent:      #3e7ad9;
-    --ch-accent-hi:   #5690f0;
-    --ch-accent-deep: #22467f;
-    --ch-accent-soft: rgba(62, 122, 217, 0.2);
-    --ch-grad:        linear-gradient(135deg, #5690f0, #3e7ad9 50%, #22467f);
+    --ch-accent:      rgb(var(--moon-accent-rgb, 62, 122, 217));
+    --ch-accent-hi:   rgb(var(--moon-hi-rgb, 86, 144, 240));
+    --ch-accent-deep: rgb(var(--moon-accent-rgb, 34, 70, 127));
+    --ch-accent-soft: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.2);
+    --ch-grad:        linear-gradient(135deg, rgb(var(--moon-hi-rgb, 86, 144, 240)), rgb(var(--moon-accent-rgb, 62, 122, 217)) 50%, rgb(var(--moon-accent-rgb, 34, 70, 127)));
 
     --ch-bubble-in:   rgba(255, 255, 255, 0.07);
-    --ch-bubble-out:  linear-gradient(135deg, #3e7ad9, #2b5aa5);
+    --ch-bubble-out:  linear-gradient(135deg, rgb(var(--moon-accent-rgb, 62, 122, 217)), rgb(var(--moon-accent-rgb, 43, 90, 165)));
 
-    --ch-sb:          rgba(184, 200, 255, 0.22);
+    --ch-sb:          rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
 }
 
 * { box-sizing: border-box; }
@@ -127,7 +127,7 @@ body.moonlight-theme {
 .brand .glyph {
     width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex: none;
     background: var(--ch-grad); color: #fff;
-    box-shadow: 0 8px 22px -8px rgba(195, 33, 120, .8), inset 0 1px 0 rgba(255, 255, 255, .25);
+    box-shadow: 0 8px 22px -8px rgba(var(--brand-rgb, 195, 33, 120), .8), inset 0 1px 0 rgba(255, 255, 255, .25);
 }
 .brand small { display: block; font-size: 0.68rem; letter-spacing: .6px; color: var(--ch-dim); font-weight: 400; margin-top: 1px; }
 
@@ -176,7 +176,7 @@ body.moonlight-theme {
 }
 .card.studio.active { background: var(--ch-studio-soft); }
 .card.studio.active::before { background: var(--ch-studio); }
-.card.system { margin-bottom: 8px; background: linear-gradient(90deg, rgba(195, 33, 120, .10), transparent); box-shadow: inset 0 0 0 1px rgba(195, 33, 120, .18); }
+.card.system { margin-bottom: 8px; background: linear-gradient(90deg, rgba(var(--brand-rgb, 195, 33, 120), .10), transparent); box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb, 195, 33, 120), .18); }
 .card.system.active { background: var(--ch-accent-soft); }
 .card:has(.badge) .c-name { font-weight: 700; }
 .card:has(.badge) .c-last { color: var(--ch-text); }
@@ -191,7 +191,7 @@ body.moonlight-theme {
 .av img { width: 100%; height: 100%; object-fit: cover; }
 .av.round { border-radius: 50%; }
 .av.sq { border-radius: 14px; }
-.av.sys { border-radius: 14px; background: var(--ch-grad); color: #fff; box-shadow: 0 6px 18px -8px rgba(195, 33, 120, .8); }
+.av.sys { border-radius: 14px; background: var(--ch-grad); color: #fff; box-shadow: 0 6px 18px -8px rgba(var(--brand-rgb, 195, 33, 120), .8); }
 
 .c-main { min-width: 0; }
 .c-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -204,7 +204,7 @@ body.moonlight-theme {
 .badge {
     min-width: 21px; height: 21px; padding: 0 7px; border-radius: 999px;
     display: grid; place-items: center; font-size: 0.7rem; font-weight: 700;
-    background: var(--ch-grad); color: #fff; box-shadow: 0 4px 12px -4px rgba(195, 33, 120, .9);
+    background: var(--ch-grad); color: #fff; box-shadow: 0 4px 12px -4px rgba(var(--brand-rgb, 195, 33, 120), .9);
 }
 .card.studio .badge { background: var(--ch-studio); color: #032a31; box-shadow: none; }
 
@@ -228,14 +228,14 @@ body.moonlight-theme {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 8px; padding: 32px; text-align: center;
 }
-.re-art { margin-bottom: 14px; filter: drop-shadow(0 18px 30px rgba(195, 33, 120, .35)); animation: re-float 6s ease-in-out infinite; }
+.re-art { margin-bottom: 14px; filter: drop-shadow(0 18px 30px rgba(var(--brand-rgb, 195, 33, 120), .35)); animation: re-float 6s ease-in-out infinite; }
 @keyframes re-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .re-title { font-size: 1.3rem; font-weight: 700; }
 .re-text { color: var(--ch-muted); font-size: .9rem; max-width: 300px; line-height: 1.55; }
 .re-btn {
     margin-top: 14px; padding: 11px 22px; border: 0; border-radius: 999px; cursor: pointer;
     background: var(--ch-grad); color: #fff; font: inherit; font-weight: 700; font-size: .9rem;
-    box-shadow: 0 10px 26px -10px rgba(195, 33, 120, .9); transition: transform .15s ease;
+    box-shadow: 0 10px 26px -10px rgba(var(--brand-rgb, 195, 33, 120), .9); transition: transform .15s ease;
 }
 .re-btn:hover { transform: translateY(-2px); }
 
@@ -244,7 +244,7 @@ body.moonlight-theme {
     background: rgba(13, 1, 24, .45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--ch-panel-line);
 }
-body.moonlight-theme .room-head { background: rgba(7, 12, 24, .5); }
+body.moonlight-theme .room-head { background: rgba(var(--moon-deep-rgb, 7, 12, 24), .5); }
 .room-head .peer { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: 4px 8px 4px 4px; margin-left: -4px; border-radius: 14px; cursor: pointer; transition: background .15s ease; }
 .room-head .peer:hover { background: rgba(255, 255, 255, .04); }
 .room.is-system .room-head .peer, .room.is-studio .room-head .peer { cursor: default; }
@@ -268,7 +268,7 @@ body.moonlight-theme .room-head { background: rgba(7, 12, 24, .5); }
     border-radius: 14px; background: rgba(28, 9, 38, .96); backdrop-filter: blur(14px);
     box-shadow: inset 0 0 0 1px var(--ch-panel-line), 0 18px 40px rgba(0, 0, 0, .6);
 }
-body.moonlight-theme .menu { background: rgba(16, 23, 40, .96); }
+body.moonlight-theme .menu { background: rgba(var(--moon-raised-rgb, 16, 23, 40), .96); }
 .menu button { width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 9px; background: none; color: var(--ch-text); font: inherit; font-size: 0.86rem; cursor: pointer; }
 .menu button:hover { background: rgba(255, 255, 255, 0.06); }
 .menu button.danger { color: var(--ch-danger); }
@@ -305,7 +305,7 @@ body.moonlight-theme .menu { background: rgba(16, 23, 40, .96); }
 .b-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .msg.them .b-text a { color: var(--ch-accent-hi); }
 .msg.them .bubble { background: var(--ch-bubble-in); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); border-bottom-left-radius: 6px; }
-.msg.mine .bubble { background: var(--ch-bubble-out); color: #fff; border-bottom-right-radius: 6px; box-shadow: 0 8px 20px -12px rgba(195, 33, 120, .9); }
+.msg.mine .bubble { background: var(--ch-bubble-out); color: #fff; border-bottom-right-radius: 6px; box-shadow: 0 8px 20px -12px rgba(var(--brand-rgb, 195, 33, 120), .9); }
 /* группа: у второго и следующих пузырей «склеивается» угол со стороны автора */
 .msg.them + .msg.them .bubble { border-top-left-radius: 6px; }
 .msg.mine + .msg.mine .bubble { border-top-right-radius: 6px; }
@@ -494,7 +494,7 @@ body.moonlight-theme .modal-card { background: #0c1426; }
     border-radius: 18px; background: var(--ch-panel-2); box-shadow: inset 0 0 0 1px var(--ch-panel-line);
     position: relative;
 }
-.notif.unread { background: linear-gradient(90deg, rgba(195, 33, 120, .14), rgba(255, 255, 255, .05)); box-shadow: inset 0 0 0 1px rgba(195, 33, 120, .35); }
+.notif.unread { background: linear-gradient(90deg, rgba(var(--brand-rgb, 195, 33, 120), .14), rgba(255, 255, 255, .05)); box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb, 195, 33, 120), .35); }
 .notif.unread::after { content: ""; position: absolute; top: 16px; right: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--ch-accent-hi); box-shadow: 0 0 0 4px var(--ch-accent-soft); }
 .n-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--ch-grad); color: #fff; }
 .n-title { font-weight: 700; font-size: .95rem; margin-bottom: 3px; padding-right: 18px; }
@@ -502,7 +502,7 @@ body.moonlight-theme .modal-card { background: #0c1426; }
 .n-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
 .n-time { font-size: .72rem; color: var(--ch-dim); }
 .n-link { font-size: .8rem; font-weight: 600; color: var(--ch-accent-hi); text-decoration: none; padding: 5px 12px; border-radius: 999px; background: var(--ch-accent-soft); }
-.n-link:hover { background: rgba(195, 33, 120, .28); }
+.n-link:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .28); }
 
 /* ── Композер: плавающая пилюля (+ панель ответа и вложения над ней) ── */
 .composer-wrap { flex: none; margin: 8px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
@@ -518,7 +518,7 @@ body.moonlight-theme .modal-card { background: #0c1426; }
 .send {
     flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%;
     background: var(--ch-grad); color: #fff; cursor: pointer; display: grid; place-items: center;
-    box-shadow: 0 6px 16px -6px rgba(195, 33, 120, .9); transition: opacity .15s ease, transform .15s ease;
+    box-shadow: 0 6px 16px -6px rgba(var(--brand-rgb, 195, 33, 120), .9); transition: opacity .15s ease, transform .15s ease;
 }
 .send:not(:disabled):hover { transform: scale(1.06); }
 .send:disabled { opacity: .3; cursor: default; box-shadow: none; }
@@ -526,14 +526,14 @@ body.moonlight-theme .modal-card { background: #0c1426; }
 /* ── Профиль ──────────────────────────────────────────────────────────────── */
 .profile { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column;
     background: #120320; transform: translateX(100%); transition: transform .24s ease; pointer-events: none; }
-body.moonlight-theme .profile { background: #0a1122; }
+body.moonlight-theme .profile { background: rgb(var(--moon-deep-rgb, 10, 17, 34)); }
 .profile.open { transform: none; pointer-events: auto; }
 .profile-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--ch-panel-line); font-weight: 600; }
 .profile-body { flex: 1; overflow-y: auto; padding: 0 20px 24px; text-align: center; }
 .profile-body::before { content: ""; display: block; height: 96px; margin: 0 -20px -52px; background: var(--ch-grad); opacity: .55; }
 .big-av { position: relative; width: 104px; height: 104px; margin: 0 auto 14px; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
     background: #1f0a2c; font-size: 2rem; font-weight: 700; color: var(--ch-muted); box-shadow: 0 0 0 5px #120320; }
-body.moonlight-theme .big-av { box-shadow: 0 0 0 5px #0a1122; }
+body.moonlight-theme .big-av { box-shadow: 0 0 0 5px rgb(var(--moon-deep-rgb, 10, 17, 34)); }
 .big-av img { width: 100%; height: 100%; object-fit: cover; }
 .p-name { font-size: 1.3rem; font-weight: 700; }
 .p-handle { font-size: 0.84rem; color: var(--ch-accent-hi); margin-top: 2px; }
@@ -546,7 +546,7 @@ body.moonlight-theme .big-av { box-shadow: 0 0 0 5px #0a1122; }
 .p-links a { padding: 12px; border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 0.88rem;
     color: var(--ch-text); background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px var(--ch-panel-line); }
 .p-links a:hover { background: rgba(255, 255, 255, 0.09); }
-.p-links a.primary { background: var(--ch-grad); color: #fff; box-shadow: 0 10px 24px -12px rgba(195, 33, 120, .9); }
+.p-links a.primary { background: var(--ch-grad); color: #fff; box-shadow: 0 10px 24px -12px rgba(var(--brand-rgb, 195, 33, 120), .9); }
 
 /* ── Тост ─────────────────────────────────────────────────────────────────── */
 .toast {
@@ -555,7 +555,7 @@ body.moonlight-theme .big-av { box-shadow: 0 0 0 5px #0a1122; }
     background: rgba(28, 9, 38, .96); box-shadow: inset 0 0 0 1px var(--ch-accent), 0 14px 30px rgba(0, 0, 0, .55);
     font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
 }
-body.moonlight-theme .toast { background: rgba(16, 23, 40, .96); }
+body.moonlight-theme .toast { background: rgba(var(--moon-raised-rgb, 16, 23, 40), .96); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.err { box-shadow: inset 0 0 0 1px var(--ch-danger), 0 14px 30px rgba(0, 0, 0, .55); }
 
@@ -580,7 +580,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
      - комната на весь экран, шапка и композер — с учётом «чёлки» и
        домашней полоски (safe-area). */
 @media (max-width: 780px) {
-    .app { grid-template-columns: 1fr; gap: 0; padding: 0; height: calc(100dvh - var(--ch-header)); max-width: none; }
+    .app { grid-template-columns: 1fr; gap: 0; padding: 0; height: calc(var(--vvh, 100dvh) - var(--ch-header)); max-width: none; }
     .panel { border-radius: 0; box-shadow: none; }
     .room { display: none; }
     .app.show-room .side { display: none; }
@@ -591,7 +591,12 @@ html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
     body.chat-page:has(.app.show-room) { --ch-header: 0px; }
     body.chat-page:has(.app.show-room) > header,
     body.chat-page:has(.app.show-room) .header { display: none !important; }
-    .app.show-room { position: fixed; inset: 0; height: 100dvh; z-index: 900; }
+    /* Не 100dvh: в установленном PWA на iOS он бывает короче экрана, и композер
+       повисал над нижним краем. --vvh/--vvt — видимая область (visualViewport,
+       см. chat.js): с клавиатурой беседа сжимается над ней, а не уезжает вверх.
+       Без них — 100% вьюпорта, растяжка по фиксированному блоку. */
+    .app.show-room { position: fixed; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100%); z-index: 900; }
+    html.kb .composer-wrap { margin-bottom: 8px; }          /* над клавиатурой «домашняя полоска» не нужна */
 
     body { font-size: 13px; }
     .side-head { padding: 12px 12px 0; }

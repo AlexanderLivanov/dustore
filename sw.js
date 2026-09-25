@@ -9,6 +9,9 @@
  *
  * v2.1: Web Push — звук в фореграунде (вкладка открыта → кастомный звук вместо
  *       нотификации), фокус существующей вкладки чата, обход SW для /chat/api.php.
+ * v2.2: баннер глушится только когда в фокусе сам чат (раньше — любая вкладка
+ *       сайта, и пуш молча пропадал); клик ведёт в нужную беседу, на телефоне —
+ *       в /m/chat; pushsubscriptionchange сам переподписывает устройство.
  */
 
 const CACHE_STATIC = 'ds-static-v2';
@@ -98,36 +101,83 @@ self.addEventListener('fetch', evt => {
 });
 
 // ─── PUSH ─────────────────────────────────────────────────────────────────────
+const CHAT_PATH = /^\/(m\/)?chat(\/|$)/;
+const isChat = c => CHAT_PATH.test(new URL(c.url).pathname);
+const windows = () => self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
 self.addEventListener('push', e => {
     if (!e.data) return;
     let d = {};
     try { d = e.data.json(); } catch { return; }
     e.waitUntil((async () => {
-        const clientsArr = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-        const focused = clientsArr.find(c => c.focused);
-        if (focused) {
-            // вкладка в фокусе → кастомный WebAudio-звук в приложении, без системной нотификации
-            focused.postMessage({ type: 'chat-sound' });
+        const all = await windows();
+        // Счётчик непрочитанных в открытых вкладках обновляем всегда
+        all.forEach(c => c.postMessage({ type: 'badge' }));
+        // Глушим баннер, только если человек прямо сейчас смотрит в чат: там
+        // новое сообщение и так появится, хватит звука. Раньше хватало любой
+        // вкладки сайта в фокусе — и пуш пропадал без следа, а звук играть было
+        // некому: chatPing есть только на странице чата.
+        const chat = all.find(c => c.focused && isChat(c));
+        if (chat) {
+            chat.postMessage({ type: 'chat-sound' });
             return;
         }
         await self.registration.showNotification(d.title || 'Dustore', {
             body: d.body || '',
-            icon: '/swad/static/img/logo_new.png',
-            tag: 'dustore-chat',
+            icon: d.icon || '/m/icons/icon-192.png',   // своя иконка — из рассылки в /devs/notifications
+            tag: d.url || 'dustore-chat',        // по тегу на беседу: вторая беседа не затирает первую
             renotify: true,
             data: { url: d.url || '/chat/' }
         });
     })());
 });
 
+/* Адрес из пуша — десктопный (/chat/?conversation=N). На телефоне сервер и сам
+   редиректит в /m/chat, но у установленного PWA есть cookie pwa_standalone,
+   при которой редиректа нет, — поэтому переписываем здесь. */
+const onMobile = all => all.some(c => new URL(c.url).pathname.startsWith('/m/'))
+    || /Android|iPhone|iPad|iPod|Mobile/i.test(self.navigator.userAgent);
+
+function forDevice(url, mobile) {
+    const u = new URL(url, self.location.origin);
+    if (mobile && /^\/chat(\/|$)/.test(u.pathname)) u.pathname = '/m/chat';
+    return u.pathname + u.search;
+}
+
 self.addEventListener('notificationclick', e => {
     e.notification.close();
-    const target = e.notification.data?.url || '/';
     e.waitUntil((async () => {
-        const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-        // если уже открыта вкладка чата — фокусируем её, а не плодим новую
-        for (const c of all) { if (c.url.includes('/chat') && 'focus' in c) return c.focus(); }
+        const all = await windows();
+        const mobile = onMobile(all);
+        const target = forDevice(e.notification.data?.url || '/', mobile);
+        // Открытый чат переводим на нужную беседу, а не плодим вкладки. На телефоне
+        // окно приложения одно — его и используем. Чужую вкладку на десктопе
+        // (человек там что-то читает) не трогаем — открываем новую.
+        // navigate() доступен только подконтрольным вкладкам, отсюда catch.
+        const tab = all.find(isChat) || (mobile ? all[0] : null);
+        if (tab) {
+            const moved = await tab.navigate(target).catch(() => null);
+            return (moved || tab).focus();
+        }
         if (self.clients.openWindow) return self.clients.openWindow(target);
+    })());
+});
+
+/* Браузер сам меняет подписку (Firefox — регулярно, Chrome — при сбросе данных).
+   Старый endpoint после этого мёртв: воркер получит 410 и удалит его, а новый
+   надо сохранить, иначе пуши на это устройство тихо закончатся. */
+self.addEventListener('pushsubscriptionchange', e => {
+    e.waitUntil((async () => {
+        const key = e.oldSubscription?.options?.applicationServerKey;
+        const sub = e.newSubscription
+            || (key && await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
+        if (!sub) return;
+        await fetch('/chat/push_subscribe.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub),
+        });
     })());
 });
 

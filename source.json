@@ -1,7 +1,25 @@
 {
-    "name": "MINI",
+    "name": "Dustore",
     "identifier": "ru.dustore.mini.source",
     "apps": [
+        {
+            "name": "MessengerExample",
+            "bundleIdentifier": "org.xarvel.messenger",
+            "developerName": "xarvel",
+            "iconURL": "https://dustore.ru/swad/static/img/dastyframe3.png",
+            "tintColor": "74155D",
+            "localizedDescription": "MessengerExample",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "buildVersion": "1",
+                    "date": "2026-09-24",
+                    "downloadURL": "https://dustore.ru/ios/MessengerExample.ipa",
+                    "size": 10916244,
+                    "minOSVersion": "15.1"
+                }
+            ]
+        },
         {
             "name": "MINI",
             "bundleIdentifier": "com.example.miniMessenger",
@@ -11,7 +29,7 @@
             "localizedDescription": "Мессенджер mini позволяет вам общаться всегда, даже в условиях ограничений. Надёжный, безопасный и не завален бесполезными функциями. Просто общайтесь. Общайтесь просто.",
             "versions": [
                 {
-                    "version": "1.0.0+3",
+                    "version": "1.0.0",
                     "buildVersion": "3",
                     "date": "2026-07-04",
                     "downloadURL": "https://dustore.ru/MINI-unsigned.ipa",

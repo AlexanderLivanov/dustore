@@ -16,6 +16,7 @@ declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/lib.php';
+m_restore_session();
 
 $path  = trim((string)parse_url($_SERVER['REQUEST_URI'] ?? '/m/', PHP_URL_PATH), '/');
 $parts = explode('/', $path);
@@ -24,7 +25,7 @@ $page  = ($parts[0] ?? '') ?: 'home';
 $param = $parts[1] ?? null;
 if ($page === 'dev') $page = 'developer';
 
-$routes = ['home', 'catalog', 'game', 'library', 'profile', 'search', 'developer', 'chat'];
+$routes = ['home', 'catalog', 'game', 'library', 'profile', 'search', 'developer', 'chat', 'login'];
 if (!in_array($page, $routes, true)) { header('Location: /m/', true, 302); exit; }
 
 $db = (new Database())->connect();

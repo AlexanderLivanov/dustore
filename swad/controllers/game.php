@@ -118,6 +118,17 @@ class Game
                         LIKE '%,Web,%'";
         }
 
+        /* Любая из платформ — например, «для телефона» = Android, iOS или Web
+           (мобильная главная). Тот же приём нормализации CSV. */
+        if (!empty($f['platforms_any']) && is_array($f['platforms_any'])) {
+            $or = [];
+            foreach ($f['platforms_any'] as $pl) {
+                $or[] = "CONCAT(',', TRIM(REPLACE(REPLACE(g.platforms, ', ', ','), ' ,', ',')), ',') LIKE CONCAT('%,', ?, ',%')";
+                $params[] = (string)$pl;
+            }
+            $where[] = '(' . implode(' OR ', $or) . ')';
+        }
+
         // Цена
         if (($f['price_type'] ?? 'all') === 'free') {
             $where[] = "COALESCE(g.price, 0) = 0";

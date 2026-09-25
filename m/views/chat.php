@@ -7,7 +7,7 @@
  * автоматически. Отличается только рамка: шапка и нижнее меню приложения,
  * а открытая беседа разворачивается на весь экран поверх них.
  */
-if (!$uid) { header('Location: /login?backUrl=' . urlencode('/m/chat'), true, 302); exit; }
+if (!$uid) { header('Location: /m/login?back=' . rawurlencode($_SERVER['REQUEST_URI'] ?? '/m/chat'), true, 302); exit; }
 require_once __DIR__ . '/../../chat/_helpers.php';
 require_once __DIR__ . '/../../chat/_vapid.php';
 
