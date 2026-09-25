@@ -202,7 +202,7 @@ body {
     background: linear-gradient(
         125deg,
         transparent 0%,
-        rgba(255, 42, 109, 0.3) 20%,
+        rgba(var(--brand-hi-rgb, 255, 42, 109), 0.3) 20%,
         rgba(5, 217, 232, 0.3) 40%,
         rgba(255, 215, 0, 0.3) 60%,
         transparent 80%
@@ -226,11 +226,6 @@ body {
 }
 
 
-.header .button {
-    transform-style: preserve-3d;
-    will-change: transform;
-    transition: transform 0.001s ease-out;
-}
 
 
 /* Контейнеры кнопок (buttons-left/right) */
@@ -252,7 +247,7 @@ body.moonlight-theme .button:hover {
 
 /* Выпадающее меню (dropdown) */
 body.moonlight-theme .nav-dropdown__menu {
-    background: rgba(10, 8, 20, 0.9);
+    background: rgba(var(--moon-deep-rgb, 10, 8, 20), 0.9);
     backdrop-filter: blur(12px);
     border-color: rgba(255, 255, 255, 0.15);
 }
@@ -262,7 +257,7 @@ body.moonlight-theme .nav-dropdown__item {
 }
 
 body.moonlight-theme .nav-dropdown__item:hover {
-    background: rgba(195, 33, 120, 0.25);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.25);
     color: #fff;
 }
 
@@ -285,7 +280,7 @@ body.moonlight-theme .vote-toggle {
 }
 
 body.moonlight-theme .vote-toggle:hover {
-    color: #b8c8ff;
+    color: rgb(var(--moon-ink-rgb, 184, 200, 255));
 }
 
 body.moonlight-theme .vote-image {
@@ -351,8 +346,8 @@ body.moonlight-theme .vote-image {
         flex-direction: column;
         gap: 6px;
         background: #1a0824;
-        border-top: 1px solid rgba(195, 33, 120, 0.3);
-        border-bottom: 1px solid rgba(195, 33, 120, 0.3);
+        border-top: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.3);
+        border-bottom: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.3);
         padding: 12px;
         z-index: 999;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
@@ -523,7 +518,7 @@ body.moonlight-theme .vote-image {
     background: linear-gradient(
         125deg,
         transparent 0%,
-        rgba(255, 42, 109, 0.4) 20%,
+        rgba(var(--brand-hi-rgb, 255, 42, 109), 0.4) 20%,
         rgba(5, 217, 232, 0.4) 40%,
         rgba(255, 215, 0, 0.4) 60%,
         transparent 80%
@@ -558,7 +553,7 @@ body.moonlight-theme .vote-image {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #2e0f32, #61114e);
+    background: linear-gradient(180deg, #2e0f32, rgb(var(--brand-deep-rgb, 97, 17, 78)));
     display: flex;
     justify-content: center;
     align-items: center;
@@ -601,7 +596,7 @@ body.moonlight-theme .image img {
     width: 40px;
     height: 40px;
     border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top-color: var(--primary, #c32178);
+    border-top-color: var(--primary, rgb(var(--brand-rgb, 195, 33, 120)));
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -643,7 +638,7 @@ body.moonlight-theme .image img {
     left: 0;
     min-width: 180px;
     background: var(--dark, #1a0a1e);
-    border: 1px solid rgba(195, 33, 120, 0.25);
+    border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.25);
     border-radius: 10px;
     padding: 6px;
     list-style: none;
@@ -677,7 +672,7 @@ body.moonlight-theme .image img {
 
 
 .nav-dropdown__item:hover {
-    background: rgba(195, 33, 120, 0.18);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.18);
     color: #fff;
 }
 
@@ -757,19 +752,19 @@ body.moonlight-theme .image img {
 
 /* ── Тема Moonlight: только цвета ── */
 body.moonlight-theme #dusty-helper-modal {
-    --d-scrim:      rgba(2, 5, 13, 0.86);
-    --d-panel-top:  #182238;
-    --d-panel-bot:  #101829;
-    --d-stage-top:  #1f2c48;
-    --d-stage-bot:  #161f35;
-    --d-line:       rgba(184, 200, 255, 0.15);
-    --d-line-soft:  rgba(184, 200, 255, 0.08);
-    --d-text:       #eaf0ff;
-    --d-muted:      rgba(184, 200, 255, 0.48);
-    --d-accent:     #3e7ad9;
-    --d-accent-hi:  #5690f0;
+    --d-scrim:      rgba(var(--moon-deep-rgb, 2, 5, 13), 0.86);
+    --d-panel-top:  rgb(var(--moon-raised-rgb, 24, 34, 56));
+    --d-panel-bot:  rgb(var(--moon-raised-rgb, 16, 24, 41));
+    --d-stage-top:  rgb(var(--moon-line-rgb, 31, 44, 72));
+    --d-stage-bot:  rgb(var(--moon-raised-rgb, 22, 31, 53));
+    --d-line:       rgba(var(--moon-ink-rgb, 184, 200, 255), 0.15);
+    --d-line-soft:  rgba(var(--moon-ink-rgb, 184, 200, 255), 0.08);
+    --d-text:       rgb(var(--moon-ink-rgb, 234, 240, 255));
+    --d-muted:      rgba(var(--moon-ink-rgb, 184, 200, 255), 0.48);
+    --d-accent:     rgb(var(--moon-accent-rgb, 62, 122, 217));
+    --d-accent-hi:  rgb(var(--moon-hi-rgb, 86, 144, 240));
     --d-btn:        rgba(255, 255, 255, 0.05);
-    --d-btn-hover:  rgba(62, 122, 217, 0.24);
+    --d-btn-hover:  rgba(var(--moon-accent-rgb, 62, 122, 217), 0.24);
 }
 
 #dusty-helper-modal.hidden {
@@ -1236,140 +1231,39 @@ body.dusty-open {
     user-select: none;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
-    transform-style: preserve-3d;
-    will-change: transform;
-    transition: transform 0.001s ease-out;
 }
 
 /* Moonlight-тема */
 body.moonlight-theme .version-badge {
     background: rgba(255, 255, 255, 0.08);
-    color: rgba(184, 200, 255, 0.7);
-}
-
-/* Блик (как на карточках игр) */
-.version-badge::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        115deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.10) 20%,
-        rgba(255, 255, 255, 0.30) 40%,
-        rgba(255, 255, 255, 0.10) 60%,
-        transparent 80%
-    );
-    background-size: 200% 100%;
-    background-position: calc(50% + var(--dx, 0%)) 0;
-    opacity: 0;
-    transition: opacity 0.01s ease;
-    /* pointer-events: none; */
-    z-index: 2;
-    mix-blend-mode: overlay;
-    border-radius: inherit;
-}
-
-.version-badge.is-tilting::after {
-    opacity: 1;
+    color: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.7);
 }
 
 /* =============================================================================
-   БЛИК НА КНОПКАХ ХЕДЕРА
+   FLOAT3D В ХЕДЕРЕ — наклон + парящая надпись на кнопках и бейдже версии.
+   Механика и ВСЕ настройки эффекта — swad/css/float3d.css (блок :root),
+   подключение — Float3D.register(...) в header.php. Здесь только вёрстка
+   самих кнопок; переменные --f3d-* здесь не переопределяем — иначе общие
+   настройки перестали бы действовать на хедер.
    ============================================================================= */
 
-.header .button::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        115deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0) 30%,
-        rgba(255, 255, 255, 0) 40%,
-        rgba(255, 255, 255, 0.08) 47%,
-        transparent 80%
-    );
-    background-size: 200% 100%;
-    background-position: calc(50% + var(--dx, 0%)) 0;
-    opacity: 0;
-    transition: opacity 0.01s ease;
-    pointer-events: none;
-    z-index: 2;
-    mix-blend-mode: overlay;
-    border-radius: inherit;
-}
-
-.header .button.is-tilting::after {
-    opacity: 1;
-}
-
-/* =============================================================================
-   ПАРЯЩИЙ СЛОЙ НА КНОПКАХ ХЕДЕРА
-   JS (header.php) оборачивает содержимое кнопки в .float-layer. Кнопка —
-   preserve-3d, поэтому слой живёт в её 3D-пространстве: при наведении он
-   поднимается над поверхностью на --float-z, и perspective() из transform
-   кнопки сдвигает его при наклоне сильнее, чем фон, — это и есть параллакс.
-
-   Что ломает эффект: overflow (кроме visible), opacity < 1, filter,
-   clip-path, mask, mix-blend-mode, isolation на самой кнопке —
-   это «группирующие» свойства, они принудительно делают transform-style: flat,
-   и слой схлопывается обратно в плоскость. На детях — можно.
-   ============================================================================= */
-
+/* Кнопка центрирует содержимое флексом: аватарка и имя встают по центру
+   кнопки, а не по базовой линии шрифта. Слой Float3D повторяет эту раскладку. */
 .header .button {
-    --float-z: 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-}
-
-/* Не в наклоне — кнопка плавно возвращается на место, а не щёлкает */
-.header .button:not(.is-tilting) {
-    transition: transform .35s cubic-bezier(.2, .8, .2, 1), background-color .2s;
-}
-
-.header .button > .float-layer {
-    display: inline-flex;
-    align-items: center;
     gap: 6px;
+}
+
+/* line-height: 1 — аватарка и имя центрируются по боксу строки */
+.header .button .f3d-layer {
     line-height: 1;
-    transform: translateZ(0);
-    transition: transform .3s cubic-bezier(.2, .8, .2, 1), filter .3s;
 }
 
-.header .button.is-tilting > .float-layer {
-    transform: translateZ(var(--float-z));
-    /* Тень падает на поверхность кнопки и уходит от курсора — второй сигнал
-       глубины для глаза, помимо параллакса */
-    filter: drop-shadow(
-        calc(var(--nx, 0) * -3px)
-        calc(3px - var(--ny, 0) * 2px)
-        3px rgba(0, 0, 0, .35)
-    );
-}
-
-/* Бейджи (абсолютные дети) висят ещё выше текста */
-.header .button > .float-badge {
-    transition: transform .3s cubic-bezier(.2, .8, .2, 1);
-}
-
-.header .button.is-tilting > .float-badge {
-    transform: translateZ(calc(var(--float-z) * 1.6));
-}
-
-/* Внутри аватарки отступ задаёт gap слоя */
-.header .button > .float-layer .header-avatar {
+/* Отступ у аватарки задаёт gap кнопки */
+.header .button .header-avatar {
     margin-right: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .header .button.is-tilting > .float-layer,
-    .header .button.is-tilting > .float-badge {
-        transform: none;
-        filter: none;
-    }
 }
 
 /* ── Лунная тема ──────────────────────────────────────────────────────────── */
@@ -1530,7 +1424,7 @@ body.moonlight-theme .center-floating-block {
 }
 
 .nav-dropdown__item:hover {
-    background: rgba(195, 33, 120, 0.18);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.18);
     color: #fff;
     padding-left: 18px;  /* лёгкое смещение вправо */
     transform: translateX(2px);
@@ -1538,11 +1432,11 @@ body.moonlight-theme .center-floating-block {
 
 /* Акцентный пункт (вход в консоль) — уже есть класс .nav-dropdown__item--accent */
 .nav-dropdown__item--accent {
-    color: rgba(255, 91, 168, 0.7) !important;
+    color: rgba(var(--brand-hi-rgb, 255, 91, 168), 0.7) !important;
 }
 .nav-dropdown__item--accent:hover {
-    color: #ff5ba8 !important;
-    background: rgba(195, 33, 120, 0.12);
+    color: rgb(var(--brand-hi-rgb, 255, 91, 168)) !important;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.12);
 }
 
 /* Разделитель (уже есть в HTML) */
@@ -1596,26 +1490,26 @@ body.moonlight-theme .center-floating-block {
 
 /* ── Лунная тема: переопределяем цвета ───────────────────────────────────── */
 body.moonlight-theme .nav-dropdown__menu {
-    background: rgba(8, 12, 24, 0.88);
-    border-color: rgba(184, 200, 255, 0.12);
+    background: rgba(var(--moon-deep-rgb, 8, 12, 24), 0.88);
+    border-color: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.12);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 body.moonlight-theme .nav-dropdown__item {
-    color: rgba(184, 200, 255, 0.7);
+    color: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.7);
 }
 body.moonlight-theme .nav-dropdown__item:hover {
-    background: rgba(62, 122, 217, 0.18);
-    color: #eaf0ff;
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.18);
+    color: rgb(var(--moon-ink-rgb, 234, 240, 255));
 }
 body.moonlight-theme .nav-dropdown__item--accent {
-    color: rgba(100, 150, 255, 0.7) !important;
+    color: rgba(var(--moon-hi-rgb, 100, 150, 255), 0.7) !important;
 }
 body.moonlight-theme .nav-dropdown__item--accent:hover {
-    color: #6ab0f7 !important;
-    background: rgba(62, 122, 217, 0.12);
+    color: rgb(var(--moon-hi-rgb, 106, 176, 247)) !important;
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.12);
 }
 body.moonlight-theme .nav-dropdown__menu [role="separator"] {
-    background: linear-gradient(90deg, transparent, rgba(184, 200, 255, 0.12), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--moon-ink-rgb, 184, 200, 255), 0.12), transparent);
 }
 
 /* =============================================================================
@@ -1681,7 +1575,7 @@ body.moonlight-theme .nav-dropdown__menu [role="separator"] {
 
 /* Лунная тема — затемнение чуть холоднее */
 body.moonlight-theme .page-transition {
-    background: rgba(4, 8, 18, 0.88);
+    background: rgba(var(--moon-deep-rgb, 4, 8, 18), 0.88);
 }
 
 /* Уважение к настройкам ОС */
@@ -1767,13 +1661,13 @@ body.moonlight-theme .page-transition {
 }
 
 .theme-dropdown__item:hover {
-    background: rgba(195, 33, 120, 0.18);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.18);
     color: #fff;
     padding-left: 14px;
 }
 
 .theme-dropdown__item.is-active {
-    background: rgba(195, 33, 120, 0.22);
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.22);
     color: #fff;
 }
 
@@ -1786,6 +1680,8 @@ body.moonlight-theme .page-transition {
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
+/* Образцы тем — буквальные цвета, без токенов палитры: это превью ДРУГОЙ темы,
+   его нельзя перекрашивать текущей (в Madness образец PinkSparkle стал бы красным) */
 .theme-dropdown__swatch[data-theme="pinksparkle"] {
     background: linear-gradient(180deg, #c32178 0%, #780066 100%);
 }
@@ -1798,20 +1694,20 @@ body.moonlight-theme .page-transition {
 
 /* ── Лунная тема: тот же стеклянный стиль, но холодный ── */
 body.moonlight-theme .theme-dropdown__menu {
-    background: rgba(8, 12, 24, 0.9);
-    border-color: rgba(184, 200, 255, 0.12);
+    background: rgba(var(--moon-deep-rgb, 8, 12, 24), 0.9);
+    border-color: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.12);
     box-shadow:
         0 12px 40px rgba(0, 0, 0, 0.6),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 body.moonlight-theme .theme-dropdown__item {
-    color: rgba(184, 200, 255, 0.75);
+    color: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.75);
 }
 body.moonlight-theme .theme-dropdown__item:hover {
-    background: rgba(62, 122, 217, 0.18);
-    color: #eaf0ff;
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.18);
+    color: rgb(var(--moon-ink-rgb, 234, 240, 255));
 }
 body.moonlight-theme .theme-dropdown__item.is-active {
-    background: rgba(62, 122, 217, 0.22);
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.22);
     color: #fff;
 }

@@ -80,9 +80,9 @@ p {
 }
 
 .btn:hover {
-  background: #e62e8a;
+  background: rgb(var(--brand-hi-rgb, 230, 46, 138));
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(195, 33, 120, 0.3);
+  box-shadow: 0 10px 20px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 /* Стили формы */
@@ -151,7 +151,7 @@ p {
 .form-group select:focus {
   border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(195, 33, 120, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 195, 33, 120), 0.2);
 }
 
 .form-group textarea {
@@ -199,9 +199,9 @@ p {
 }
 
 .form-submit:hover {
-  background: #e62e8a;
+  background: rgb(var(--brand-hi-rgb, 230, 46, 138));
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(195, 33, 120, 0.3);
+  box-shadow: 0 10px 20px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
 }
 
 .required::after {

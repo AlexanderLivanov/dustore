@@ -70,7 +70,7 @@
 
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(195, 33, 120, 0.3);
+            box-shadow: 0 10px 25px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
             background: rgba(255, 255, 255, 0.08);
         }
 
@@ -100,7 +100,7 @@
             color: white;
             height: 65mm;
             width: 96mm;
-            box-shadow: 0 10px 30px rgba(195, 33, 120, 0.3);
+            box-shadow: 0 10px 30px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
             overflow: hidden;
             transition: transform 0.6s;
             transform-style: preserve-3d;
@@ -332,9 +332,9 @@
         }
 
         .btn-primary:hover {
-            background: #e62e8a;
+            background: rgb(var(--brand-hi-rgb, 230, 46, 138));
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(195, 33, 120, 0.4);
+            box-shadow: 0 5px 15px rgba(var(--brand-rgb, 195, 33, 120), 0.4);
         }
 
         .btn-outline {

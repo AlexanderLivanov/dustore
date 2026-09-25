@@ -50,11 +50,11 @@ $notifications = $nc->getUserNotifications($user_id, 50);
         .notification-card.unread {
             border-left: 4px solid var(--primary);
             border-left-color: var(--secondary);
-            background: rgba(195, 33, 120, 0.3);
+            background: rgba(var(--brand-rgb, 195, 33, 120), 0.3);
         }
 
         .notification-card:hover {
-            background: rgba(195, 33, 120, 0.15);
+            background: rgba(var(--brand-rgb, 195, 33, 120), 0.15);
         }
 
         .notification-title {

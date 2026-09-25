@@ -31,11 +31,11 @@ $page_title = 'deplex — заливка билдов в Dustore';
         .hero{position:relative;padding:80px 0 64px;text-align:center;overflow:hidden;}
         .hero::before{content:'';position:absolute;top:-40%;left:50%;transform:translateX(-50%);
             width:900px;height:900px;border-radius:50%;
-            background:radial-gradient(circle,rgba(195,33,120,.22),transparent 60%);z-index:0;}
+            background:radial-gradient(circle,rgba(var(--brand-rgb, 195, 33, 120), .22),transparent 60%);z-index:0;}
         .hero>*{position:relative;z-index:1;}
         .hero-banner{font-family:'JetBrains Mono',monospace;color:var(--primary);
             font-size:clamp(8px,2.1vw,18px);line-height:1.25;white-space:pre;display:inline-block;
-            text-align:left;margin-bottom:28px;text-shadow:0 0 30px rgba(195,33,120,.5);}
+            text-align:left;margin-bottom:28px;text-shadow:0 0 30px rgba(var(--brand-rgb, 195, 33, 120), .5);}
         .hero h1{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,5vw,3rem);font-weight:800;
             letter-spacing:-.02em;margin-bottom:14px;color:#fff;}
         .hero p{font-size:clamp(1rem,2.5vw,1.2rem);color:var(--muted);max-width:620px;margin:0 auto 32px;}
@@ -43,8 +43,8 @@ $page_title = 'deplex — заливка билдов в Dustore';
         .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:var(--radius);
             font-weight:700;font-size:.95rem;cursor:pointer;border:none;transition:transform .15s,box-shadow .15s,background .2s;}
         .btn:active{transform:scale(.97);}
-        .btn-primary{background:linear-gradient(135deg,#c32178,#74155d);color:#fff;box-shadow:0 4px 24px rgba(195,33,120,.35);}
-        .btn-primary:hover{box-shadow:0 6px 32px rgba(195,33,120,.55);}
+        .btn-primary{background:linear-gradient(135deg,rgb(var(--brand-rgb, 195, 33, 120)),rgb(var(--brand-deep-rgb, 116, 21, 93)));color:#fff;box-shadow:0 4px 24px rgba(var(--brand-rgb, 195, 33, 120), .35);}
+        .btn-primary:hover{box-shadow:0 6px 32px rgba(var(--brand-rgb, 195, 33, 120), .55);}
         .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
         .btn-ghost:hover{background:var(--surface);}
 
@@ -89,7 +89,7 @@ $page_title = 'deplex — заливка билдов в Dustore';
         .dl-hint{font-size:.78rem;color:var(--muted);}
 
         /* ── PLAYERS ── */
-        .players{background:linear-gradient(135deg,rgba(195,33,120,.08),rgba(116,21,93,.05));
+        .players{background:linear-gradient(135deg,rgba(var(--brand-rgb, 195, 33, 120), .08),rgba(var(--brand-deep-rgb, 116, 21, 93), .05));
             border:1px solid var(--border);border-radius:22px;padding:40px;text-align:center;}
         .players h2{font-family:'Syne',sans-serif;font-size:1.5rem;color:#fff;margin-bottom:10px;}
         .players p{color:var(--muted);max-width:560px;margin:0 auto;}
