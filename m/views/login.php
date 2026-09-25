@@ -31,7 +31,7 @@ $footExtra = '<script>window.M_BACK = ' . json_encode($back) . ';</script><scrip
 ?>
 <section class="auth">
   <a class="ic-btn auth-x" href="<?= h(str_starts_with($back, '/m/') ? '/m/' : $back) ?>" aria-label="Закрыть"><i class="ti ti-x"></i></a>
-  <img class="auth-logo" src="/m/icons/logo.webp" alt="Dustore" draggable="false">
+  <img class="auth-logo" src="/m/icons/logo-appolo.png" alt="Dustore" draggable="false">
   <h1>Вход</h1>
   <p class="muted">Библиотека, чаты и вишлист — в одном аккаунте на всех устройствах</p>
 
