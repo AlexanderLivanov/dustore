@@ -45,6 +45,11 @@ function map_to_mobile_route(string $path): string
         return '/m/profile';
     }
 
+    /* /chat/?conversation=N → /m/chat?conversation=N (параметры допишутся ниже) */
+    if (str_starts_with($path, '/chat')) {
+        return '/m/chat';
+    }
+
     /* /library       → /m/library */
     if (str_starts_with($path, '/library')) {
         return '/m/library';

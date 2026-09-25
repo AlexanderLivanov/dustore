@@ -1,0 +1,26 @@
+{
+  "id": "/m/",
+  "name": "Dustore — инди-игры",
+  "short_name": "Dustore",
+  "description": "Инди-игры российских разработчиков: каталог, библиотека и чаты в кармане",
+  "start_url": "/m/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "portrait",
+  "background_color": "#0d0118",
+  "theme_color": "#0d0118",
+  "lang": "ru",
+  "dir": "ltr",
+  "categories": ["games", "entertainment", "social"],
+  "icons": [
+    { "src": "/m/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/m/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/m/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Чаты", "url": "/m/chat", "icons": [{ "src": "/m/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Каталог", "url": "/m/catalog", "icons": [{ "src": "/m/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Мои игры", "url": "/m/library", "icons": [{ "src": "/m/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

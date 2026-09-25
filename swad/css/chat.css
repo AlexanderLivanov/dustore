@@ -18,10 +18,14 @@
    подсказка «Выберите диалог…» делила правую панель пополам с тредом.
    Правило [hidden] ниже — единственное, что это чинит, не удалять.
 
+   v2: ответы, пины, вложения, контекстное меню, свайп, мобильный/PWA-слой.
    Лунная тема (body.moonlight-theme) переопределяет только цвета.
    ============================================================================= */
 
-.app [hidden], .toast[hidden] { display: none !important; }
+/* Всё, что управляется атрибутом hidden: и внутри .app, и оверлеи вне его
+   (меню, настройки, лайтбокс). Скрытый лайтбокс с display:grid ловил клики
+   по всей странице — тот же баг, что с подсказкой. */
+.app [hidden], .toast[hidden], .ctx[hidden], .modal[hidden], .lightbox[hidden], .dropzone[hidden] { display: none !important; }
 
 :root {
     --ch-header:      80px;
@@ -286,16 +290,20 @@ body.moonlight-theme .menu { background: rgba(var(--moon-raised-rgb, 16, 23, 40)
 }
 .day::before, .day::after { content: ""; flex: 1; height: 1px; background: var(--ch-panel-line); }
 
-.msg { display: flex; max-width: min(72%, 620px); }
+.msg { position: relative; display: flex; align-items: center; gap: 6px; max-width: min(72%, 620px); touch-action: pan-y; }
+.msg.mine { flex-direction: row-reverse; }
 .msg.mine { align-self: flex-end; }
 .msg.them { align-self: flex-start; }
 /* смена собеседника — воздух между группами; подряд идущие — плотно */
 .msg.mine + .msg.them, .msg.them + .msg.mine { margin-top: 10px; }
 
 .bubble {
-    position: relative; padding: 9px 14px 7px; border-radius: 20px;
-    font-size: 0.9rem; line-height: 1.48; word-break: break-word; white-space: pre-wrap;
+    position: relative; min-width: 0; padding: 9px 14px 7px; border-radius: 20px;
+    font-size: 0.9rem; line-height: 1.48; word-break: break-word;
 }
+.b-text { white-space: pre-wrap; }
+.b-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.msg.them .b-text a { color: var(--ch-accent-hi); }
 .msg.them .bubble { background: var(--ch-bubble-in); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); border-bottom-left-radius: 6px; }
 .msg.mine .bubble { background: var(--ch-bubble-out); color: #fff; border-bottom-right-radius: 6px; box-shadow: 0 8px 20px -12px rgba(var(--brand-rgb, 195, 33, 120), .9); }
 /* группа: у второго и следующих пузырей «склеивается» угол со стороны автора */
@@ -308,16 +316,176 @@ body.moonlight-theme .menu { background: rgba(var(--moon-raised-rgb, 16, 23, 40)
 .b-time { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px; font-size: 0.66rem; color: var(--ch-dim); }
 .msg.mine .b-time { color: rgba(255, 255, 255, 0.7); }
 
-/* ── Галочки прочтения ── */
-.ticks { display: inline-flex; flex: none; color: rgba(255, 255, 255, 0.6); }
-.ticks .tick-b { opacity: 0; transition: opacity .25s ease; }
-.ticks.read { color: #fff; }
-.ticks.read .tick-b { opacity: 1; }
+/* ── Статусы своего сообщения ──
+   Раньше «прочитано» отличалось от «отправлено» только белым против 60% белого
+   на розовом пузыре — на глаз почти не различимо. Теперь три явных состояния:
+   ✓ (тускло) → ✓✓ (тускло) → ✓✓ цветные с лёгким свечением. Цвет «прочитано»
+   берём контрастный к пузырю: холодный циан на розовом, тёплый на студийном. */
+.ticks { display: inline-flex; align-items: center; flex: none; color: rgba(255, 255, 255, 0.62); --tick-read: #8ff7ff; }
+.ticks svg { overflow: visible; }
+.ticks .tick-b { opacity: 0; transform: translateX(-3px); transition: opacity .25s ease, transform .25s ease; }
+.ticks.dlv .tick-b, .ticks.read .tick-b { opacity: 1; transform: none; }
+.ticks.read { color: var(--tick-read); filter: drop-shadow(0 0 3px rgba(143, 247, 255, .55)); }
+.room.is-studio .ticks { --tick-read: #fff4b8; }
+.room.is-studio .ticks.read { filter: drop-shadow(0 0 3px rgba(255, 236, 150, .6)); }
+body.moonlight-theme .ticks { --tick-read: #b8fff0; }
+.ticks.clock { color: rgba(255, 255, 255, .7); }
+.ticks.clock .clock-h { transform-origin: 8px 8px; animation: tick-spin 1.6s linear infinite; }
+@keyframes tick-spin { to { transform: rotate(360deg); } }
+.ticks.fail { width: 15px; height: 15px; border-radius: 50%; justify-content: center; background: var(--ch-danger); color: #fff; font-weight: 800; font-size: .66rem; }
+@media (prefers-reduced-motion: reduce) { .ticks.clock .clock-h { animation: none; } }
 
-.del { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border: 0; border-radius: 50%;
-    background: #2a0d36; color: #fff; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity .15s ease;
-    box-shadow: 0 0 0 1px var(--ch-panel-line), 0 4px 10px rgba(0, 0, 0, .5); }
-.msg.mine .bubble:hover .del, .del:focus-visible { opacity: 1; }
+/* в списке бесед: статус последнего своего сообщения рядом со временем */
+.c-time { display: inline-flex; align-items: center; gap: 4px; }
+.c-time .ticks { color: var(--ch-dim); --tick-read: var(--ch-accent-hi); }
+.c-time .ticks.read { filter: none; }
+.card.studio .c-time .ticks { --tick-read: var(--ch-studio); }
+
+/* оптимистичная отправка */
+.msg.pending .bubble { opacity: .78; }
+.msg.pending.failed .bubble { opacity: 1; box-shadow: inset 0 0 0 1.5px var(--ch-danger); }
+.msg.pending .quote, .msg.pending .m-img { pointer-events: none; }
+.m-fail { display: inline-flex; gap: 4px; flex: none; }
+.m-fail button { width: 28px; height: 28px; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    background: rgba(255, 107, 138, .16); color: var(--ch-danger); font-size: 1.05rem; line-height: 1; }
+.m-fail button:hover { background: var(--ch-danger); color: #fff; }
+
+/* ── Действия у сообщения: «⋯» при наведении, иконка свайпа ── */
+.m-more { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(255, 255, 255, .06); color: var(--ch-muted); cursor: pointer; opacity: 0; transition: opacity .15s ease, background .15s ease; }
+.msg:hover .m-more, .m-more:focus-visible { opacity: 1; }
+.m-more:hover { background: rgba(255, 255, 255, .12); color: var(--ch-text); }
+@media (pointer: coarse) { .m-more { display: none; } }
+
+.swipe-ic { position: absolute; left: -38px; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--ch-accent-soft); color: var(--ch-accent-hi);
+    opacity: var(--swipe, 0); transform: scale(calc(.6 + var(--swipe, 0) * .4)); pointer-events: none; }
+.msg.swipe-ready .swipe-ic { background: var(--ch-grad); color: #fff; }
+.msg.swipe-back { transition: transform .2s cubic-bezier(.2, .8, .2, 1); }
+.msg.flash .bubble { animation: msg-flash 1.4s ease; }
+@keyframes msg-flash { 0%, 30% { box-shadow: 0 0 0 3px var(--ch-accent-hi); } 100% { box-shadow: 0 0 0 3px transparent; } }
+
+/* ── Цитата ответа внутри пузыря ── */
+.quote { display: block; width: 100%; min-width: 140px; text-align: left; margin: 0 0 6px; padding: 5px 10px 6px;
+    border: 0; border-left: 3px solid var(--ch-accent-hi); border-radius: 6px 10px 10px 6px;
+    background: rgba(255, 255, 255, .07); color: inherit; font: inherit; cursor: pointer; }
+.msg.mine .quote { border-left-color: rgba(255, 255, 255, .85); background: rgba(0, 0, 0, .16); }
+.quote b { display: block; font-size: .78rem; color: var(--ch-accent-hi); }
+.msg.mine .quote b { color: #fff; }
+.quote span { display: block; font-size: .82rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quote.gone span { font-style: italic; opacity: .6; }
+
+/* ── Вложения в пузыре ── */
+.m-img { display: block; position: relative; width: min(320px, 62vw); max-height: 380px; margin: 0 0 6px; padding: 0; border: 0;
+    border-radius: 14px; overflow: hidden; background: rgba(0, 0, 0, .25); cursor: zoom-in; }
+.m-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bubble.media { padding: 4px; background: transparent !important; box-shadow: none !important; }
+.bubble.media .m-img { margin: 0; border-radius: 16px; }
+.bubble.media .b-time { position: absolute; right: 12px; bottom: 10px; margin: 0; padding: 2px 7px; border-radius: 999px;
+    background: rgba(0, 0, 0, .55); color: #fff; }
+
+.m-file { display: flex; align-items: center; gap: 10px; min-width: 220px; margin: 0 0 6px; padding: 8px 10px;
+    border-radius: 12px; background: rgba(0, 0, 0, .18); color: inherit; text-decoration: none; }
+.msg.them .m-file { background: rgba(255, 255, 255, .06); }
+.m-file:hover { background: rgba(0, 0, 0, .26); }
+.mf-ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; flex: none; background: var(--ch-grad); color: #fff; }
+.mf-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mf-name { font-size: .86rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mf-size { font-size: .72rem; opacity: .7; }
+.mf-dl { opacity: .7; flex: none; }
+
+/* ── Плашка закреплённого ── */
+.pinbar { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 16px; flex: none; text-align: left;
+    border: 0; border-bottom: 1px solid var(--ch-panel-line); background: rgba(195, 33, 120, .07); color: inherit; font: inherit; cursor: pointer; }
+.pinbar:hover { background: rgba(195, 33, 120, .12); }
+.pb-line { width: 3px; align-self: stretch; border-radius: 3px; background: var(--ch-grad); flex: none; }
+.pb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pb-title { font-size: .74rem; font-weight: 700; color: var(--ch-accent-hi); }
+.pb-text { font-size: .84rem; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-x { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: var(--ch-dim); font-size: 18px; flex: none; }
+.pb-x:hover { color: var(--ch-text); background: rgba(255, 255, 255, .08); }
+
+/* ── Панель ответа над композером ── */
+.reply-bar { display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 14px; border-radius: 16px;
+    background: var(--ch-inset); box-shadow: inset 3px 0 0 var(--ch-accent-hi); }
+.rb-ic { color: var(--ch-accent-hi); flex: none; }
+.rb-main { flex: 1; min-width: 0; }
+.rb-name { font-size: .76rem; font-weight: 700; color: var(--ch-accent-hi); }
+.rb-text { font-size: .82rem; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-x { width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--ch-dim); font-size: 18px; cursor: pointer; }
+.rb-x:hover { background: rgba(255, 255, 255, .08); color: var(--ch-text); }
+
+/* ── Вложения в композере ── */
+.attach-tray { display: flex; gap: 8px; overflow-x: auto; padding: 2px; }
+.att { position: relative; display: flex; align-items: center; gap: 8px; flex: none; max-width: 240px; padding: 6px 30px 6px 6px;
+    border-radius: 14px; background: var(--ch-inset); box-shadow: inset 0 0 0 1px var(--ch-panel-line); overflow: hidden; }
+.att img { width: 40px; height: 40px; object-fit: cover; border-radius: 9px; flex: none; }
+.att-ic { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 9px; background: var(--ch-grad); color: #fff; flex: none; }
+.att-main { min-width: 0; display: flex; flex-direction: column; }
+.att-name { font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.att-meta { font-size: .7rem; color: var(--ch-dim); }
+.att.error { box-shadow: inset 0 0 0 1px var(--ch-danger); }
+.att.error .att-meta { color: var(--ch-danger); }
+.att-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: calc(var(--p, 0) * 100%); background: var(--ch-grad); transition: width .2s ease; }
+.att-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; border-radius: 50%;
+    background: rgba(0, 0, 0, .4); color: #fff; cursor: pointer; font-size: 13px; line-height: 1; }
+.attach { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; display: grid; place-items: center;
+    background: none; color: var(--ch-muted); cursor: pointer; transition: color .15s ease, background .15s ease; }
+.attach:hover { color: var(--ch-text); background: rgba(255, 255, 255, .06); }
+
+.dropzone { position: absolute; inset: 10px; z-index: 25; display: grid; place-items: center; border-radius: 18px;
+    border: 2px dashed var(--ch-accent-hi); background: rgba(13, 1, 24, .82); backdrop-filter: blur(6px);
+    font-size: 1.05rem; font-weight: 700; color: var(--ch-text); pointer-events: none; }
+
+/* ── Контекстное меню ── */
+.ctx { position: fixed; z-index: 1200; min-width: 220px; padding: 6px; border-radius: 14px;
+    background: rgba(28, 9, 38, .97); backdrop-filter: blur(14px);
+    box-shadow: inset 0 0 0 1px var(--ch-panel-line), 0 18px 44px rgba(0, 0, 0, .65);
+    animation: ctx-in .12s ease; }
+body.moonlight-theme .ctx { background: rgba(16, 23, 40, .97); }
+@keyframes ctx-in { from { opacity: 0; transform: scale(.96); } }
+.ctx button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px;
+    background: none; color: var(--ch-text); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; }
+.ctx button svg { color: var(--ch-muted); flex: none; }
+.ctx button:hover { background: rgba(255, 255, 255, .07); }
+.ctx button.danger, .ctx button.danger svg { color: var(--ch-danger); }
+
+.side-more { margin-left: auto; width: 34px; height: 34px; }
+
+/* ── Настройки ── */
+.modal { position: fixed; inset: 0; z-index: 1150; display: grid; place-items: center; padding: 16px;
+    background: rgba(5, 0, 10, .6); backdrop-filter: blur(6px); }
+.modal-card { width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 18px 20px 20px; border-radius: 22px;
+    background: #170622; box-shadow: inset 0 0 0 1px var(--ch-panel-line), 0 30px 70px rgba(0, 0, 0, .7); }
+body.moonlight-theme .modal-card { background: #0c1426; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 1.05rem; }
+.st-section { margin: 16px 0 8px; font-size: .72rem; letter-spacing: .6px; text-transform: uppercase; color: var(--ch-dim); }
+.st-sounds { display: flex; flex-direction: column; gap: 4px; }
+.st-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; cursor: pointer; }
+.st-row:hover { background: rgba(255, 255, 255, .04); }
+.st-row.on { background: var(--ch-accent-soft); }
+.st-row input { accent-color: var(--ch-accent); width: 16px; height: 16px; }
+.st-name { flex: 1; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-play { width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .07); color: var(--ch-text); cursor: pointer; font-size: 11px; }
+.st-play:hover { background: var(--ch-grad); }
+.st-upload { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; margin-top: 6px; padding: 10px 12px;
+    border: 1px dashed rgba(255, 255, 255, .18); border-radius: 12px; background: none; color: var(--ch-text); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; }
+.st-upload svg { grid-row: span 2; transform: rotate(180deg); color: var(--ch-accent-hi); }
+.st-upload small { color: var(--ch-dim); font-size: .72rem; }
+.st-upload:hover { border-color: var(--ch-accent); }
+.st-upload:disabled { opacity: .4; cursor: default; }
+.st-vol { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: .86rem; color: var(--ch-muted); }
+.st-vol input { flex: 1; accent-color: var(--ch-accent); }
+.st-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .88rem; color: var(--ch-muted); }
+.st-btn { padding: 8px 16px; border: 0; border-radius: 999px; background: var(--ch-grad); color: #fff; font: inherit; font-weight: 700; font-size: .84rem; cursor: pointer; }
+
+/* ── Лайтбокс ── */
+.lightbox { position: fixed; inset: 0; z-index: 1250; display: grid; place-items: center; padding: 4vh 4vw;
+    background: rgba(4, 0, 8, .92); cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 88vh; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, .7); }
+.lb-dl { position: absolute; right: 20px; top: 18px; padding: 8px 16px; border-radius: 999px; background: rgba(255, 255, 255, .1);
+    color: #fff; font-size: .85rem; font-weight: 600; text-decoration: none; }
+.lb-dl:hover { background: rgba(255, 255, 255, .18); }
 
 /* ── Уведомления ── */
 .notif {
@@ -336,13 +504,14 @@ body.moonlight-theme .menu { background: rgba(var(--moon-raised-rgb, 16, 23, 40)
 .n-link { font-size: .8rem; font-weight: 600; color: var(--ch-accent-hi); text-decoration: none; padding: 5px 12px; border-radius: 999px; background: var(--ch-accent-soft); }
 .n-link:hover { background: rgba(var(--brand-rgb, 195, 33, 120), .28); }
 
-/* ── Композер: плавающая пилюля ── */
-.composer { display: flex; align-items: flex-end; gap: 8px; margin: 8px 16px 16px; padding: 6px 6px 6px 16px; flex: none;
+/* ── Композер: плавающая пилюля (+ панель ответа и вложения над ней) ── */
+.composer-wrap { flex: none; margin: 8px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.composer { display: flex; align-items: flex-end; gap: 4px; padding: 6px;
     border-radius: 24px; background: var(--ch-inset); box-shadow: inset 0 0 0 1px var(--ch-panel-line);
     transition: box-shadow .18s ease; }
 .composer:focus-within { box-shadow: inset 0 0 0 1px var(--ch-accent), 0 0 0 4px var(--ch-accent-soft); }
 .composer textarea {
-    flex: 1; min-height: 40px; max-height: 130px; resize: none; padding: 10px 0;
+    flex: 1; min-height: 40px; max-height: 140px; resize: none; padding: 10px 4px;
     background: none; border: 0; color: var(--ch-text); font: inherit; font-size: .92rem; outline: none;
 }
 .composer textarea::placeholder { color: var(--ch-dim); }
@@ -402,18 +571,108 @@ html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
 
 @media (max-width: 900px) { :root { --ch-header: 64px; } }
 
+/* ── Телефон ─────────────────────────────────────────────────────────────────
+   Правила «чтобы ощущалось как приложение, а не сайт»:
+     - поля ввода 16px: iOS Safari сам зумит страницу при фокусе на поле
+       с шрифтом меньше 16px — именно это «увеличение при входе в чат»;
+     - без системных превью по долгому тапу, выделения и подсветки тапа:
+       долгий тап открывает наше меню;
+     - комната на весь экран, шапка и композер — с учётом «чёлки» и
+       домашней полоски (safe-area). */
 @media (max-width: 780px) {
-    .app { grid-template-columns: 1fr; gap: 0; padding: 0; height: calc(100dvh - var(--ch-header)); }
+    .app { grid-template-columns: 1fr; gap: 0; padding: 0; height: calc(100dvh - var(--ch-header)); max-width: none; }
     .panel { border-radius: 0; box-shadow: none; }
     .room { display: none; }
     .app.show-room .side { display: none; }
     .app.show-room .room { display: flex; }
-    .back { display: block; }
-    .msg { max-width: 86%; }
-    .thread { padding: 14px 12px 8px; }
-    .composer { margin: 6px 10px 10px; }
+    .back { display: grid; place-items: center; width: 34px; height: 34px; margin-left: -6px; padding: 0; }
+
+    /* в открытой беседе прячем шапку сайта: всё место — сообщениям */
+    body.chat-page:has(.app.show-room) { --ch-header: 0px; }
+    body.chat-page:has(.app.show-room) > header,
+    body.chat-page:has(.app.show-room) .header { display: none !important; }
+    .app.show-room { position: fixed; inset: 0; height: 100dvh; z-index: 900; }
+
+    body { font-size: 13px; }
+    .side-head { padding: 12px 12px 0; }
+    .brand { font-size: 1.15rem; }
+    .brand .glyph { width: 34px; height: 34px; border-radius: 11px; }
+    .search-top { margin: 10px 12px 4px; }
+    .list, .search-results { padding: 4px 6px 12px; }
+    .card { grid-template-columns: 44px minmax(0, 1fr) auto; padding: 8px 8px; border-radius: 14px; }
+    .av { width: 44px; height: 44px; }
+    .c-name { font-size: .92rem; }
+    .c-last { font-size: .8rem; }
+
+    .room-head { padding: calc(6px + env(safe-area-inset-top)) 8px 6px; gap: 8px; }
+    .room-head .av { width: 36px; height: 36px; }
+    .rh-name { font-size: .95rem; }
+    .icon-btn { width: 34px; height: 34px; }
+    .pinbar { padding: 6px 12px; }
+    .thread { padding: 10px 10px 6px; background-size: 18px 18px; }
+    .msg { max-width: 84%; }
+    .bubble { padding: 7px 11px 5px; font-size: .9rem; border-radius: 18px; }
+    .m-img { width: min(260px, 66vw); }
+    .m-file { min-width: 0; }
+    .composer-wrap { margin: 4px 8px calc(8px + env(safe-area-inset-bottom)); }
+    .composer { border-radius: 22px; }
+    .composer textarea, .search-top input { font-size: 16px; }        /* ← главное: нет авто-зума iOS */
+    .send, .attach { width: 38px; height: 38px; }
+    .notif { padding: 12px; grid-template-columns: 34px minmax(0, 1fr); }
+    .n-ico { width: 34px; height: 34px; }
+    .ctx { min-width: 200px; }
+    .ctx button { padding: 12px; font-size: .92rem; }
+    .modal { place-items: end center; padding: 0; }
+    .modal-card { width: 100%; border-radius: 22px 22px 0 0; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
+
+/* Тач-устройства: убираем «сайтовые» реакции браузера */
+@media (pointer: coarse) {
+    .app, .ctx, .modal { -webkit-tap-highlight-color: transparent; }
+    .app img, .lightbox img { -webkit-touch-callout: none; -webkit-user-drag: none; user-select: none; }
+    .card, .result, .tab, .pinbar, .quote, .m-img, .m-file, .att, .room-head, .side-head, .ctx, .notif, .msg {
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    }
+    .thread { overscroll-behavior: contain; }
+    .list, .search-results { overscroll-behavior: contain; }
+    button:active { transform: scale(.97); }
+}
+
 
 @media (max-width: 480px) { :root { --ch-header: 58px; } }
 
 @media (prefers-reduced-motion: reduce) { .profile, .toast { transition: none; } .re-art { animation: none; } }
+
+/* ════════════════════ ОБОИ ════════════════════
+   Фон треда рисуется инлайн-стилем (пресет или фото). Чтобы на любой картинке
+   читалось: входящие пузыри плотнее и с blur, разделители дней — «пилюли». */
+.room.has-wp .thread { background-color: #0b0512; }
+.room.has-wp .msg.them .bubble { background: rgba(22, 10, 32, .82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+body.moonlight-theme .room.has-wp .msg.them .bubble { background: rgba(10, 16, 32, .84); }
+.room.has-wp .day { align-self: center; padding: 3px 11px; border-radius: 999px; color: #fff; font-weight: 600;
+    background: rgba(10, 4, 16, .55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.room.has-wp .day::before, .room.has-wp .day::after { display: none; }
+.room.has-wp .more-btn, .room.has-wp .thread > .empty { background: rgba(10, 4, 16, .6); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; }
+.room.has-wp .thread > .empty { padding: 12px 18px; border-radius: 16px; }
+
+.wp-card { width: min(460px, 100%); }
+.wp-preview { height: 150px; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
+    background: #0b0512 radial-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px) 0 0 / 22px 22px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.wp-b { max-width: 70%; padding: 7px 12px; border-radius: 16px; font-size: .8rem; line-height: 1.35; }
+.wp-b.them { align-self: flex-start; background: rgba(22, 10, 32, .82); border-bottom-left-radius: 5px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.wp-b.mine { align-self: flex-end; background: var(--ch-bubble-out); color: #fff; border-bottom-right-radius: 5px; }
+.wp-scope { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 14px 0 12px; padding: 4px; border-radius: 12px; background: var(--ch-inset); }
+.wp-scope button { padding: 8px 10px; border: 0; border-radius: 9px; background: none; color: var(--ch-muted); font: inherit; font-size: .84rem; font-weight: 600; cursor: pointer; }
+.wp-scope button.on { background: var(--ch-grad); color: #fff; }
+.wp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.wp-tile { display: flex; flex-direction: column; gap: 5px; padding: 0; border: 0; background: none; color: var(--ch-muted); font: inherit; font-size: .7rem; cursor: pointer; text-align: center; }
+.wp-tile i { display: grid; place-items: center; aspect-ratio: 3 / 4; border-radius: 12px; background: var(--ch-inset); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); transition: box-shadow .15s ease, transform .15s ease; }
+.wp-tile:hover i { transform: translateY(-2px); }
+.wp-tile.on i { box-shadow: 0 0 0 2px var(--ch-accent-hi), 0 6px 18px -8px var(--ch-accent); }
+.wp-tile.on { color: var(--ch-text); }
+.wp-tile.add i { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18); border: 1px dashed transparent; color: var(--ch-accent-hi); }
+.wp-tile.none i { background: #0b0512 radial-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px) 0 0 / 10px 10px; }
+.wp-note { margin: 10px 0 0; font-size: .76rem; color: var(--ch-dim); min-height: 1em; }
+.wp-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; }
+.wp-link { margin-right: auto; padding: 0; border: 0; background: none; color: var(--ch-muted); font: inherit; font-size: .82rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.wp-link:hover { color: var(--ch-text); }

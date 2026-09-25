@@ -472,6 +472,38 @@ $stmt->execute([
                             <path d="M4.217 7c-.274 0 -.544 .054 -.797 .161c-1.426 .615 -1.767 2.562 -1.078 4.335c.563 1.451 1.71 2.504 2.941 2.504c.274 0 .544 -.054 .797 -.161c1.426 -.615 1.767 -2.562 1.078 -4.335c-.563 -1.451 -1.71 -2.504 -2.941 -2.504z" />
                         </svg>
                     </button>
+                    <!-- Быстрый переход к лаунчеру DustoreX. Мятная точка «новое» гаснет
+                         после первого перехода (localStorage, ключ dxl_seen). -->
+                    <a class="button dxl-hbtn" href="/launcher" title="DustoreX — лаунчер для Windows и Android"
+                        aria-label="Лаунчер DustoreX"
+                        style="padding: 6px; position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none;"
+                        onclick="try{localStorage.setItem('dxl_seen','1')}catch(e){}">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 16V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+                            <path d="M2 19h10" />
+                            <rect x="15" y="10" width="7" height="11" rx="1.5" />
+                            <path d="M18 18h1" />
+                        </svg>
+                        <span class="dxl-hbtn__dot" hidden style="position:absolute; top:4px; right:4px; width:8px; height:8px;
+                            border-radius:50%; background:#6fe3d3; box-shadow:0 0 0 2px var(--header-bg, #160822), 0 0 8px rgba(111,227,211,.8);"></span>
+                    </a>
+                    <style>
+                        /* в мобильном меню иконки идут списком с подписями — см. header_mobile.css */
+                        @media (max-width: 900px) {
+                            .user-menu .dxl-hbtn::after { content: "Лаунчер DustoreX"; }
+                            .user-menu .dxl-hbtn .dxl-hbtn__dot { position: static !important; margin-left: auto; order: 2; }
+                        }
+                    </style>
+                    <script>
+                        try {
+                            if (!localStorage.getItem('dxl_seen') && location.pathname !== '/launcher') {
+                                document.querySelector('.dxl-hbtn__dot').hidden = false;
+                            } else if (location.pathname === '/launcher') {
+                                localStorage.setItem('dxl_seen', '1');
+                            }
+                        } catch (e) {}
+                    </script>
                     <button class="button" style="padding: 6px; position: relative;" onclick="location.href='/chat'">
                         <!-- Индикатор для уведомлений (оставляем как есть) -->
                         <?php if (!empty($unread_notif_count)): ?>
