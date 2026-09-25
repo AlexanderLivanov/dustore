@@ -447,12 +447,12 @@ $stmt->execute([
                     Moonlight
                 </a>
             </li>
-            <li>
+            <!-- <li>
                 <a class="theme-dropdown__item" href="#" data-theme="madness" role="menuitem">
                     <span class="theme-dropdown__swatch" data-theme="madness"></span>
                     Madness
                 </a>
-            </li>
+            </li> -->
         </ul>
     </div>
                     <button class="button" style="padding: 6px;" id="modeBtn">
