@@ -65,30 +65,20 @@ echo "push_doctor — запущен от «{$me}»" . ($me === 'root' ? ' (root
 /* ─── 1. Ключи VAPID ─────────────────────────────────────────────────────── */
 head('1. Ключи VAPID');
 
-$envFile = getenv('PUSH_ENV_FILE') ?: '/etc/dustore/push.env';
-$file = [];
-if (!file_exists($envFile)) {
-    warn("{$envFile} нет");
-} elseif (!is_readable($envFile)) {
-    bad("{$envFile} есть, но «{$me}» не может его прочитать (" . file_access($envFile) . ") — сайт возьмёт ключ из pass.php, а воркер из этого файла. "
-        . "Дай группе веб-сервера чтение: chgrp www-data {$envFile} && chmod 640 {$envFile}");
-} else {
-    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        if ($line === '' || $line[0] === '#') continue;
-        [$k, $v] = array_pad(explode('=', $line, 2), 2, '');
-        $file[strtoupper(trim(preg_replace('/^export\s+/', '', $k)))] = trim($v, " \t\"'");
-    }
-    ok("{$envFile} читается (" . file_access($envFile) . ')');
+// Источники — ровно те, что перебирает chat/_push_config.php (и pwa/push-worker.js)
+foreach (push_env_files() as $f) {
+    if (!file_exists($f)) continue;
+    if (is_readable($f)) { ok("{$f} читается (" . file_access($f) . ')'); continue; }
+    bad("{$f} есть, но «{$me}» не может его прочитать (" . file_access($f) . '). Сайт этот файл пропустит, '
+        . 'а воркер от root — прочтёт: ключи разъедутся. chgrp www-data ' . $f . ' && chmod 640 ' . $f);
 }
-$filePub  = $file['VAPID_PUBLIC'] ?? $file['VAPID_PUBLIC_KEY'] ?? '';
-$filePriv = $file['VAPID_PRIVATE'] ?? $file['VAPID_PRIVATE_KEY'] ?? '';
-
+$cfg   = push_config();
 $site  = vapid_public_key();            // ровно то, что chat/index.php и /m/ отдают браузеру
 $const = defined('VAPID_PUBLIC_KEY') ? (string)VAPID_PUBLIC_KEY : '';
+echo "    сайт берёт ключи из:     " . ($cfg['source'] ?: '(нигде)') . "\n";
 echo "    сайт отдаёт браузерам:  " . short($site) . "\n";
-echo "    push.env VAPID_PUBLIC:  " . short($filePub) . "\n";
-echo "    pass.php константа:     " . short($const) . "\n";
-if (getenv('VAPID_PUBLIC')) warn('VAPID_PUBLIC задан в окружении этого шелла — у Apache/php-fpm окружение другое, не обманись');
+if ($const !== '' && $cfg['source'] !== 'swad/pass.php') echo "    pass.php константа:     " . short($const) . "\n";
+if (getenv('VAPID_PUBLIC')) warn('VAPID_PUBLIC задан в окружении этого шелла — у Apache окружение другое, не обманись');
 
 if ($site === '') {
     bad('Сайт не отдаёт ключ: кнопка «Включить» ответит «не настроены на сервере»');
@@ -98,34 +88,33 @@ if ($site === '') {
     ok('Ключ сайта по формату верный');
 }
 
-if ($filePriv !== '') {
-    $derived = vapid_public_from_private($filePriv);
-    if ($derived === null) bad('VAPID_PRIVATE в push.env не читается как ключ P-256');
-    elseif ($filePub !== '' && $derived !== $filePub) bad('В push.env VAPID_PUBLIC и VAPID_PRIVATE — НЕ пара. Push-сервис ответит 403 на каждую отправку');
-    else ok('В push.env публичный и приватный ключ — пара');
-    if ($derived && $site !== '' && $derived !== $site) {
-        bad('Сайт раздаёт ключ ' . short($site) . ', а воркер подписывает парой от ' . short($derived) . ' — каждая отправка получит 403. '
-            . ($site === $filePub
-                ? 'Сгенерируй пару заново (npx web-push generate-vapid-keys) и впиши обе строки из одного вывода'
-                : 'PHP берёт ключ не из push.env (env веб-сервера или pass.php)'));
-    } elseif ($derived && $site === $derived) {
-        ok('Ключ сайта совпадает с приватным ключом воркера');
-    }
+if ($cfg['private'] === '') {
+    warn("В источнике «{$cfg['source']}» нет VAPID_PRIVATE — пару не сверить. Воркер должен получить ту же пару из env");
 } else {
-    warn('VAPID_PRIVATE в push.env не нашёл — пару с ключом сайта сверить нечем. Воркер берёт ключи из своего env (systemd EnvironmentFile)');
+    $derived = vapid_public_from_private($cfg['private']);
+    if ($derived === null)        bad('VAPID_PRIVATE не читается как ключ P-256');
+    elseif ($derived !== $site)   bad('VAPID_PUBLIC и VAPID_PRIVATE в «' . $cfg['source'] . '» — НЕ пара: push-сервис ответит 403 на каждую отправку. '
+                                     . 'Сгенерируй пару заново (npx web-push generate-vapid-keys), обе строки из одного вывода');
+    else                          ok('Публичный и приватный ключ — пара');
 }
 if ($const !== '' && $site !== '' && $const !== $site) {
-    warn('pass.php держит другой (старый?) ключ. Сейчас он не используется, но при потере доступа к push.env сайт молча переключится на него');
+    warn('pass.php держит другой ключ. Сейчас он не используется, но если выше по списку файлы станут недоступны, сайт молча переключится на него');
 }
 
 /* ─── 2. Секрет моста PHP ↔ Node ─────────────────────────────────────────── */
 head('2. Секрет моста');
 $secretFile = getenv('BRIDGE_SECRET_FILE') ?: '/etc/dustore/bridge.secret';
+$from = is_file($secretFile) && is_readable($secretFile) && trim((string)file_get_contents($secretFile)) !== '' ? $secretFile . ' ' . file_access($secretFile)
+      : (getenv('BRIDGE_SECRET') ? 'env BRIDGE_SECRET'
+      : ($cfg['bridge'] !== '' ? 'BRIDGE_SECRET из ' . $cfg['source']
+      : ($cfg['private'] !== '' ? 'выведен из VAPID_PRIVATE (так же считает воркер)' : '')));
 if (bridge_secret() === '') {
-    bad("Секрета нет: ни {$secretFile} (" . (file_exists($secretFile) ? file_access($secretFile) . ', не читается' : 'нет файла') . '), ни env BRIDGE_SECRET. '
-        . 'push_outbox.php отвечает воркеру 403');
+    bad('Секрета нет, и вывести его не из чего — push_outbox.php отвечает воркеру 503');
 } else {
-    ok("Секрет есть (" . (is_file($secretFile) ? $secretFile . ' ' . file_access($secretFile) : 'env BRIDGE_SECRET') . ')');
+    ok("Секрет есть: {$from}");
+    if (is_file($secretFile) && !is_readable($secretFile)) {
+        bad("{$secretFile} есть, но «{$me}» его не читает (" . file_access($secretFile) . ') — у сайта и воркера разные секреты, outbox ответит 403');
+    }
 }
 
 /* ─── 3. База ────────────────────────────────────────────────────────────── */
