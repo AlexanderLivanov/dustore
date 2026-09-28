@@ -1076,7 +1076,7 @@ body.moonlight-theme {
                         <button type="submit" class="btn-save">💾 Сохранить изменения</button>
                         <a href="/assetstore/asset.php?id=<?= $asset_id ?>" class="btn-cancel">← Назад к ассету</a>
                         <?php if ($isAdmin): ?>
-                            <a href="/assetstore/admin.php?tab=moderation" class="btn-cancel" style="margin-left:auto">🛡️ В админку</a>
+                            <a href="/assetstore/manage.php" class="btn-cancel" style="margin-left:auto">🛡️ В админку</a>
                         <?php endif; ?>
                     </div>
                 </form>
