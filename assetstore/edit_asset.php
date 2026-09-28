@@ -65,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rigged      = isset($_POST['rigged']) ? 1 : 0;
         $animated    = isset($_POST['animated']) ? 1 : 0;
         $status      = $isAdmin ? trim($_POST['status'] ?? 'draft') : $asset['status'];
+        $changelog   = trim($_POST['changelog'] ?? '');
+        $oldVersion  = (string)($asset['version'] ?? '');
 
         if (!$name || !$description) throw new Exception('Заполните название и описание');
 
@@ -125,6 +127,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status,
             $asset_id
         ]);
+
+        // Версия сменилась — пишем в историю и, если ассет уже опубликован
+        // и есть кому его читать, шлём уведомление владельцам библиотеки.
+        // Тихий best-effort: сама правка ассета уже сохранена выше, ошибка
+        // здесь не должна портить пользователю видимый результат сохранения.
+        if ($version !== $oldVersion) {
+            try {
+                require_once __DIR__ . '/_versions.php';
+                asset_record_version($pdo, $asset_id, $version, $changelog !== '' ? $changelog : null, $user_id);
+                if ($asset['status'] === 'published') {
+                    asset_notify_update($pdo, $asset_id, $name, $version, $changelog);
+                }
+            } catch (Throwable $e) {
+                error_log('[edit_asset] version notify failed: ' . $e->getMessage());
+            }
+        }
 
         // Refresh
         $stmt->execute([$asset_id]);
@@ -865,6 +883,12 @@ body.moonlight-theme {
                             <div class="field">
                                 <label>Теги (через запятую)</label>
                                 <input type="text" name="tags" value="<?= htmlspecialchars($asset['tags'] ?? '') ?>" placeholder="pbr, seamless, 4k">
+                            </div>
+                        </div>
+                        <div class="form-grid full">
+                            <div class="field">
+                                <label>Что нового в этой версии</label>
+                                <textarea name="changelog" rows="3" placeholder="Заполните, если меняете номер версии — это увидят все, у кого ассет уже в библиотеке, и получат уведомление"></textarea>
                             </div>
                         </div>
                     </div>

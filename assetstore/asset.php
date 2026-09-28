@@ -2,6 +2,7 @@
 session_start();
 require_once('../swad/config.php');
 require_once('../swad/controllers/game.php');
+require_once(__DIR__ . '/_versions.php');
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -35,6 +36,7 @@ $engines      = json_decode($asset['engine_compatibility'] ?? '[]', true) ?: [];
 $tags         = !empty($asset['tags']) ? array_map('trim', explode(',', $asset['tags'])) : [];
 $contents     = json_decode($asset['contents']     ?? '[]', true) ?: []; // list of included files/objects
 $model3dUrl   = $asset['model_3d_url'] ?? ''; // .glb or .gltf URL for 3D viewer
+$versionHistory = asset_version_history($pdo, $asset_id, 10);
 
 /* ── Ownership check ─────────────────────────────────────────────────── */
 $isOwned = false;
@@ -1025,6 +1027,24 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                         </div>
                     </div>
                 </div>
+
+                <?php if (!empty($versionHistory)): ?>
+                <!-- Version history / changelog -->
+                <div class="buy-card" style="padding:14px 16px">
+                    <div style="font-weight:700;font-size:.86rem;margin-bottom:10px">История версий</div>
+                    <?php foreach ($versionHistory as $v): ?>
+                        <div style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+                            <div style="display:flex;justify-content:space-between;gap:10px;font-size:.82rem">
+                                <span style="font-weight:700">v<?= htmlspecialchars($v['version']) ?></span>
+                                <span style="color:rgba(240,230,255,.45)"><?= date('d.m.Y', strtotime($v['created_at'])) ?></span>
+                            </div>
+                            <?php if (!empty($v['changelog'])): ?>
+                                <div style="font-size:.8rem;color:rgba(240,230,255,.7);margin-top:4px;white-space:pre-wrap"><?= htmlspecialchars($v['changelog']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
 
                 <!-- Author card -->
                 <div class="author-card">

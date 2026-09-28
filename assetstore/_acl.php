@@ -18,6 +18,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_schema.php';
+
 /* ── Уровни ──────────────────────────────────────────────────────────────── */
 if (!defined('ACL_ROLE_ROOT')) {
     define('ACL_ROLE_ROOT', -1);   // высшая роль
@@ -113,6 +115,8 @@ function acl_ctx(PDO $pdo): array
 {
     static $ctx = null;
     if ($ctx !== null) return $ctx;
+
+    AssetSchema::ensure($pdo);
 
     $uid  = isset($_SESSION['USERDATA']['id']) ? (int)$_SESSION['USERDATA']['id'] : 0;
     $role = $uid ? acl_role($pdo, $uid) : ACL_ROLE_USER;
