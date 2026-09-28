@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../swad/config.php');
+require_once(__DIR__ . '/_licensing.php');
 
 if (empty($_SESSION['USERDATA']['id'])) {
     header('Location: /login');
@@ -14,11 +15,16 @@ $asset_id = intval($_GET['id'] ?? 0);
 $user_id  = (int)$_SESSION['USERDATA']['id'];
 $isAdmin  = false;
 
-// Check admin or studio owner
-$u = $pdo->prepare("SELECT role FROM users WHERE id=? LIMIT 1");
+/* Check admin or studio owner.
+   Было: SELECT role FROM users + сравнение со строкой 'admin' — такой
+   колонки в users нет (см. assetstore/_acl.php), запрос падал
+   PDOException'ом на КАЖДОМ открытии страницы, и без try/catch это был
+   голый фатал: править ассет не мог вообще никто, ни владелец, ни админ.
+   Реальная роль — users.global_role, -1 = админ платформы. */
+$u = $pdo->prepare("SELECT global_role FROM users WHERE id=? LIMIT 1");
 $u->execute([$user_id]);
 $ur = $u->fetch(PDO::FETCH_ASSOC);
-$isAdmin = ($ur['role'] ?? '') === 'admin';
+$isAdmin = ((int)($ur['global_role'] ?? 0)) === -1;
 
 // Get studio
 $studioStmt = $pdo->prepare("SELECT name FROM studios WHERE owner_id=? LIMIT 1");
@@ -60,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rigged      = isset($_POST['rigged']) ? 1 : 0;
         $animated    = isset($_POST['animated']) ? 1 : 0;
         $status      = $isAdmin ? trim($_POST['status'] ?? 'draft') : $asset['status'];
+        $changelog   = trim($_POST['changelog'] ?? '');
+        $oldVersion  = (string)($asset['version'] ?? '');
 
         if (!$name || !$description) throw new Exception('Заполните название и описание');
 
@@ -121,6 +129,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $asset_id
         ]);
 
+        // Версия сменилась — пишем в историю и, если ассет уже опубликован
+        // и есть кому его читать, шлём уведомление владельцам библиотеки.
+        // Тихий best-effort: сама правка ассета уже сохранена выше, ошибка
+        // здесь не должна портить пользователю видимый результат сохранения.
+        if ($version !== $oldVersion) {
+            try {
+                require_once __DIR__ . '/_versions.php';
+                asset_record_version($pdo, $asset_id, $version, $changelog !== '' ? $changelog : null, $user_id);
+                if ($asset['status'] === 'published') {
+                    asset_notify_update($pdo, $asset_id, $name, $version, $changelog);
+                }
+            } catch (Throwable $e) {
+                error_log('[edit_asset] version notify failed: ' . $e->getMessage());
+            }
+        }
+
+        // Уровни лицензии — если ни один чекбокс не включён, asset_save_license_tiers
+        // просто снимает все тарифы, и ассет возвращается к обычной flat-цене выше.
+        asset_save_license_tiers($pdo, $asset_id, asset_parse_tier_input($_POST));
+
         // Refresh
         $stmt->execute([$asset_id]);
         $asset = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -134,6 +162,7 @@ $formats  = json_decode($asset['formats'] ?? '[]', true) ?: [];
 $engines  = json_decode($asset['engine_compatibility'] ?? '[]', true) ?: [];
 $contents = json_decode($asset['contents'] ?? '[]', true) ?: [];
 $contents_text = implode("\n", array_map(fn($c) => $c['name'] ?? '', $contents));
+$tiersByKey = array_column(asset_get_license_tiers($pdo, $asset_id), null, 'tier');
 
 $CATS = [
     '3d_model' => ['label' => '3D Модели', 'emoji' => '🧊'],
@@ -159,7 +188,7 @@ $cat = $CATS[$asset['category']] ?? ['label' => ucfirst($asset['category']), 'em
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Редактировать: <?= htmlspecialchars($asset['name']) ?></title>
     <link rel="stylesheet" href="../swad/css/pages.css">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
 :root {
     --primary: #c32178;
@@ -804,6 +833,13 @@ body.moonlight-theme {
     border-color: rgba(255,255,255,0.15);
     color: #fff;
 }
+
+/* ── Fid Core convergence (точечный проход) ── */
+:root { --pix: 6px; }
+.btn-save {
+    border-radius: 0;
+    clip-path: polygon(var(--pix) 0, 100% 0, 100% calc(100% - var(--pix)), calc(100% - var(--pix)) 100%, 0 100%, 0 var(--pix));
+}
     </style>
 </head>
 
@@ -860,6 +896,12 @@ body.moonlight-theme {
                             <div class="field">
                                 <label>Теги (через запятую)</label>
                                 <input type="text" name="tags" value="<?= htmlspecialchars($asset['tags'] ?? '') ?>" placeholder="pbr, seamless, 4k">
+                            </div>
+                        </div>
+                        <div class="form-grid full">
+                            <div class="field">
+                                <label>Что нового в этой версии</label>
+                                <textarea name="changelog" rows="3" placeholder="Заполните, если меняете номер версии — это увидят все, у кого ассет уже в библиотеке, и получат уведомление"></textarea>
                             </div>
                         </div>
                     </div>
@@ -987,8 +1029,34 @@ body.moonlight-theme {
                             <div class="field">
                                 <label>Цена (₽) · 0 = бесплатно</label>
                                 <input type="number" name="price" id="priceInput" value="<?= $asset['price'] ?>" min="0" step="10" oninput="updateSplit()">
+                                <?php if ($tiersByKey): ?>
+                                    <div class="field-hint">Цена ниже подставляется автоматически как минимум из тарифов справа</div>
+                                <?php endif; ?>
                             </div>
                         </div>
+
+                        <!-- Уровни лицензии — необязательно, надстройка над ценой выше -->
+                        <div class="field-hint" style="margin:10px 0">
+                            Уровни лицензии (необязательно): разные цены под разное использование.
+                            Ничего не включено — ассет продаётся по цене выше, одним тарифом.
+                        </div>
+                        <?php foreach (asset_tier_labels() as $tk => $tl): $tv = $tiersByKey[$tk] ?? null; ?>
+                            <div class="form-grid" style="align-items:flex-end;margin-bottom:8px">
+                                <div class="field" style="flex:0 0 auto">
+                                    <label><input type="checkbox" name="tier_<?= $tk ?>_on" value="1" <?= $tv ? 'checked' : '' ?>
+                                        onchange="document.getElementById('etierRow_<?= $tk ?>').style.opacity=this.checked?'1':'.4'"> <?= $tl ?></label>
+                                </div>
+                                <div class="field" id="etierRow_<?= $tk ?>" style="opacity:<?= $tv ? '1' : '.4' ?>">
+                                    <label>Цена, ₽</label>
+                                    <input type="number" name="tier_<?= $tk ?>_price" min="0" step="10" value="<?= $tv['price'] ?? 0 ?>">
+                                </div>
+                                <div class="field" style="grid-column:span 2">
+                                    <label>Условия</label>
+                                    <input type="text" name="tier_<?= $tk ?>_terms" value="<?= htmlspecialchars($tv['terms'] ?? '') ?>" placeholder="Например: до 3 проектов, без модификации">
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+
                         <div class="field" style="margin-top:12px">
                             <label>Ваша доля: <span id="devPct"><?= $asset['dev_share'] ?? 70 ?></span>%</label>
                             <div class="split-wrap">
@@ -1071,7 +1139,7 @@ body.moonlight-theme {
                         <button type="submit" class="btn-save">💾 Сохранить изменения</button>
                         <a href="/assetstore/asset.php?id=<?= $asset_id ?>" class="btn-cancel">← Назад к ассету</a>
                         <?php if ($isAdmin): ?>
-                            <a href="/assetstore/admin.php?tab=moderation" class="btn-cancel" style="margin-left:auto">🛡️ В админку</a>
+                            <a href="/assetstore/manage.php" class="btn-cancel" style="margin-left:auto">🛡️ В админку</a>
                         <?php endif; ?>
                     </div>
                 </form>

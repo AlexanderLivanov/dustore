@@ -2,6 +2,8 @@
 session_start();
 require_once('../swad/config.php');
 require_once('../swad/controllers/game.php');
+require_once(__DIR__ . '/_versions.php');
+require_once(__DIR__ . '/_licensing.php');
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -35,6 +37,54 @@ $engines      = json_decode($asset['engine_compatibility'] ?? '[]', true) ?: [];
 $tags         = !empty($asset['tags']) ? array_map('trim', explode(',', $asset['tags'])) : [];
 $contents     = json_decode($asset['contents']     ?? '[]', true) ?: []; // list of included files/objects
 $model3dUrl   = $asset['model_3d_url'] ?? ''; // .glb or .gltf URL for 3D viewer
+$versionHistory = asset_version_history($pdo, $asset_id, 10);
+$licenseTiers = asset_get_license_tiers($pdo, $asset_id);
+
+/* ── Похожие ассеты: скоринг по тегам/категории/движку на PHP-стороне ──
+   Без JSON_OVERLAPS (не на всех MariaDB, что в проде) — тянем разумный
+   пул кандидатов одним запросом и считаем совпадения в PHP. Тот же приём,
+   что и с облаком тегов на index.php: tags — свободный CSV, не отдельная
+   таблица, так что делать это в SQL было бы либо хрупко, либо N+1. */
+function asset_find_similar(PDO $pdo, array $asset, array $tags, array $engines, int $limit = 6): array
+{
+    $st = $pdo->prepare(
+        "SELECT * FROM assets WHERE status = 'published' AND id != ?
+          ORDER BY downloads_count DESC LIMIT 300"
+    );
+    $st->execute([(int)$asset['id']]);
+    $pool = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    $tagsLower = array_map('mb_strtolower', $tags);
+    $scored = [];
+    foreach ($pool as $cand) {
+        $score = 0;
+        if (!empty($asset['category']) && $cand['category'] === $asset['category']) $score += 2;
+
+        $cTags = !empty($cand['tags']) ? array_map(fn($t) => mb_strtolower(trim($t)), explode(',', $cand['tags'])) : [];
+        $score += 3 * count(array_intersect($tagsLower, $cTags));
+
+        $cEngines = json_decode($cand['engine_compatibility'] ?? '[]', true) ?: [];
+        $score += count(array_intersect($engines, $cEngines));
+
+        if ($score > 0) $scored[] = [$score, $cand];
+    }
+
+    usort($scored, fn($a, $b) => $b[0] <=> $a[0]);
+    $result = array_map(fn($p) => $p[1], array_slice($scored, 0, $limit));
+
+    // Фоллбэк: нечего скорить (мало данных/новый каталог) — покажем хоть
+    // что-то из той же категории, а не пустой блок.
+    if (!$result && !empty($asset['category'])) {
+        $st2 = $pdo->prepare("SELECT * FROM assets WHERE status='published' AND id != ? AND category = ? ORDER BY downloads_count DESC LIMIT ?");
+        $st2->bindValue(1, (int)$asset['id'], PDO::PARAM_INT);
+        $st2->bindValue(2, $asset['category']);
+        $st2->bindValue(3, $limit, PDO::PARAM_INT);
+        $st2->execute();
+        $result = $st2->fetchAll(PDO::FETCH_ASSOC);
+    }
+    return $result;
+}
+$similarAssets = asset_find_similar($pdo, $asset, $tags, $engines);
 
 /* ── Ownership check ─────────────────────────────────────────────────── */
 $isOwned = false;
@@ -115,7 +165,7 @@ function fmtBytes($b)
     <title>Dustore — <?= htmlspecialchars($asset['name']) ?></title>
     <link rel="stylesheet" href="/swad/css/pages.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
 :root {
     --primary: #c32178;
@@ -831,6 +881,17 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
 @media (prefers-reduced-motion: reduce) {
     .viewer-spinner, .loading-spinner { animation: none; }
 }
+
+/* ── Fid Core convergence (точечный проход) ────────────────────────────
+   Карточка покупки — главный коммерческий фокус страницы — получает тот
+   же pixel-corner срез угла, что и .buy-card в bundle.php. --ac-radius
+   не трогаем: он общий для галереи/вкладок, менять его глобально здесь
+   не входило в задачу. */
+:root { --pix: 6px; }
+.buy-card, .pay-btn {
+    border-radius: 0;
+    clip-path: polygon(var(--pix) 0, 100% 0, 100% calc(100% - var(--pix)), calc(100% - var(--pix)) 100%, 0 100%, 0 var(--pix));
+}
     </style>
 </head>
 
@@ -903,7 +964,7 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                 <!-- Buy card -->
                 <div class="buy-card">
                     <div class="buy-card-header">
-                        <div class="buy-price-label"><?= $price > 0 ? 'Цена' : 'Доступно' ?></div>
+                        <div class="buy-price-label"><?= $price > 0 ? ($licenseTiers ? 'От' : 'Цена') : 'Доступно' ?></div>
                         <div class="buy-price <?= $price == 0 ? 'free' : '' ?>">
                             <?= $price == 0 ? 'Бесплатно' : number_format($price, 0, ',', ' ') . ' ₽' ?>
                         </div>
@@ -1025,6 +1086,24 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                         </div>
                     </div>
                 </div>
+
+                <?php if (!empty($versionHistory)): ?>
+                <!-- Version history / changelog -->
+                <div class="buy-card" style="padding:14px 16px">
+                    <div style="font-weight:700;font-size:.86rem;margin-bottom:10px">История версий</div>
+                    <?php foreach ($versionHistory as $v): ?>
+                        <div style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+                            <div style="display:flex;justify-content:space-between;gap:10px;font-size:.82rem">
+                                <span style="font-weight:700">v<?= htmlspecialchars($v['version']) ?></span>
+                                <span style="color:rgba(240,230,255,.45)"><?= date('d.m.Y', strtotime($v['created_at'])) ?></span>
+                            </div>
+                            <?php if (!empty($v['changelog'])): ?>
+                                <div style="font-size:.8rem;color:rgba(240,230,255,.7);margin-top:4px;white-space:pre-wrap"><?= htmlspecialchars($v['changelog']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
 
                 <!-- Author card -->
                 <div class="author-card">
@@ -1317,6 +1396,30 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                 </div>
 
             </section>
+
+            <?php if ($similarAssets): ?>
+                <section class="similar-section" style="margin-top:32px">
+                    <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--txt,#f0e6ff)">Похожие ассеты</h2>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">
+                        <?php foreach ($similarAssets as $sa):
+                            $saCat = $CATS[$sa['category']] ?? ['label' => ucfirst($sa['category']), 'emoji' => '📦'];
+                        ?>
+                            <a href="/assetstore/asset.php?id=<?= (int)$sa['id'] ?>" style="display:block;text-decoration:none;color:inherit;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:12px;overflow:hidden;transition:border-color .15s"
+                               onmouseover="this.style.borderColor='var(--primary,#c32178)'" onmouseout="this.style.borderColor='rgba(255,255,255,.09)'">
+                                <img src="<?= !empty($sa['path_to_cover']) ? htmlspecialchars($sa['path_to_cover']) : 'https://placehold.co/190x120/160028/c32178?text=' . urlencode($saCat['label']) ?>"
+                                     alt="" style="width:100%;height:110px;object-fit:cover;display:block;background:#1c0b2a">
+                                <div style="padding:10px 12px">
+                                    <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= htmlspecialchars($sa['name']) ?></div>
+                                    <div style="font-size:.7rem;color:rgba(255,255,255,.45);margin-top:2px"><?= $saCat['emoji'] ?> <?= htmlspecialchars($saCat['label']) ?></div>
+                                    <div style="font-size:.78rem;font-family:'JetBrains Mono',monospace;margin-top:6px;color:rgba(255,255,255,.75)">
+                                        <?= $sa['price'] > 0 ? number_format((float)$sa['price'], 0, ',', ' ') . ' ₽' : 'Бесплатно' ?>
+                                    </div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
         </div>
     </main>
 
@@ -1340,29 +1443,50 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                         </div>
                     </div>
 
+                    <?php if ($licenseTiers): ?>
+                    <!-- License tier picker -->
+                    <div class="pay-breakdown" style="margin-bottom:14px">
+                        <div class="pb-row" style="margin-bottom:6px"><strong>Выберите лицензию</strong></div>
+                        <?php foreach ($licenseTiers as $i => $t): ?>
+                            <label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-top:1px solid rgba(255,255,255,.06)">
+                                <input type="radio" name="tier_pick" value="<?= (int)$t['id'] ?>"
+                                       data-price="<?= (float)$t['price'] ?>"
+                                       <?= $i === 0 ? 'checked' : '' ?> onchange="onTierPick()">
+                                <span style="flex:1">
+                                    <strong><?= htmlspecialchars($t['label']) ?></strong>
+                                    <?php if (!empty($t['terms'])): ?>
+                                        <div style="font-size:.78rem;color:var(--muted)"><?= htmlspecialchars($t['terms']) ?></div>
+                                    <?php endif; ?>
+                                </span>
+                                <span><?= number_format((float)$t['price'], 0, ',', ' ') ?> ₽</span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Breakdown -->
                     <div class="pay-breakdown">
                         <div class="pb-row">
                             <span class="pb-label">Стоимость ассета</span>
-                            <span class="pb-val"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val" id="pbAssetPrice"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
                         </div>
                         <div class="pb-row">
                             <span class="pb-label">
                                 <strong>→ Разработчику</strong>&nbsp;(<?= $devSharePct ?>%)
                             </span>
-                            <span class="pb-val dev"><?= number_format($devEarns, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val dev" id="pbDevAmt"><?= number_format($devEarns, 2, ',', ' ') ?> ₽</span>
                         </div>
                         <div class="pb-row">
                             <span class="pb-label">→ Платформе&nbsp;(<?= $platSharePct ?>%)</span>
-                            <span class="pb-val plat"><?= number_format($platEarns, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val plat" id="pbPlatAmt"><?= number_format($platEarns, 2, ',', ' ') ?> ₽</span>
                         </div>
                         <div class="modal-split-bar">
-                            <div class="d" style="width:<?= $devSharePct ?>%"></div>
-                            <div class="p" style="width:<?= $platSharePct ?>%"></div>
+                            <div class="d" id="modalSplitDev" style="width:<?= $devSharePct ?>%"></div>
+                            <div class="p" id="modalSplitPlat" style="width:<?= $platSharePct ?>%"></div>
                         </div>
                         <div class="pb-row total">
                             <span class="pb-label"><strong>Итого к оплате</strong></span>
-                            <span class="pb-val total"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val total" id="pbTotal"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
                         </div>
                     </div>
 
@@ -1453,8 +1577,37 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
         }
 
         /* ── Payment modal ── */
+        const DEV_SHARE_PCT = <?= (int)$devSharePct ?>;
+
+        function fmtRub(n) {
+            return n.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+        }
+
+        /* Пересчёт разбивки на клиенте при выборе тарифа лицензии — без
+           перезагрузки страницы. dev_share% у ассета фиксированный, меняется
+           только сумма, от которой он берётся. */
+        function onTierPick() {
+            const r = document.querySelector('input[name=tier_pick]:checked');
+            if (!r) return;
+            const price = parseFloat(r.dataset.price) || 0;
+            const dev = price * DEV_SHARE_PCT / 100;
+            const plat = price - dev;
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('pbAssetPrice', fmtRub(price));
+            set('pbDevAmt', fmtRub(dev));
+            set('pbPlatAmt', fmtRub(plat));
+            set('pbTotal', fmtRub(price));
+            const btn = document.getElementById('payBtn');
+            if (btn && !btn.disabled) btn.textContent = 'Оплатить ' + fmtRub(price);
+            const dBar = document.getElementById('modalSplitDev');
+            const pBar = document.getElementById('modalSplitPlat');
+            if (dBar) dBar.style.width = DEV_SHARE_PCT + '%';
+            if (pBar) pBar.style.width = (100 - DEV_SHARE_PCT) + '%';
+        }
+
         function openPayModal() {
             document.getElementById('payModal')?.classList.add('open');
+            if (document.querySelector('input[name=tier_pick]')) onTierPick();
         }
 
         function closePayModal() {
@@ -1468,6 +1621,10 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
         function submitPayment(assetId) {
             const btn = document.getElementById('payBtn');
             if (!btn || btn.disabled) return;
+            const tierEl = document.querySelector('input[name=tier_pick]:checked');
+            const tierId = tierEl ? tierEl.value : 0;
+            const restoreText = tierEl ? 'Оплатить ' + fmtRub(parseFloat(tierEl.dataset.price) || 0)
+                                        : 'Оплатить <?= number_format($price, 2, ",", " ") ?> ₽';
             btn.disabled = true;
             btn.textContent = 'Обработка…';
             fetch('../swad/controllers/buy_asset.php', {
@@ -1475,7 +1632,7 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `asset_id=${assetId}&csrf=${encodeURIComponent(CSRF)}`
+                    body: `asset_id=${assetId}&tier_id=${encodeURIComponent(tierId)}&csrf=${encodeURIComponent(CSRF)}`
                 })
                 .then(r => r.json())
                 .then(d => {
@@ -1485,7 +1642,7 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                     } else {
                         alert('Ошибка: ' + (d.error || 'Неизвестная ошибка'));
                         btn.disabled = false;
-                        btn.textContent = 'Оплатить <?= number_format($price, 2, ",", " ") ?> ₽';
+                        btn.textContent = restoreText;
                     }
                 })
                 .catch(() => {

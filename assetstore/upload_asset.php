@@ -2,6 +2,7 @@
 session_start();
 require_once('../swad/config.php');
 require_once('../swad/controllers/s3.php');
+require_once(__DIR__ . '/_licensing.php');
 
 if (empty($_SESSION['USERDATA']['id'])) {
     header('Location: /login');
@@ -135,6 +136,10 @@ if (!empty($_FILES['asset_file']['tmp_name'])) {
 ]);
 
         $new_id = $pdo->lastInsertId();
+
+        $tiers = asset_parse_tier_input($_POST);
+        if ($tiers) asset_save_license_tiers($pdo, (int)$new_id, $tiers);
+
         $success = $new_id;
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -149,7 +154,7 @@ if (!empty($_FILES['asset_file']['tmp_name'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Загрузить ассет — Dustore</title>
     <link rel="stylesheet" href="../swad/css/pages.css">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
 :root {
     --primary: #c32178;
@@ -793,6 +798,13 @@ body.moonlight-theme {
 .btn-cancel:hover {
     border-color: rgba(255,255,255,0.15);
     color: #fff;
+}
+
+/* ── Fid Core convergence (точечный проход) ── */
+:root { --pix: 6px; }
+.btn-submit {
+    border-radius: 0;
+    clip-path: polygon(var(--pix) 0, 100% 0, 100% calc(100% - var(--pix)), calc(100% - var(--pix)) 100%, 0 100%, 0 var(--pix));
 }
     </style>
 </head>
@@ -1548,6 +1560,29 @@ body.moonlight-theme {
                             </div>
                         </div>
                         <input type="hidden" name="dev_share" id="devShareHidden" value="70">
+
+                        <!-- Уровни лицензии — необязательно. Если ничего не включить,
+                             ассет продаётся по одной цене выше, как обычно. -->
+                        <div class="sec-title" style="margin-top:28px">Уровни лицензии <span style="font-weight:400;color:var(--muted)">(необязательно)</span></div>
+                        <div class="field-hint" style="margin-bottom:10px">
+                            Разные цены под разное использование — например, дороже для коммерческих проектов.
+                            Если не включать ни один — ассет продаётся по цене выше, одним тарифом.
+                        </div>
+                        <?php foreach (['personal' => 'Личная', 'commercial' => 'Коммерческая', 'extended' => 'Расширенная'] as $tk => $tl): ?>
+                            <div class="form-grid" style="align-items:flex-end;margin-bottom:8px">
+                                <div class="field" style="flex:0 0 auto">
+                                    <label><input type="checkbox" name="tier_<?= $tk ?>_on" value="1" onchange="document.getElementById('tierRow_<?= $tk ?>').style.opacity=this.checked?'1':'.4'"> <?= $tl ?></label>
+                                </div>
+                                <div class="field" id="tierRow_<?= $tk ?>" style="opacity:.4">
+                                    <label>Цена, ₽</label>
+                                    <input type="number" name="tier_<?= $tk ?>_price" min="0" step="10" value="0">
+                                </div>
+                                <div class="field" style="grid-column:span 2">
+                                    <label>Условия (необязательно)</label>
+                                    <input type="text" name="tier_<?= $tk ?>_terms" placeholder="Например: до 3 проектов, без модификации">
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
 
                         <div class="btn-row">
                             <button type="button" class="btn-back" onclick="goStep(2)">← Назад</button>

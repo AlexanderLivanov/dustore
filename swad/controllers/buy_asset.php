@@ -32,6 +32,7 @@ header('Content-Type: application/json; charset=utf-8');
    Одна лишняя ../ во всех пяти контроллерах. */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/../../assetstore/_licensing.php';
 
 if (empty($_SESSION['USERDATA']['id'])) {
     http_response_code(401);
@@ -56,6 +57,7 @@ $db  = new Database();
 $pdo = $db->connect();
 
 $asset_id = intval($_POST['asset_id'] ?? 0);
+$tier_id  = intval($_POST['tier_id'] ?? 0);
 $user_id  = (int)$_SESSION['USERDATA']['id'];
 
 if ($asset_id <= 0) {
@@ -79,12 +81,16 @@ try {
         reply(['success' => true, 'already_owned' => true]);
     }
 
-    $price = (float)$asset['price'];
+    // Уровень лицензии — необязательная надстройка над flat-ценой ассета
+    // (assetstore/_licensing.php). Тариф должен реально принадлежать этому
+    // ассету — иначе id чужого/несуществующего тарифа просто игнорируем.
+    $tier  = $tier_id > 0 ? asset_tier_by_id($pdo, $tier_id, $asset_id) : null;
+    $price = $tier ? (float)$tier['price'] : (float)$asset['price'];
 
     // Бесплатный — просто добавляем
     if ($price <= 0) {
-        $pdo->prepare("INSERT INTO asset_library (player_id, asset_id, date) VALUES (?, ?, NOW())")
-            ->execute([$user_id, $asset_id]);
+        $pdo->prepare("INSERT INTO asset_library (player_id, asset_id, tier_id, date) VALUES (?, ?, ?, NOW())")
+            ->execute([$user_id, $asset_id, $tier ? (int)$tier['id'] : null]);
         $pdo->prepare("UPDATE assets SET downloads_count = downloads_count + 1 WHERE id = ?")
             ->execute([$asset_id]);
         reply(['success' => true]);
@@ -102,8 +108,8 @@ try {
            даром, молча, без единой записи в лог.
            Разрешаем такое поведение только явным флагом в конфиге. */
         if (defined('ASSETSTORE_DEV_FREE') && ASSETSTORE_DEV_FREE === true) {
-            $pdo->prepare("INSERT INTO asset_library (player_id, asset_id, date) VALUES (?, ?, NOW())")
-                ->execute([$user_id, $asset_id]);
+            $pdo->prepare("INSERT INTO asset_library (player_id, asset_id, tier_id, date) VALUES (?, ?, ?, NOW())")
+                ->execute([$user_id, $asset_id, $tier ? (int)$tier['id'] : null]);
             $pdo->prepare("UPDATE assets SET downloads_count = downloads_count + 1 WHERE id = ?")
                 ->execute([$asset_id]);
             reply(['success' => true, 'dev_mode' => true]);
@@ -119,8 +125,8 @@ try {
         'amount'      => ['value' => number_format($price, 2, '.', ''), 'currency' => 'RUB'],
         'confirmation'=> ['type' => 'redirect', 'return_url' => $return_url],
         'capture'     => true,
-        'description' => "Ассет: {$asset['name']} (ID {$asset_id})",
-        'metadata'    => ['asset_id' => $asset_id, 'user_id' => $user_id],
+        'description' => "Ассет: {$asset['name']} (ID {$asset_id})" . ($tier ? " — лицензия «{$tier['label']}»" : ''),
+        'metadata'    => ['asset_id' => $asset_id, 'user_id' => $user_id, 'tier_id' => $tier ? (int)$tier['id'] : 0],
     ];
 
     $ch = curl_init('https://api.yookassa.ru/v3/payments');
@@ -155,10 +161,10 @@ try {
 
     // Сохраняем pending-платёж
     $pdo->prepare("
-        INSERT INTO asset_payments (asset_id, user_id, payment_id, amount, status, created_at)
-        VALUES (?, ?, ?, ?, 'pending', NOW())
-        ON DUPLICATE KEY UPDATE payment_id = VALUES(payment_id), status = 'pending'
-    ")->execute([$asset_id, $user_id, $data['id'], $price]);
+        INSERT INTO asset_payments (asset_id, user_id, tier_id, payment_id, amount, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+        ON DUPLICATE KEY UPDATE payment_id = VALUES(payment_id), tier_id = VALUES(tier_id), status = 'pending'
+    ")->execute([$asset_id, $user_id, $tier ? (int)$tier['id'] : null, $data['id'], $price]);
 
     reply(['success' => true, 'payment_url' => $payment_url]);
 

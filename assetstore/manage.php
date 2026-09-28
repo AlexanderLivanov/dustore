@@ -251,6 +251,9 @@ table.grid{width:100%;border-collapse:collapse;font-size:.86rem}
     </div>
     <div style="display:flex;gap:8px">
       <a href="/assetstore/upload_asset.php" class="btn primary pix">+ Загрузить ассет</a>
+      <?php if (!empty($ctx['studios'])): ?>
+      <a href="/assetstore/my_bundles.php" class="btn ghost pix">📦 Мои наборы</a>
+      <?php endif; ?>
       <a href="/assetstore/" class="btn ghost pix">Витрина</a>
     </div>
   </div>
@@ -431,6 +434,7 @@ table.grid{width:100%;border-collapse:collapse;font-size:.86rem}
   <input type="hidden" id="edId">
   <div class="fld"><label>Цена, ₽ (0 = бесплатно)</label><input type="number" id="edPrice" min="0" step="1" class="pix"></div>
   <div class="fld"><label>Версия</label><input type="text" id="edVersion" maxlength="20" class="pix"></div>
+  <div class="fld"><label>Что нового (если меняете версию — увидят владельцы)</label><textarea id="edChangelog" rows="2" class="pix"></textarea></div>
   <div class="fld"><label>Теги (через запятую, до 15)</label><input type="text" id="edTags" class="pix"></div>
   <div class="fld"><label>Доля разработчика, % (10–90)</label><input type="number" id="edShare" min="10" max="90" class="pix"></div>
   <?php if ($ctx['is_staff']): ?>
@@ -536,6 +540,7 @@ document.querySelectorAll('.act-edit').forEach(b => b.onclick = () => {
   $('#edId').value = d.id;
   $('#edPrice').value = parseFloat(d.price) || 0;
   $('#edVersion').value = d.version || '1.0';
+  $('#edChangelog').value = '';
   $('#edTags').value = d.tags || '';
   $('#edShare').value = d.share || 70;
   const f = $('#edFeatured'); if (f) f.checked = d.featured === '1';
@@ -548,6 +553,7 @@ $('#edSave').onclick = () => {
     id: +$('#edId').value,
     price: +$('#edPrice').value,
     version: $('#edVersion').value,
+    changelog: $('#edChangelog').value,
     tags: $('#edTags').value,
     dev_share: +$('#edShare').value
   };
