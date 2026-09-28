@@ -25,7 +25,7 @@ $page  = ($parts[0] ?? '') ?: 'home';
 $param = $parts[1] ?? null;
 if ($page === 'dev') $page = 'developer';
 
-$routes = ['home', 'catalog', 'game', 'library', 'profile', 'search', 'developer', 'chat', 'login'];
+$routes = ['home', 'catalog', 'game', 'library', 'profile', 'search', 'developer', 'chat', 'login', 'media', 'player'];
 if (!in_array($page, $routes, true)) { header('Location: /m/', true, 302); exit; }
 
 $db = (new Database())->connect();
@@ -38,6 +38,7 @@ $title     = 'Dustore';
 $bodyClass = 'p-' . $page;
 $hideNav   = false;       // страница игры: вместо меню — панель с кнопкой
 $hideHead  = false;
+$navTab    = null;        // какую вкладку нижнего меню подсветить (null — по умолчанию из shell.php, '' — никакую)
 $headExtra = '';          // доп. <link>/<meta> в <head>
 $footExtra = '';          // доп. скрипты перед </body>
 

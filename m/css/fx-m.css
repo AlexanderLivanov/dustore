@@ -1,0 +1,58 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Fid Core в оболочке PWA.
+
+   Разметку и раскладку хабов/ленты даёт swad/css/fx.css (он уже адаптивный: маленький блок уходит наверх
+   горизонтальной лентой карточек, меню превращаются в нижние шторки). Здесь — только «кожа» приложения:
+   палитра из app.css, липкие вкладки под шапкой приложения, тост над нижним меню и точечные поправки,
+   где сброс кнопок .fx button стирал стили родных элементов /m.
+   Подключается после fx.css (m_fx_head в m/lib.php).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.fx.fx-m {
+    --bg: #14041d;
+    --panel: #1e0a2b;
+    --panel2: #241030;
+    --line: #34204a;
+    --line2: #46305c;
+    --muted: #bca9c9;
+    --accent: #e8327c;
+    --accent2: #a01f66;
+    --gap: 12px;
+    font-family: var(--font);
+}
+
+/* баннер: подложка темнее и «фиолетовее», чтобы шов с фоном приложения не читался */
+.fx.fx-m .fx-banner { background: #1a0725 }
+.fx.fx-m .fx-banner::after {
+    background: linear-gradient(90deg, rgba(20,4,29,.94) 8%, rgba(20,4,29,.7) 55%, rgba(20,4,29,.5)),
+                linear-gradient(0deg, rgba(20,4,29,.85), transparent 62%);
+}
+.fx.fx-m .fx-post, .fx.fx-m .fx-card { background: rgba(255,255,255,.03) }
+
+/* вкладки липнут под шапкой приложения; на странице игры шапки нет — только под «чёлку» */
+.fx.fx-m .fx-tabs,
+.fx.fx-m .fx-fid__main .fx-tabs { top: calc(var(--head-h) + var(--safe-t)); background: var(--bg) }
+body.p-game .fx.fx-m .fx-tabs { top: var(--safe-t) }
+
+/* «Проекты» студии — первой карточкой маленького блока: по ним человек ходит в игры чаще, чем читает статистику */
+.fx.fx-m .fx-card--bubbles { order: -1 }
+
+/* тост поднимаем над нижним меню */
+.fx.fx-m .fx-toast { bottom: calc(var(--nav-h) + var(--safe-b) + 14px) }
+body.no-nav .fx.fx-m .fx-toast { bottom: calc(84px + var(--safe-b)) }      /* на странице игры внизу панель «Играть» */
+
+/* лента: на всю ширину экрана, без «карточек в карточках» */
+.fx.fx-m.fx-fid { padding-bottom: 24px }
+.fx.fx-m .fx-cc { margin-left: 0; margin-right: 0 }
+
+/* родные элементы /m внутри .fx: сброс `.fx button` (фон, цвет) сильнее одиночных классов app.css */
+.fx.fx-m .shot { background: var(--bg-2) }
+.fx.fx-m .link-btn { color: var(--accent-hi); padding: 0 }
+.fx.fx-m .gp-sec, .fx.fx-m .gp-lead { margin-left: var(--gut); margin-right: var(--gut) }
+.fx.fx-m .fx-pane > .gp-sec:first-child { margin-top: 16px }
+.fx.fx-m .rev { padding-left: 0; padding-right: 0 }
+
+/* страница игры: блок хаба стыкуется с родной шапкой игры без лишних отступов сверху */
+.fx.fx-gp { padding-top: 0 }
+.fx.fx-gp .fx-cols { margin-top: 16px }
+.fx.fx-gp .fx-side:empty { display: none }

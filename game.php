@@ -227,6 +227,35 @@ $isPaid = ($game['price'] ?? 0) > 0;
    добавили позже (новое поле, кнопка, виджет) — в библиотеке оно появится
    само, без второй копии для синхронизации. */
 $isEmbed = !empty($_GET['embed']);
+
+/* ── ХАБ ИГРЫ (Fid Core): стена, обсуждения, DustHunt, статистика, модераторы ── */
+require_once __DIR__ . '/swad/fx/pages.php';
+Fx::use($pdo);
+$fxId      = (int)$game_id;
+$fxViewer  = Fx::uid();
+$fxRole    = FxAuth::gameRole($fxId, $fxViewer);                    // admin | owner | staff | mod | null
+$fxOwner   = in_array($fxRole, ['admin', 'owner'], true);           // шестерёнки настройки видит только владелец
+$fxTeam    = in_array($fxRole, ['admin', 'owner', 'staff'], true);  // может писать от имени студии
+$fxStudio  = FxPeople::studio($gameStudio);
+$fxMonet   = FxMonet::get($gameStudio);
+$fxHunt    = FxHunt::current($fxId, $fxViewer);
+$fxStats   = FxStats::game($fxId);
+$fxMods    = FxMods::list($fxId);
+if (!$isOwnerView) FxStats::bump('game', $fxId);
+
+$fxWall    = FxFeed::wall('game', $fxId, 'wall',  $fxViewer);
+$fxForum   = FxFeed::wall('game', $fxId, 'forum', $fxViewer);
+FxPosts::view(array_merge(array_column($fxWall['posts'], 'id'), array_column($fxForum['posts'], 'id')));
+$fxTabs    = ['feed' => ['chat', 'Лента'], 'forum' => ['branch', 'Обсуждения'], 'about' => ['gamepad', 'Об игре'], 'reviews' => ['star', 'Отзывы']];
+$fxTab     = (string)($_GET['tab'] ?? '');
+if (!isset($fxTabs[$fxTab])) $fxTab = ($fxWall['posts'] || $fxForum['posts'] || $fxTeam) ? 'feed' : 'about';   // пустой хаб → сначала «Об игре»
+$fxCtx     = ['viewer' => $fxViewer, 'show_reason' => false, 'wall' => ['type' => 'game', 'id' => $fxId, 'channel' => 'wall'], 'wall_game' => $fxId];
+$fxGear    = static fn(string $to, string $label, string $anchor = '', string $cls = 'fx-gear--icon') =>
+    $fxOwner ? FxRenderHub::gear(FxPage::console($to, ['game' => $fxId], $anchor), $label, $cls) : '';
+$fxSpark   = static fn(array $v, string $cls) => array_sum($v) > 0 ? FxRenderHub::spark($v, $cls) : '<div class="fx-cap">Пока нет данных</div>';
+$fxBanner  = $game['banner_url'] ?: ($game['path_to_cover'] ?: '');
+$fxArt     = $game['icon_url'] ?: ($game['path_to_cover'] ?: '/swad/static/img/hg-icon.jpg');
+$fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$game['description']);
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -236,6 +265,7 @@ $isEmbed = !empty($_GET['embed']);
     <title>Dustore — <?= htmlspecialchars($game['name']) ?></title>
     <?= strtolower((string)$game['status']) === 'published' && empty($game['hidden']) ? og_game($game) : '' ?>
     <link rel="stylesheet" href="/swad/css/gamepage.css">
+    <?= FxPage::head() ?>
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <script src="/swad/js/CartManager.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -513,65 +543,55 @@ $isEmbed = !empty($_GET['embed']);
     </div>
     <?php endif; ?>
     <main>
-        <?php if (!empty($game['banner_url'])): ?>
-            <div class="gp-banner" style="background-image:url('<?= htmlspecialchars($game['banner_url']) ?>')"></div>
-        <?php endif; ?>
+        <?= FxPage::body() ?>
+        <div class="fx fx-hub" data-game="<?= $fxId ?>">
 
-        <div class="gp-wrap">
-
-            <!-- ══ HEADER ══ -->
-            <div class="gp-header">
-                <?php
-                $headerArt = $game['icon_url'] ?: ($game['path_to_cover'] ?: '/swad/static/img/hg-icon.jpg');
-                ?>
-                <img class="gp-cover" src="<?= htmlspecialchars($headerArt) ?>"
-                     alt="<?= htmlspecialchars($game['name']) ?>">
-                <div class="gp-title-block">
-                    <h1><?= htmlspecialchars($game['name']) ?></h1>
-                    <?php if (!empty($stpd['donate_link'])): ?>
-                        <a class="gp-donate-link" href="<?= htmlspecialchars($stpd['donate_link']) ?>" target="_blank">💰 Задонатить разработчику</a>
-                    <?php endif; ?>
-                    <?php if ($badges): ?>
-                        <div class="gp-badges">
-                            <?php foreach ($badges as $b): ?>
-                                <span class="gp-badge"><?= htmlspecialchars(trim($b)) ?></span>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($jamInfo): ?>
-                        <div class="gp-badges" style="margin-top:4px;">
-                            <a class="gp-badge" href="/jams/vote.php?id=<?= (int)$jamInfo['id'] ?>"
-                            style="text-decoration:none;background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.35);color:#fbbf24;">
-                                🏆 Участник джема: <?= htmlspecialchars($jamInfo['title']) ?>
-                            </a>
-                            <?php foreach ($expertPicks as $p): ?>
-                                <span class="gp-badge" style="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#fbbf24;">
-                                    🏅 Выбор эксперта: <?= htmlspecialchars($p['name']) ?>
-                                </span>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                    <div class="gp-stats">
-                        <div class="gp-stat">
-                            <div class="gp-stat-val"><?= date('d.m.Y', strtotime($game['release_date'])) ?></div>
-                            <div class="gp-stat-lbl">Релиз</div>
-                        </div>
-                        <div class="gp-stat">
-                            <?php if ($ratingData['count'] > 0): ?>
-                                <div class="gp-stat-val"><?= $ratingData['avg'] ?>/10</div>
-                                <div class="gp-stat-lbl">Оценок: <?= $ratingData['count'] ?></div>
-                            <?php else: ?>
-                                <div class="gp-stat-val">—</div>
-                                <div class="gp-stat-lbl">Нет оценок</div>
-                            <?php endif; ?>
+            <!-- ══ БАННЕР ══ -->
+            <section class="fx-banner">
+                <div class="fx-banner__bg<?= $game['banner_url'] ? '' : ' fx-banner__bg--soft' ?>"<?= $fxBanner ? ' style="--bn:url(\'' . htmlspecialchars($fxBanner, ENT_QUOTES) . '\')"' : '' ?>></div>
+                <?php if ($fxOwner): ?>
+                    <div class="fx-gear-wrap"><?= FxRenderHub::gear(FxPage::console('edit', ['game' => $fxId], 'name'), 'Настроить страницу игры') ?></div>
+                <?php endif; ?>
+                <div class="fx-banner__in">
+                    <div class="fx-banner__id">
+                        <div class="fx-icon fx-px" style="background-image:url('<?= htmlspecialchars($fxArt, ENT_QUOTES) ?>')" role="img" aria-label="<?= htmlspecialchars($game['name']) ?>"></div>
+                        <div class="fx-banner__t">
+                            <h1><?= htmlspecialchars($game['name']) ?></h1>
+                            <div class="fx-banner__by">
+                                <span>от</span>
+                                <a href="/d/<?= htmlspecialchars($game['studio_slug']) ?>"><?= htmlspecialchars($game['studio_name']) ?></a>
+                                <?= FxRender::verified($fxStudio['verified'] ?? null) ?>
+                            </div>
+                            <?php if ($fxShort !== ''): ?><p class="fx-banner__d"><?= htmlspecialchars($fxShort) ?></p><?php endif; ?>
+                            <div class="fx-chips">
+                                <?php if ($ratingData['count'] > 0): ?>
+                                    <span class="fx-chip" title="Оценок: <?= (int)$ratingData['count'] ?>"><?= fx_icon('star', 'ic--sm') ?><?= htmlspecialchars((string)$ratingData['avg']) ?>/10</span>
+                                <?php endif; ?>
+                                <?php if (!empty($game['genre'])): ?><span class="fx-chip"><?= htmlspecialchars($game['genre']) ?></span><?php endif; ?>
+                                <span class="fx-chip"><?= htmlspecialchars($platformStr) ?></span>
+                                <span class="fx-chip"><?= fx_icon('clock', 'ic--sm') ?><?= date('d.m.Y', strtotime($game['release_date'])) ?></span>
+                                <?php if (!empty($game['age_rating'])): ?><span class="fx-chip"><?= htmlspecialchars($game['age_rating']) ?></span><?php endif; ?>
+                                <?php foreach ($badges as $b): ?><span class="fx-chip"><?= htmlspecialchars(trim($b)) ?></span><?php endforeach; ?>
+                                <?php if ($jamInfo): ?>
+                                    <a class="fx-chip fx-chip--gold" href="/jams/vote.php?id=<?= (int)$jamInfo['id'] ?>"><?= fx_icon('trophy', 'ic--sm') ?>Джем: <?= htmlspecialchars($jamInfo['title']) ?></a>
+                                    <?php foreach ($expertPicks as $ep_): ?><span class="fx-chip fx-chip--gold"><?= fx_icon('award', 'ic--sm') ?>Выбор эксперта: <?= htmlspecialchars($ep_['name']) ?></span><?php endforeach; ?>
+                                <?php endif; ?>
+                                <?php if (!empty($fxMonet['donate_on']) && !empty($fxMonet['donate_url'])): ?>
+                                    <a class="fx-chip" href="<?= htmlspecialchars($fxMonet['donate_url']) ?>" target="_blank" rel="noopener nofollow"><?= fx_icon('coin', 'ic--sm') ?>Поддержать разработчика</a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
+                    <div class="fx-banner__side">
+                        <?= FxRenderHub::huntWidget($fxHunt, $fxOwner ? ['assign_url' => FxPage::console('coop', ['game' => $fxId], 'hunt')] : []) ?>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <div class="fx-cols">
 
             <!-- ══ SIDEBAR ══ -->
-            <aside class="gp-side">
-                <div class="gp-side-inner">
+            <aside class="fx-side">
 
                     <!-- Purchase card -->
                     <div class="gp-buy-card">
@@ -769,6 +789,11 @@ $isEmbed = !empty($_GET['embed']);
                     </div>
                     <?php endif; ?>
 
+                    <!-- Статистика игры -->
+                    <?= FxPages::gameStats($fxStats, $fxOwner, $fxId) ?>
+
+                    <?= FxPages::gameMods($fxMods, $fxOwner, $fxId) ?>
+
                     <!-- Developer card -->
                     <a class="gp-dev-card" href="/d/<?= htmlspecialchars($game['studio_slug']) ?>">
                         <div class="gp-dev-icon">🏢</div>
@@ -811,15 +836,35 @@ $isEmbed = !empty($_GET['embed']);
                     </div>
                     <?php endif; ?>
 
-                </div>
             </aside>
 
-            <!-- ══ MAIN CONTENT ══ -->
-            <div class="gp-main">
+            <!-- ══ ОСНОВНОЙ БЛОК ══ -->
+            <div class="fx-main">
+                <nav class="fx-tabs" role="tablist">
+                    <?php foreach ($fxTabs as $k => [$ic_, $label_]): ?>
+                        <button type="button" class="fx-tab<?= $fxTab === $k ? ' on' : '' ?>" role="tab" data-fx="tab" data-pane="<?= $k ?>">
+                            <?= fx_icon($ic_, 'ic--sm') ?><?= Fx::e($label_) ?>
+                            <?php if ($k === 'reviews' && $ratingData['count'] > 0): ?><span class="fx-tab__n"><?= (int)$ratingData['count'] ?></span><?php endif; ?>
+                        </button>
+                    <?php endforeach; ?>
+                </nav>
+
+                <!-- Лента: стена игры — пишет любой игрок; сюда же попадают посты из медиа с этой игрой -->
+                <div class="fx-pane" data-pane="feed"<?= $fxTab === 'feed' ? '' : ' hidden' ?>>
+                    <?= FxPages::gameFeed($game, $fxId, 'wall', $fxWall, $fxViewer, $fxTeam) ?>
+                </div>
+
+                <!-- Обсуждения: ветки, закреплённые модераторами игры, идут наверху -->
+                <div class="fx-pane" data-pane="forum"<?= $fxTab === 'forum' ? '' : ' hidden' ?>>
+                    <?= FxPages::gameFeed($game, $fxId, 'forum', $fxForum, $fxViewer, $fxTeam) ?>
+                </div>
+
+                <!-- Об игре: витрина -->
+                <div class="fx-pane" data-pane="about"<?= $fxTab === 'about' ? '' : ' hidden' ?>>
 
                 <?php if (!empty($screenshots)): ?>
                 <div class="gp-section">
-                    <h2 class="gp-section-title">Скриншоты</h2>
+                    <h2 class="gp-section-title">Скриншоты <?= $fxGear('edit', 'Скриншоты', 'screenshots-card') ?></h2>
                     <div class="gp-screenshots" id="screenshots-grid">
                         <?php foreach ($screenshots as $idx => $s): ?>
                             <div class="gp-screenshot"
@@ -832,6 +877,7 @@ $isEmbed = !empty($_GET['embed']);
                 <?php endif; ?>
 
                 <div class="gp-section">
+                    <?php if ($fxOwner): ?><div class="fx-gear-wrap--in"><?= $fxGear('edit', 'Описание', 'description') ?></div><?php endif; ?>
                     <div class="gp-description"><?= nl2br(htmlspecialchars($game['description'])) ?></div>
                 </div>
 
@@ -855,7 +901,7 @@ $isEmbed = !empty($_GET['embed']);
                 <?php if (!empty($game['trailer_url'])): $trailerHtml = trailer_embed($game['trailer_url']); ?>
                 <?php if ($trailerHtml !== ''): ?>
                 <div class="gp-section">
-                    <h2 class="gp-section-title">Трейлер</h2>
+                    <h2 class="gp-section-title">Трейлер <?= $fxGear('edit', 'Трейлер', 'trailer_url') ?></h2>
                     <div class="gp-trailer"><?= $trailerHtml ?></div>
                 </div>
                 <?php endif; ?>
@@ -876,7 +922,10 @@ $isEmbed = !empty($_GET['embed']);
                 </div>
                 <?php endif; ?>
 
-                <!-- Reviews -->
+                </div><!-- /pane about -->
+
+                <!-- Отзывы -->
+                <div class="fx-pane" data-pane="reviews"<?= $fxTab === 'reviews' ? '' : ' hidden' ?>>
                 <div class="gp-section">
                     <h2 class="gp-section-title">Отзывы игроков</h2>
 
@@ -939,9 +988,11 @@ $isEmbed = !empty($_GET['embed']);
                         <p style="color:#f59e0b;font-size:.85rem;margin-top:12px;"><a href="/login" style="color:#e88fc0;">Войдите</a>, чтобы оставить отзыв.</p>
                     <?php endif; ?>
                 </div>
+                </div><!-- /pane reviews -->
 
-            </div>
-        </div>
+            </div><!-- /fx-main -->
+            </div><!-- /fx-cols -->
+        </div><!-- /fx -->
     </main>
 
     <!-- OFFER MODAL — только для платных -->
@@ -997,6 +1048,17 @@ fetch('/swad/controllers/jams/jam_play.php', {
 </script>
 <?php endif; ?>
 
+    <?= FxPage::scripts() ?>
+    <script>
+    /* «Написать отзыв →» ведёт на форму, а она теперь во вкладке «Отзывы» */
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest && e.target.closest('a[href="#review-form-wrap"]');
+        if (!a) return;
+        e.preventDefault();
+        var t = document.querySelector('.fx-tab[data-pane="reviews"]'); if (t) t.click();
+        setTimeout(function () { var f = document.getElementById('review-form-wrap'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 80);
+    });
+    </script>
     <script>
     // ── Screenshots data ──
     const SCREENSHOTS = <?= json_encode(array_values(array_column($screenshots, 'path'))) ?>;

@@ -231,3 +231,35 @@ function m_catalog_filters(array $q): array {
         'offset'     => max(0, (int)($q['offset'] ?? 0)),
     ];
 }
+
+/* ── Fid Core (swad/fx) внутри PWA: хабы игры/студии/игрока и лента «Медиа» ─────────────────────────
+   Разметку рисует тот же код, что и на сайте (swad/fx/pages.php, render*.php) — мобилка не держит
+   вторую копию. Отличаются только оболочка и адреса ссылок: Fx::mobile(true) переключает их на /m/*. */
+
+/* Окна из swad/static/elements/* просят asset_url() из шапки сайта (?v=… для сброса кэша). У /m шапки сайта нет. */
+if (!function_exists('asset_url')) {
+    function asset_url(string $path): string { return m_asset($path); }
+}
+
+/** Браузер предзагружает страницы /m/* (speculationrules в shell.php) — такие запросы просмотрами не считаем. */
+function m_is_prefetch(): bool {
+    return stripos((string)($_SERVER['HTTP_SEC_PURPOSE'] ?? $_SERVER['HTTP_PURPOSE'] ?? ''), 'prefetch') !== false;
+}
+
+function m_fx(PDO $db): void {
+    require_once __DIR__ . '/../swad/fx/pages.php';
+    Fx::use($db);
+    Fx::mobile(true);
+    Fx::quiet(m_is_prefetch());
+}
+
+/** Стили ядра + «кожа» PWA (палитра приложения, липкие вкладки под шапкой). Кладётся в $headExtra. */
+function m_fx_head(): string {
+    return FxPage::head() . '<link rel="stylesheet" href="' . m_asset('/m/css/fx-m.css') . '">';
+}
+
+/** Спрайт иконок + window.FX. Печатается в начале контента вьюхи. */
+function m_fx_top(): string { return FxPage::body(); }
+
+/** Скрипты ядра. Кладутся в $footExtra. */
+function m_fx_scripts(bool $editor = false): string { return FxPage::scripts($editor); }

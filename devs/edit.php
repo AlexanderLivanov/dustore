@@ -556,7 +556,7 @@ if (in_array($mod_status, ['pending','rejected'])):
         <input type="hidden" name="action" value="save">
         <div style="display:flex;flex-direction:column;gap:14px;">
 
-            <div class="card">
+            <div class="card" id="c-basic">
                 <div class="card-title"><span class="material-icons">info</span>Основная информация</div>
                 <div class="grid-2">
                     <div class="field col-full">
@@ -602,7 +602,7 @@ if (in_array($mod_status, ['pending','rejected'])):
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card" id="c-platforms">
                 <div class="card-title"><span class="material-icons">devices</span>Платформы и языки</div>
                 <div class="field">
                     <label>Платформы</label>
@@ -648,7 +648,7 @@ if (in_array($mod_status, ['pending','rejected'])):
 
             <!-- Файл игры вынесён из формы save (ниже, вне <form>) — иначе вложенный <form> Deplex ломал сохранение -->
 
-            <div class="card">
+            <div class="card" id="c-trailer">
                 <div class="card-title"><span class="material-icons">movie</span>Трейлер</div>
                 <div class="field">
                     <label>Ссылка на трейлер</label>
@@ -848,7 +848,7 @@ if (in_array($mod_status, ['pending','rejected'])):
     <div style="display:flex;flex-direction:column;gap:14px;">
 
         <!-- Обложка + Иконка -->
-        <div class="card">
+        <div class="card" id="c-media">
             <div class="card-title"><span class="material-icons">image</span>Медиа</div>
 
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:8px;">
@@ -1493,5 +1493,25 @@ if (IS_LOCKED) {
 </script>
 JS;
 
+?>
+<style>
+    /* переход с публичной страницы игры по шестерёнке: подсвечиваем нужное поле */
+    @keyframes fxFlash { 0% { box-shadow: 0 0 0 3px var(--p, #c32178); } 100% { box-shadow: 0 0 0 3px transparent; } }
+    .fx-flash { animation: fxFlash 1.8s ease-out; border-radius: 10px; }
+</style>
+<script>
+(function () {
+    var h = decodeURIComponent(location.hash.replace('#', ''));
+    if (!h) return;
+    var el = document.getElementById(h) || document.querySelector('[name="' + h.replace(/"/g, '') + '"]');
+    if (!el) return;
+    var box = el.closest('.field') || el.closest('.card') || el;
+    box.scrollIntoView({ block: 'center' });
+    box.classList.add('fx-flash');
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) try { el.focus({ preventScroll: true }); } catch (e) { }
+    setTimeout(function () { box.classList.remove('fx-flash'); }, 2200);
+})();
+</script>
+<?php
 require_once(__DIR__ . '/includes/footer.php');
 ?>
