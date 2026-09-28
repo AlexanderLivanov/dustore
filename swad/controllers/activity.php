@@ -1,6 +1,7 @@
 <?php
 // 01.09.2025 (c) Alexander Livanov
 require_once 'user.php';
+require_once 'analytics.php'; // Analytics::detectPlatform() — общий детектор платформы
 require_once '../config.php';
 
 /* Страховка от частичного деплоя. activity.php — хартбит, он дёргается
@@ -12,6 +13,31 @@ if (!defined('ONLINE_WINDOW_MIN')) define('ONLINE_WINDOW_MIN', 15);
 $db = new Database();
 $pdo = $db->connect();
 $curr_user = new User();
+
+/* До этой правки мобильная оболочка (m/layout/shell.php) вообще не звала
+   этот хартбит — значит, user_daily_activity (а через неё DAU/сессии/
+   ретеншн в GPI) видела только десктоп. Добавляем колонку самоустанавливающейся
+   миграцией (тот же приём, что в chat/_stories.php: проверка в information_schema,
+   успех кэшируем в сессии, чтобы не дёргать её на каждый хартбит) и пишем
+   в неё платформу — теперь "мобильные" видно и в общих метриках активности,
+   не только там, где это специально считали (analytics_events.platform). */
+function ensure_activity_platform_column(PDO $pdo): void
+{
+    if (!empty($_SESSION['ua_schema_platform'])) return;
+    try {
+        $has = (int)$pdo->query("
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'user_daily_activity' AND column_name = 'platform'
+        ")->fetchColumn();
+        if (!$has) {
+            $pdo->exec("ALTER TABLE user_daily_activity ADD COLUMN platform VARCHAR(8) NULL");
+        }
+        $_SESSION['ua_schema_platform'] = true;
+    } catch (Throwable $e) {
+        error_log('[activity] platform column: ' . $e->getMessage());
+    }
+}
+ensure_activity_platform_column($pdo);
 
 // Получаем количество онлайн.
 // Окно вынесено в ONLINE_WINDOW_MIN (config.php), чтобы коллектор и
@@ -80,16 +106,21 @@ try {
  */
 function track_daily_activity(PDO $pdo, int $userId): void
 {
+    // Один и тот же пользователь за день может зайти и с телефона, и с
+    // десктопа — колонка не врёт про это, а честно помечает день 'mixed',
+    // вместо того чтобы последний заход молча затирал первый.
+    $platform = Analytics::detectPlatform();
     try {
         $pdo->prepare("
-            INSERT INTO user_daily_activity (user_id, day, hits, sessions, first_seen, last_seen)
-            VALUES (?, CURDATE(), 1, 1, NOW(), NOW())
+            INSERT INTO user_daily_activity (user_id, day, hits, sessions, first_seen, last_seen, platform)
+            VALUES (?, CURDATE(), 1, 1, NOW(), NOW(), ?)
             ON DUPLICATE KEY UPDATE
                 sessions  = sessions + (last_seen < NOW() - INTERVAL 30 MINUTE),
                 hits      = hits + 1,
                 last_seen = NOW(),
-                source    = 'live'
-        ")->execute([$userId]);
+                source    = 'live',
+                platform  = IF(platform IS NULL OR platform = VALUES(platform), VALUES(platform), 'mixed')
+        ")->execute([$userId, $platform]);
     } catch (Throwable $e) {
         error_log('[activity] daily: ' . $e->getMessage());
     }
