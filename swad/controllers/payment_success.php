@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../../swad/config.php');
+require_once(__DIR__ . '/../../assetstore/_bundles.php');
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -19,6 +20,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pay_id   = $payment['id']     ?? '';
     $status   = $payment['status'] ?? '';
     $meta     = $payment['metadata'] ?? [];
+
+    // Набор — отдельная ветка: metadata.kind='bundle' ставит buy_bundle.php,
+    // у обычной покупки ассета такого ключа нет вовсе.
+    if (($meta['kind'] ?? '') === 'bundle') {
+        $bundle_id = intval($meta['bundle_id'] ?? 0);
+        $user_id   = intval($meta['user_id']   ?? 0);
+        if ($status === 'succeeded' && $bundle_id && $user_id) {
+            try {
+                $pdo->prepare("UPDATE asset_bundle_payments SET status = 'succeeded' WHERE payment_id = ?")
+                    ->execute([$pay_id]);
+                asset_bundle_grant($pdo, $user_id, $bundle_id);
+            } catch (Exception $e) {
+                error_log('Bundle payment webhook error: ' . $e->getMessage());
+            }
+        }
+        http_response_code(200);
+        exit;
+    }
+
     $asset_id = intval($meta['asset_id'] ?? 0);
     $user_id  = intval($meta['user_id']  ?? 0);
     $tier_id  = intval($meta['tier_id']  ?? 0);
@@ -45,15 +65,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Redirect после оплаты (GET) ───────────────────────────────────────
-$asset_id = intval($_GET['asset_id'] ?? 0);
+$asset_id  = intval($_GET['asset_id']  ?? 0);
+$bundle_id = intval($_GET['bundle_id'] ?? 0);
 
-if (empty($_SESSION['USERDATA']['id']) || !$asset_id) {
+if (empty($_SESSION['USERDATA']['id']) || (!$asset_id && !$bundle_id)) {
     header('Location: /assetstore/');
     exit;
 }
-
-// Проверяем статус платежа (иногда вебхук приходит раньше)
 $user_id = (int)$_SESSION['USERDATA']['id'];
+
+if ($bundle_id) {
+    // Иногда вебхук приходит раньше, чем пользователь вернётся на return_url.
+    $paid = asset_bundle_is_owned($pdo, $user_id, $bundle_id);
+    header("Location: /assetstore/bundle.php?id={$bundle_id}&" . ($paid ? 'paid=1' : 'pending=1'));
+    exit;
+}
+
 $owned = $pdo->prepare("SELECT id FROM asset_library WHERE player_id = ? AND asset_id = ? LIMIT 1");
 $owned->execute([$user_id, $asset_id]);
 

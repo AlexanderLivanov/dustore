@@ -910,6 +910,9 @@ body.moonlight-theme {
 
                 <!-- Кнопки действий -->
                 <div class="ah-actions">
+                    <a href="/assetstore/bundles.php" class="ah-btn">
+                        📦 Наборы
+                    </a>
                     <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
                         <a href="/assetstore/my_assets.php?tab=library" class="ah-btn">
                             📦 Библиотека
@@ -1088,6 +1091,12 @@ body.moonlight-theme {
                     </a>
                 </div>
             <?php endif; ?>
+
+            <a href="/assetstore/bundles.php" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:9px;background:var(--surf);border:1px solid var(--bdr);color:var(--muted);text-decoration:none;font-size:.8rem;transition:all .18s;margin-top:4px"
+                onmouseover="this.style.borderColor='var(--pr)';this.style.color='#e88fc0'"
+                onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--muted)'">
+                📦 Наборы ассетов
+            </a>
 
             <?php $sidebarHtml = ob_get_clean(); ?>
 

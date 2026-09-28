@@ -14,7 +14,7 @@
 
 declare(strict_types=1);
 
-const ASSET_SCHEMA_VERSION = 2;
+const ASSET_SCHEMA_VERSION = 3;
 
 final class AssetSchema
 {
@@ -55,6 +55,48 @@ final class AssetSchema
                 PRIMARY KEY (id),
                 UNIQUE KEY uq_asset_tier (asset_id, tier),
                 KEY ix_asset (asset_id, sort)
+            ) $t",
+
+            /* Наборы ассетов. Без собственной модерации — публикует
+               владелец студии сам, из своих уже опубликованных ассетов
+               (см. assetstore/_bundles.php). Отдельная сущность от assets,
+               не строка в ней: у набора нет файла, версий, тегов и т.д. */
+            "CREATE TABLE IF NOT EXISTS asset_bundles (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                studio_id INT UNSIGNED NOT NULL,
+                name VARCHAR(128) NOT NULL,
+                description TEXT NULL,
+                price DECIMAL(10,2) NOT NULL DEFAULT 0,
+                path_to_cover VARCHAR(255) NULL,
+                status VARCHAR(16) NOT NULL DEFAULT 'draft',
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NULL,
+                PRIMARY KEY (id),
+                KEY ix_studio (studio_id, status)
+            ) $t",
+
+            "CREATE TABLE IF NOT EXISTS asset_bundle_items (
+                bundle_id INT UNSIGNED NOT NULL,
+                asset_id INT UNSIGNED NOT NULL,
+                sort TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                PRIMARY KEY (bundle_id, asset_id)
+            ) $t",
+
+            /* Отдельно от asset_payments: платёж за набор — один payment_id
+               на несколько ассетов сразу, а не на один, так что общая
+               (asset_id, tier_id, payment_id) форма asset_payments сюда не
+               ложится без искажения смысла существующей таблицы. */
+            "CREATE TABLE IF NOT EXISTS asset_bundle_payments (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                bundle_id INT UNSIGNED NOT NULL,
+                user_id INT UNSIGNED NOT NULL,
+                payment_id VARCHAR(64) NULL,
+                amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+                status VARCHAR(16) NOT NULL DEFAULT 'pending',
+                created_at DATETIME NOT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_bundle_user (bundle_id, user_id),
+                KEY ix_payment (payment_id)
             ) $t",
         ];
     }

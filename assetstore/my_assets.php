@@ -563,6 +563,12 @@ $CATS = [
                     <a href="?tab=wishlist" class="<?= $page === 'wishlist' ? 'active' : '' ?>">
                         ♡ Список желаний <span class="cnt"><?= count($wishlist) ?></span>
                     </a>
+                    <a href="/assetstore/bundles.php">
+                        📦 Наборы
+                    </a>
+                    <a href="/assetstore/my_bundles.php">
+                        🧩 Мои наборы
+                    </a>
                 </nav>
             </div>
         </div>

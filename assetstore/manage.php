@@ -251,6 +251,9 @@ table.grid{width:100%;border-collapse:collapse;font-size:.86rem}
     </div>
     <div style="display:flex;gap:8px">
       <a href="/assetstore/upload_asset.php" class="btn primary pix">+ Загрузить ассет</a>
+      <?php if (!empty($ctx['studios'])): ?>
+      <a href="/assetstore/my_bundles.php" class="btn ghost pix">📦 Мои наборы</a>
+      <?php endif; ?>
       <a href="/assetstore/" class="btn ghost pix">Витрина</a>
     </div>
   </div>
