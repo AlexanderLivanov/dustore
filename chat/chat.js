@@ -16,9 +16,11 @@
 
   /* ── Утилиты ─────────────────────────────────────────────────────────────── */
   const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const isTouch = matchMedia('(pointer: coarse)').matches;
+  const INPUT_PLACEHOLDER = $('#input') ? $('#input').placeholder : 'Написать сообщение…';
 
   function api(action, params = {}, method = 'GET') {
     const opt = { method, credentials: 'same-origin' };
@@ -82,7 +84,7 @@
   const state = {
     tab: 'personal', convId: 0, lastId: 0, firstId: 0, hasMore: false,
     draft: null, header: null, isSystem: false, listTimer: null, threadTimer: null,
-    peerLastRead: 0, peerDelivered: 0,
+    peerLastRead: 0, peerDelivered: 0, blocked: { byMe: false, me: false },
     wallpaper: null,          // что пришло с сервера: { active, scope, mine, shared }
     msgs: new Map(),          // id → сообщение (для меню, копирования, ответа)
     pins: [], pinIdx: 0,
@@ -248,7 +250,8 @@
   function paintList() {
     const box = $('#list');
     const all = state.convs;
-    if (MOBILE) { paintChips(); paintRecent(); }
+    if (MOBILE) paintChips();
+    paintStories();
     if (!all.length) { box.innerHTML = '<div class="empty">Здесь появятся ваши диалоги</div>'; return; }
     const shown = MOBILE ? all.filter(c => inFilter(c, state.filter)) : all;
     if (!shown.length) { box.innerHTML = '<div class="empty">В этом разделе пока пусто</div>'; return; }
@@ -261,10 +264,11 @@
       const last = isSys
         ? (c.last ? esc(c.last.body) : 'нет уведомлений')
         : (c.last ? (c.last.mine ? '<span class="me">Вы: </span>' : '') + esc(c.last.body) : '<i>нет сообщений</i>');
-      /* только телефон: точка «в сети», плашка «студия», значок закрепа у «Уведомлений» */
+      /* точка «в сети» и плашка «студия» — теперь на обеих платформах (десктоп
+         был обделён при мобильном редизайне); закреп у «Уведомлений» — только телефон */
       const av = `<div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>`;
-      const avCell = MOBILE ? `<div class="av-w">${av}${isOnline(c.peer) ? '<i class="on" title="в сети"></i>' : ''}</div>` : av;
-      const pill = MOBILE && c.peer.kind === 'studio' ? '<span class="c-pill">студия</span>' : '';
+      const avCell = `<div class="av-w">${av}${isOnline(c.peer) ? '<i class="on" title="в сети"></i>' : ''}</div>`;
+      const pill = c.peer.kind === 'studio' ? '<span class="c-pill">студия</span>' : '';
       const time = `<span class="c-time">${c.last?.state ? `<span class="ticks ${c.last.state === 'delivered' ? 'dlv' : c.last.state}">${TICK_SVG}</span>` : ''}${c.ts ? fmtTime(c.ts) : ''}</span>`;
       /* на телефоне правая колонка как в макете: время сверху, закреп и счётчик снизу */
       const end = MOBILE ? `<span class="c-end">${time}<span class="c-bot">${isSys ? PIN_SVG : ''}${badge}</span></span>` : badge;
@@ -295,24 +299,187 @@
     paintList();
   });
 
-  /* Лента «Недавние»: те, кто написал (кольцо) и кто сейчас в сети (точка). Быстрый вход
-     в беседу одним тапом — вместо «историй» из макета, у нас их нет. */
-  function paintRecent() {
-    const box = $('#recent'); if (!box) return;
-    const cs = state.convs.filter(c => c.peer.kind !== 'system' && c.id > 0);
-    const score = c => (c.unread ? 2 : 0) + (isOnline(c.peer) ? 1 : 0);
-    const top = cs.map((c, i) => ({ c, i })).sort((a, b) => score(b.c) - score(a.c) || a.i - b.i).slice(0, 12).map(x => x.c);
-    box.hidden = top.length < 2 || state.filter !== 'all';
-    box.innerHTML = box.hidden ? '' : top.map(c =>
-      `<button type="button" class="rc${c.unread ? ' hot' : ''}" data-id="${c.id}">
-        <span class="ring"><span class="av ${avShape(c.peer)}">${avatarHTML(c.peer)}</span>${isOnline(c.peer) ? '<i class="on"></i>' : ''}</span>
-        <span class="rc-n">${esc(c.peer.name)}</span></button>`).join('');
+  /* ================================================================
+     ИСТОРИИ: кольцо друзей с активными сторис на 24ч, над списком чатов.
+     Один и тот же блок и на мобильном, и на десктопе (см. chat/_markup.php
+     #stories, chat/_stories.php на сервере). Раньше здесь была лента
+     «Недавние» — заглушка вместо историй из макета, которых не было;
+     теперь настоящие. */
+  const STORY_BG = ['#c3217a', '#7d3ac1', '#1c8f6b', '#c17a1c', '#2d5fc1', '#c13030'];
+  const STORY_ERR = { rate: 'Слишком часто — не больше 20 историй в час', limit: 'У вас уже 20 активных историй', too_big: 'Файл больше 8 МБ', bad_type: 'Только JPG, PNG или WebP', empty: 'Напишите хоть что-нибудь', too_long: 'Слишком длинно', storage: 'Не удалось сохранить файл', network: 'Нет связи с сервером' };
+  const storyPeer = u => ({ name: u.username, avatar: u.avatar, kind: 'round' });
+  let storiesCache = null, storiesFetchedAt = 0;
+
+  async function paintStories() {
+    const box = $('#stories'); if (!box) return;
+    if (!storiesCache || Date.now() - storiesFetchedAt > 30000) {
+      storiesFetchedAt = Date.now();
+      try { const r = await api('stories_list', {}, 'GET'); if (r.ok) storiesCache = r.groups; } catch (e) { }
+    }
+    renderStories(box, storiesCache || []);
   }
-  $('#recent')?.addEventListener('click', e => {
-    const b = e.target.closest('.rc'); if (!b) return;
-    const c = state.convs.find(x => x.id === +b.dataset.id); if (!c) return;
-    openConv(c.id, c.peer, c.type === 'studio', null, false);
+  function renderStories(box, groups) {
+    box.hidden = !groups.length;
+    if (!groups.length) { box.innerHTML = ''; return; }
+    box.innerHTML = groups.map((g, i) => {
+      const peer = storyPeer(g.user);
+      const ring = !g.stories.length ? '' : (g.has_unseen ? ' unseen' : ' seen');
+      const plus = g.is_me ? '<i class="sr-plus" data-i="' + i + '">+</i>' : '';
+      return `<button type="button" class="sr${ring}" data-i="${i}">
+        <span class="ring"><span class="av ${avShape(peer)}">${avatarHTML(peer)}</span>${plus}</span>
+        <span class="rc-n">${g.is_me ? 'Вы' : esc(g.user.username)}</span></button>`;
+    }).join('');
+  }
+  $('#stories')?.addEventListener('click', e => {
+    const plus = e.target.closest('.sr-plus'); if (plus) return openStoryComposer();
+    const b = e.target.closest('.sr'); if (!b) return;
+    const g = (storiesCache || [])[+b.dataset.i]; if (!g) return;
+    if (g.is_me && !g.stories.length) return openStoryComposer();
+    openStoryViewer(+b.dataset.i);
   });
+
+  /* ---- просмотрщик на весь экран ---- */
+  const sv = { groups: [], gi: 0, si: 0, timer: null, holdT: null, held: false, touchY: null };
+  function currentGroup() { return sv.groups[sv.gi]; }
+  function currentStory() { const g = currentGroup(); return g ? g.stories[sv.si] : null; }
+
+  function openStoryViewer(groupIndex) {
+    sv.groups = storiesCache || []; sv.gi = groupIndex; sv.si = 0;
+    $('#storyView').hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    renderStorySlide();
+  }
+  function closeStoryViewer() {
+    clearTimeout(sv.timer); clearTimeout(sv.holdT);
+    $('#storyView').hidden = true;
+    document.documentElement.style.overflow = '';
+    paintStories();
+  }
+  function renderStorySlide() {
+    clearTimeout(sv.timer);
+    const g = currentGroup();
+    if (!g) return closeStoryViewer();
+    const s = g.stories[sv.si];
+    if (!s) {
+      if (sv.gi < sv.groups.length - 1) { sv.gi++; sv.si = 0; return renderStorySlide(); }
+      return closeStoryViewer();
+    }
+    $('#svBars').innerHTML = g.stories.map((_, i) => `<span class="sv-bar${i < sv.si ? ' done' : ''}">${i === sv.si ? '<i id="svFill"></i>' : ''}</span>`).join('');
+    const peer = storyPeer(g.user);
+    $('#svAv').className = 'av ' + avShape(peer);
+    $('#svAv').innerHTML = avatarHTML(peer);
+    $('#svName').textContent = g.is_me ? 'Ваша история' : g.user.username;
+    $('#svTime').textContent = fmtTime(s.created_at);
+    $('#svDel').hidden = !g.is_me;
+    $('#svViewersBtn').hidden = !g.is_me;
+    $('#svViewerList').hidden = true;
+    const media = $('#svMedia');
+    media.innerHTML = s.kind === 'photo'
+      ? `<img src="${esc(s.media_url)}" alt="">${s.text ? `<div class="sv-cap">${esc(s.text)}</div>` : ''}`
+      : `<div class="sv-text" style="background:${esc(s.bg || STORY_BG[0])}">${esc(s.text)}</div>`;
+
+    if (!s.seen) { api('story_view', { id: s.id }, 'POST'); s.seen = true; g.has_unseen = g.stories.some(x => !x.seen); }
+
+    const dur = s.kind === 'text' ? 6000 : 5000;
+    requestAnimationFrame(() => { const f = $('#svFill'); if (f) { f.style.animation = 'none'; void f.offsetWidth; f.style.animation = `svFill ${dur}ms linear forwards`; } });
+    sv.timer = setTimeout(nextStory, dur);
+  }
+  function nextStory() { sv.si++; renderStorySlide(); }
+  function prevStory() { if (sv.si > 0) sv.si--; else if (sv.gi > 0) { sv.gi--; sv.si = 0; } renderStorySlide(); }
+  function svPause() { clearTimeout(sv.timer); const f = $('#svFill'); if (f) f.style.animationPlayState = 'paused'; }
+  function svResume() {
+    const f = $('#svFill'); if (!f) return;
+    f.style.animationPlayState = 'running';
+    const pct = parseFloat(getComputedStyle(f).width) / Math.max(1, parseFloat(getComputedStyle(f.parentElement).width));
+    const dur = currentStory()?.kind === 'text' ? 6000 : 5000;
+    sv.timer = setTimeout(nextStory, Math.max(300, dur * (1 - pct)));
+  }
+  function svDown() { sv.held = false; sv.holdT = setTimeout(() => { sv.held = true; svPause(); }, 180); }
+  function svUp(dir) { clearTimeout(sv.holdT); if (sv.held) { svResume(); sv.held = false; return; } dir === 'prev' ? prevStory() : nextStory(); }
+  $('#svPrev')?.addEventListener('pointerdown', svDown);
+  $('#svPrev')?.addEventListener('pointerup', () => svUp('prev'));
+  $('#svNext')?.addEventListener('pointerdown', svDown);
+  $('#svNext')?.addEventListener('pointerup', () => svUp('next'));
+  $('#svClose')?.addEventListener('click', closeStoryViewer);
+  $('#svDel')?.addEventListener('click', async () => {
+    const s = currentStory(); if (!s || !confirm('Удалить историю?')) return;
+    svPause();
+    await api('story_delete', { id: s.id }, 'POST');
+    currentGroup().stories.splice(sv.si, 1);
+    renderStorySlide();
+  });
+  $('#svViewersBtn')?.addEventListener('click', async () => {
+    const s = currentStory(); if (!s) return;
+    svPause();
+    const r = await api('story_viewers', { id: s.id }, 'GET');
+    const list = $('#svViewerList'); list.hidden = false;
+    list.innerHTML = (r.viewers || []).length
+      ? r.viewers.map(v => `<div class="sv-viewer"><span class="av ${avShape(storyPeer(v))}">${avatarHTML(storyPeer(v))}</span>${esc(v.username)}</div>`).join('')
+      : '<div class="sv-viewer-empty">Пока никто не смотрел</div>';
+  });
+  $('#storyView')?.addEventListener('touchstart', e => { sv.touchY = e.touches[0].clientY; }, { passive: true });
+  $('#storyView')?.addEventListener('touchend', e => {
+    if (sv.touchY === null) return;
+    const dy = e.changedTouches[0].clientY - sv.touchY; sv.touchY = null;
+    if (dy > 80) closeStoryViewer();
+  }, { passive: true });
+
+  /* ---- публикация истории ---- */
+  let snMode = 'photo', snFileObj = null, snBgIdx = 0;
+  function openStoryComposer() {
+    $('#storyNew').hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    snReset();
+  }
+  function closeStoryComposer() { $('#storyNew').hidden = true; document.documentElement.style.overflow = ''; }
+  function snReset() {
+    $('#snFile').value = ''; snFileObj = null;
+    $('#snPreview').hidden = true; $('#snCaption').value = ''; $('#snTextInput').value = '';
+    snMode = 'photo'; snBgIdx = 0;
+    $$('.sn-tabs button').forEach(b => b.classList.toggle('on', b.dataset.sn === 'photo'));
+    $('#snPhoto').hidden = false; $('#snText').hidden = true;
+    renderSnBg(); checkSnValid();
+  }
+  function renderSnBg() {
+    $('#snBg').innerHTML = STORY_BG.map((c, i) => `<button type="button" class="sn-swatch${i === snBgIdx ? ' on' : ''}" data-i="${i}" style="background:${c}"></button>`).join('');
+  }
+  function checkSnValid() { $('#snSubmit').disabled = snMode === 'photo' ? !snFileObj : !$('#snTextInput').value.trim(); }
+  $('#snBg')?.addEventListener('click', e => { const b = e.target.closest('.sn-swatch'); if (!b) return; snBgIdx = +b.dataset.i; renderSnBg(); });
+  $('.sn-tabs')?.addEventListener('click', e => {
+    const b = e.target.closest('button[data-sn]'); if (!b) return;
+    snMode = b.dataset.sn;
+    $$('.sn-tabs button').forEach(x => x.classList.toggle('on', x === b));
+    $('#snPhoto').hidden = snMode !== 'photo';
+    $('#snText').hidden = snMode !== 'text';
+    checkSnValid();
+  });
+  $('#snPick')?.addEventListener('click', () => $('#snFile').click());
+  $('#snFile')?.addEventListener('change', () => {
+    const f = $('#snFile').files[0]; if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { toast('Файл больше 8 МБ', true); return; }
+    snFileObj = f;
+    $('#snImg').src = URL.createObjectURL(f);
+    $('#snPreview').hidden = false;
+    checkSnValid();
+  });
+  $('#snPreviewX')?.addEventListener('click', () => { snFileObj = null; $('#snFile').value = ''; $('#snPreview').hidden = true; checkSnValid(); });
+  $('#snTextInput')?.addEventListener('input', checkSnValid);
+  $('#snClose')?.addEventListener('click', closeStoryComposer);
+  $('#snSubmit')?.addEventListener('click', async () => {
+    $('#snSubmit').disabled = true;
+    let r;
+    if (snMode === 'photo') {
+      const fd = new FormData();
+      fd.append('action', 'story_create'); fd.append('kind', 'photo');
+      fd.append('file', snFileObj); fd.append('text', $('#snCaption').value.trim());
+      r = await fetch(API + '?action=story_create', { method: 'POST', credentials: 'same-origin', body: fd }).then(x => x.json()).catch(() => ({ ok: false, error: 'network' }));
+    } else {
+      r = await api('story_create', { kind: 'text', text: $('#snTextInput').value.trim(), bg: STORY_BG[snBgIdx] }, 'POST');
+    }
+    if (!r.ok) { $('#snSubmit').disabled = false; toast(STORY_ERR[r.error] || 'Не получилось опубликовать', true); return; }
+    closeStoryComposer(); storiesCache = null; paintStories(); toast('История опубликована');
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#storyView').hidden) closeStoryViewer(); });
   $('#list').addEventListener('click', e => {
     const el = e.target.closest('.card'); if (!el) return;
     openConv(+el.dataset.id, JSON.parse(el.dataset.peer), el.dataset.studio === '1', null, el.dataset.system === '1');
@@ -341,6 +508,8 @@
     $('#menu').hidden = true;
     $('#delConv').hidden = !!isSystem;
     $('#wpOpen').hidden = !!isSystem || id <= 0;
+    $('#blockUser').hidden = !!isSystem || !!isStudio || id <= 0;
+    state.blocked = { byMe: false, me: false };
     showRoom(true);
     renderPins();
     syncQuick();
@@ -361,7 +530,7 @@
 
   function applyHeader(h) {
     if (!h) return;
-    state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind };
+    state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind, last_seen: h.last_seen, studio: h.studio, tag: h.tag };
     if (state.header.peer && state.header.peer.name === '…' && h.name) {
       state.header.peer = { kind: h.kind, id: h.peer_id, name: h.name, avatar: h.avatar };
       $('#rhName').textContent = h.name;
@@ -370,13 +539,32 @@
     }
     state.peerLastRead = h.peer_last_read_id || 0;
     state.peerDelivered = Math.max(h.peer_last_delivered_id || 0, state.peerLastRead);
+
+    // Чёрный список — только личные диалоги; для студий/системных h.blocked_* нет вовсе
+    state.blocked = { byMe: !!h.blocked_by_me, me: !!h.blocked_me };
+    const blockedEither = state.blocked.byMe || state.blocked.me;
+    $('#blockUser').hidden = h.kind !== 'user' || !!h.studio;
+    $('#blockUser').textContent = state.blocked.byMe ? 'Разблокировать' : 'Заблокировать';
+    applyBlockedComposerState();
+
     let sub;
-    if (h.kind === 'system') sub = 'системные уведомления';
+    if (blockedEither) sub = state.blocked.byMe ? 'вы заблокировали пользователя' : 'пользователь вас заблокировал';
+    else if (h.kind === 'system') sub = 'системные уведомления';
     else if (h.kind === 'studio') sub = 'официальный канал студии';
     else sub = h.tag ? ('обращение · ' + h.tag) : (lastSeen(h.last_seen) || 'личный чат');
-    const online = h.kind === 'user' && h.last_seen && (Date.now() - asDate(h.last_seen) < 90000);
+    const online = !blockedEither && h.kind === 'user' && h.last_seen && (Date.now() - asDate(h.last_seen) < 90000);
     $('#rhSub').innerHTML = `<span class="live${online ? '' : ' off'}"></span>${esc(sub)}`;
     updateReadTicks();
+  }
+
+  /** Включает/выключает композер по текущему state.blocked — вызывается и из
+   *  applyHeader() (открыли диалог), и сразу после клика по «Заблокировать». */
+  function applyBlockedComposerState() {
+    const blocked = !!(state.blocked && (state.blocked.byMe || state.blocked.me));
+    $('#input').disabled = blocked;
+    $('#attachBtn').disabled = blocked;
+    $('#input').placeholder = blocked ? 'Переписка недоступна' : INPUT_PLACEHOLDER;
+    autosize();
   }
 
   async function loadInitial() {
@@ -516,6 +704,16 @@
   </div>`;
   }
 
+  const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+  /** Пилюли реакций под сообщением: клик по своей — снимает, по чужой — ставит ту же. */
+  function renderReactions(reactions) {
+    if (!reactions || !reactions.length) return '';
+    return `<div class="reactions">${reactions.map(r =>
+      `<button type="button" class="react-pill${r.mine ? ' mine' : ''}" data-emoji="${esc(r.emoji)}">${esc(r.emoji)}<span>${r.count}</span></button>`
+    ).join('')}</div>`;
+  }
+
   function renderMsg(m) {
     if (state.isSystem) return renderNotif(m);
     const side = m.mine ? 'mine' : 'them';
@@ -528,11 +726,24 @@
     const text = m.body ? `<div class="b-text">${linkify(esc(m.body))}</div>` : '';
     const onlyImg = m.file && m.file.kind === 'image' && !m.body && !m.reply;
     const ticks = m.mine ? renderTicks(m.id) : '';
+    const reactions = renderReactions(m.reactions);
     return `<div class="msg ${side}" data-id="${m.id}">
     <span class="swipe-ic" aria-hidden="true">${ICON.reply}</span>
-    <div class="bubble${onlyImg ? ' media' : ''}">${quote}${media}${text}<span class="b-time">${fmtTime(m.at)}${ticks}</span></div>
+    <div class="bubble${onlyImg ? ' media' : ''}">${quote}${media}${text}<span class="b-time">${fmtTime(m.at)}${ticks}</span>${reactions}</div>
     <button type="button" class="m-more" aria-label="Действия">${ICON.more}</button>
   </div>`;
+  }
+
+  async function toggleReaction(id, emoji) {
+    const r = await api('react', { message_id: id, emoji }, 'POST');
+    if (!r.ok) { toast('Не удалось поставить реакцию', true); return; }
+    const m = state.msgs.get(id); if (m) m.reactions = r.reactions;
+    const bubble = document.querySelector(`#thread .msg[data-id="${id}"] .bubble`);
+    if (bubble) {
+      bubble.querySelector('.reactions')?.remove();
+      const html = renderReactions(r.reactions);
+      if (html) bubble.insertAdjacentHTML('beforeend', html);
+    }
   }
 
   /* Переход к сообщению (цитата, пин): догружаем историю, пока не найдём. */
@@ -553,6 +764,7 @@
     const dr = e.target.closest('.m-drop'); if (dr) { dropPending(dr.closest('.msg').dataset.tmp); return; }
     const q = e.target.closest('.quote'); if (q) { jumpTo(+q.dataset.jump); return; }
     const img = e.target.closest('.m-img'); if (img) { openLightbox(img.dataset.full, img.dataset.name); return; }
+    const rp = e.target.closest('.react-pill'); if (rp) { toggleReaction(+rp.closest('.msg[data-id]').dataset.id, rp.dataset.emoji); return; }
     const more = e.target.closest('.m-more');
     if (more) { const r = more.getBoundingClientRect(); openMsgMenu(+more.closest('.msg[data-id]')?.dataset.id, r.left, r.bottom); }
   });
@@ -674,14 +886,21 @@
 
   /* ════════════════════════ КОНТЕКСТНОЕ МЕНЮ ═══════════════════════════════
      ПКМ на ПК и долгий тап на телефоне открывают одно и то же меню. */
-  function openCtx(items, x, y) {
+  /** extra: необязательный { html, onClick(el) } — своя разметка сверху меню
+   *  (сейчас так подключена полоска быстрых реакций в openMsgMenu). onClick
+   *  получает ближайший элемент внутри extra.html или null, и должен вернуть
+   *  true, если сам обработал клик — тогда обычные пункты меню не проверяются. */
+  function openCtx(items, x, y, extra) {
     const c = $('#ctx');
-    c.innerHTML = items.map((it, i) => `<button type="button" class="${it.danger ? 'danger' : ''}" data-i="${i}">${it.icon || ''}<span>${esc(it.label)}</span></button>`).join('');
+    c.innerHTML = (extra ? extra.html : '') + items.map((it, i) => `<button type="button" class="${it.danger ? 'danger' : ''}" data-i="${i}">${it.icon || ''}<span>${esc(it.label)}</span></button>`).join('');
     c.hidden = false;
     const w = c.offsetWidth, h = c.offsetHeight;
     c.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
     c.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px';
-    c.onclick = e => { const b = e.target.closest('button'); if (!b) return; closeCtx(); items[+b.dataset.i].run(); };
+    c.onclick = e => {
+      if (extra && extra.onClick(e.target.closest(extra.sel))) { closeCtx(); return; }
+      const b = e.target.closest('button[data-i]'); if (!b) return; closeCtx(); items[+b.dataset.i].run();
+    };
   }
   function closeCtx() { $('#ctx').hidden = true; }
   document.addEventListener('pointerdown', e => { if (!e.target.closest('#ctx')) closeCtx(); }, true);
@@ -695,6 +914,10 @@
   function openMsgMenu(id, x, y) {
     const m = state.msgs.get(id); if (!m || m.deleted || state.isSystem) return;
     const pinned = state.pins.some(p => p.id === id);
+    const mine = (m.reactions || []).find(r => r.mine);
+    const reactHtml = `<div class="ctx-react">${QUICK_REACTIONS.map(em =>
+      `<button type="button" class="react-em${mine && mine.emoji === em ? ' active' : ''}" data-emoji="${em}">${em}</button>`
+    ).join('')}</div>`;
     const items = [{ label: 'Ответить', icon: ICON.reply, run: () => startReply(id) }];
     if (state.v2) items.push({ label: pinned ? 'Открепить' : 'Закрепить', icon: ICON.pin, run: () => togglePin(id, !pinned) });
     if (m.body) items.push({ label: 'Копировать текст', icon: ICON.copy, run: () => navigator.clipboard?.writeText(m.body).then(() => toast('Скопировано')) });
@@ -703,13 +926,29 @@
       run: () => m.file.kind === 'image' ? openLightbox(m.file.url, m.file.name) : window.open(m.file.url, '_blank')
     });
     if (m.mine) items.push({ label: 'Удалить', icon: ICON.del, danger: true, run: () => deleteMessage(id) });
-    openCtx(items, x, y);
+    openCtx(items, x, y, { html: reactHtml, sel: '.react-em', onClick: el => { if (!el) return false; toggleReaction(id, el.dataset.emoji); return true; } });
   }
   thread.addEventListener('contextmenu', e => {
     const msg = e.target.closest('.msg[data-id]');
     if (!msg || e.target.closest('a')) return;          // по ссылке — обычное меню браузера на ПК
     e.preventDefault();
     if (!isTouch) openMsgMenu(+msg.dataset.id, e.clientX, e.clientY);
+  });
+
+  /* Двойной клик по сообщению — сразу «Ответить», как в десктопном Telegram.
+     Свои интерактивные зоны (ссылка, цитата, картинка, реакция, три точки)
+     исключаем — у них двойной клик не должен спорить с их собственным
+     действием. Двойной клик по тексту иначе ещё и выделяет слово браузером —
+     сразу же снимаем это выделение, чтобы не оставалось синим пятном поверх
+     открывшейся панели ответа. */
+  thread.addEventListener('dblclick', e => {
+    if (state.isSystem) return;
+    const msg = e.target.closest('.msg[data-id]');
+    if (!msg || msg.querySelector('.gone')) return;
+    if (e.target.closest('a, .quote, .m-img, .m-file, .react-pill, .m-more, .m-retry, .m-drop')) return;
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    startReply(+msg.dataset.id);
   });
 
   async function deleteMessage(id) {
@@ -764,6 +1003,21 @@
     if (!r.ok) { toast('Не удалось удалить', true); return; }
     if (id === state.convId) { $('#app').classList.remove('show-room'); state.convId = 0; clearInterval(state.threadTimer); showRoom(false); }
     loadList();
+  }
+  async function toggleBlock() {
+    const uid = state.header && state.header.peer_id;
+    if (!uid) return;
+    const willBlock = !(state.blocked && state.blocked.byMe);
+    if (willBlock && !confirm('Заблокировать пользователя? Он больше не сможет писать вам, а вы — ему. Переписка останется видна.')) return;
+    const r = await api(willBlock ? 'block_user' : 'unblock_user', { user_id: uid }, 'POST');
+    if (!r.ok) { toast('Не удалось выполнить', true); return; }
+    state.blocked = { byMe: willBlock, me: state.blocked ? state.blocked.me : false };
+    $('#blockUser').textContent = willBlock ? 'Разблокировать' : 'Заблокировать';
+    applyBlockedComposerState();
+    const online = !willBlock && state.header.last_seen && (Date.now() - asDate(state.header.last_seen) < 90000);
+    const sub = willBlock ? 'вы заблокировали пользователя' : (lastSeen(state.header.last_seen) || 'личный чат');
+    $('#rhSub').innerHTML = `<span class="live${online ? '' : ' off'}"></span>${esc(sub)}`;
+    toast(willBlock ? 'Пользователь заблокирован' : 'Пользователь разблокирован');
   }
 
   $('#sideMore').addEventListener('click', e => {
@@ -987,7 +1241,8 @@
     const why = err === 'too_fast' ? 'Слишком часто, подождите секунду'
       : err === 'network' ? 'Нет соединения — сообщение не ушло'
         : err === 'too_long' ? 'Сообщение длиннее 4000 символов'
-          : 'Не удалось отправить';
+          : err === 'blocked' ? 'Переписка недоступна: пользователь заблокирован'
+            : 'Не удалось отправить';
     toast(why, true);
     if (!p.convId) {                       // черновик диалога: пузыря нет — вернём текст в поле
       if (p.backup && !$('#input').value) { $('#input').value = p.backup; autosize(); }
@@ -1011,7 +1266,8 @@
     t.style.height = 'auto';
     t.style.height = Math.min(t.scrollHeight, 140) + 'px';
     const hasReady = state.atts.some(a => a.status === 'ready');
-    $('#send').disabled = (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
+    const blocked = !!(state.blocked && (state.blocked.byMe || state.blocked.me));
+    $('#send').disabled = blocked || (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
     syncQuick();
   }
 
@@ -1046,6 +1302,7 @@
   $('#markRead').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) markRead(state.convId); });
   $('#wpOpen').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) openWallpaper(); });
   $('#delConv').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) deleteConv(state.convId); });
+  $('#blockUser').addEventListener('click', () => { $('#menu').hidden = true; toggleBlock(); });
 
   /* ════════════════════════ ОБОИ ═══════════════════════════════════════════
      Пресеты — чистый CSS (слои градиентов): ноль запросов, ноль байт, чёткие
