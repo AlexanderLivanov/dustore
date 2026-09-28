@@ -175,17 +175,67 @@ final class Fx
     public static function urlMedia(): string                  { return self::$mobile ? '/m/media' : '/fid'; }
     public static function urlPost(int $id): string            { return self::$mobile ? '/m/media?post=' . $id : '/fid/post/' . $id; }
 
-    /** Уведомление в существующую таблицу notifications. Ошибки не всплывают: уведомление — не критично. */
+    /**
+     * Уведомление в общую таблицу notifications — ту же, что использует
+     * NotificationCenter и чат («Уведомления», красная точка в хедере,
+     * веб-пуш). Колонки именно (title, message, action, status, date):
+     * более ранняя версия писала (body, url, created_at, is_read), которых
+     * в реальной таблице нет — INSERT падал на PDOException и уведомление
+     * просто терялось. Ошибки не всплывают наружу: уведомление не критично,
+     * не должно ронять реакцию/пост/коммент, из-за которых оно шлётся.
+     */
     public static function notify(int $userId, string $title, string $body, string $url): void
     {
-        if ($userId <= 0 || $userId === self::uid()) return;
+        self::notifyMany([$userId], $title, $body, $url);
+    }
+
+    /** Та же рассылка, но сразу многим (например, всем друзьям после нового поста). */
+    public static function notifyMany(array $userIds, string $title, string $body, string $url): void
+    {
+        $me = self::uid();
+        $ids = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn($id) => $id > 0 && $id !== $me)));
+        if (!$ids) return;
+        $title = mb_substr($title, 0, 120);
+        $body = mb_substr($body, 0, 250);
+
         try {
-            self::pdo()->prepare(
-                "INSERT INTO notifications (user_id, title, body, url, created_at, is_read) VALUES (?,?,?,?,?,0)"
-            )->execute([$userId, mb_substr($title, 0, 120), mb_substr($body, 0, 250), $url, self::now()]);
+            $pdo = self::pdo();
+            $ins = $pdo->prepare("INSERT INTO notifications (user_id, title, message, action, status, date) VALUES (?,?,?,?,'unread', NOW())");
+            foreach ($ids as $id) $ins->execute([$id, $title, $body, $url]);
         } catch (Throwable $e) {
             error_log('[fx] notify: ' . $e->getMessage());
+            return;
         }
+
+        /* Веб-пуш — best effort, отдельно от записи в БД: сбой очереди не должен
+           «съедать» уже сохранённое уведомление. Клик по пушу всегда ведёт во
+           вкладку «Уведомления» чата (на телефоне SW сам перепишет на /m/chat),
+           как и у send_notification()/NotificationCenter — единый паттерн. */
+        try {
+            $helpers = __DIR__ . '/../../chat/push_helpers.php';
+            if (is_file($helpers)) {
+                require_once $helpers;
+                if (function_exists('push_enqueue_user')) {
+                    $pdo = self::pdo();
+                    foreach ($ids as $id) push_enqueue_user($pdo, $id, $title, $body, '/chat/?system=1');
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('[fx] notify push: ' . $e->getMessage());
+        }
+    }
+
+    /** Друзья пользователя (принятые заявки, таблица friends) — для «постов друзей» и подобного. */
+    public static function friendIds(int $uid): array
+    {
+        if ($uid <= 0) return [];
+        $st = self::pdo()->prepare(
+            "SELECT player_id, friend_id FROM friends WHERE status = 'accepted' AND (player_id = ? OR friend_id = ?)"
+        );
+        $st->execute([$uid, $uid]);
+        $out = [];
+        foreach ($st->fetchAll() as $r) $out[] = (int)$r['player_id'] === $uid ? (int)$r['friend_id'] : (int)$r['player_id'];
+        return array_values(array_unique($out));
     }
 }
 

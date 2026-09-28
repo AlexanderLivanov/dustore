@@ -190,19 +190,54 @@ final class FxPosts
         ]);
         $id = (int)$pdo->lastInsertId();
 
-        self::notifyNew($uid, $id, $wt, $wid, $ch, $title . ' ' . $body);
+        self::notifyNew($uid, $id, $wt, $wid, $kind, $asStudio, $title . ' ' . $body);
         return ['ok' => true, 'id' => $id];
     }
 
-    private static function notifyNew(int $uid, int $id, string $wt, int $wid, string $ch, string $text): void
+    private static function notifyNew(int $uid, int $id, string $wt, int $wid, string $kind, ?int $asStudio, string $text): void
     {
         $me = FxPeople::user($uid)['name'] ?? 'Кто-то';
         $url = '/fid/post/' . $id;
-        foreach (Fx::mentions($text) as [$type, $tid]) {
-            if ($type === 'user') Fx::notify($tid, $me . ' упомянул(а) вас', mb_substr(preg_replace('/@\[\w+:\d+\|([^\]]+)\]/u', '$1', $text) ?? '', 0, 140), $url);
-        }
+        $clean = mb_substr(preg_replace('/@\[\w+:\d+\|([^\]]+)\]/u', '$1', $text) ?? '', 0, 140);
+
+        self::notifyMentions($text, $me, $url, $wt === 'user' ? [$wid] : []);
+
         if ($wt === 'user' && $wid !== $uid) {
-            Fx::notify($wid, $me . ' написал(а) на вашей стене', mb_substr(preg_replace('/@\[\w+:\d+\|([^\]]+)\]/u', '$1', $text) ?? '', 0, 140), $url);
+            Fx::notify($wid, $me . ' написал(а) на вашей стене', $clean, $url);
+        }
+
+        /* Новый личный пост — уведомляем друзей. Только «личное»: своя стена или
+           лента от своего имени (не студия, не новость, не форум/девлог игры/студии). */
+        $isPersonal = $kind !== 'news' && (($wt === 'user' && $wid === $uid) || ($wt === 'media' && $asStudio === null));
+        if ($isPersonal) {
+            $friends = Fx::friendIds($uid);
+            if ($friends) Fx::notifyMany($friends, $me . ' опубликовал(а) новую запись', $clean, $url);
+        }
+    }
+
+    /**
+     * Уведомления по @упоминаниям в тексте: пользователю — напрямую, студии или
+     * игре — её владельцу (у игры своего «хозяина» нет, только студия-разработчик).
+     * $skip — id, кому уведомление уже ушло другим путём (не дублируем).
+     */
+    public static function notifyMentions(string $text, string $who, string $url, array $skip = []): void
+    {
+        $clean = mb_substr(preg_replace('/@\[\w+:\d+\|([^\]]+)\]/u', '$1', $text) ?? '', 0, 140);
+        foreach (Fx::mentions($text) as [$type, $tid]) {
+            if ($type === 'user') {
+                if (!in_array($tid, $skip, true)) Fx::notify($tid, $who . ' упомянул(а) вас', $clean, $url);
+                continue;
+            }
+            $owner = 0;
+            if ($type === 'studio') {
+                $owner = FxPeople::studio($tid)['owner_id'] ?? 0;
+            } elseif ($type === 'game') {
+                $g = FxPeople::game($tid);
+                $owner = $g ? (FxPeople::studio($g['studio_id'])['owner_id'] ?? 0) : 0;
+            }
+            if ($owner && !in_array($owner, $skip, true)) {
+                Fx::notify($owner, $who . ($type === 'studio' ? ' упомянул(а) вашу студию' : ' упомянул(а) вашу игру'), $clean, $url);
+            }
         }
     }
 
@@ -554,11 +589,10 @@ final class FxComments
 
         $who = FxPeople::user($uid)['name'] ?? 'Кто-то';
         $url = '/fid/post/' . $postId;
+        $postAuthor = (int)$p['author_id'];
         if ($parentAuthor) Fx::notify($parentAuthor, $who . ' ответил(а) вам', mb_substr($body, 0, 140), $url);
-        if ((int)$p['author_id'] !== $parentAuthor) Fx::notify((int)$p['author_id'], $who . ' прокомментировал(а)', mb_substr($body, 0, 140), $url);
-        foreach (Fx::mentions($body) as [$type, $tid]) {
-            if ($type === 'user' && $tid !== $parentAuthor && $tid !== (int)$p['author_id']) Fx::notify($tid, $who . ' упомянул(а) вас', mb_substr($body, 0, 140), $url);
-        }
+        if ($postAuthor !== $parentAuthor) Fx::notify($postAuthor, $who . ' прокомментировал(а)', mb_substr($body, 0, 140), $url);
+        FxPosts::notifyMentions($body, $who, $url, [$parentAuthor, $postAuthor]);
         return ['ok' => true, 'id' => $id];
     }
 
@@ -579,9 +613,10 @@ final class FxComments
     {
         if ($uid <= 0) return ['ok' => false, 'error' => 'auth'];
         $pdo = Fx::pdo();
-        $ex = $pdo->prepare("SELECT 1 FROM fx_comments WHERE id = ? AND status = 1");
+        $ex = $pdo->prepare("SELECT author_id, post_id, body FROM fx_comments WHERE id = ? AND status = 1");
         $ex->execute([$id]);
-        if (!$ex->fetchColumn()) return ['ok' => false, 'error' => 'not_found'];
+        $c = $ex->fetch();
+        if (!$c) return ['ok' => false, 'error' => 'not_found'];
         $has = $pdo->prepare("SELECT 1 FROM fx_comment_likes WHERE comment_id = ? AND user_id = ?");
         $has->execute([$id, $uid]);
         if ($has->fetchColumn()) {
@@ -590,6 +625,8 @@ final class FxComments
         } else {
             $pdo->prepare("INSERT INTO fx_comment_likes (comment_id, user_id, created_at) VALUES (?,?,?)")->execute([$id, $uid, Fx::now()]);
             $on = true;
+            $who = FxPeople::user($uid)['name'] ?? 'Кто-то';
+            Fx::notify((int)$c['author_id'], $who . ' оценил(а) ваш комментарий', mb_substr((string)$c['body'], 0, 140), '/fid/post/' . (int)$c['post_id']);
         }
         $pdo->prepare("UPDATE fx_comments SET n_like = (SELECT COUNT(*) FROM fx_comment_likes WHERE comment_id = ?) WHERE id = ?")->execute([$id, $id]);
         $n = $pdo->prepare("SELECT n_like FROM fx_comments WHERE id = ?");

@@ -20,16 +20,10 @@ final class FxFeed
 {
     public const PAGE = 15;
 
+    /** @deprecated используй Fx::friendIds() — оставлено, чтобы не трогать вызовы ниже по файлу */
     public static function friendIds(int $uid): array
     {
-        if ($uid <= 0) return [];
-        $st = Fx::pdo()->prepare(
-            "SELECT player_id, friend_id FROM friends WHERE status = 'accepted' AND (player_id = ? OR friend_id = ?)"
-        );
-        $st->execute([$uid, $uid]);
-        $out = [];
-        foreach ($st->fetchAll() as $r) $out[] = (int)$r['player_id'] === $uid ? (int)$r['friend_id'] : (int)$r['player_id'];
-        return array_values(array_unique($out));
+        return Fx::friendIds($uid);
     }
 
     /** @return array{studio:int[],game:int[]} */
