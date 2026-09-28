@@ -15,7 +15,7 @@ function downloadGame(int $game_id, int $user_id): void
     $pdo = (new Database())->connect();
 
     $stmt = $pdo->prepare("
-        SELECT id, game_zip_url, vt_status
+        SELECT id, game_zip_url, vt_status, sprint_id
         FROM games WHERE id = ? LIMIT 1
     ");
     $stmt->execute([$game_id]);
@@ -41,6 +41,22 @@ function downloadGame(int $game_id, int $user_id): void
         } catch (Throwable $e) {
             error_log('[download_game] library write failed uid=' . $user_id
                     . ' game=' . $game_id . ': ' . $e->getMessage());
+        }
+
+        /* Отметка play-to-vote (см. download_deplex.php — тот же паттерн 1-в-1).
+           До этого патча zip-игры вообще не могли получить право голоса: клик
+           «Открыть работу» на странице голосования её не даёт (см. jam_play.php),
+           а этот, единственный реальный путь скачивания, jam_plays не писал. */
+        $sprint_id = (int)($game['sprint_id'] ?? 0);
+        if ($sprint_id > 0) {
+            try {
+                if (!defined('JAM_PLAY_LIB_ONLY')) define('JAM_PLAY_LIB_ONLY', true);
+                require_once(__DIR__ . '/jams/jam_play.php');
+                jam_play_record($pdo, $sprint_id, $game_id, $user_id, 'download');
+            } catch (Throwable $e) {
+                error_log('[download_game] jam_play_record failed uid=' . $user_id
+                        . ' game=' . $game_id . ': ' . $e->getMessage());
+            }
         }
     }
 

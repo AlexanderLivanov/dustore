@@ -1033,20 +1033,13 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
     <?php endif; ?>
 
     <?php /*
-       ВНИМАНИЕ: этот блок писал jam_plays по факту открытия страницы —
-       из-за него право голоса получали, не скачав билд (601 запись из 743).
-       Удалять его нужно ОДНОВРЕМЕННО с патчем download_game.php,
-       который пишет jam_plays на сервере при выдаче файла.
-       Пока патч не выкачен — блок оставлен как есть.
+       Блок, писавший jam_plays по факту открытия страницы (без скачивания),
+       убран: download_game.php теперь сам ставит отметку при выдаче файла
+       (как и download_deplex.php), а право голоса даёт именно скачивание/
+       запуск, а не просмотр карточки. Заодно этот блок и так уже не
+       работал: jam_play.php требует csrf_valid(), а этот fetch его не
+       посылал — тихо получал 403 и ничего не писал.
     */ ?>
-    <?php if (!empty($jamInfo) && !empty($_SESSION['USERDATA']['id'])): ?>
-<script>
-fetch('/swad/controllers/jams/jam_play.php', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ sprint_id: <?= (int)$jamInfo['id'] ?>, game_id: <?= (int)$game_id ?> })
-}).catch(()=>{});
-</script>
-<?php endif; ?>
 
     <?= FxPage::scripts() ?>
     <script>

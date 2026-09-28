@@ -311,7 +311,7 @@ $stmt->execute([
 
                     <!-- Кнопка «Джемы» вместо дропдауна -->
                     <button class="button" onclick="location.href='/jams'">Джемы</button>
-                    <!-- <button class="button" onclick="location.href='/fid'">Фиды</button> -->
+                    <button class="button" onclick="location.href='/fid'">Фиды</button>
 
                     <!-- Dropdown «Для разработчиков» -->
                     <div class="nav-dropdown">
