@@ -538,6 +538,16 @@
   </div>`;
   }
 
+  const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+  /** Пилюли реакций под сообщением: клик по своей — снимает, по чужой — ставит ту же. */
+  function renderReactions(reactions) {
+    if (!reactions || !reactions.length) return '';
+    return `<div class="reactions">${reactions.map(r =>
+      `<button type="button" class="react-pill${r.mine ? ' mine' : ''}" data-emoji="${esc(r.emoji)}">${esc(r.emoji)}<span>${r.count}</span></button>`
+    ).join('')}</div>`;
+  }
+
   function renderMsg(m) {
     if (state.isSystem) return renderNotif(m);
     const side = m.mine ? 'mine' : 'them';
@@ -550,11 +560,24 @@
     const text = m.body ? `<div class="b-text">${linkify(esc(m.body))}</div>` : '';
     const onlyImg = m.file && m.file.kind === 'image' && !m.body && !m.reply;
     const ticks = m.mine ? renderTicks(m.id) : '';
+    const reactions = renderReactions(m.reactions);
     return `<div class="msg ${side}" data-id="${m.id}">
     <span class="swipe-ic" aria-hidden="true">${ICON.reply}</span>
-    <div class="bubble${onlyImg ? ' media' : ''}">${quote}${media}${text}<span class="b-time">${fmtTime(m.at)}${ticks}</span></div>
+    <div class="bubble${onlyImg ? ' media' : ''}">${quote}${media}${text}<span class="b-time">${fmtTime(m.at)}${ticks}</span>${reactions}</div>
     <button type="button" class="m-more" aria-label="Действия">${ICON.more}</button>
   </div>`;
+  }
+
+  async function toggleReaction(id, emoji) {
+    const r = await api('react', { message_id: id, emoji }, 'POST');
+    if (!r.ok) { toast('Не удалось поставить реакцию', true); return; }
+    const m = state.msgs.get(id); if (m) m.reactions = r.reactions;
+    const bubble = document.querySelector(`#thread .msg[data-id="${id}"] .bubble`);
+    if (bubble) {
+      bubble.querySelector('.reactions')?.remove();
+      const html = renderReactions(r.reactions);
+      if (html) bubble.insertAdjacentHTML('beforeend', html);
+    }
   }
 
   /* Переход к сообщению (цитата, пин): догружаем историю, пока не найдём. */
@@ -575,6 +598,7 @@
     const dr = e.target.closest('.m-drop'); if (dr) { dropPending(dr.closest('.msg').dataset.tmp); return; }
     const q = e.target.closest('.quote'); if (q) { jumpTo(+q.dataset.jump); return; }
     const img = e.target.closest('.m-img'); if (img) { openLightbox(img.dataset.full, img.dataset.name); return; }
+    const rp = e.target.closest('.react-pill'); if (rp) { toggleReaction(+rp.closest('.msg[data-id]').dataset.id, rp.dataset.emoji); return; }
     const more = e.target.closest('.m-more');
     if (more) { const r = more.getBoundingClientRect(); openMsgMenu(+more.closest('.msg[data-id]')?.dataset.id, r.left, r.bottom); }
   });
@@ -696,14 +720,21 @@
 
   /* ════════════════════════ КОНТЕКСТНОЕ МЕНЮ ═══════════════════════════════
      ПКМ на ПК и долгий тап на телефоне открывают одно и то же меню. */
-  function openCtx(items, x, y) {
+  /** extra: необязательный { html, onClick(el) } — своя разметка сверху меню
+   *  (сейчас так подключена полоска быстрых реакций в openMsgMenu). onClick
+   *  получает ближайший элемент внутри extra.html или null, и должен вернуть
+   *  true, если сам обработал клик — тогда обычные пункты меню не проверяются. */
+  function openCtx(items, x, y, extra) {
     const c = $('#ctx');
-    c.innerHTML = items.map((it, i) => `<button type="button" class="${it.danger ? 'danger' : ''}" data-i="${i}">${it.icon || ''}<span>${esc(it.label)}</span></button>`).join('');
+    c.innerHTML = (extra ? extra.html : '') + items.map((it, i) => `<button type="button" class="${it.danger ? 'danger' : ''}" data-i="${i}">${it.icon || ''}<span>${esc(it.label)}</span></button>`).join('');
     c.hidden = false;
     const w = c.offsetWidth, h = c.offsetHeight;
     c.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
     c.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px';
-    c.onclick = e => { const b = e.target.closest('button'); if (!b) return; closeCtx(); items[+b.dataset.i].run(); };
+    c.onclick = e => {
+      if (extra && extra.onClick(e.target.closest(extra.sel))) { closeCtx(); return; }
+      const b = e.target.closest('button[data-i]'); if (!b) return; closeCtx(); items[+b.dataset.i].run();
+    };
   }
   function closeCtx() { $('#ctx').hidden = true; }
   document.addEventListener('pointerdown', e => { if (!e.target.closest('#ctx')) closeCtx(); }, true);
@@ -717,6 +748,10 @@
   function openMsgMenu(id, x, y) {
     const m = state.msgs.get(id); if (!m || m.deleted || state.isSystem) return;
     const pinned = state.pins.some(p => p.id === id);
+    const mine = (m.reactions || []).find(r => r.mine);
+    const reactHtml = `<div class="ctx-react">${QUICK_REACTIONS.map(em =>
+      `<button type="button" class="react-em${mine && mine.emoji === em ? ' active' : ''}" data-emoji="${em}">${em}</button>`
+    ).join('')}</div>`;
     const items = [{ label: 'Ответить', icon: ICON.reply, run: () => startReply(id) }];
     if (state.v2) items.push({ label: pinned ? 'Открепить' : 'Закрепить', icon: ICON.pin, run: () => togglePin(id, !pinned) });
     if (m.body) items.push({ label: 'Копировать текст', icon: ICON.copy, run: () => navigator.clipboard?.writeText(m.body).then(() => toast('Скопировано')) });
@@ -725,7 +760,7 @@
       run: () => m.file.kind === 'image' ? openLightbox(m.file.url, m.file.name) : window.open(m.file.url, '_blank')
     });
     if (m.mine) items.push({ label: 'Удалить', icon: ICON.del, danger: true, run: () => deleteMessage(id) });
-    openCtx(items, x, y);
+    openCtx(items, x, y, { html: reactHtml, sel: '.react-em', onClick: el => { if (!el) return false; toggleReaction(id, el.dataset.emoji); return true; } });
   }
   thread.addEventListener('contextmenu', e => {
     const msg = e.target.closest('.msg[data-id]');

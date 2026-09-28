@@ -450,6 +450,24 @@ body.moonlight-theme .ctx { background: rgba(16, 23, 40, .97); }
 .ctx button:hover { background: rgba(255, 255, 255, .07); }
 .ctx button.danger, .ctx button.danger svg { color: var(--ch-danger); }
 
+/* Полоска быстрых реакций сверху меню сообщения */
+.ctx-react { display: flex; justify-content: space-between; gap: 2px; padding: 4px 4px 8px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--ch-panel-line); }
+.react-em { border: 0; background: none; font-size: 1.25rem; line-height: 1; padding: 6px; border-radius: 50%;
+    cursor: pointer; transition: transform .12s ease, background .12s ease; }
+.react-em:hover { background: rgba(255, 255, 255, .09); transform: scale(1.15); }
+.react-em.active { background: rgba(var(--brand-rgb, 195, 33, 120), .28); }
+
+/* Пилюли реакций под сообщением */
+.reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.react-pill { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px;
+    padding: 2px 8px; font-size: .82rem; line-height: 1.5; cursor: pointer;
+    background: rgba(255, 255, 255, .08); color: var(--ch-text); }
+.react-pill span { font-size: .74rem; color: var(--ch-muted); font-variant-numeric: tabular-nums; }
+.react-pill.mine { background: rgba(var(--brand-rgb, 195, 33, 120), .32); }
+.react-pill.mine span { color: var(--ch-text); }
+.react-pill:hover { filter: brightness(1.15); }
+
 .side-more { margin-left: auto; width: 34px; height: 34px; }
 
 /* ── Настройки ── */

@@ -10,11 +10,13 @@ if (is_file(__DIR__ . '/ws_helpers.php')) require_once __DIR__ . '/ws_helpers.ph
 require_once __DIR__ . '/_crypto.php';
 require_once __DIR__ . '/_files.php';
 require_once __DIR__ . '/_blocks.php';
+require_once __DIR__ . '/_reactions.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $db = (new Database())->connect('dustore');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 chat_blocks_ensure($db);
+chat_reactions_ensure($db);
 
 /**
  * Чат v2 (файлы, ответы, пины, звук) включается сам, как только прогнана
@@ -712,6 +714,7 @@ function enrich_messages(PDO $db, int $cid, array $rows, int $myId, bool $v2): a
     $senderIds = array_merge(array_map(fn($m) => (int)$m['sender_id'], $rows), array_map(fn($r) => (int)$r['sender_id'], $replies));
     $smeta = get_users_meta($db, $senderIds);
     $files = $v2 ? chat_files_by_ids($db, array_merge(array_column($rows, 'file_id'), array_column($replies, 'file_id'))) : [];
+    $reactions = chat_reactions_for($db, array_column($rows, 'id'), $myId);
 
     $out = [];
     foreach ($rows as $m) {
@@ -727,6 +730,7 @@ function enrich_messages(PDO $db, int $cid, array $rows, int $myId, bool $v2): a
             'at'      => $m['created_at'],
             'file'    => (!$del && $file) ? chat_file_dto($file) : null,
             'reply'   => null,
+            'reactions' => $del ? [] : ($reactions[(int)$m['id']] ?? []),
         ];
         $rid = (int)($m['reply_to_id'] ?? 0);
         if ($rid && isset($replies[$rid])) {
@@ -881,6 +885,20 @@ if ($action === 'pin' || $action === 'unpin') {
     }
     if (function_exists('ws_notify')) ws_notify($cid, ws_recipients($db, $cid, $myId));
     out(['ok' => true, 'pins' => conv_pins($db, $cid)]);
+}
+
+/* =================== ACTION: react ===================
+ * Реакции работают независимо от chat v2/v3 — своя таблица, своя ensure(),
+ * не завязана на reply_to_id/file_id. Один клик тем же эмодзи снимает
+ * реакцию, другим — переставляет (см. chat_toggle_reaction). */
+if ($action === 'react') {
+    [$m, $c] = message_with_access($db, (int)($_POST['message_id'] ?? 0), $myId, $myStudioIds);
+    $emoji = trim((string)($_POST['emoji'] ?? ''));
+    if ($emoji === '' || mb_strlen($emoji) > 8) out(['ok' => false, 'error' => 'bad_emoji']);
+    chat_toggle_reaction($db, (int)$m['id'], $myId, $emoji);
+    $sums = chat_reactions_for($db, [(int)$m['id']], $myId);
+    if (function_exists('ws_notify')) ws_notify((int)$m['conversation_id'], ws_recipients($db, (int)$m['conversation_id'], $myId));
+    out(['ok' => true, 'message_id' => (int)$m['id'], 'reactions' => $sums[(int)$m['id']] ?? []]);
 }
 
 /* =================== ACTION: mark_read =================== */
