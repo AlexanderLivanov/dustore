@@ -89,12 +89,14 @@ if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
         $sb_events = (int)$_pdo->query("SELECT COUNT(*) FROM platform_events WHERE is_read=0")->fetchColumn();
         $sb_orgs   = (int)$_pdo->query("SELECT COUNT(*) FROM studios WHERE status='pending'")->fetchColumn();
         $sb_experts = (int)$_pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
+        $sb_assets  = (int)$_pdo->query("SELECT COUNT(*) FROM assets WHERE status='pending'")->fetchColumn();
     } else {
         $_ev = $_pdo->prepare("SELECT COUNT(*) FROM platform_events WHERE studio_id=? AND is_read=0");
         $_ev->execute([$studio_id]);
         $sb_events  = (int)$_ev->fetchColumn();
         $sb_orgs    = 0;
         $sb_experts = 0;
+        $sb_assets  = 0;
     }
 
     $_SESSION[$_ck] = [
@@ -103,6 +105,7 @@ if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
         'events'  => $sb_events,
         'orgs'    => $sb_orgs,
         'experts' => $sb_experts,
+        'assets'  => $sb_assets,
     ];
     $_SESSION[$_ck_ts] = time();
 }
@@ -151,6 +154,7 @@ if ($is_moder) {
     $nav_items[] = ['id' => 'recentorgs', 'href' => '/devs/recentorgs', 'icon' => 'domain_add',   'label' => 'Новые организации', 'badge' => $sb['orgs']];
     $nav_items[] = ['id' => 'experts',    'href' => '/devs/experts',    'icon' => 'verified_user', 'label' => 'Эксперты',          'badge' => $sb['experts']];
     $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => 'security'];
+    $nav_items[] = ['id' => 'assets-mod', 'href' => '/assetstore/manage.php', 'icon' => 'inventory_2', 'label' => 'Модерация ассетов', 'badge' => $sb['assets'] ?? 0];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
         $nav_items[] = ['id' => 'notifications', 'href' => '/devs/notifications', 'icon' => 'campaign', 'label' => 'Уведомления'];

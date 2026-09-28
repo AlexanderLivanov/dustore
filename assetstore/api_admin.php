@@ -33,6 +33,7 @@ set_exception_handler(function (Throwable $e) {
 
 require_once __DIR__ . '/../swad/config.php';
 require_once __DIR__ . '/_acl.php';
+require_once __DIR__ . '/_versions.php';
 
 function jout(array $d, int $code = 200): void
 {
@@ -147,10 +148,12 @@ switch ($action) {
             $sets[] = 'price = ?'; $params[] = $v;
             $diff['price'] = [$asset['price'], $v];
         }
+        $newVersion = null;
         if (array_key_exists('version', $in)) {
             $v = mb_substr(trim((string)$in['version']), 0, 20);
             $sets[] = 'version = ?'; $params[] = $v;
             $diff['version'] = [$asset['version'], $v];
+            if ($v !== '' && $v !== (string)$asset['version']) $newVersion = $v;
         }
         if (array_key_exists('tags', $in)) {
             $tags = array_slice(array_filter(array_map(
@@ -183,6 +186,18 @@ switch ($action) {
         $params[] = $id;
         $pdo->prepare("UPDATE assets SET " . implode(', ', $sets) . " WHERE id = ?")->execute($params);
         acl_log($pdo, $ctx, $id, 'quick_edit', null, null, null, $diff);
+
+        if ($newVersion !== null) {
+            $changelog = trim((string)($in['changelog'] ?? ''));
+            try {
+                asset_record_version($pdo, $id, $newVersion, $changelog !== '' ? $changelog : null, (int)$ctx['uid']);
+                if ($asset['status'] === 'published') {
+                    asset_notify_update($pdo, $id, (string)$asset['name'], $newVersion, $changelog !== '' ? $changelog : null);
+                }
+            } catch (Throwable $e) {
+                error_log('[api_admin] version notify failed: ' . $e->getMessage());
+            }
+        }
 
         jout(['ok' => true, 'changed' => array_keys($diff)]);
     }
