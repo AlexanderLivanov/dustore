@@ -14,7 +14,7 @@
 
 declare(strict_types=1);
 
-const ASSET_SCHEMA_VERSION = 3;
+const ASSET_SCHEMA_VERSION = 4;
 
 final class AssetSchema
 {
@@ -101,12 +101,42 @@ final class AssetSchema
         ];
     }
 
-    /** Пошаговые ALTER'ы. ADD COLUMN IF NOT EXISTS — синтаксис MariaDB. */
+    /**
+     * Есть ли колонка — проверяем через information_schema, а не через
+     * "ADD COLUMN IF NOT EXISTS": это синтаксис MariaDB, на обычном MySQL
+     * (как выяснилось — на проде) падает с ошибкой синтаксиса. Через
+     * information_schema — переносимо на оба движка одинаково.
+     */
+    private static function columnExists(PDO $pdo, string $table, string $column): bool
+    {
+        $st = $pdo->prepare(
+            "SELECT 1 FROM information_schema.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1"
+        );
+        $st->execute([$table, $column]);
+        return (bool)$st->fetchColumn();
+    }
+
+    /** Пошаговые ALTER'ы — каждый шаг сперва проверяет через information_schema,
+     *  есть ли уже колонка, и только потом делает голый ALTER TABLE ... ADD COLUMN
+     *  без IF NOT EXISTS (её нет в стандартном MySQL). */
     private static function upgrade(PDO $pdo, int $from): void
     {
         if ($from < 2) {
-            $pdo->exec("ALTER TABLE asset_payments ADD COLUMN IF NOT EXISTS tier_id INT UNSIGNED NULL AFTER asset_id");
-            $pdo->exec("ALTER TABLE asset_library  ADD COLUMN IF NOT EXISTS tier_id INT UNSIGNED NULL AFTER asset_id");
+            if (!self::columnExists($pdo, 'asset_payments', 'tier_id')) {
+                $pdo->exec("ALTER TABLE asset_payments ADD COLUMN tier_id INT UNSIGNED NULL AFTER asset_id");
+            }
+            if (!self::columnExists($pdo, 'asset_library', 'tier_id')) {
+                $pdo->exec("ALTER TABLE asset_library ADD COLUMN tier_id INT UNSIGNED NULL AFTER asset_id");
+            }
+        }
+        if ($from < 4) {
+            // studios.display_name читают _acl.php/manage.php/_bundles.php
+            // (косметическое имя студии поверх слага name) — на части
+            // инсталляций, в т.ч. на проде, колонки не было вовсе.
+            if (!self::columnExists($pdo, 'studios', 'display_name')) {
+                $pdo->exec("ALTER TABLE studios ADD COLUMN display_name VARCHAR(128) NULL AFTER name");
+            }
         }
     }
 

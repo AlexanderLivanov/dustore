@@ -123,9 +123,23 @@ function acl_ctx(PDO $pdo): array
 
     $studios = [];
     if ($uid) {
-        $st = $pdo->prepare("SELECT id, name, display_name FROM studios WHERE owner_id = ?");
-        $st->execute([$uid]);
-        $studios = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        // display_name должен подтянуться сам через AssetSchema::ensure() выше
+        // (миграция v4), но подстраховываемся на случай, если ALTER на этой
+        // инсталляции по какой-то причине не прошёл (нет прав и т.п.) — тогда
+        // просто не фатал, а имя студии = name без косметической надстройки.
+        try {
+            $st = $pdo->prepare("SELECT id, name, display_name FROM studios WHERE owner_id = ?");
+            $st->execute([$uid]);
+            $studios = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e) {
+            error_log('[acl] studios.display_name недоступна, откатываюсь на name: ' . $e->getMessage());
+            $st = $pdo->prepare("SELECT id, name FROM studios WHERE owner_id = ?");
+            $st->execute([$uid]);
+            $studios = array_map(
+                static fn($s) => $s + ['display_name' => null],
+                $st->fetchAll(PDO::FETCH_ASSOC) ?: []
+            );
+        }
     }
 
     return $ctx = [
