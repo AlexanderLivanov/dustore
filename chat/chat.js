@@ -16,6 +16,7 @@
 
   /* ── Утилиты ─────────────────────────────────────────────────────────────── */
   const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -249,7 +250,8 @@
   function paintList() {
     const box = $('#list');
     const all = state.convs;
-    if (MOBILE) { paintChips(); paintRecent(); }
+    if (MOBILE) paintChips();
+    paintStories();
     if (!all.length) { box.innerHTML = '<div class="empty">Здесь появятся ваши диалоги</div>'; return; }
     const shown = MOBILE ? all.filter(c => inFilter(c, state.filter)) : all;
     if (!shown.length) { box.innerHTML = '<div class="empty">В этом разделе пока пусто</div>'; return; }
@@ -262,10 +264,11 @@
       const last = isSys
         ? (c.last ? esc(c.last.body) : 'нет уведомлений')
         : (c.last ? (c.last.mine ? '<span class="me">Вы: </span>' : '') + esc(c.last.body) : '<i>нет сообщений</i>');
-      /* только телефон: точка «в сети», плашка «студия», значок закрепа у «Уведомлений» */
+      /* точка «в сети» и плашка «студия» — теперь на обеих платформах (десктоп
+         был обделён при мобильном редизайне); закреп у «Уведомлений» — только телефон */
       const av = `<div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>`;
-      const avCell = MOBILE ? `<div class="av-w">${av}${isOnline(c.peer) ? '<i class="on" title="в сети"></i>' : ''}</div>` : av;
-      const pill = MOBILE && c.peer.kind === 'studio' ? '<span class="c-pill">студия</span>' : '';
+      const avCell = `<div class="av-w">${av}${isOnline(c.peer) ? '<i class="on" title="в сети"></i>' : ''}</div>`;
+      const pill = c.peer.kind === 'studio' ? '<span class="c-pill">студия</span>' : '';
       const time = `<span class="c-time">${c.last?.state ? `<span class="ticks ${c.last.state === 'delivered' ? 'dlv' : c.last.state}">${TICK_SVG}</span>` : ''}${c.ts ? fmtTime(c.ts) : ''}</span>`;
       /* на телефоне правая колонка как в макете: время сверху, закреп и счётчик снизу */
       const end = MOBILE ? `<span class="c-end">${time}<span class="c-bot">${isSys ? PIN_SVG : ''}${badge}</span></span>` : badge;
@@ -296,24 +299,187 @@
     paintList();
   });
 
-  /* Лента «Недавние»: те, кто написал (кольцо) и кто сейчас в сети (точка). Быстрый вход
-     в беседу одним тапом — вместо «историй» из макета, у нас их нет. */
-  function paintRecent() {
-    const box = $('#recent'); if (!box) return;
-    const cs = state.convs.filter(c => c.peer.kind !== 'system' && c.id > 0);
-    const score = c => (c.unread ? 2 : 0) + (isOnline(c.peer) ? 1 : 0);
-    const top = cs.map((c, i) => ({ c, i })).sort((a, b) => score(b.c) - score(a.c) || a.i - b.i).slice(0, 12).map(x => x.c);
-    box.hidden = top.length < 2 || state.filter !== 'all';
-    box.innerHTML = box.hidden ? '' : top.map(c =>
-      `<button type="button" class="rc${c.unread ? ' hot' : ''}" data-id="${c.id}">
-        <span class="ring"><span class="av ${avShape(c.peer)}">${avatarHTML(c.peer)}</span>${isOnline(c.peer) ? '<i class="on"></i>' : ''}</span>
-        <span class="rc-n">${esc(c.peer.name)}</span></button>`).join('');
+  /* ================================================================
+     ИСТОРИИ: кольцо друзей с активными сторис на 24ч, над списком чатов.
+     Один и тот же блок и на мобильном, и на десктопе (см. chat/_markup.php
+     #stories, chat/_stories.php на сервере). Раньше здесь была лента
+     «Недавние» — заглушка вместо историй из макета, которых не было;
+     теперь настоящие. */
+  const STORY_BG = ['#c3217a', '#7d3ac1', '#1c8f6b', '#c17a1c', '#2d5fc1', '#c13030'];
+  const STORY_ERR = { rate: 'Слишком часто — не больше 20 историй в час', limit: 'У вас уже 20 активных историй', too_big: 'Файл больше 8 МБ', bad_type: 'Только JPG, PNG или WebP', empty: 'Напишите хоть что-нибудь', too_long: 'Слишком длинно', storage: 'Не удалось сохранить файл', network: 'Нет связи с сервером' };
+  const storyPeer = u => ({ name: u.username, avatar: u.avatar, kind: 'round' });
+  let storiesCache = null, storiesFetchedAt = 0;
+
+  async function paintStories() {
+    const box = $('#stories'); if (!box) return;
+    if (!storiesCache || Date.now() - storiesFetchedAt > 30000) {
+      storiesFetchedAt = Date.now();
+      try { const r = await api('stories_list', {}, 'GET'); if (r.ok) storiesCache = r.groups; } catch (e) { }
+    }
+    renderStories(box, storiesCache || []);
   }
-  $('#recent')?.addEventListener('click', e => {
-    const b = e.target.closest('.rc'); if (!b) return;
-    const c = state.convs.find(x => x.id === +b.dataset.id); if (!c) return;
-    openConv(c.id, c.peer, c.type === 'studio', null, false);
+  function renderStories(box, groups) {
+    box.hidden = !groups.length;
+    if (!groups.length) { box.innerHTML = ''; return; }
+    box.innerHTML = groups.map((g, i) => {
+      const peer = storyPeer(g.user);
+      const ring = !g.stories.length ? '' : (g.has_unseen ? ' unseen' : ' seen');
+      const plus = g.is_me ? '<i class="sr-plus" data-i="' + i + '">+</i>' : '';
+      return `<button type="button" class="sr${ring}" data-i="${i}">
+        <span class="ring"><span class="av ${avShape(peer)}">${avatarHTML(peer)}</span>${plus}</span>
+        <span class="rc-n">${g.is_me ? 'Вы' : esc(g.user.username)}</span></button>`;
+    }).join('');
+  }
+  $('#stories')?.addEventListener('click', e => {
+    const plus = e.target.closest('.sr-plus'); if (plus) return openStoryComposer();
+    const b = e.target.closest('.sr'); if (!b) return;
+    const g = (storiesCache || [])[+b.dataset.i]; if (!g) return;
+    if (g.is_me && !g.stories.length) return openStoryComposer();
+    openStoryViewer(+b.dataset.i);
   });
+
+  /* ---- просмотрщик на весь экран ---- */
+  const sv = { groups: [], gi: 0, si: 0, timer: null, holdT: null, held: false, touchY: null };
+  function currentGroup() { return sv.groups[sv.gi]; }
+  function currentStory() { const g = currentGroup(); return g ? g.stories[sv.si] : null; }
+
+  function openStoryViewer(groupIndex) {
+    sv.groups = storiesCache || []; sv.gi = groupIndex; sv.si = 0;
+    $('#storyView').hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    renderStorySlide();
+  }
+  function closeStoryViewer() {
+    clearTimeout(sv.timer); clearTimeout(sv.holdT);
+    $('#storyView').hidden = true;
+    document.documentElement.style.overflow = '';
+    paintStories();
+  }
+  function renderStorySlide() {
+    clearTimeout(sv.timer);
+    const g = currentGroup();
+    if (!g) return closeStoryViewer();
+    const s = g.stories[sv.si];
+    if (!s) {
+      if (sv.gi < sv.groups.length - 1) { sv.gi++; sv.si = 0; return renderStorySlide(); }
+      return closeStoryViewer();
+    }
+    $('#svBars').innerHTML = g.stories.map((_, i) => `<span class="sv-bar${i < sv.si ? ' done' : ''}">${i === sv.si ? '<i id="svFill"></i>' : ''}</span>`).join('');
+    const peer = storyPeer(g.user);
+    $('#svAv').className = 'av ' + avShape(peer);
+    $('#svAv').innerHTML = avatarHTML(peer);
+    $('#svName').textContent = g.is_me ? 'Ваша история' : g.user.username;
+    $('#svTime').textContent = fmtTime(s.created_at);
+    $('#svDel').hidden = !g.is_me;
+    $('#svViewersBtn').hidden = !g.is_me;
+    $('#svViewerList').hidden = true;
+    const media = $('#svMedia');
+    media.innerHTML = s.kind === 'photo'
+      ? `<img src="${esc(s.media_url)}" alt="">${s.text ? `<div class="sv-cap">${esc(s.text)}</div>` : ''}`
+      : `<div class="sv-text" style="background:${esc(s.bg || STORY_BG[0])}">${esc(s.text)}</div>`;
+
+    if (!s.seen) { api('story_view', { id: s.id }, 'POST'); s.seen = true; g.has_unseen = g.stories.some(x => !x.seen); }
+
+    const dur = s.kind === 'text' ? 6000 : 5000;
+    requestAnimationFrame(() => { const f = $('#svFill'); if (f) { f.style.animation = 'none'; void f.offsetWidth; f.style.animation = `svFill ${dur}ms linear forwards`; } });
+    sv.timer = setTimeout(nextStory, dur);
+  }
+  function nextStory() { sv.si++; renderStorySlide(); }
+  function prevStory() { if (sv.si > 0) sv.si--; else if (sv.gi > 0) { sv.gi--; sv.si = 0; } renderStorySlide(); }
+  function svPause() { clearTimeout(sv.timer); const f = $('#svFill'); if (f) f.style.animationPlayState = 'paused'; }
+  function svResume() {
+    const f = $('#svFill'); if (!f) return;
+    f.style.animationPlayState = 'running';
+    const pct = parseFloat(getComputedStyle(f).width) / Math.max(1, parseFloat(getComputedStyle(f.parentElement).width));
+    const dur = currentStory()?.kind === 'text' ? 6000 : 5000;
+    sv.timer = setTimeout(nextStory, Math.max(300, dur * (1 - pct)));
+  }
+  function svDown() { sv.held = false; sv.holdT = setTimeout(() => { sv.held = true; svPause(); }, 180); }
+  function svUp(dir) { clearTimeout(sv.holdT); if (sv.held) { svResume(); sv.held = false; return; } dir === 'prev' ? prevStory() : nextStory(); }
+  $('#svPrev')?.addEventListener('pointerdown', svDown);
+  $('#svPrev')?.addEventListener('pointerup', () => svUp('prev'));
+  $('#svNext')?.addEventListener('pointerdown', svDown);
+  $('#svNext')?.addEventListener('pointerup', () => svUp('next'));
+  $('#svClose')?.addEventListener('click', closeStoryViewer);
+  $('#svDel')?.addEventListener('click', async () => {
+    const s = currentStory(); if (!s || !confirm('Удалить историю?')) return;
+    svPause();
+    await api('story_delete', { id: s.id }, 'POST');
+    currentGroup().stories.splice(sv.si, 1);
+    renderStorySlide();
+  });
+  $('#svViewersBtn')?.addEventListener('click', async () => {
+    const s = currentStory(); if (!s) return;
+    svPause();
+    const r = await api('story_viewers', { id: s.id }, 'GET');
+    const list = $('#svViewerList'); list.hidden = false;
+    list.innerHTML = (r.viewers || []).length
+      ? r.viewers.map(v => `<div class="sv-viewer"><span class="av ${avShape(storyPeer(v))}">${avatarHTML(storyPeer(v))}</span>${esc(v.username)}</div>`).join('')
+      : '<div class="sv-viewer-empty">Пока никто не смотрел</div>';
+  });
+  $('#storyView')?.addEventListener('touchstart', e => { sv.touchY = e.touches[0].clientY; }, { passive: true });
+  $('#storyView')?.addEventListener('touchend', e => {
+    if (sv.touchY === null) return;
+    const dy = e.changedTouches[0].clientY - sv.touchY; sv.touchY = null;
+    if (dy > 80) closeStoryViewer();
+  }, { passive: true });
+
+  /* ---- публикация истории ---- */
+  let snMode = 'photo', snFileObj = null, snBgIdx = 0;
+  function openStoryComposer() {
+    $('#storyNew').hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    snReset();
+  }
+  function closeStoryComposer() { $('#storyNew').hidden = true; document.documentElement.style.overflow = ''; }
+  function snReset() {
+    $('#snFile').value = ''; snFileObj = null;
+    $('#snPreview').hidden = true; $('#snCaption').value = ''; $('#snTextInput').value = '';
+    snMode = 'photo'; snBgIdx = 0;
+    $$('.sn-tabs button').forEach(b => b.classList.toggle('on', b.dataset.sn === 'photo'));
+    $('#snPhoto').hidden = false; $('#snText').hidden = true;
+    renderSnBg(); checkSnValid();
+  }
+  function renderSnBg() {
+    $('#snBg').innerHTML = STORY_BG.map((c, i) => `<button type="button" class="sn-swatch${i === snBgIdx ? ' on' : ''}" data-i="${i}" style="background:${c}"></button>`).join('');
+  }
+  function checkSnValid() { $('#snSubmit').disabled = snMode === 'photo' ? !snFileObj : !$('#snTextInput').value.trim(); }
+  $('#snBg')?.addEventListener('click', e => { const b = e.target.closest('.sn-swatch'); if (!b) return; snBgIdx = +b.dataset.i; renderSnBg(); });
+  $('.sn-tabs')?.addEventListener('click', e => {
+    const b = e.target.closest('button[data-sn]'); if (!b) return;
+    snMode = b.dataset.sn;
+    $$('.sn-tabs button').forEach(x => x.classList.toggle('on', x === b));
+    $('#snPhoto').hidden = snMode !== 'photo';
+    $('#snText').hidden = snMode !== 'text';
+    checkSnValid();
+  });
+  $('#snPick')?.addEventListener('click', () => $('#snFile').click());
+  $('#snFile')?.addEventListener('change', () => {
+    const f = $('#snFile').files[0]; if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { toast('Файл больше 8 МБ', true); return; }
+    snFileObj = f;
+    $('#snImg').src = URL.createObjectURL(f);
+    $('#snPreview').hidden = false;
+    checkSnValid();
+  });
+  $('#snPreviewX')?.addEventListener('click', () => { snFileObj = null; $('#snFile').value = ''; $('#snPreview').hidden = true; checkSnValid(); });
+  $('#snTextInput')?.addEventListener('input', checkSnValid);
+  $('#snClose')?.addEventListener('click', closeStoryComposer);
+  $('#snSubmit')?.addEventListener('click', async () => {
+    $('#snSubmit').disabled = true;
+    let r;
+    if (snMode === 'photo') {
+      const fd = new FormData();
+      fd.append('action', 'story_create'); fd.append('kind', 'photo');
+      fd.append('file', snFileObj); fd.append('text', $('#snCaption').value.trim());
+      r = await fetch(API + '?action=story_create', { method: 'POST', credentials: 'same-origin', body: fd }).then(x => x.json()).catch(() => ({ ok: false, error: 'network' }));
+    } else {
+      r = await api('story_create', { kind: 'text', text: $('#snTextInput').value.trim(), bg: STORY_BG[snBgIdx] }, 'POST');
+    }
+    if (!r.ok) { $('#snSubmit').disabled = false; toast(STORY_ERR[r.error] || 'Не получилось опубликовать', true); return; }
+    closeStoryComposer(); storiesCache = null; paintStories(); toast('История опубликована');
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#storyView').hidden) closeStoryViewer(); });
   $('#list').addEventListener('click', e => {
     const el = e.target.closest('.card'); if (!el) return;
     openConv(+el.dataset.id, JSON.parse(el.dataset.peer), el.dataset.studio === '1', null, el.dataset.system === '1');

@@ -11,12 +11,14 @@ require_once __DIR__ . '/_crypto.php';
 require_once __DIR__ . '/_files.php';
 require_once __DIR__ . '/_blocks.php';
 require_once __DIR__ . '/_reactions.php';
+require_once __DIR__ . '/_stories.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $db = (new Database())->connect('dustore');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 chat_blocks_ensure($db);
 chat_reactions_ensure($db);
+chat_stories_ensure($db);
 
 /**
  * Чат v2 (файлы, ответы, пины, звук) включается сам, как только прогнана
@@ -683,6 +685,40 @@ if ($action === 'unblock_user') {
     if ($target<=0) out(['ok'=>false,'error'=>'bad_id']);
     chat_unblock_user($db,$myId,$target);
     out(['ok'=>true,'blocked_by_me'=>false]);
+}
+
+/* =================== ACTION: stories_list / story_create / story_view / story_viewers / story_delete ===================
+ * «Истории»: эфемерные фото/текстовые карточки на 24 часа, видны друзьям.
+ * Кольцо над списком чатов (см. chat/_markup.php #stories) — на мобильном и
+ * десктопе одинаково, см. chat_stories_ensure() в _stories.php. */
+if ($action === 'stories_list') {
+    out(['ok' => true, 'groups' => chat_stories_feed($db, $myId)]);
+}
+if ($action === 'story_create') {
+    $kind = (string)($_POST['kind'] ?? 'photo');
+    // не больше 20 публикаций в час на сессию — как у Fid-загрузки фото
+    $now = time();
+    $log = array_values(array_filter((array)($_SESSION['chat_story_up'] ?? []), static fn($t) => $t > $now - 3600));
+    if (count($log) >= 20) out(['ok' => false, 'error' => 'rate']);
+    $log[] = $now; $_SESSION['chat_story_up'] = $log;
+
+    $r = $kind === 'text'
+        ? chat_story_create_text($db, $myId, (string)($_POST['text'] ?? ''), (string)($_POST['bg'] ?? ''))
+        : chat_story_create_photo($db, $myId, $_FILES['file'] ?? [], (string)($_POST['text'] ?? ''));
+    out($r);
+}
+if ($action === 'story_view') {
+    $id = (int)($_POST['id'] ?? 0); if ($id <= 0) out(['ok' => false, 'error' => 'bad_id']);
+    chat_story_view($db, $id, $myId);
+    out(['ok' => true]);
+}
+if ($action === 'story_viewers') {
+    $id = (int)($_GET['id'] ?? 0); if ($id <= 0) out(['ok' => false, 'error' => 'bad_id']);
+    out(['ok' => true, 'viewers' => chat_story_viewers($db, $id, $myId)]);
+}
+if ($action === 'story_delete') {
+    $id = (int)($_POST['id'] ?? 0); if ($id <= 0) out(['ok' => false, 'error' => 'bad_id']);
+    out(['ok' => chat_story_delete($db, $id, $myId)]);
 }
 
 /* ════════════════════════ ЧАТ v2 ════════════════════════════════════════ */
