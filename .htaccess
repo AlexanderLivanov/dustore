@@ -10,6 +10,8 @@ RedirectMatch 404 "/\.(?!well-known/)"
 RewriteRule ^d/([a-zA-Z0-9_-]+)/?$ dev?name=$1 [L,QSA]
 # То же самое для /g/id (игры)
 RewriteRule ^g/([0-9]+)/?$ game?name=$1 [L,QSA]
+# Пост ленты: /fid/post/123 открывает ленту сразу с оверлеем поста
+RewriteRule ^fid/post/([0-9]+)/?$ fid/index.php?post=$1 [L,QSA]
 # И игроков 
 RewriteEngine On
 RewriteRule ^player/([^/]+)/?$ /player.php?username=$1 [L,QSA]

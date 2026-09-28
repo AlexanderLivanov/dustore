@@ -141,6 +141,7 @@ $nav_items = [
     ['divider' => true, 'label' => 'Студия'],
     ['id' => 'studio',     'href' => '/devs/mystudio',  'icon' => 'apartment',          'label' => 'Моя студия'],
     ['id' => 'staff',      'href' => '/devs/staff',     'icon' => 'groups',             'label' => 'Сотрудники'],
+    ['id' => 'coop',       'href' => '/devs/coop',      'icon' => 'group_work',         'label' => 'Соучастники проектов'],
     ['id' => 'select',     'href' => '/devs/select',    'icon' => 'swap_horiz',         'label' => 'Сменить студию'],
     ['id' => 'promotion',  'href' => '/devs/promotion', 'icon' => 'campaign',           'label' => 'Продвижение'],
 ];
