@@ -27,6 +27,24 @@
     });
   }
 
+  /* ── Хартбит активности: тот же swad/controllers/activity.php, что зовёт
+       десктопная шапка (swad/static/elements/header.php) — мобильная
+       оболочка его не звала вообще, поэтому DAU/сессии/«онлайн» по всему
+       сайту (не только в админке) видели только десктоп. Паттерн 1-в-1
+       десктопный: сразу + сброс таймера на активность + раз в минуту фоном. */
+  function pingActivity() {
+    fetch('/swad/controllers/activity.php', { method: 'POST', credentials: 'same-origin' }).catch(() => { });
+  }
+  pingActivity();
+  let activityTimeout;
+  function resetActivityTimer() {
+    clearTimeout(activityTimeout);
+    activityTimeout = setTimeout(pingActivity, 30000);
+  }
+  ['touchstart', 'click', 'scroll'].forEach(ev => addEventListener(ev, resetActivityTimer, { passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pingActivity(); });
+  setInterval(pingActivity, 60000);
+
   /* ── Тост ── */
   let tt;
   function toast(msg) {

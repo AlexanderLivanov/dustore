@@ -154,6 +154,7 @@ if ($is_moder) {
     $nav_items[] = ['id' => 'recentorgs', 'href' => '/devs/recentorgs', 'icon' => 'domain_add',   'label' => 'Новые организации', 'badge' => $sb['orgs']];
     $nav_items[] = ['id' => 'experts',    'href' => '/devs/experts',    'icon' => 'verified_user', 'label' => 'Эксперты',          'badge' => $sb['experts']];
     $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => 'security'];
+    $nav_items[] = ['id' => 'mobile_analytics', 'href' => '/devs/mobile_analytics', 'icon' => 'smartphone', 'label' => 'Аналитика: мобильная версия'];
     $nav_items[] = ['id' => 'assets-mod', 'href' => '/assetstore/manage.php', 'icon' => 'inventory_2', 'label' => 'Модерация ассетов', 'badge' => $sb['assets'] ?? 0];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];

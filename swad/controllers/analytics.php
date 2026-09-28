@@ -57,7 +57,16 @@ class Analytics
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($d), 4));
     }
 
-    private static function detectPlatform(): string
+    /**
+     * public — это ЕДИНСТВЕННОЕ определение платформы, которым должен
+     * пользоваться весь сайт (см. swad/controllers/activity.php). До этого
+     * в коде было три независимых UA-детектора (тут, в mobile_redirect.php
+     * и в chat.js через window.CHAT_CFG.mobile) — что не страшно, пока они
+     * решают разные локальные задачи, но плодить четвёртый ради очередной
+     * метрики уже не стоит: activity.php переиспользует этот же метод, чтобы
+     * "мобильный" в разных отчётах платформы значило одно и то же.
+     */
+    public static function detectPlatform(): string
     {
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
         if (preg_match('/tablet|ipad/i', $ua))            return 'tablet';
