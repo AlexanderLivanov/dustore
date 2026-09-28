@@ -69,8 +69,24 @@ function asset_transition_label(string $from, string $to): string
 /* ── Роль ────────────────────────────────────────────────────────────────── */
 /**
  * ⚠️ ЕДИНСТВЕННОЕ МЕСТО, где читается роль из БД.
- *    Если у тебя роль лежит не в users.role, а, например, в staff
- *    (join по telegram_id, НЕ по users.id) — правится только эта функция.
+ *
+ * Раньше здесь стояло `SELECT role FROM users` — такой колонки в users нет
+ * нигде в проекте (везде используется global_role: -1 = админ платформы,
+ * 0 = обычный пользователь), запрос падал на PDOException, ловился и тихо
+ * подменялся на ACL_ROLE_USER. Из-за этого is_staff/is_root были false
+ * ВСЕГДА, для всех, включая самого админа платформы — «Режим модератора»
+ * в manage.php был физически недостижим.
+ *
+ * Важно: это не просто смена имени колонки. global_role по умолчанию у
+ * обычного пользователя = 0, а не NULL, и 0 <= ACL_STAFF_MAX(3) — если бы
+ * мы просто скопировали global_role в $role как есть, каждый обычный
+ * пользователь стал бы «модератором ассетов». Отдельной шкалы 0..3 под
+ * будущих модераторов в global_role по факту не существует (для игр/студий
+ * модераторские роли живут в отдельной таблице staff, а не в global_role) —
+ * поэтому здесь бинарный маппинг: админ платформы -> ACL_ROLE_ROOT,
+ * все остальные -> ACL_ROLE_USER. Понадобится промежуточный «модератор
+ * ассетов, не админ» — заводить для него отдельную таблицу (по образцу
+ * fx_game_mods), а не полагаться на global_role.
  */
 function acl_role(PDO $pdo, ?int $uid): int
 {
@@ -80,12 +96,11 @@ function acl_role(PDO $pdo, ?int $uid): int
 
     $role = ACL_ROLE_USER;
     try {
-        $st = $pdo->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT global_role FROM users WHERE id = ? LIMIT 1");
         $st->execute([$uid]);
         $v = $st->fetchColumn();
-        // fail-closed: NULL / '' / отсутствие строки => обычный пользователь
-        if ($v !== false && $v !== null && $v !== '') {
-            $role = (int)$v;
+        if ($v !== false && $v !== null && (int)$v <= ACL_ROLE_ROOT) {
+            $role = ACL_ROLE_ROOT;
         }
     } catch (PDOException $e) {
         error_log('[acl] role lookup failed: ' . $e->getMessage());

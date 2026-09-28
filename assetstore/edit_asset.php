@@ -14,11 +14,16 @@ $asset_id = intval($_GET['id'] ?? 0);
 $user_id  = (int)$_SESSION['USERDATA']['id'];
 $isAdmin  = false;
 
-// Check admin or studio owner
-$u = $pdo->prepare("SELECT role FROM users WHERE id=? LIMIT 1");
+/* Check admin or studio owner.
+   Было: SELECT role FROM users + сравнение со строкой 'admin' — такой
+   колонки в users нет (см. assetstore/_acl.php), запрос падал
+   PDOException'ом на КАЖДОМ открытии страницы, и без try/catch это был
+   голый фатал: править ассет не мог вообще никто, ни владелец, ни админ.
+   Реальная роль — users.global_role, -1 = админ платформы. */
+$u = $pdo->prepare("SELECT global_role FROM users WHERE id=? LIMIT 1");
 $u->execute([$user_id]);
 $ur = $u->fetch(PDO::FETCH_ASSOC);
-$isAdmin = ($ur['role'] ?? '') === 'admin';
+$isAdmin = ((int)($ur['global_role'] ?? 0)) === -1;
 
 // Get studio
 $studioStmt = $pdo->prepare("SELECT name FROM studios WHERE owner_id=? LIMIT 1");
