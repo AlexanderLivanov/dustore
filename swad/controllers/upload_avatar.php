@@ -58,6 +58,8 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/user.php';
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/_avatar_schema.php';
+require_once __DIR__ . '/_avatars.php';
 
 $autoload = __DIR__ . '/../../vendor/autoload.php';
 if (!is_readable($autoload)) {
@@ -161,12 +163,24 @@ try {
     if ($url === '') throw new RuntimeException('empty ObjectURL');
 
     $pdo = (new Database())->connect();
+    AvatarSchema::ensure($pdo);
+
     $pdo->prepare("UPDATE users SET profile_picture = ?, updated = NOW() WHERE id = ?")
         ->execute([$url, $user_id]);
 
     $_SESSION['USERDATA']['profile_picture'] = $url;
 
-    reply(['success' => true, 'url' => $url]);
+    // История — best-effort: если запись в user_avatars почему-то не
+    // удалась, аватарка у пользователя всё равно уже сохранена и видна,
+    // просто не появится в листалке. Не роняем успешный аплоад из-за этого.
+    $avatarId = null;
+    try {
+        $avatarId = avatar_history_add($pdo, $user_id, $url, $key);
+    } catch (Throwable $e) {
+        error_log('[upload_avatar] history write failed: ' . $e->getMessage());
+    }
+
+    reply(['success' => true, 'url' => $url, 'avatar_id' => $avatarId]);
 
 } catch (Throwable $e) {
     // Текст исключения AWS содержит эндпоинт, имя бакета и иногда ключи —
