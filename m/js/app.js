@@ -289,6 +289,20 @@
     descMore.addEventListener('click', () => { desc.classList.remove('clamp'); descMore.hidden = true; });
   }
 
+  // Трейлер: постер-facade -> реальный эмбед лежит в <template> и не грузится,
+  // пока не кликнут (iframe YouTube/VK не тянется каждому посетителю карточки)
+  const trailerFacade = $('.gp-trailer-facade');
+  if (trailerFacade) {
+    const play = () => {
+      const tpl = trailerFacade.querySelector('template');
+      if (tpl) trailerFacade.replaceWith(tpl.content.cloneNode(true));
+    };
+    trailerFacade.addEventListener('click', play);
+    trailerFacade.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); }
+    });
+  }
+
   // Вишлист: оптимистично + идемпотентно (шлём желаемое состояние, а не «переключи»)
   const wish = $('#wishBtn');
   wish?.addEventListener('click', async () => {

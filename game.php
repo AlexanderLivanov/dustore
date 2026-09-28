@@ -343,6 +343,14 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
         .gp-trailer{position:relative;padding-bottom:56.25%;height:0;border-radius:var(--radius);
             overflow:hidden;border:1px solid var(--border);}
         .gp-trailer iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+        .gp-trailer-facade{position:absolute;inset:0;background-size:cover;background-position:center;
+            display:flex;align-items:center;justify-content:center;cursor:pointer;background-color:#000;}
+        .gp-trailer-facade::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,.28);transition:background .15s;}
+        .gp-trailer-facade:hover::before{background:rgba(0,0,0,.15);}
+        .gp-trailer-play{position:relative;z-index:1;width:64px;height:64px;border-radius:50%;
+            background:rgb(var(--brand-rgb, 195, 33, 120));color:#fff;display:flex;align-items:center;
+            justify-content:center;padding-left:4px;transition:transform .15s;box-shadow:0 4px 18px rgba(0,0,0,.4);}
+        .gp-trailer-facade:hover .gp-trailer-play{transform:scale(1.08);}
         /* ── SCREENSHOTS ── */
         .gp-screenshots{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
         .gp-screenshot{aspect-ratio:16/9;border-radius:10px;background-size:cover;
@@ -898,7 +906,7 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($game['trailer_url'])): $trailerHtml = trailer_embed($game['trailer_url']); ?>
+                <?php if (!empty($game['trailer_url'])): $trailerHtml = trailer_facade_html($game['trailer_url'], $fxArt); ?>
                 <?php if ($trailerHtml !== ''): ?>
                 <div class="gp-section">
                     <h2 class="gp-section-title">Трейлер <?= $fxGear('edit', 'Трейлер', 'trailer_url') ?></h2>
@@ -1050,6 +1058,25 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
         e.preventDefault();
         var t = document.querySelector('.fx-tab[data-pane="reviews"]'); if (t) t.click();
         setTimeout(function () { var f = document.getElementById('review-form-wrap'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 80);
+    });
+
+    /* Трейлер: постер-facade -> реальный эмбед лежит в <template> и не грузится,
+       пока не кликнут — так iframe YouTube/VK не тянется каждому посетителю карточки. */
+    function playTrailerFacade(f) {
+        var tpl = f.querySelector('template');
+        if (!tpl) return;
+        f.replaceWith(tpl.content.cloneNode(true));
+    }
+    document.addEventListener('click', function (e) {
+        var f = e.target.closest && e.target.closest('.gp-trailer-facade');
+        if (f) playTrailerFacade(f);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var f = e.target.closest && e.target.closest('.gp-trailer-facade');
+        if (!f) return;
+        e.preventDefault();
+        playTrailerFacade(f);
     });
     </script>
     <script>

@@ -57,7 +57,7 @@ $features     = json_decode((string)($game['features'] ?? ''), true) ?: [];
 $requirements = json_decode((string)($game['requirements'] ?? ''), true) ?: [];
 $achievements = json_decode((string)($game['achievements'] ?? ''), true) ?: [];
 $badges       = array_values(array_filter(array_map('trim', explode(',', (string)($game['badges'] ?? '')))));
-$trailer      = trailer_embed($game['trailer_url'] ?? '');
+$trailer      = trailer_facade_html($game['trailer_url'] ?? '', $hero);
 $size         = (int)($game['game_zip_size'] ?? 0);
 $sizeLabel    = $size > 0 ? ($size >= 1073741824 ? number_format($size / 1073741824, 1, ',', '') . ' ГБ' : max(1, round($size / 1048576)) . ' МБ') : null;
 $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk.php');
