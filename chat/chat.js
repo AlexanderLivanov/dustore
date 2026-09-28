@@ -19,6 +19,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const isTouch = matchMedia('(pointer: coarse)').matches;
+  const INPUT_PLACEHOLDER = $('#input') ? $('#input').placeholder : 'Написать сообщение…';
 
   function api(action, params = {}, method = 'GET') {
     const opt = { method, credentials: 'same-origin' };
@@ -82,7 +83,7 @@
   const state = {
     tab: 'personal', convId: 0, lastId: 0, firstId: 0, hasMore: false,
     draft: null, header: null, isSystem: false, listTimer: null, threadTimer: null,
-    peerLastRead: 0, peerDelivered: 0,
+    peerLastRead: 0, peerDelivered: 0, blocked: { byMe: false, me: false },
     wallpaper: null,          // что пришло с сервера: { active, scope, mine, shared }
     msgs: new Map(),          // id → сообщение (для меню, копирования, ответа)
     pins: [], pinIdx: 0,
@@ -341,6 +342,8 @@
     $('#menu').hidden = true;
     $('#delConv').hidden = !!isSystem;
     $('#wpOpen').hidden = !!isSystem || id <= 0;
+    $('#blockUser').hidden = !!isSystem || !!isStudio || id <= 0;
+    state.blocked = { byMe: false, me: false };
     showRoom(true);
     renderPins();
     syncQuick();
@@ -361,7 +364,7 @@
 
   function applyHeader(h) {
     if (!h) return;
-    state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind };
+    state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind, last_seen: h.last_seen, studio: h.studio, tag: h.tag };
     if (state.header.peer && state.header.peer.name === '…' && h.name) {
       state.header.peer = { kind: h.kind, id: h.peer_id, name: h.name, avatar: h.avatar };
       $('#rhName').textContent = h.name;
@@ -370,13 +373,32 @@
     }
     state.peerLastRead = h.peer_last_read_id || 0;
     state.peerDelivered = Math.max(h.peer_last_delivered_id || 0, state.peerLastRead);
+
+    // Чёрный список — только личные диалоги; для студий/системных h.blocked_* нет вовсе
+    state.blocked = { byMe: !!h.blocked_by_me, me: !!h.blocked_me };
+    const blockedEither = state.blocked.byMe || state.blocked.me;
+    $('#blockUser').hidden = h.kind !== 'user' || !!h.studio;
+    $('#blockUser').textContent = state.blocked.byMe ? 'Разблокировать' : 'Заблокировать';
+    applyBlockedComposerState();
+
     let sub;
-    if (h.kind === 'system') sub = 'системные уведомления';
+    if (blockedEither) sub = state.blocked.byMe ? 'вы заблокировали пользователя' : 'пользователь вас заблокировал';
+    else if (h.kind === 'system') sub = 'системные уведомления';
     else if (h.kind === 'studio') sub = 'официальный канал студии';
     else sub = h.tag ? ('обращение · ' + h.tag) : (lastSeen(h.last_seen) || 'личный чат');
-    const online = h.kind === 'user' && h.last_seen && (Date.now() - asDate(h.last_seen) < 90000);
+    const online = !blockedEither && h.kind === 'user' && h.last_seen && (Date.now() - asDate(h.last_seen) < 90000);
     $('#rhSub').innerHTML = `<span class="live${online ? '' : ' off'}"></span>${esc(sub)}`;
     updateReadTicks();
+  }
+
+  /** Включает/выключает композер по текущему state.blocked — вызывается и из
+   *  applyHeader() (открыли диалог), и сразу после клика по «Заблокировать». */
+  function applyBlockedComposerState() {
+    const blocked = !!(state.blocked && (state.blocked.byMe || state.blocked.me));
+    $('#input').disabled = blocked;
+    $('#attachBtn').disabled = blocked;
+    $('#input').placeholder = blocked ? 'Переписка недоступна' : INPUT_PLACEHOLDER;
+    autosize();
   }
 
   async function loadInitial() {
@@ -765,6 +787,21 @@
     if (id === state.convId) { $('#app').classList.remove('show-room'); state.convId = 0; clearInterval(state.threadTimer); showRoom(false); }
     loadList();
   }
+  async function toggleBlock() {
+    const uid = state.header && state.header.peer_id;
+    if (!uid) return;
+    const willBlock = !(state.blocked && state.blocked.byMe);
+    if (willBlock && !confirm('Заблокировать пользователя? Он больше не сможет писать вам, а вы — ему. Переписка останется видна.')) return;
+    const r = await api(willBlock ? 'block_user' : 'unblock_user', { user_id: uid }, 'POST');
+    if (!r.ok) { toast('Не удалось выполнить', true); return; }
+    state.blocked = { byMe: willBlock, me: state.blocked ? state.blocked.me : false };
+    $('#blockUser').textContent = willBlock ? 'Разблокировать' : 'Заблокировать';
+    applyBlockedComposerState();
+    const online = !willBlock && state.header.last_seen && (Date.now() - asDate(state.header.last_seen) < 90000);
+    const sub = willBlock ? 'вы заблокировали пользователя' : (lastSeen(state.header.last_seen) || 'личный чат');
+    $('#rhSub').innerHTML = `<span class="live${online ? '' : ' off'}"></span>${esc(sub)}`;
+    toast(willBlock ? 'Пользователь заблокирован' : 'Пользователь разблокирован');
+  }
 
   $('#sideMore').addEventListener('click', e => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -987,7 +1024,8 @@
     const why = err === 'too_fast' ? 'Слишком часто, подождите секунду'
       : err === 'network' ? 'Нет соединения — сообщение не ушло'
         : err === 'too_long' ? 'Сообщение длиннее 4000 символов'
-          : 'Не удалось отправить';
+          : err === 'blocked' ? 'Переписка недоступна: пользователь заблокирован'
+            : 'Не удалось отправить';
     toast(why, true);
     if (!p.convId) {                       // черновик диалога: пузыря нет — вернём текст в поле
       if (p.backup && !$('#input').value) { $('#input').value = p.backup; autosize(); }
@@ -1011,7 +1049,8 @@
     t.style.height = 'auto';
     t.style.height = Math.min(t.scrollHeight, 140) + 'px';
     const hasReady = state.atts.some(a => a.status === 'ready');
-    $('#send').disabled = (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
+    const blocked = !!(state.blocked && (state.blocked.byMe || state.blocked.me));
+    $('#send').disabled = blocked || (!t.value.trim() && !hasReady) || state.atts.some(a => a.status === 'uploading');
     syncQuick();
   }
 
@@ -1046,6 +1085,7 @@
   $('#markRead').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) markRead(state.convId); });
   $('#wpOpen').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) openWallpaper(); });
   $('#delConv').addEventListener('click', () => { $('#menu').hidden = true; if (state.convId) deleteConv(state.convId); });
+  $('#blockUser').addEventListener('click', () => { $('#menu').hidden = true; toggleBlock(); });
 
   /* ════════════════════════ ОБОИ ═══════════════════════════════════════════
      Пресеты — чистый CSS (слои градиентов): ноль запросов, ноль байт, чёткие

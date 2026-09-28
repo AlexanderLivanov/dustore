@@ -515,6 +515,8 @@ body.moonlight-theme .modal-card { background: #0c1426; }
     background: none; border: 0; color: var(--ch-text); font: inherit; font-size: .92rem; outline: none;
 }
 .composer textarea::placeholder { color: var(--ch-dim); }
+.composer textarea:disabled { opacity: .5; cursor: default; }
+.attach:disabled { opacity: .3; cursor: default; pointer-events: none; }
 .send {
     flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%;
     background: var(--ch-grad); color: #fff; cursor: pointer; display: grid; place-items: center;

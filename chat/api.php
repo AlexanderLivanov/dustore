@@ -9,10 +9,12 @@ if (is_file(__DIR__ . '/push_helpers.php')) require_once __DIR__ . '/push_helper
 if (is_file(__DIR__ . '/ws_helpers.php')) require_once __DIR__ . '/ws_helpers.php';
 require_once __DIR__ . '/_crypto.php';
 require_once __DIR__ . '/_files.php';
+require_once __DIR__ . '/_blocks.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $db = (new Database())->connect('dustore');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+chat_blocks_ensure($db);
 
 /**
  * Чат v2 (файлы, ответы, пины, звук) включается сам, как только прогнана
@@ -563,7 +565,13 @@ function thread_header(PDO $db, array $c, int $myId): array {
     $u=(get_users_meta($db,[$peer]))[$peer] ?? [];
     $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$peer]); $seen=$la->fetchColumn() ?: null;
     [$dlv,$rd]=peer_ptrs($db,$cid,$peer);
-    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
+    // Чёрный список — только для личных диалогов (сюда доходят только они:
+    // system и studio уже вернулись выше). Обе стороны видны фронту сразу,
+    // чтобы правильно показать и композер, и подпись «вы заблокировали» /
+    // «вас заблокировали» без лишнего запроса.
+    $blk = chat_block_status($db, $myId, $peer);
+    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv,
+            'blocked_by_me'=>$blk['a_blocked_b'],'blocked_me'=>$blk['b_blocked_a']];
 }
 
 /* =================== ACTION: send =================== */
@@ -595,6 +603,16 @@ if ($action === 'send') {
     }
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
     if($c['type']==='system') out(['ok'=>false,'error'=>'readonly']); // в «Уведомления» не пишем руками
+    if ($c['type']==='dm') {
+        // Блок в любую сторону останавливает новые сообщения для обоих —
+        // история никуда не девается, просто дальше писать нельзя, пока
+        // не разблокируют. Проверяем на каждую отправку, а не только при
+        // создании диалога: блокировка может появиться уже после того, как
+        // переписка существует давно.
+        $peerRow=$db->prepare("SELECT user_id FROM conversation_participants WHERE conversation_id=? AND user_id<>? LIMIT 1");
+        $peerRow->execute([$cid,$myId]); $peerId=(int)$peerRow->fetchColumn();
+        if ($peerId>0 && chat_is_blocked_pair($db,$myId,$peerId)) out(['ok'=>false,'error'=>'blocked']);
+    }
 
     if ($replyTo > 0) {
         // отвечать можно только на сообщение из этой же беседы
@@ -646,6 +664,23 @@ if ($action === 'delete_conversation') {
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
     $db->prepare("UPDATE conversation_participants SET archived=1 WHERE conversation_id=? AND user_id=?")->execute([$cid,$myId]);
     out(['ok'=>true,'conversation_id'=>$cid]);
+}
+
+/* =================== ACTION: block_user / unblock_user ===================
+ * Чёрный список в личных чатах. Кнопка живёт в меню открытого диалога
+ * (см. chat/_markup.php #blockUser) — user_id берётся из уже известного
+ * peer_id собеседника, отдельного экрана «управление ЧС» пока нет. */
+if ($action === 'block_user') {
+    $target=(int)($_POST['user_id'] ?? 0);
+    if ($target<=0 || $target===$myId) out(['ok'=>false,'error'=>'bad_id']);
+    chat_block_user($db,$myId,$target);
+    out(['ok'=>true,'blocked_by_me'=>true]);
+}
+if ($action === 'unblock_user') {
+    $target=(int)($_POST['user_id'] ?? 0);
+    if ($target<=0) out(['ok'=>false,'error'=>'bad_id']);
+    chat_unblock_user($db,$myId,$target);
+    out(['ok'=>true,'blocked_by_me'=>false]);
 }
 
 /* ════════════════════════ ЧАТ v2 ════════════════════════════════════════ */

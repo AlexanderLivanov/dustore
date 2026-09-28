@@ -77,6 +77,7 @@
         <div class="menu" id="menu" hidden>
           <button id="markRead">Отметить прочитанным</button>
           <button id="wpOpen">Обои чата</button>
+          <button id="blockUser">Заблокировать</button>
           <button class="danger" id="delConv">Удалить переписку</button>
         </div>
       </div>
