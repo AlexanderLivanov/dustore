@@ -10,6 +10,7 @@ $selCategory = isset($_GET['category']) ? trim($_GET['category']) : null;
 $selPrice    = isset($_GET['price'])    ? trim($_GET['price'])    : null;
 $selEngine   = isset($_GET['engine'])   ? trim($_GET['engine'])   : null;
 $selLicense  = isset($_GET['license'])  ? trim($_GET['license'])  : null;
+$selTag      = isset($_GET['tag'])      ? trim($_GET['tag'])      : null;
 $selSort     = isset($_GET['sort'])     ? trim($_GET['sort'])     : 'newest';
 $searchQ     = isset($_GET['q'])        ? trim($_GET['q'])        : '';
 
@@ -30,6 +31,12 @@ if ($selEngine) {
 if ($selLicense) {
     $where[] = "a.license = ?";
     $params[] = $selLicense;
+}
+if ($selTag) {
+    // tags — свободный текст через запятую (см. upload_asset.php), без
+    // нормализации при сохранении, поэтому подстрокой, как и в поиске ниже.
+    $where[] = "a.tags LIKE ?";
+    $params[] = '%' . $selTag . '%';
 }
 if ($searchQ) {
     $where[] = "(a.name LIKE ? OR a.studio_name LIKE ? OR a.tags LIKE ?)";
@@ -104,6 +111,26 @@ $LICENSES = [
     'personal'   => 'Личное использование',
 ];
 
+/* ── Облако тегов: топ по частоте среди опубликованных ассетов ──────────
+   Схема не трогается — tags как был свободным CSV-текстом (upload_asset.php),
+   так и остаётся; считаем частоту на PHP-стороне, а не городим отдельную
+   таблицу тегов ради витринного списка. */
+$POPULAR_TAGS = [];
+try {
+    $tagRows = $pdo->query("SELECT tags FROM assets WHERE status='published' AND tags IS NOT NULL AND tags != ''")->fetchAll(PDO::FETCH_COLUMN);
+    $freq = [];
+    foreach ($tagRows as $row) {
+        foreach (explode(',', $row) as $t) {
+            $t = mb_strtolower(trim($t));
+            if ($t === '') continue;
+            $freq[$t] = ($freq[$t] ?? 0) + 1;
+        }
+    }
+    arsort($freq);
+    $POPULAR_TAGS = array_slice(array_keys($freq), 0, 16);
+} catch (Exception $e) {
+}
+
 function buildUrl($mergeParams)
 {
     $p = array_merge($_GET, $mergeParams);
@@ -121,7 +148,7 @@ function buildUrl($mergeParams)
     <title>Dustore Assets — База ассетов</title>
     <link rel="stylesheet" href="../swad/css/pages.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
 :root {
     --primary: #c32178;
@@ -498,6 +525,25 @@ body.moonlight-theme {
 .reset-btn:hover {
     border-color: var(--primary);
     color: var(--primary);
+}
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 2px 0; }
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.6);
+    font-size: .76rem;
+    text-decoration: none;
+    transition: all .15s;
+}
+.tag-chip:hover { border-color: var(--primary); color: rgb(var(--brand-hi-rgb, 232, 143, 192)); }
+.tag-chip.active {
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.18);
+    border-color: rgba(var(--brand-rgb, 195, 33, 120), 0.4);
+    color: rgb(var(--brand-hi-rgb, 232, 143, 192));
 }
 
 /* ===== MAIN CONTENT ===== */
@@ -888,6 +934,19 @@ body.moonlight-theme {
 @media (min-width: 769px) {
     .mob-bar { display: none; }
 }
+
+/* ── Fid Core convergence (точечный проход, не рефактор) ─────────────────
+   Карточки .ac намеренно не трогаем — у них своя проработанная 3D-tilt
+   система (Float3D + глянцевый блик), pixel-corner клип-путь на скруглённом
+   углу с blur/shadow даст артефакты. Берём то, что можно взять без риска:
+   pixel-corner на плоских кнопках, JetBrains Mono на ценах — тот же приём,
+   что и в manage.php/bundle.php. */
+:root { --pix: 6px; }
+.ah-btn.primary, .ac-dl-btn {
+    border-radius: 0;
+    clip-path: polygon(var(--pix) 0, 100% 0, 100% calc(100% - var(--pix)), calc(100% - var(--pix)) 100%, 0 100%, 0 var(--pix));
+}
+.ac-price, .ac-p { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
 
@@ -1067,7 +1126,24 @@ body.moonlight-theme {
                 </div>
             </div>
 
-            <?php if ($selCategory || $selPrice || $selEngine || $selLicense || $searchQ): ?>
+            <?php if ($POPULAR_TAGS): ?>
+            <div class="fg">
+                <div class="fg-h" data-t="fb-tag">Теги
+                    <svg class="ch" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                </div>
+                <div class="fg-b" id="fb-tag">
+                    <div class="tag-cloud">
+                        <?php foreach ($POPULAR_TAGS as $t): ?>
+                            <a href="<?= buildUrl(['tag' => $selTag === $t ? null : $t]) ?>" class="tag-chip <?= $selTag === $t ? 'active' : '' ?>">#<?= htmlspecialchars($t) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($selCategory || $selPrice || $selEngine || $selLicense || $selTag || $searchQ): ?>
                 <a href="?" class="reset-btn">✕ Сбросить фильтры</a>
             <?php endif; ?>
 
@@ -1113,7 +1189,7 @@ body.moonlight-theme {
                             <line x1="11" y1="18" x2="13" y2="18" />
                         </svg>
                         Фильтры
-                        <?php if ($selCategory || $selPrice || $selEngine || $selLicense): ?>
+                        <?php if ($selCategory || $selPrice || $selEngine || $selLicense || $selTag): ?>
                             <span style="background:var(--pr);border-radius:100px;padding:1px 7px;font-size:.66rem;color:#fff">!</span>
                         <?php endif; ?>
                     </button>
@@ -1128,7 +1204,7 @@ body.moonlight-theme {
                 </div>
 
                 <!-- Active filter chips -->
-                <?php if ($selCategory || $selPrice || $selEngine || $selLicense || $searchQ): ?>
+                <?php if ($selCategory || $selPrice || $selEngine || $selLicense || $selTag || $searchQ): ?>
                     <div class="chips">
                         <?php if ($selCategory && isset($CATS[$selCategory])): ?>
                             <a class="chip" href="<?= buildUrl(['category' => null]) ?>"><?= $CATS[$selCategory]['emoji'] ?> <?= $CATS[$selCategory]['label'] ?> <span class="chip-x">✕</span></a>
@@ -1141,6 +1217,9 @@ body.moonlight-theme {
                         <?php endif; ?>
                         <?php if ($selLicense && isset($LICENSES[$selLicense])): ?>
                             <a class="chip" href="<?= buildUrl(['license' => null]) ?>">📜 <?= htmlspecialchars($LICENSES[$selLicense]) ?> <span class="chip-x">✕</span></a>
+                        <?php endif; ?>
+                        <?php if ($selTag): ?>
+                            <a class="chip" href="<?= buildUrl(['tag' => null]) ?>">#<?= htmlspecialchars($selTag) ?> <span class="chip-x">✕</span></a>
                         <?php endif; ?>
                         <?php if ($searchQ): ?>
                             <a class="chip" href="<?= buildUrl(['q' => null]) ?>">🔍 «<?= htmlspecialchars($searchQ) ?>» <span class="chip-x">✕</span></a>

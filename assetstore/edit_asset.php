@@ -188,7 +188,7 @@ $cat = $CATS[$asset['category']] ?? ['label' => ucfirst($asset['category']), 'em
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Редактировать: <?= htmlspecialchars($asset['name']) ?></title>
     <link rel="stylesheet" href="../swad/css/pages.css">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
 :root {
     --primary: #c32178;
@@ -832,6 +832,13 @@ body.moonlight-theme {
 .btn-cancel:hover {
     border-color: rgba(255,255,255,0.15);
     color: #fff;
+}
+
+/* ── Fid Core convergence (точечный проход) ── */
+:root { --pix: 6px; }
+.btn-save {
+    border-radius: 0;
+    clip-path: polygon(var(--pix) 0, 100% 0, 100% calc(100% - var(--pix)), calc(100% - var(--pix)) 100%, 0 100%, 0 var(--pix));
 }
     </style>
 </head>
