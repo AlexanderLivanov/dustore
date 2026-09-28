@@ -239,7 +239,8 @@ final class FxRender
     public static function reactions(array $s): string
     {
         $mine = $s['mine'] ?? null;
-        $group = static function (string $side, array $set, int $count) use ($mine) {
+        $rx = $s['rx'] ?? [];
+        $group = static function (string $side, array $set, int $count) use ($mine, $rx) {
             $names = array_keys($set);
             $on = ($mine && in_array($mine, $names, true)) ? ' on' : '';
             $ic = $on ? $mine : $names[0];
@@ -247,11 +248,21 @@ final class FxRender
             $h .= '<button type="button" class="fx-act fx-rx__main' . $on . '" data-fx="react" data-e="' . ($on ? $mine : $names[0]) . '" data-count="' . $count . '" aria-label="Реакция">'
                 . fx_icon($ic) . '<span class="fx-rx__n">' . Fx::n($count) . '</span></button><div class="fx-rxpop" role="menu">';
             foreach ($set as $n => $title) {
-                $h .= '<button type="button" class="fx-rxo" role="menuitem" data-fx="react" data-e="' . $n . '" title="' . Fx::e($title) . '">' . fx_icon($n) . '</button>';
+                $nc = (int)($rx[$n] ?? 0);
+                $activeCls = $mine === $n ? ' on' : '';
+                $badge = $nc > 0 ? '<span class="fx-rxo__n">' . Fx::n($nc) . '</span>' : '';
+                $h .= '<button type="button" class="fx-rxo' . $activeCls . '" role="menuitem" data-fx="react" data-e="' . $n . '" title="' . Fx::e($title) . '">' . fx_icon($n) . $badge . '</button>';
             }
             return $h . '</div></div>';
         };
-        return $group('up', FxReact::UP, $s['up']) . $group('down', FxReact::DOWN, $s['down']);
+        $total = array_sum($rx);
+        $summary = '';
+        if ($total > 1) {
+            $top = array_slice(array_keys($rx), 0, 3);
+            $icons = implode('', array_map(static fn($k) => '<i class="fx-rxsum__i" data-e="' . $k . '">' . fx_icon($k) . '</i>', $top));
+            $summary = '<span class="fx-rxsum" title="Реакций: ' . $total . '">' . $icons . '<b>' . Fx::n($total) . '</b></span>';
+        }
+        return $summary . $group('up', FxReact::UP, $s['up']) . $group('down', FxReact::DOWN, $s['down']);
     }
 
     /* ------------------------------------------------------------------

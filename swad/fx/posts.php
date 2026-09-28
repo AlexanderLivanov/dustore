@@ -394,6 +394,7 @@ final class FxPosts
         FxPeople::prime($users, $studios, $games);
 
         [$in, $p] = Fx::in($ids);
+        $rxBreak = FxReact::breakdown($ids);
         $mineRx = $minePoll = $counts = [];
         if ($viewer > 0) {
             $st = $pdo->prepare("SELECT post_id, kind FROM fx_reactions WHERE user_id = ? AND post_id IN ($in)");
@@ -454,7 +455,7 @@ final class FxPosts
                 'poll' => $poll, 'tags' => $r['tags'] ? explode(',', (string)$r['tags']) : [],
                 'game' => $game && $game['status'] === 'published' && !$game['hidden'] ? $game : null,
                 'pinned' => (bool)$r['pinned'], 'locked' => (bool)$r['locked'],
-                'stats' => ['up' => (int)$r['n_up'], 'down' => (int)$r['n_down'], 'comments' => (int)$r['n_cm'], 'views' => (int)$r['n_views'], 'mine' => $mineRx[$id] ?? null],
+                'stats' => ['up' => (int)$r['n_up'], 'down' => (int)$r['n_down'], 'comments' => (int)$r['n_cm'], 'views' => (int)$r['n_views'], 'mine' => $mineRx[$id] ?? null, 'rx' => $rxBreak[$id] ?? []],
                 'author' => $author, 'byline' => $byline, 'author_id' => (int)$r['author_id'],
                 'origin' => self::origin($r),
                 'time' => Fx::ago($r['created_at']), 'iso' => $r['created_at'], 'edited' => !empty($r['edited_at']),
@@ -506,6 +507,29 @@ final class FxReact
     public const UP   = ['heart' => 'Нравится', 'fire' => 'Огонь', 'clap' => 'Респект', 'laugh' => 'Смешно', 'mind' => 'Вынос мозга'];
     public const DOWN = ['thumbdown' => 'Не нравится', 'zzz' => 'Скучно', 'mask' => 'Кринж', 'meh' => 'Спорно'];
 
+    /**
+     * Разбивка реакций по конкретным эмодзи для пачки постов разом (без N+1).
+     * Считаем «вживую» из fx_reactions агрегатом GROUP BY — без отдельного
+     * кэширующего столбца/таблицы: строк на пост обычно немного, а PRIMARY
+     * KEY (post_id, user_id) уже покрывает `WHERE post_id IN (...)` своим
+     * левым столбцом, так что доп. индекс не нужен и денормализованный
+     * счётчик (который норовит разъехаться с реальностью) заводить незачем.
+     * @return array<int, array<string,int>> post_id => [kind => count], по убыванию count
+     */
+    public static function breakdown(array $postIds): array
+    {
+        $postIds = array_values(array_unique(array_filter(array_map('intval', $postIds))));
+        if (!$postIds) return [];
+        $pdo = Fx::pdo();
+        [$in, $p] = Fx::in($postIds);
+        $st = $pdo->prepare("SELECT post_id, kind, COUNT(*) c FROM fx_reactions WHERE post_id IN ($in) GROUP BY post_id, kind");
+        $st->execute($p);
+        $out = [];
+        foreach ($st->fetchAll() as $r) $out[(int)$r['post_id']][(string)$r['kind']] = (int)$r['c'];
+        foreach ($out as $id => $kinds) arsort($out[$id]);
+        return $out;
+    }
+
     /** Повторный клик по той же реакции снимает её. */
     public static function set(int $uid, int $postId, string $kind): array
     {
@@ -544,7 +568,8 @@ final class FxReact
             $who = FxPeople::user($uid)['name'] ?? 'Кто-то';
             Fx::notify((int)$p['author_id'], $who . ' оценил(а) вашу запись', mb_substr((string)($p['title'] ?: $p['body']), 0, 100), '/fid/post/' . $postId);
         }
-        return ['ok' => true, 'up' => (int)$r['n_up'], 'down' => (int)$r['n_down'], 'mine' => $mine];
+        $rx = self::breakdown([$postId])[$postId] ?? [];
+        return ['ok' => true, 'up' => (int)$r['n_up'], 'down' => (int)$r['n_down'], 'mine' => $mine, 'rx' => $rx];
     }
 }
 

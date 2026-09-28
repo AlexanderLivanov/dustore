@@ -1194,6 +1194,10 @@ $ctx   = ['viewer' => $viewer, 'show_reason' => true];
                 </div>
             </section>
         </aside>
+
+        <?php if ($viewer > 0): ?>
+            <button type="button" class="fx-fab" data-fx="new-post" aria-label="Новый пост"><?= fx_icon('plus') ?></button>
+        <?php endif; ?>
     </div>
         <?php
         return ['html' => ob_get_clean(), 'tab' => $tab];

@@ -200,8 +200,33 @@
 .fx .fx-rxg--down .fx-rxpop { left: 0; transform: translateY(6px) scale(.9) }
 .fx .fx-rxg:hover .fx-rxpop, .fx .fx-rxg.open .fx-rxpop { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1) }
 .fx .fx-rxg--down:hover .fx-rxpop, .fx .fx-rxg--down.open .fx-rxpop { transform: translateY(0) scale(1) }
-.fx .fx-rxo { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; transition: .13s }
+.fx .fx-rxo { position: relative; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; transition: .13s }
 .fx .fx-rxo:hover { background: #382a3e; transform: scale(1.22) translateY(-2px) }
+.fx .fx-rxo.on { background: #382a3e }
+
+/* выразительные реакции: у каждого эмодзи — свой цвет, а не одна розовая/синяя
+   заливка на все девять. В попапе-пикере цвет виден всегда (чтобы выбор был
+   наглядным), у активной реакции на самой кнопке — когда она выбрана. */
+.fx .fx-rxo[data-e="heart"],     .fx .fx-rx__main[data-e="heart"].on     { color: #ff5c8a }
+.fx .fx-rxo[data-e="fire"],      .fx .fx-rx__main[data-e="fire"].on      { color: #ff8a3d }
+.fx .fx-rxo[data-e="clap"],      .fx .fx-rx__main[data-e="clap"].on      { color: #ffcf49 }
+.fx .fx-rxo[data-e="laugh"],     .fx .fx-rx__main[data-e="laugh"].on     { color: #5cd6ff }
+.fx .fx-rxo[data-e="mind"],      .fx .fx-rx__main[data-e="mind"].on      { color: #b98bff }
+.fx .fx-rxo[data-e="thumbdown"], .fx .fx-rx__main[data-e="thumbdown"].on { color: #8a94a6 }
+.fx .fx-rxo[data-e="zzz"],       .fx .fx-rx__main[data-e="zzz"].on       { color: #8b93ff }
+.fx .fx-rxo[data-e="mask"],      .fx .fx-rx__main[data-e="mask"].on      { color: #35d6c4 }
+.fx .fx-rxo[data-e="meh"],       .fx .fx-rx__main[data-e="meh"].on       { color: #e0ac4d }
+@keyframes fxRxPop { 0% { transform: scale(1) } 45% { transform: scale(1.35) } 100% { transform: scale(1) } }
+.fx .fx-rx__main.on .ic { animation: fxRxPop .32s cubic-bezier(.2,.8,.2,1) }
+
+/* счётчик у конкретной эмодзи в попапе — сколько раз именно её поставили */
+.fx .fx-rxo__n { position: absolute; bottom: -4px; right: -2px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 999px; background: #100b13; border: 1px solid var(--line2); font-size: 9.5px; font-weight: 800; line-height: 13px; text-align: center; color: var(--text) }
+
+/* сводная пилюля слева от кнопок — «кто вообще реагировал», как в мессенджерах */
+.fx .fx-rxsum { display: inline-flex; align-items: center; gap: 3px; padding: 5px 8px 5px 6px; border-radius: 999px; background: var(--panel2); margin-right: 2px; font-size: 12px; font-weight: 700; color: var(--text) }
+.fx .fx-rxsum__i { width: 17px; height: 17px; display: grid; place-items: center; margin-left: -6px; border-radius: 50%; background: #201820; border: 1.5px solid var(--card, #150c17) }
+.fx .fx-rxsum__i:first-child { margin-left: 0 }
+.fx .fx-rxsum__i .ic { width: 11px; height: 11px }
 .fx .fx-actions__end { margin-left: auto; display: flex; align-items: center; gap: 4px }
 .fx .fx-views { display: flex; align-items: center; gap: 5px; font-size: 12px; padding: 0 4px; color: var(--muted) }
 
@@ -306,18 +331,23 @@
 .fx .fx-send:disabled { opacity: .5 }
 
 /* ---------- 9. КОМПОЗЕР ---------- */
-.fx .fx-cc { background: rgba(255,255,255,.025); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 14px 10px; margin-bottom: 16px; transition: border-color .2s }
+.fx .fx-cc { max-width: 100%; overflow-x: hidden; box-sizing: border-box; background: rgba(255,255,255,.025); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 14px 10px; margin-bottom: 16px; transition: border-color .2s }
 .fx .fx-cc:focus-within { border-color: var(--accent2) }
 .fx .fx-cc--guest { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13.5px }
 .fx .fx-cc--guest a { color: var(--accent); font-weight: 700 }
-.fx .fx-cc__head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; min-height: 30px }
-.fx .fx-cc__hint { font-size: 12px; color: var(--muted) }
-.fx .fx-cc__as { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; transition: .18s }
+/* min-width:0 — иначе у flex-детей действует неявный min-width:auto (по
+   содержимому), и длинная строка без пробелов (например «Публикация от:
+   ИмяСтудииБезПробелов» или подпись кросспоста) распирает ряд шире экрана
+   даже при flex-wrap: wrap на родителе — перенос строк это не чинит, нужно
+   явно разрешить детям сжиматься. */
+.fx .fx-cc__head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; min-height: 30px; min-width: 0 }
+.fx .fx-cc__hint, .fx .fx-cc__asname { overflow-wrap: anywhere; min-width: 0 }
+.fx .fx-cc__as { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; transition: .18s; min-width: 0; max-width: 100% }
 .fx .fx-cc__as:hover { border-color: var(--line2); color: #fff }
 .fx .fx-cc__as b { color: var(--text); font-size: 12.5px }
-.fx .fx-cc__title { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); outline: none; padding: 4px 0 9px; margin-bottom: 8px; font-size: 16px; font-weight: 800 }
+.fx .fx-cc__title { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); outline: none; padding: 4px 0 9px; margin-bottom: 8px; font-size: 16px; font-weight: 800; overflow-wrap: anywhere }
 .fx .fx-cc__title::placeholder { color: #6e6473; font-weight: 600 }
-.fx .fx-cc__field { width: 100%; min-height: 48px; max-height: 320px; resize: none; background: none; border: 0; font-size: 15px; line-height: 1.55; padding: 2px 0; outline: none }
+.fx .fx-cc__field { width: 100%; min-height: 48px; max-height: 320px; resize: none; background: none; border: 0; font-size: 15px; line-height: 1.55; padding: 2px 0; outline: none; overflow-wrap: anywhere }
 .fx .fx-cc__field::placeholder { color: #6e6473 }
 .fx .fx-cc__thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px }
 .fx .fx-thumb { position: relative; width: 84px; height: 84px; border-radius: 10px; background: #19101f center / cover; border: 1px solid var(--line) }
@@ -331,7 +361,7 @@
 .fx .fx-cc__poll input:focus { border-color: var(--accent2) }
 .fx .fx-cc__addopt { align-self: flex-start; font-size: 12px; color: var(--accent); font-weight: 700; padding: 4px 2px }
 .fx .fx-cc__days { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px }
-.fx .fx-cc__bar { display: flex; align-items: center; gap: 4px; margin-top: 8px; border-top: 1px solid var(--line); padding-top: 9px; flex-wrap: wrap }
+.fx .fx-cc__bar { display: flex; align-items: center; gap: 4px; margin-top: 8px; border-top: 1px solid var(--line); padding-top: 9px; flex-wrap: wrap; min-width: 0 }
 .fx .fx-cc__tools { display: flex; gap: 2px }
 .fx .fx-cc__tools button { width: 34px; height: 34px; border-radius: 9px; font-size: 16px; opacity: .8; display: grid; place-items: center }
 .fx .fx-cc__tools button:hover { background: var(--panel2); opacity: 1 }
@@ -340,7 +370,17 @@
 .fx .fx-cc__submit { background: var(--accent); color: #fff; font-weight: 800; font-size: 13px; border-radius: 9px; padding: 9px 16px; transition: .18s }
 .fx .fx-cc__submit:disabled { opacity: .35; cursor: default }
 .fx .fx-cc__submit:not(:disabled):active { transform: scale(.95) }
-.fx .fx-cc__cross { margin: 0 8px 0 10px; font-size: 12px; color: var(--muted) }
+
+/* плавающая кнопка «новый пост» — быстрый доступ, когда композер наверху
+   ленты уже прокручен из виду; появляется/исчезает через .show (см. fx.js,
+   IntersectionObserver за композером), а не постоянно на экране. */
+.fx .fx-fab { position: fixed; right: 20px; bottom: 24px; z-index: 900; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.4); opacity: 0; transform: scale(.6) translateY(10px); pointer-events: none; transition: opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1) }
+.fx .fx-fab.show { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto }
+.fx .fx-fab:hover { filter: brightness(1.08) }
+.fx .fx-fab:active { transform: scale(.92) }
+.fx .fx-fab .ic { width: 24px; height: 24px }
+.fx.fx-m .fx-fab { right: 16px; bottom: calc(var(--nav-h, 0px) + var(--safe-b, 0px) + 16px); width: 52px; height: 52px }
+.fx .fx-cc__cross { margin: 0 8px 0 10px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; min-width: 0; max-width: 100% }
 
 .fx .fx-sw { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px }
 .fx .fx-sw input { display: none }

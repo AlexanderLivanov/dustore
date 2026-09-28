@@ -147,14 +147,35 @@
     /* ---------------------------------------------------------------- реакции */
     function paintReactions(post, res) {
         $$('.fx-rxg', post).forEach(g => {
-            const side = g.dataset.side, main = $('.fx-rx__main', g), names = $$('.fx-rxo', g).map(b => b.dataset.e);
+            const side = g.dataset.side, main = $('.fx-rx__main', g), opts = $$('.fx-rxo', g), names = opts.map(b => b.dataset.e);
             const count = side === 'up' ? res.up : res.down, on = res.mine && names.includes(res.mine);
             $('.fx-rx__n', main).textContent = nfmt(count); main.dataset.count = count;
             main.classList.toggle('on', !!on);
             main.dataset.e = on ? res.mine : g.dataset.def;
             $('use', main).setAttribute('href', '#fxi-' + (on ? res.mine : g.dataset.def));
             g.classList.remove('open');
+            // разбивка по конкретным эмодзи (res.rx) приходит только от сервера — в
+            // оптимистичном пре-рендере (до ответа api()) её нет, и бейджики просто
+            // не трогаем один кадр, пока не придёт настоящее число
+            if (res.rx) opts.forEach(b => {
+                b.classList.toggle('on', b.dataset.e === res.mine);
+                let n = $('.fx-rxo__n', b), c = res.rx[b.dataset.e] || 0;
+                if (c > 0) { if (!n) { n = document.createElement('span'); n.className = 'fx-rxo__n'; b.appendChild(n); } n.textContent = nfmt(c); }
+                else if (n) n.remove();
+            });
         });
+        if (res.rx) {
+            const total = Object.values(res.rx).reduce((a, b) => a + b, 0);
+            const box = $('.fx-actions', post);
+            let sum = $('.fx-rxsum', post);
+            if (total > 1 && box) {
+                const top = Object.entries(res.rx).sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
+                const icons = top.map(k => '<i class="fx-rxsum__i" data-e="' + k + '">' + ic(k) + '</i>').join('');
+                if (!sum) { sum = document.createElement('span'); sum.className = 'fx-rxsum'; box.prepend(sum); }
+                sum.title = 'Реакций: ' + total;
+                sum.innerHTML = icons + '<b>' + nfmt(total) + '</b>';
+            } else if (sum) sum.remove();
+        }
     }
     async function react(post, kind) {
         const id = +post.dataset.id;
@@ -440,6 +461,12 @@
             case 'tpl': { const tp = $(t.dataset.tpl); if (tp) openModal(tp.innerHTML); break; }   // модалка из <template id=…> на странице
             case 'tab': showTab(t.closest('.fx-tabs') || $('.fx-tabs'), t.dataset.pane, true); break;
             case 'scroll': { const el = $(t.dataset.to); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); break; }
+            case 'new-post': {
+                const f = $('.fx-cc[data-fx-form="post"]'); if (!f) break;
+                f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const ta = $('.fx-cc__field', f); if (ta) setTimeout(() => ta.focus(), 320);
+                break;
+            }
         }
     });
 
@@ -480,6 +507,37 @@
         const now = Date.now(); if (now - lastTap < 300) { e.preventDefault(); m.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); } lastTap = now;
     });
 
+    /* десктоп: поповер реакций держался ровно на CSS :hover у .fx-rxg, а между
+       самой кнопкой и поповером есть небольшой зазор (8px, см. .fx-rxpop в
+       fx.css) — курсор при движении к нужной эмодзи иногда на мгновение
+       оказывается ровно в этом зазоре, :hover слетает, и поповер закрывается
+       раньше, чем пользователь успел кликнуть. Не трогаем сам CSS-путь (он
+       остаётся мгновенным резервным вариантом), а добавляем поверх него
+       JS-класс .open с небольшой отсрочкой закрытия — ровно то же самое, чем
+       уже открывается поповер по долгому тапу на телефоне, здесь просто триггер
+       другой. На тач-устройствах mouseover/mouseout по тапу обычно не летят, но
+       на всякий случай ограничиваем эффект реальными указывающими мышами. */
+    if (matchMedia('(hover: hover)').matches) {
+        document.addEventListener('mouseover', e => {
+            const g = e.target.closest('.fx-rxg'); if (!g) return;
+            clearTimeout(g._rxCloseT); g.classList.add('open');
+        });
+        document.addEventListener('mouseout', e => {
+            const g = e.target.closest('.fx-rxg'); if (!g || g.contains(e.relatedTarget)) return;
+            g._rxCloseT = setTimeout(() => g.classList.remove('open'), 220);
+        });
+    }
+
+    /* плавающая кнопка «новый пост»: видна, только когда композер прокручен
+       из виду — незачем дублировать то, что и так на экране */
+    function initFab() {
+        const fab = $('.fx-fab'); if (!fab) return;
+        const cc = $('.fx-cc[data-fx-form="post"]'); if (!cc) return;
+        if ('IntersectionObserver' in window) {
+            new IntersectionObserver(([e]) => fab.classList.toggle('show', !e.isIntersecting), { rootMargin: '-40px 0px 0px 0px' }).observe(cc);
+        } else fab.classList.add('show');
+    }
+
     /* прогресс чтения статьи */
     document.addEventListener('scroll', e => {
         const sc = e.target; if (!sc.classList || !sc.classList.contains('fx-ov__scroll')) return;
@@ -494,6 +552,7 @@
         ensureUI();
         stickSide(); window.addEventListener('resize', stickSide); window.addEventListener('load', stickSide);
         $$('form[data-fx-form=post]').forEach(initComposer);
+        initFab();
         $$('.fx-tabs').forEach(tabs => {
             const want = new URL(location.href).searchParams.get('tab');
             if (want && $('.fx-tab[data-pane="' + want + '"]', tabs)) showTab(tabs, want, false);
