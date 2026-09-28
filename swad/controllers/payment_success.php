@@ -21,12 +21,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $meta     = $payment['metadata'] ?? [];
     $asset_id = intval($meta['asset_id'] ?? 0);
     $user_id  = intval($meta['user_id']  ?? 0);
+    $tier_id  = intval($meta['tier_id']  ?? 0);
 
     if ($status === 'succeeded' && $asset_id && $user_id) {
         try {
-            // Добавляем в библиотеку
-            $pdo->prepare("INSERT IGNORE INTO asset_library (player_id, asset_id, date) VALUES (?, ?, NOW())")
-                ->execute([$user_id, $asset_id]);
+            // Добавляем в библиотеку. Вебхук — источник истины для "succeeded"
+            // (может прийти раньше, чем пользователь вернётся на return_url),
+            // поэтому tier_id тянем из metadata платежа, а не из сессии.
+            $pdo->prepare("INSERT IGNORE INTO asset_library (player_id, asset_id, tier_id, date) VALUES (?, ?, ?, NOW())")
+                ->execute([$user_id, $asset_id, $tier_id > 0 ? $tier_id : null]);
             // Обновляем статус платежа
             $pdo->prepare("UPDATE asset_payments SET status = 'succeeded' WHERE payment_id = ?")
                 ->execute([$pay_id]);

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../swad/config.php');
+require_once(__DIR__ . '/_schema.php');
 
 if (empty($_SESSION['USERDATA']['id'])) {
     header('Location: /login');
@@ -9,6 +10,7 @@ if (empty($_SESSION['USERDATA']['id'])) {
 
 $db  = new Database();
 $pdo = $db->connect();
+AssetSchema::ensure($pdo);
 $user_id = (int)$_SESSION['USERDATA']['id'];
 
 $page = $_GET['tab'] ?? 'library'; // library | wishlist
@@ -17,9 +19,10 @@ $page = $_GET['tab'] ?? 'library'; // library | wishlist
 $library = [];
 try {
     $stmt = $pdo->prepare("
-        SELECT a.*, al.date AS obtained_date
+        SELECT a.*, al.date AS obtained_date, al.tier_id, alt.label AS tier_label
         FROM asset_library al
         JOIN assets a ON a.id = al.asset_id
+        LEFT JOIN asset_license_tiers alt ON alt.id = al.tier_id
         WHERE al.player_id = ?
         ORDER BY al.date DESC
     ");
@@ -615,7 +618,12 @@ $CATS = [
                                     <div class="ac-body">
                                         <div class="ac-name"><?= htmlspecialchars($a['name']) ?></div>
                                         <div class="ac-author">by <?= htmlspecialchars($a['studio_name']) ?></div>
-                                        <div class="ac-date"><?= $dateLabel ?></div>
+                                        <div class="ac-date">
+                                            <?= $dateLabel ?>
+                                            <?php if ($page === 'library' && !empty($a['tier_label'])): ?>
+                                                · лицензия «<?= htmlspecialchars($a['tier_label']) ?>»
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </a>
                                 <div class="ac-foot">

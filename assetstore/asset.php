@@ -3,6 +3,7 @@ session_start();
 require_once('../swad/config.php');
 require_once('../swad/controllers/game.php');
 require_once(__DIR__ . '/_versions.php');
+require_once(__DIR__ . '/_licensing.php');
 
 $db  = new Database();
 $pdo = $db->connect();
@@ -37,6 +38,7 @@ $tags         = !empty($asset['tags']) ? array_map('trim', explode(',', $asset['
 $contents     = json_decode($asset['contents']     ?? '[]', true) ?: []; // list of included files/objects
 $model3dUrl   = $asset['model_3d_url'] ?? ''; // .glb or .gltf URL for 3D viewer
 $versionHistory = asset_version_history($pdo, $asset_id, 10);
+$licenseTiers = asset_get_license_tiers($pdo, $asset_id);
 
 /* ── Ownership check ─────────────────────────────────────────────────── */
 $isOwned = false;
@@ -905,7 +907,7 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                 <!-- Buy card -->
                 <div class="buy-card">
                     <div class="buy-card-header">
-                        <div class="buy-price-label"><?= $price > 0 ? 'Цена' : 'Доступно' ?></div>
+                        <div class="buy-price-label"><?= $price > 0 ? ($licenseTiers ? 'От' : 'Цена') : 'Доступно' ?></div>
                         <div class="buy-price <?= $price == 0 ? 'free' : '' ?>">
                             <?= $price == 0 ? 'Бесплатно' : number_format($price, 0, ',', ' ') . ' ₽' ?>
                         </div>
@@ -1360,29 +1362,50 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                         </div>
                     </div>
 
+                    <?php if ($licenseTiers): ?>
+                    <!-- License tier picker -->
+                    <div class="pay-breakdown" style="margin-bottom:14px">
+                        <div class="pb-row" style="margin-bottom:6px"><strong>Выберите лицензию</strong></div>
+                        <?php foreach ($licenseTiers as $i => $t): ?>
+                            <label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-top:1px solid rgba(255,255,255,.06)">
+                                <input type="radio" name="tier_pick" value="<?= (int)$t['id'] ?>"
+                                       data-price="<?= (float)$t['price'] ?>"
+                                       <?= $i === 0 ? 'checked' : '' ?> onchange="onTierPick()">
+                                <span style="flex:1">
+                                    <strong><?= htmlspecialchars($t['label']) ?></strong>
+                                    <?php if (!empty($t['terms'])): ?>
+                                        <div style="font-size:.78rem;color:var(--muted)"><?= htmlspecialchars($t['terms']) ?></div>
+                                    <?php endif; ?>
+                                </span>
+                                <span><?= number_format((float)$t['price'], 0, ',', ' ') ?> ₽</span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Breakdown -->
                     <div class="pay-breakdown">
                         <div class="pb-row">
                             <span class="pb-label">Стоимость ассета</span>
-                            <span class="pb-val"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val" id="pbAssetPrice"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
                         </div>
                         <div class="pb-row">
                             <span class="pb-label">
                                 <strong>→ Разработчику</strong>&nbsp;(<?= $devSharePct ?>%)
                             </span>
-                            <span class="pb-val dev"><?= number_format($devEarns, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val dev" id="pbDevAmt"><?= number_format($devEarns, 2, ',', ' ') ?> ₽</span>
                         </div>
                         <div class="pb-row">
                             <span class="pb-label">→ Платформе&nbsp;(<?= $platSharePct ?>%)</span>
-                            <span class="pb-val plat"><?= number_format($platEarns, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val plat" id="pbPlatAmt"><?= number_format($platEarns, 2, ',', ' ') ?> ₽</span>
                         </div>
                         <div class="modal-split-bar">
-                            <div class="d" style="width:<?= $devSharePct ?>%"></div>
-                            <div class="p" style="width:<?= $platSharePct ?>%"></div>
+                            <div class="d" id="modalSplitDev" style="width:<?= $devSharePct ?>%"></div>
+                            <div class="p" id="modalSplitPlat" style="width:<?= $platSharePct ?>%"></div>
                         </div>
                         <div class="pb-row total">
                             <span class="pb-label"><strong>Итого к оплате</strong></span>
-                            <span class="pb-val total"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
+                            <span class="pb-val total" id="pbTotal"><?= number_format($price, 2, ',', ' ') ?> ₽</span>
                         </div>
                     </div>
 
@@ -1473,8 +1496,37 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
         }
 
         /* ── Payment modal ── */
+        const DEV_SHARE_PCT = <?= (int)$devSharePct ?>;
+
+        function fmtRub(n) {
+            return n.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+        }
+
+        /* Пересчёт разбивки на клиенте при выборе тарифа лицензии — без
+           перезагрузки страницы. dev_share% у ассета фиксированный, меняется
+           только сумма, от которой он берётся. */
+        function onTierPick() {
+            const r = document.querySelector('input[name=tier_pick]:checked');
+            if (!r) return;
+            const price = parseFloat(r.dataset.price) || 0;
+            const dev = price * DEV_SHARE_PCT / 100;
+            const plat = price - dev;
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('pbAssetPrice', fmtRub(price));
+            set('pbDevAmt', fmtRub(dev));
+            set('pbPlatAmt', fmtRub(plat));
+            set('pbTotal', fmtRub(price));
+            const btn = document.getElementById('payBtn');
+            if (btn && !btn.disabled) btn.textContent = 'Оплатить ' + fmtRub(price);
+            const dBar = document.getElementById('modalSplitDev');
+            const pBar = document.getElementById('modalSplitPlat');
+            if (dBar) dBar.style.width = DEV_SHARE_PCT + '%';
+            if (pBar) pBar.style.width = (100 - DEV_SHARE_PCT) + '%';
+        }
+
         function openPayModal() {
             document.getElementById('payModal')?.classList.add('open');
+            if (document.querySelector('input[name=tier_pick]')) onTierPick();
         }
 
         function closePayModal() {
@@ -1488,6 +1540,10 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
         function submitPayment(assetId) {
             const btn = document.getElementById('payBtn');
             if (!btn || btn.disabled) return;
+            const tierEl = document.querySelector('input[name=tier_pick]:checked');
+            const tierId = tierEl ? tierEl.value : 0;
+            const restoreText = tierEl ? 'Оплатить ' + fmtRub(parseFloat(tierEl.dataset.price) || 0)
+                                        : 'Оплатить <?= number_format($price, 2, ",", " ") ?> ₽';
             btn.disabled = true;
             btn.textContent = 'Обработка…';
             fetch('../swad/controllers/buy_asset.php', {
@@ -1495,7 +1551,7 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `asset_id=${assetId}&csrf=${encodeURIComponent(CSRF)}`
+                    body: `asset_id=${assetId}&tier_id=${encodeURIComponent(tierId)}&csrf=${encodeURIComponent(CSRF)}`
                 })
                 .then(r => r.json())
                 .then(d => {
@@ -1505,7 +1561,7 @@ body.moonlight-theme .offer-box { background: rgb(var(--moon-raised-rgb, 16, 23,
                     } else {
                         alert('Ошибка: ' + (d.error || 'Неизвестная ошибка'));
                         btn.disabled = false;
-                        btn.textContent = 'Оплатить <?= number_format($price, 2, ",", " ") ?> ₽';
+                        btn.textContent = restoreText;
                     }
                 })
                 .catch(() => {

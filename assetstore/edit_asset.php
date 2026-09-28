@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../swad/config.php');
+require_once(__DIR__ . '/_licensing.php');
 
 if (empty($_SESSION['USERDATA']['id'])) {
     header('Location: /login');
@@ -144,6 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Уровни лицензии — если ни один чекбокс не включён, asset_save_license_tiers
+        // просто снимает все тарифы, и ассет возвращается к обычной flat-цене выше.
+        asset_save_license_tiers($pdo, $asset_id, asset_parse_tier_input($_POST));
+
         // Refresh
         $stmt->execute([$asset_id]);
         $asset = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -157,6 +162,7 @@ $formats  = json_decode($asset['formats'] ?? '[]', true) ?: [];
 $engines  = json_decode($asset['engine_compatibility'] ?? '[]', true) ?: [];
 $contents = json_decode($asset['contents'] ?? '[]', true) ?: [];
 $contents_text = implode("\n", array_map(fn($c) => $c['name'] ?? '', $contents));
+$tiersByKey = array_column(asset_get_license_tiers($pdo, $asset_id), null, 'tier');
 
 $CATS = [
     '3d_model' => ['label' => '3D Модели', 'emoji' => '🧊'],
@@ -1016,8 +1022,34 @@ body.moonlight-theme {
                             <div class="field">
                                 <label>Цена (₽) · 0 = бесплатно</label>
                                 <input type="number" name="price" id="priceInput" value="<?= $asset['price'] ?>" min="0" step="10" oninput="updateSplit()">
+                                <?php if ($tiersByKey): ?>
+                                    <div class="field-hint">Цена ниже подставляется автоматически как минимум из тарифов справа</div>
+                                <?php endif; ?>
                             </div>
                         </div>
+
+                        <!-- Уровни лицензии — необязательно, надстройка над ценой выше -->
+                        <div class="field-hint" style="margin:10px 0">
+                            Уровни лицензии (необязательно): разные цены под разное использование.
+                            Ничего не включено — ассет продаётся по цене выше, одним тарифом.
+                        </div>
+                        <?php foreach (asset_tier_labels() as $tk => $tl): $tv = $tiersByKey[$tk] ?? null; ?>
+                            <div class="form-grid" style="align-items:flex-end;margin-bottom:8px">
+                                <div class="field" style="flex:0 0 auto">
+                                    <label><input type="checkbox" name="tier_<?= $tk ?>_on" value="1" <?= $tv ? 'checked' : '' ?>
+                                        onchange="document.getElementById('etierRow_<?= $tk ?>').style.opacity=this.checked?'1':'.4'"> <?= $tl ?></label>
+                                </div>
+                                <div class="field" id="etierRow_<?= $tk ?>" style="opacity:<?= $tv ? '1' : '.4' ?>">
+                                    <label>Цена, ₽</label>
+                                    <input type="number" name="tier_<?= $tk ?>_price" min="0" step="10" value="<?= $tv['price'] ?? 0 ?>">
+                                </div>
+                                <div class="field" style="grid-column:span 2">
+                                    <label>Условия</label>
+                                    <input type="text" name="tier_<?= $tk ?>_terms" value="<?= htmlspecialchars($tv['terms'] ?? '') ?>" placeholder="Например: до 3 проектов, без модификации">
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+
                         <div class="field" style="margin-top:12px">
                             <label>Ваша доля: <span id="devPct"><?= $asset['dev_share'] ?? 70 ?></span>%</label>
                             <div class="split-wrap">

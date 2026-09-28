@@ -14,7 +14,7 @@
 
 declare(strict_types=1);
 
-const ASSET_SCHEMA_VERSION = 1;
+const ASSET_SCHEMA_VERSION = 2;
 
 final class AssetSchema
 {
@@ -36,7 +36,36 @@ final class AssetSchema
                 PRIMARY KEY (id),
                 KEY ix_asset (asset_id, id)
             ) $t",
+
+            /* Уровни лицензии — НАДстройка над assets.price/license, не замена.
+               Если у ассета нет строк здесь — он продаётся как раньше, по
+               одной цене. Если есть — assets.price синхронизируется на MIN()
+               из тарифов (см. asset_save_license_tiers), так что все места,
+               которые просто читают assets.price (витрина, manage.php,
+               аналитика), продолжают работать без единой правки. */
+            "CREATE TABLE IF NOT EXISTS asset_license_tiers (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                asset_id INT UNSIGNED NOT NULL,
+                tier VARCHAR(16) NOT NULL,
+                label VARCHAR(64) NOT NULL,
+                price DECIMAL(10,2) NOT NULL DEFAULT 0,
+                terms TEXT NULL,
+                sort TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_asset_tier (asset_id, tier),
+                KEY ix_asset (asset_id, sort)
+            ) $t",
         ];
+    }
+
+    /** Пошаговые ALTER'ы. ADD COLUMN IF NOT EXISTS — синтаксис MariaDB. */
+    private static function upgrade(PDO $pdo, int $from): void
+    {
+        if ($from < 2) {
+            $pdo->exec("ALTER TABLE asset_payments ADD COLUMN IF NOT EXISTS tier_id INT UNSIGNED NULL AFTER asset_id");
+            $pdo->exec("ALTER TABLE asset_library  ADD COLUMN IF NOT EXISTS tier_id INT UNSIGNED NULL AFTER asset_id");
+        }
     }
 
     public static function ensure(PDO $pdo): void
@@ -68,6 +97,7 @@ final class AssetSchema
 
         if ($have < ASSET_SCHEMA_VERSION) {
             foreach (self::ddl() as $sql) $pdo->exec($sql);
+            self::upgrade($pdo, $have);
             $pdo->prepare(
                 "INSERT INTO asset_schema_meta (k, v) VALUES ('schema', ?)
                  ON DUPLICATE KEY UPDATE v = VALUES(v)"
