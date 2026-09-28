@@ -769,6 +769,22 @@
     if (!isTouch) openMsgMenu(+msg.dataset.id, e.clientX, e.clientY);
   });
 
+  /* Двойной клик по сообщению — сразу «Ответить», как в десктопном Telegram.
+     Свои интерактивные зоны (ссылка, цитата, картинка, реакция, три точки)
+     исключаем — у них двойной клик не должен спорить с их собственным
+     действием. Двойной клик по тексту иначе ещё и выделяет слово браузером —
+     сразу же снимаем это выделение, чтобы не оставалось синим пятном поверх
+     открывшейся панели ответа. */
+  thread.addEventListener('dblclick', e => {
+    if (state.isSystem) return;
+    const msg = e.target.closest('.msg[data-id]');
+    if (!msg || msg.querySelector('.gone')) return;
+    if (e.target.closest('a, .quote, .m-img, .m-file, .react-pill, .m-more, .m-retry, .m-drop')) return;
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    startReply(+msg.dataset.id);
+  });
+
   async function deleteMessage(id) {
     if (!confirm('Удалить сообщение?')) return;
     const r = await api('delete_message', { message_id: id }, 'POST');
