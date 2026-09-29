@@ -58,8 +58,10 @@ body.moonlight-theme {
 
 .container {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 0px auto;
     padding: 0 20px;
+    align-self: start;
+    margin-top: 100px;
 }
 
 section { padding: 80px 0; }
@@ -1230,7 +1232,6 @@ body.moonlight-theme .telegram-banner .tg-text a {
 }
 
 .dust-close {
-  margin-top: 20px;
   padding: 10px 18px;
   border: none;
   background: white;
