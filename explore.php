@@ -323,7 +323,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
 
         const DEFAULTS = { adult: 0, web: 0, genre: null, sort: 'popularity', dir: 'desc', priceType: 'all', priceMax: 5000, q: '', offset: 0 };
         const state = Object.assign({}, DEFAULTS, {
-            genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
+            genre: <?= $selectedGenre ? json_encode($selectedGenre, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : 'null' ?>,
             adult: <?= $adultSection ? 1 : 0 ?>,
             web: <?= $webSection ? 1 : 0 ?>
         });
