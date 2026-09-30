@@ -34,7 +34,8 @@ $card = function (array $m) use ($h) { $o = $m['other']; ob_start(); ?>
                 <div class="mk-match__act">
                     <?php if ($m['deal']): ?>
                         <span class="l4x-verified"><?= l4x_icon('check') ?>сделка</span>
-                        <?php if ($m['tg']): ?><a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="https://t.me/<?= $h($m['tg']) ?>" target="_blank" rel="noopener"><?= l4x_icon('telegram') ?>Написать</a><?php endif; ?>
+                        <?php if (!empty($m['other']['id'])): ?><a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="/chat/?to=<?= (int)$m['other']['id'] ?>"><?= l4x_icon('chat') ?>В чат Dustore</a><?php endif; ?>
+                        <?php if ($m['tg']): ?><a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="https://t.me/<?= $h($m['tg']) ?>" target="_blank" rel="noopener"><?= l4x_icon('telegram') ?>Написать</a><?php endif; ?>
                     <?php elseif ($m['mine'] === 'new'): ?>
                         <button class="l4x-btn l4x-btn--acc l4x-btn--sm" data-act="match-yes" data-id="<?= (int)$m['id'] ?>"><?= l4x_icon('check') ?>Интересно</button>
                         <button class="l4x-btn l4x-btn--ghost l4x-btn--sm" data-act="match-no" data-id="<?= (int)$m['id'] ?>">Не подходит</button>

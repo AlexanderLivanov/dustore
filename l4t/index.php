@@ -307,8 +307,13 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                 <div class="l4x-hero__actions">
                     <?php if ($isOwner): ?>
                         <button class="l4x-btn l4x-btn--acc" data-act="customize"><?= l4x_icon('settings') ?>Настроить профиль</button>
-                    <?php elseif (!empty($userdata['telegram_username'])): ?>
-                        <a class="l4x-btn l4x-btn--acc" href="https://t.me/<?= $h($userdata['telegram_username']) ?>" target="_blank" rel="noopener"><?= l4x_icon('telegram') ?>Написать</a>
+                    <?php else: ?>
+                        <?php if (!empty($_SESSION['USERDATA']['id'])): ?>
+                            <a class="l4x-btn l4x-btn--acc" href="/chat/?to=<?= (int)$userdata['id'] ?>"><?= l4x_icon('chat') ?>Написать в Dustore</a>
+                        <?php endif; ?>
+                        <?php if (!empty($userdata['telegram_username'])): ?>
+                            <a class="l4x-btn <?= !empty($_SESSION['USERDATA']['id']) ? 'l4x-btn--ghost' : 'l4x-btn--acc' ?>" href="https://t.me/<?= $h($userdata['telegram_username']) ?>" target="_blank" rel="noopener"><?= l4x_icon('telegram') ?>Telegram</a>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <button class="l4x-btn l4x-btn--ghost" data-act="qr" data-mode="<?= $isOwner ? 'card' : 'url' ?>" data-url="<?= $h($host . '/l4t/' . $handleOf . '?via=qr') ?>" data-label="<?= $h($displayName) ?>" title="QR-визитка"><?= l4x_icon('qr') ?></button>
                     <?php if (!$isOwner): ?><a class="l4x-btn l4x-btn--ghost" href="/l4t/<?= $h($handleOf) ?>/cv" title="Резюме одной страницей"><?= l4x_icon('file') ?></a><?php endif; ?>
@@ -775,7 +780,7 @@ require_once __DIR__ . '/../swad/static/elements/header.php';
                         $payload = [
                             'kind' => $kind, 'role' => $r['search_role'] ?? '—', 'spec' => $r['search_spec'] ?? '', 'cond' => $r['conditions'] ?? '',
                             'date' => date('d.m.Y H:i', strtotime((string)$r['created_at'])), 'status' => $r['status'] ?? '',
-                            'message' => $r['message'] ?? '', 'who' => $who, 'tg' => $ct['telegram_username'] ?? '', 'l4trole' => $ct['l4t_role'] ?? '',
+                            'message' => $r['message'] ?? '', 'who' => $who, 'uid' => $kind === 'incoming' ? (int)$r['user_id'] : 0, 'tg' => $ct['telegram_username'] ?? '', 'l4trole' => $ct['l4t_role'] ?? '',
                             'id' => (int)$r['id'],
                         ];
                     ?>
