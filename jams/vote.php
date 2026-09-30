@@ -297,6 +297,34 @@ $ratedCount = 0;
 foreach ($gamesLive as $g) if ((int)$g['my_points'] > 0) $ratedCount++;
 $liveCount = count($gamesLive);
 
+/* ── Таймер «итоги сообщества» ──────────────────────────────────────────────
+   Отсчёт до фиксированного момента, после которого показываем игру с
+   максимумом баллов СООБЩЕСТВА (is_expert = 0 — оценки жюри в эту номинацию
+   не входят). Победитель считается на сервере: часы посетителя не при чём.
+   Показываем только в джеме, окно голосования которого заканчивается рядом
+   с этой датой — иначе таймер «1 октября» висел бы на любом другом джеме. */
+const JV_WINNER_AT     = '2026-10-01 12:00:00';   // Europe/Moscow
+const JV_NOMINATION    = 'Выбор сообщества';        // название номинации
+$winnerAt   = strtotime(JV_WINNER_AT);
+$showWinner = $revealed && (!$vEnd || abs($vEnd - $winnerAt) <= 86400);
+$winners    = [];
+if ($showWinner && $now >= $winnerAt && $gamesLive) {
+    $cv = $pdo->prepare("SELECT game_id, SUM(points) AS pts, COUNT(*) AS n
+                           FROM jam_votes WHERE sprint_id = ? AND is_expert = 0 AND points > 0
+                          GROUP BY game_id");
+    $cv->execute([$sprint_id]);
+    $liveById = [];
+    foreach ($gamesLive as $g) $liveById[(int)$g['id']] = $g;
+    $best = null;
+    foreach ($cv->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $gid = (int)$row['game_id'];
+        if (!isset($liveById[$gid])) continue;
+        $key = [(int)$row['pts'], (int)$row['n']];          // баллы, затем число голосовавших
+        if ($best === null || $key > $best) { $best = $key; $winners = []; }
+        if ($key === $best) $winners[] = $liveById[$gid] + ['c_pts' => $key[0], 'c_n' => $key[1]];
+    }
+}
+
 require_once('../swad/static/elements/header.php');
 ?>
 <!DOCTYPE html>
@@ -338,6 +366,35 @@ require_once('../swad/static/elements/header.php');
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if ($showWinner): ?>
+        <div class="jv-timer<?= $now >= $winnerAt ? ' done' : '' ?>" id="jvTimer" data-left="<?= max(0, $winnerAt - $now) ?>">
+            <div class="jv-timer-tag"><?= h(JV_NOMINATION) ?></div>
+            <?php if ($now < $winnerAt): ?>
+                <div class="jv-timer-title">Победителя объявим <?= date('d.m в H:i', $winnerAt) ?> (МСК)</div>
+                <div class="jv-timer-clock" aria-live="off">
+                    <span><b data-u="d">0</b><small>дн</small></span>
+                    <span><b data-u="h">00</b><small>час</small></span>
+                    <span><b data-u="m">00</b><small>мин</small></span>
+                    <span><b data-u="s">00</b><small>сек</small></span>
+                </div>
+                <div class="jv-timer-sub">Выиграет работа с наибольшим числом баллов от сообщества.</div>
+            <?php elseif ($winners): ?>
+                <div class="jv-timer-title"><?= count($winners) > 1 ? 'Победу делят' : 'Победитель голосования сообщества' ?></div>
+                <div class="jv-winners">
+                <?php foreach ($winners as $w): ?>
+                    <a class="jv-winner" href="/g/<?= (int)$w['id'] ?>">
+                        <img src="<?= h($w['icon_url'] ?: ($w['path_to_cover'] ?: $COVER_FALLBACK)) ?>" alt="" loading="lazy" decoding="async">
+                        <span><b><?= h($w['name']) ?></b><small><?= (int)$w['c_pts'] ?> баллов · <?= (int)$w['c_n'] ?> голосовавших</small></span>
+                    </a>
+                <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="jv-timer-title">Время вышло</div>
+                <div class="jv-timer-sub">Голосов сообщества пока нет — победителя определить не из чего.</div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
 
         <?php if (!$revealed): ?>
             <div class="jv-empty" style="padding:80px 20px;">
@@ -522,6 +579,27 @@ require_once('../swad/static/elements/header.php');
         toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
     }
 
+
+    /* Обратный отсчёт. Остаток приходит с сервера (data-left), а не из
+       часов браузера — их часто сбивают. На нуле один раз перезагружаем
+       страницу: победителя рисует сервер. */
+    (function () {
+        const t = document.getElementById('jvTimer');
+        if (!t || t.classList.contains('done')) return;
+        const end = Date.now() + (+t.dataset.left) * 1000;
+        const el  = u => t.querySelector('[data-u="' + u + '"]');
+        const pad = n => String(n).padStart(2, '0');
+        function tick() {
+            const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+            el('d').textContent = Math.floor(left / 86400);
+            el('h').textContent = pad(Math.floor(left % 86400 / 3600));
+            el('m').textContent = pad(Math.floor(left % 3600 / 60));
+            el('s').textContent = pad(left % 60);
+            if (left <= 0) { setTimeout(() => location.reload(), 1500); return; }
+            setTimeout(tick, 250);
+        }
+        tick();
+    })();
 
     const rules = document.getElementById('rules');
     const rulesBtn = document.getElementById('rulesBtn');
