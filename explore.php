@@ -93,6 +93,17 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     в соответствии с законодательством РФ.
                 </div>
 
+                <?php /* Шапка витрины в языке профилей игрока/студии: крупная панель с
+                         заголовком, а веб-режим — капсула справа. Плитка «Веб-игр» та же,
+                         что была (#webGamesTile): её ищет JS по id, а не по месту в DOM. */ ?>
+                <header class="ex-hero">
+                    <span class="ex-hero__mark" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r=".9" fill="currentColor" stroke="none"/><circle cx="17.8" cy="13.6" r=".9" fill="currentColor" stroke="none"/></svg>
+                    </span>
+                    <div class="ex-hero__text">
+                        <h1 class="ex-hero__title">Каталог игр</h1>
+                        <p class="ex-hero__sub">Ищите по названию и жанру, фильтруйте по цене — или сразу играйте в браузере.</p>
+                    </div>
                 <?php /* Отдельный крупный переключатель, а не ещё один чип в общем списке
                          жанров слева — веб-игры это отдельный режим просмотра («играть сейчас,
                          без скачивания»), а не жанр. У него свой набор жанров-чипов ниже,
@@ -113,6 +124,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     </span>
                     <span class="web-tile-check" aria-hidden="true"></span>
                 </a>
+                </header>
 
                 <div class="search-wrapper">
                     <div class="sort-buttons" id="sortButtons">
