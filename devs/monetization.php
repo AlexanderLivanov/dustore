@@ -3,7 +3,11 @@ $page_title = 'Монетизация';
 $active_nav = 'monetization';
 require_once(__DIR__ . '/includes/header.php');
 
+require_once(__DIR__ . '/../swad/controllers/csrf.php');
+require_once(__DIR__ . '/../swad/fx/boot.php');
+
 $conn = $db->connect();
+Fx::use($conn);
 
 // Добавляем колонки YooKassa если ещё нет (idempotent)
 try {
@@ -41,6 +45,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->prepare("UPDATE studios SET bank_name=?,BIC=?,acc_num=?,INN=? WHERE id=?")
             ->execute([$bank_name, $BIC, $acc_num, $INN, $studio_id]);
         $success_msg = 'Банковские реквизиты сохранены.';
+    }
+
+    /* Донаты, закрытая комната и ссылки обратной связи — то, что видно на публичной странице студии */
+    elseif (str_starts_with((string)$section, 'fx_')) {
+        if (!csrf_valid()) {
+            $error_msg = 'Сессия устарела — обновите страницу и повторите.';
+        } elseif (!FxAuth::isStudioOwner($studio_id, (int)$user_id)) {
+            $error_msg = 'Менять это может владелец или администратор студии.';
+        } else {
+            $cur = FxMonet::get($studio_id);
+            if ($section === 'fx_donate') {
+                $cur['donate_on']   = !empty($_POST['donate_on']) ? 1 : 0;
+                $cur['donate_url']  = trim((string)($_POST['donate_url'] ?? ''));
+                $cur['donate_note'] = (string)($_POST['donate_note'] ?? '');
+                FxMonet::save($studio_id, $cur);
+                $success_msg = 'Настройки донатов сохранены.';
+            } elseif ($section === 'fx_room') {
+                $cur['room_on']    = !empty($_POST['room_on']) ? 1 : 0;
+                $cur['room_title'] = (string)($_POST['room_title'] ?? '');
+                $cur['room_desc']  = (string)($_POST['room_desc'] ?? '');
+                $cur['room_price'] = (string)($_POST['room_price'] ?? '');
+                FxMonet::save($studio_id, $cur);
+                $success_msg = 'Закрытая комната сохранена.';
+            } elseif ($section === 'fx_links') {
+                $rows = [];
+                foreach ((array)($_POST['link_label'] ?? []) as $i => $label) {
+                    $rows[] = ['label' => (string)$label, 'url' => (string)($_POST['link_url'][$i] ?? '')];
+                }
+                FxMonet::saveLinks($studio_id, $rows);
+                $success_msg = 'Ссылки обратной связи сохранены.';
+            }
+        }
     }
 
     // Перечитываем
@@ -163,5 +199,131 @@ function pv($a, $k)
     </div>
 
 </div>
+
+
+<?php
+/* ── Публичная страница студии: донаты, закрытая комната, ссылки ── */
+$fxCan   = FxAuth::isStudioOwner($studio_id, (int)$user_id);
+$fxMon   = FxMonet::get($studio_id);
+$fxLinks = FxMonet::links($studio_id) ?: FxStats::feedback($pay);   // ещё ничего не сохраняли — то, что уже видят посетители из карточки студии
+$fxLinks = array_map(static fn($l) => ['label' => $l['label'], 'url' => preg_replace('#^mailto:#', '', (string)$l['url'])], $fxLinks);
+$fxLinks = array_slice(array_pad($fxLinks, max(count($fxLinks) + 1, 3), ['label' => '', 'url' => '']), 0, 8);
+?>
+<div style="display:flex;align-items:center;gap:10px;margin:28px 0 12px;">
+    <span class="material-icons" style="color:var(--p);">storefront</span>
+    <div>
+        <div style="font-size:15px;font-weight:700;">Страница студии</div>
+        <div style="font-size:12px;color:var(--tm);">Эти настройки видят посетители на <a href="/d/<?= htmlspecialchars((string)($pay['tiker'] ?? '')) ?>" target="_blank" style="color:var(--p);text-decoration:none;">публичной странице студии ↗</a></div>
+    </div>
+</div>
+
+<?php if (!$fxCan): ?>
+    <div class="alert" style="margin-bottom:14px;background:rgba(255,255,255,.04);border:1px solid var(--bd);color:var(--ts);">
+        <span class="material-icons" style="vertical-align:-6px;margin-right:6px;">lock</span>Смотреть можно всем сотрудникам, менять — только владелец или администратор студии.
+    </div>
+<?php endif; ?>
+
+<div class="grid-2" style="gap:16px;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Донаты -->
+        <div class="card" id="donate">
+            <div class="card-title"><span class="material-icons">volunteer_activism</span>Донаты</div>
+            <div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:14px;">
+                В баннере студии появится кнопка «Задонатить». Она открывает вашу ссылку в новой вкладке — Boosty, Patreon, DonationAlerts, СБП-ссылку и т. п.
+            </div>
+            <form method="POST">
+                <?= csrf_field() ?><input type="hidden" name="section" value="fx_donate">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
+                    <input type="checkbox" name="donate_on" value="1" style="accent-color:var(--p);width:16px;height:16px;" <?= !empty($fxMon['donate_on']) ? 'checked' : '' ?>>
+                    <span style="font-size:13px;font-weight:600;">Показывать кнопку «Задонатить»</span>
+                </label>
+                <div class="field"><label>Ссылка для донатов</label>
+                    <input type="text" inputmode="url" autocapitalize="off" name="donate_url" value="<?= htmlspecialchars((string)($fxMon['donate_url'] ?? '')) ?>" placeholder="https://boosty.to/…" maxlength="255"></div>
+                <div class="field"><label>Подпись под кнопкой <small style="color:var(--tm);">(необязательно)</small></label>
+                    <input type="text" name="donate_note" value="<?= htmlspecialchars((string)($fxMon['donate_note'] ?? '')) ?>" placeholder="Все донаты идут на новые уровни" maxlength="160"></div>
+                <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;" <?= $fxCan ? '' : 'disabled' ?>>
+                    <span class="material-icons">save</span>Сохранить донаты
+                </button>
+            </form>
+        </div>
+
+        <!-- Закрытая комната -->
+        <div class="card" id="room">
+            <div class="card-title"><span class="material-icons">lock</span>Закрытая комната
+                <span style="margin-left:auto;font-size:10px;background:var(--elev);color:var(--tm);padding:1px 8px;border-radius:4px;border:1px solid var(--bd);">скоро</span></div>
+            <div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:14px;">
+                Платный контент для тех, кто поддерживает студию: ранние сборки, закулисье, наброски. Вход пока не открыт — кнопка на странице студии
+                будет неактивной, а вторая вкладка рядом с девблогом появится позже. Настройки сохранятся и подхватятся автоматически.
+            </div>
+            <form method="POST">
+                <?= csrf_field() ?><input type="hidden" name="section" value="fx_room">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
+                    <input type="checkbox" name="room_on" value="1" style="accent-color:var(--p);width:16px;height:16px;" <?= !empty($fxMon['room_on']) ? 'checked' : '' ?>>
+                    <span style="font-size:13px;font-weight:600;">Показывать «Закрытую комнату»</span>
+                </label>
+                <div class="field"><label>Название</label>
+                    <input type="text" name="room_title" value="<?= htmlspecialchars((string)($fxMon['room_title'] ?? '')) ?>" placeholder="Закулисье" maxlength="80"></div>
+                <div class="field"><label>Что внутри</label>
+                    <textarea name="room_desc" maxlength="400" style="min-height:80px;" placeholder="Ранние сборки, наброски, голосования"><?= htmlspecialchars((string)($fxMon['room_desc'] ?? '')) ?></textarea></div>
+                <div class="field"><label>Цена доступа, монет <small style="color:var(--tm);">(пусто — без цены)</small></label>
+                    <input type="number" name="room_price" min="0" value="<?= htmlspecialchars((string)($fxMon['room_price'] ?? '')) ?>" placeholder="150"></div>
+                <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;" <?= $fxCan ? '' : 'disabled' ?>>
+                    <span class="material-icons">save</span>Сохранить комнату
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Обратная связь -->
+    <div class="card" id="links">
+        <div class="card-title"><span class="material-icons">forum</span>Обратная связь</div>
+        <div style="font-size:12px;color:var(--ts);line-height:1.6;margin-bottom:14px;">
+            Куда посетителям писать студии: Telegram, Discord, почта, сайт. До 8 ссылок — они покажутся в блоке «Обратная связь» на странице студии.
+            Почту можно указать просто адресом, схему <code>https://</code> добавим сами.
+        </div>
+        <form method="POST">
+            <?= csrf_field() ?><input type="hidden" name="section" value="fx_links">
+            <div id="fx-link-rows">
+                <?php foreach ($fxLinks as $l): ?>
+                    <div style="display:grid;grid-template-columns:130px 1fr;gap:8px;margin-bottom:8px;">
+                        <div class="field" style="margin:0;"><input type="text" name="link_label[]" value="<?= htmlspecialchars((string)$l['label']) ?>" placeholder="Название" maxlength="48"></div>
+                        <div class="field" style="margin:0;"><input type="text" name="link_url[]" value="<?= htmlspecialchars((string)$l['url']) ?>" placeholder="t.me/… или почта" maxlength="255"></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="btn btn-g" id="fx-link-add" style="margin-bottom:12px;"><span class="material-icons">add</span>Ещё ссылка</button>
+            <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;" <?= $fxCan ? '' : 'disabled' ?>>
+                <span class="material-icons">save</span>Сохранить ссылки
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    @keyframes fxFlash { 0% { box-shadow: 0 0 0 3px var(--p, #c32178); } 100% { box-shadow: 0 0 0 3px transparent; } }
+    .fx-flash { animation: fxFlash 1.8s ease-out; border-radius: 12px; }
+</style>
+<script>
+(function () {
+    // «ещё ссылка»: не больше 8 строк
+    var rows = document.getElementById('fx-link-rows'), add = document.getElementById('fx-link-add');
+    if (rows && add) add.addEventListener('click', function () {
+        if (rows.children.length >= 8) { add.disabled = true; return; }
+        var d = rows.lastElementChild.cloneNode(true);
+        d.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+        rows.appendChild(d);
+        if (rows.children.length >= 8) add.disabled = true;
+    });
+    // переход по шестерёнке со страницы студии: #donate | #room | #links
+    var h = decodeURIComponent(location.hash.replace('#', ''));
+    var el = h && document.getElementById(h);
+    if (el) {
+        el.scrollIntoView({ block: 'center' });
+        el.classList.add('fx-flash');
+        setTimeout(function () { el.classList.remove('fx-flash'); }, 2200);
+    }
+})();
+</script>
 
 <?php require_once(__DIR__ . '/includes/footer.php'); ?>

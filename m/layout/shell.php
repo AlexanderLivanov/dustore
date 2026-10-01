@@ -8,8 +8,9 @@
 $tabOf = [
     'home' => 'games', 'catalog' => 'games', 'game' => 'games', 'search' => 'games', 'developer' => 'games',
     'media' => 'media', 'chat' => 'chat', 'library' => 'profile', 'profile' => 'profile', 'login' => 'profile',
+    'player' => 'profile',      // чужой профиль вьюха сама переводит в «никакую» через $navTab = ''
 ];
-$tab = $tabOf[$page] ?? 'games';
+$tab = $navTab ?? ($tabOf[$page] ?? 'games');
 $nav = [['games', '/m/', 'Игры']];
 if (is_file(__DIR__ . '/../views/media.php')) $nav[] = ['media', '/m/media', 'Медиа'];
 $nav[] = ['chat', '/m/chat', 'Чаты'];

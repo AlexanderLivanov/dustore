@@ -9,10 +9,16 @@ if (is_file(__DIR__ . '/push_helpers.php')) require_once __DIR__ . '/push_helper
 if (is_file(__DIR__ . '/ws_helpers.php')) require_once __DIR__ . '/ws_helpers.php';
 require_once __DIR__ . '/_crypto.php';
 require_once __DIR__ . '/_files.php';
+require_once __DIR__ . '/_blocks.php';
+require_once __DIR__ . '/_reactions.php';
+require_once __DIR__ . '/_stories.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $db = (new Database())->connect('dustore');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+chat_blocks_ensure($db);
+chat_reactions_ensure($db);
+chat_stories_ensure($db);
 
 /**
  * Чат v2 (файлы, ответы, пины, звук) включается сам, как только прогнана
@@ -563,7 +569,13 @@ function thread_header(PDO $db, array $c, int $myId): array {
     $u=(get_users_meta($db,[$peer]))[$peer] ?? [];
     $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$peer]); $seen=$la->fetchColumn() ?: null;
     [$dlv,$rd]=peer_ptrs($db,$cid,$peer);
-    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
+    // Чёрный список — только для личных диалогов (сюда доходят только они:
+    // system и studio уже вернулись выше). Обе стороны видны фронту сразу,
+    // чтобы правильно показать и композер, и подпись «вы заблокировали» /
+    // «вас заблокировали» без лишнего запроса.
+    $blk = chat_block_status($db, $myId, $peer);
+    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv,
+            'blocked_by_me'=>$blk['a_blocked_b'],'blocked_me'=>$blk['b_blocked_a']];
 }
 
 /* =================== ACTION: send =================== */
@@ -595,6 +607,16 @@ if ($action === 'send') {
     }
     $c=conv_access($db,$cid,$myId,$myStudioIds); if(!$c) out(['ok'=>false,'error'=>'forbidden']);
     if($c['type']==='system') out(['ok'=>false,'error'=>'readonly']); // в «Уведомления» не пишем руками
+    if ($c['type']==='dm') {
+        // Блок в любую сторону останавливает новые сообщения для обоих —
+        // история никуда не девается, просто дальше писать нельзя, пока
+        // не разблокируют. Проверяем на каждую отправку, а не только при
+        // создании диалога: блокировка может появиться уже после того, как
+        // переписка существует давно.
+        $peerRow=$db->prepare("SELECT user_id FROM conversation_participants WHERE conversation_id=? AND user_id<>? LIMIT 1");
+        $peerRow->execute([$cid,$myId]); $peerId=(int)$peerRow->fetchColumn();
+        if ($peerId>0 && chat_is_blocked_pair($db,$myId,$peerId)) out(['ok'=>false,'error'=>'blocked']);
+    }
 
     if ($replyTo > 0) {
         // отвечать можно только на сообщение из этой же беседы
@@ -648,6 +670,57 @@ if ($action === 'delete_conversation') {
     out(['ok'=>true,'conversation_id'=>$cid]);
 }
 
+/* =================== ACTION: block_user / unblock_user ===================
+ * Чёрный список в личных чатах. Кнопка живёт в меню открытого диалога
+ * (см. chat/_markup.php #blockUser) — user_id берётся из уже известного
+ * peer_id собеседника, отдельного экрана «управление ЧС» пока нет. */
+if ($action === 'block_user') {
+    $target=(int)($_POST['user_id'] ?? 0);
+    if ($target<=0 || $target===$myId) out(['ok'=>false,'error'=>'bad_id']);
+    chat_block_user($db,$myId,$target);
+    out(['ok'=>true,'blocked_by_me'=>true]);
+}
+if ($action === 'unblock_user') {
+    $target=(int)($_POST['user_id'] ?? 0);
+    if ($target<=0) out(['ok'=>false,'error'=>'bad_id']);
+    chat_unblock_user($db,$myId,$target);
+    out(['ok'=>true,'blocked_by_me'=>false]);
+}
+
+/* =================== ACTION: stories_list / story_create / story_view / story_viewers / story_delete ===================
+ * «Истории»: эфемерные фото/текстовые карточки на 24 часа, видны друзьям.
+ * Кольцо над списком чатов (см. chat/_markup.php #stories) — на мобильном и
+ * десктопе одинаково, см. chat_stories_ensure() в _stories.php. */
+if ($action === 'stories_list') {
+    out(['ok' => true, 'groups' => chat_stories_feed($db, $myId)]);
+}
+if ($action === 'story_create') {
+    $kind = (string)($_POST['kind'] ?? 'photo');
+    // не больше 20 публикаций в час на сессию — как у Fid-загрузки фото
+    $now = time();
+    $log = array_values(array_filter((array)($_SESSION['chat_story_up'] ?? []), static fn($t) => $t > $now - 3600));
+    if (count($log) >= 20) out(['ok' => false, 'error' => 'rate']);
+    $log[] = $now; $_SESSION['chat_story_up'] = $log;
+
+    $r = $kind === 'text'
+        ? chat_story_create_text($db, $myId, (string)($_POST['text'] ?? ''), (string)($_POST['bg'] ?? ''))
+        : chat_story_create_photo($db, $myId, $_FILES['file'] ?? [], (string)($_POST['text'] ?? ''));
+    out($r);
+}
+if ($action === 'story_view') {
+    $id = (int)($_POST['id'] ?? 0); if ($id <= 0) out(['ok' => false, 'error' => 'bad_id']);
+    chat_story_view($db, $id, $myId);
+    out(['ok' => true]);
+}
+if ($action === 'story_viewers') {
+    $id = (int)($_GET['id'] ?? 0); if ($id <= 0) out(['ok' => false, 'error' => 'bad_id']);
+    out(['ok' => true, 'viewers' => chat_story_viewers($db, $id, $myId)]);
+}
+if ($action === 'story_delete') {
+    $id = (int)($_POST['id'] ?? 0); if ($id <= 0) out(['ok' => false, 'error' => 'bad_id']);
+    out(['ok' => chat_story_delete($db, $id, $myId)]);
+}
+
 /* ════════════════════════ ЧАТ v2 ════════════════════════════════════════ */
 
 /** Короткая строка для превью в списке, пуша и цитаты ответа. */
@@ -677,6 +750,7 @@ function enrich_messages(PDO $db, int $cid, array $rows, int $myId, bool $v2): a
     $senderIds = array_merge(array_map(fn($m) => (int)$m['sender_id'], $rows), array_map(fn($r) => (int)$r['sender_id'], $replies));
     $smeta = get_users_meta($db, $senderIds);
     $files = $v2 ? chat_files_by_ids($db, array_merge(array_column($rows, 'file_id'), array_column($replies, 'file_id'))) : [];
+    $reactions = chat_reactions_for($db, array_column($rows, 'id'), $myId);
 
     $out = [];
     foreach ($rows as $m) {
@@ -692,6 +766,7 @@ function enrich_messages(PDO $db, int $cid, array $rows, int $myId, bool $v2): a
             'at'      => $m['created_at'],
             'file'    => (!$del && $file) ? chat_file_dto($file) : null,
             'reply'   => null,
+            'reactions' => $del ? [] : ($reactions[(int)$m['id']] ?? []),
         ];
         $rid = (int)($m['reply_to_id'] ?? 0);
         if ($rid && isset($replies[$rid])) {
@@ -846,6 +921,20 @@ if ($action === 'pin' || $action === 'unpin') {
     }
     if (function_exists('ws_notify')) ws_notify($cid, ws_recipients($db, $cid, $myId));
     out(['ok' => true, 'pins' => conv_pins($db, $cid)]);
+}
+
+/* =================== ACTION: react ===================
+ * Реакции работают независимо от chat v2/v3 — своя таблица, своя ensure(),
+ * не завязана на reply_to_id/file_id. Один клик тем же эмодзи снимает
+ * реакцию, другим — переставляет (см. chat_toggle_reaction). */
+if ($action === 'react') {
+    [$m, $c] = message_with_access($db, (int)($_POST['message_id'] ?? 0), $myId, $myStudioIds);
+    $emoji = trim((string)($_POST['emoji'] ?? ''));
+    if ($emoji === '' || mb_strlen($emoji) > 8) out(['ok' => false, 'error' => 'bad_emoji']);
+    chat_toggle_reaction($db, (int)$m['id'], $myId, $emoji);
+    $sums = chat_reactions_for($db, [(int)$m['id']], $myId);
+    if (function_exists('ws_notify')) ws_notify((int)$m['conversation_id'], ws_recipients($db, (int)$m['conversation_id'], $myId));
+    out(['ok' => true, 'message_id' => (int)$m['id'], 'reactions' => $sums[(int)$m['id']] ?? []]);
 }
 
 /* =================== ACTION: mark_read =================== */

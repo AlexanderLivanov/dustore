@@ -601,6 +601,13 @@ require_once('../swad/static/elements/header.php');
     }
 
 
+    /* Разблокируем шкалу оценок только когда сервер подтвердил, что открытие
+       засчиталось (веб-игра — тут запуск и есть игра). Для скачиваемых работ
+       jam_play.php намеренно ничего не пишет (success:false, skipped:true) —
+       право голоса даёт только реальное скачивание на странице игры, — и
+       раньше шкала всё равно разблокировалась по одному клику, а сам голос
+       потом отклонялся сервером: человек открывал работу, видел, что можно
+       оценивать, жал на балл — и получал отказ «сначала скачайте игру». */
     document.addEventListener('click', e => {
         const link = e.target.closest('[data-open]');
         if (!link) return;
@@ -609,9 +616,18 @@ require_once('../swad/static/elements/header.php');
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
             body: JSON.stringify({ sprint_id: SPRINT_ID, game_id: gid, csrf: CSRF })
+        }).then(r => r.json()).then(r => {
+            if (r && r.success) unlock(gid);
+            else if (r && r.skipped) needDownload(gid);
         }).catch(() => {});
-        unlock(gid);
     });
+
+    function needDownload(gid) {
+        const card = document.getElementById('card-' + gid);
+        if (!card || card.dataset.opened === '1') return;   // уже засчитано раньше — не откатываем подсказку
+        const hint = document.getElementById('hint-' + gid);
+        if (hint) hint.textContent = 'Скачайте игру на её странице, чтобы оценить';
+    }
 
     function unlock(gid) {
         const card = document.getElementById('card-' + gid);

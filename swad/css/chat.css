@@ -25,7 +25,7 @@
 /* Всё, что управляется атрибутом hidden: и внутри .app, и оверлеи вне его
    (меню, настройки, лайтбокс). Скрытый лайтбокс с display:grid ловил клики
    по всей странице — тот же баг, что с подсказкой. */
-.app [hidden], .toast[hidden], .ctx[hidden], .modal[hidden], .lightbox[hidden], .dropzone[hidden] { display: none !important; }
+.app [hidden], .toast[hidden], .ctx[hidden], .modal[hidden], .lightbox[hidden], .dropzone[hidden], .story-view[hidden], .story-view [hidden], .sn-preview[hidden] { display: none !important; }
 
 :root {
     --ch-header:      80px;
@@ -157,6 +157,20 @@ body.moonlight-theme {
 .search-top.has-value button { display: block; }
 .search-top button:hover { color: var(--ch-text); }
 
+/* ── Истории: кольцо друзей с активными сторис на 24ч, над списком чатов ── */
+.stories { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 6px 16px 10px; }
+.stories::-webkit-scrollbar { display: none; }
+.sr { flex: 0 0 auto; width: 62px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.sr .ring { position: relative; width: 58px; height: 58px; padding: 2.5px; border-radius: 50%; background: var(--ch-panel-line); transition: background .15s ease; }
+.sr.unseen .ring { background: linear-gradient(135deg, #ff5a9c, #ffc94d); }
+.sr:hover .ring { filter: brightness(1.08); }
+.sr .av { width: 100%; height: 100%; border-radius: 50%; font-size: 15px; }
+.sr-plus { position: absolute; right: -2px; bottom: -2px; width: 19px; height: 19px; border-radius: 50%;
+    background: var(--ch-grad); color: #fff; font-size: 13px; font-weight: 800; line-height: 18px; text-align: center;
+    box-shadow: 0 0 0 2.5px var(--ch-inset); }
+.sr .rc-n { max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--ch-muted); }
+
 .list, .search-results { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 10px 14px; }
 
 .card {
@@ -193,9 +207,28 @@ body.moonlight-theme {
 .av.sq { border-radius: 14px; }
 .av.sys { border-radius: 14px; background: var(--ch-grad); color: #fff; box-shadow: 0 6px 18px -8px rgba(var(--brand-rgb, 195, 33, 120), .8); }
 
+/* «В сети» — точка на аватарке (было только в мобильной сборке). НЕ копируем
+   мобильный приём «сплошная обводка цвета фона»: там фон плоский (#14041d),
+   а здесь под панелью может быть что угодно — от градиента до фото лунной
+   темы, — так что сплошной обводкой мы бы вырезали заметное чужеродное пятно.
+   Вместо этого — полупрозрачное гало, как у .live ниже: оно всегда слегка
+   затемняет/подсвечивает то, что под ним, а не пытается угадать точный цвет. */
+.av-w { position: relative; flex: none; }
+.av-w .on {
+    position: absolute; right: -2px; bottom: -2px; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--ch-online); box-shadow: 0 0 0 3px rgba(70, 209, 138, .22), 0 0 0 1.5px rgba(0, 0, 0, .35);
+}
+.c-pill {
+    flex: none; padding: 2px 7px; border-radius: 7px; background: var(--ch-studio-soft); color: var(--ch-studio);
+    font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+}
+
 .c-main { min-width: 0; }
 .c-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.c-name { font-weight: 600; font-size: 0.93rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* flex:auto без min-width:0 не сжимается ниже своего контента (та же ловушка,
+   что чинили в .fx-cc) — без этого длинное имя студии+плашка+время вылезали
+   бы за карточку теперь, когда плашка есть и на десктопе. */
+.c-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 0.93rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .c-time { font-size: 0.7rem; color: var(--ch-dim); flex: none; }
 .c-last { font-size: 0.82rem; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
 .c-last .me { color: var(--ch-dim); }
@@ -450,6 +483,24 @@ body.moonlight-theme .ctx { background: rgba(16, 23, 40, .97); }
 .ctx button:hover { background: rgba(255, 255, 255, .07); }
 .ctx button.danger, .ctx button.danger svg { color: var(--ch-danger); }
 
+/* Полоска быстрых реакций сверху меню сообщения */
+.ctx-react { display: flex; justify-content: space-between; gap: 2px; padding: 4px 4px 8px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--ch-panel-line); }
+.react-em { border: 0; background: none; font-size: 1.25rem; line-height: 1; padding: 6px; border-radius: 50%;
+    cursor: pointer; transition: transform .12s ease, background .12s ease; }
+.react-em:hover { background: rgba(255, 255, 255, .09); transform: scale(1.15); }
+.react-em.active { background: rgba(var(--brand-rgb, 195, 33, 120), .28); }
+
+/* Пилюли реакций под сообщением */
+.reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.react-pill { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px;
+    padding: 2px 8px; font-size: .82rem; line-height: 1.5; cursor: pointer;
+    background: rgba(255, 255, 255, .08); color: var(--ch-text); }
+.react-pill span { font-size: .74rem; color: var(--ch-muted); font-variant-numeric: tabular-nums; }
+.react-pill.mine { background: rgba(var(--brand-rgb, 195, 33, 120), .32); }
+.react-pill.mine span { color: var(--ch-text); }
+.react-pill:hover { filter: brightness(1.15); }
+
 .side-more { margin-left: auto; width: 34px; height: 34px; }
 
 /* ── Настройки ── */
@@ -483,6 +534,61 @@ body.moonlight-theme .modal-card { background: #0c1426; }
 .lightbox { position: fixed; inset: 0; z-index: 1250; display: grid; place-items: center; padding: 4vh 4vw;
     background: rgba(4, 0, 8, .92); cursor: zoom-out; }
 .lightbox img { max-width: 100%; max-height: 88vh; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, .7); }
+
+/* ── Просмотр истории на весь экран ── */
+.story-view { position: fixed; inset: 0; z-index: 1260; display: flex; flex-direction: column; background: #0a0410; }
+.sv-bars { display: flex; gap: 4px; padding: 10px 12px 0; }
+.sv-bar { flex: 1; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, .25); overflow: hidden; }
+.sv-bar.done { background: rgba(255, 255, 255, .8); }
+.sv-bar i { display: block; height: 100%; width: 0; background: #fff; border-radius: inherit; }
+@keyframes svFill { from { width: 0% } to { width: 100% } }
+.sv-head { display: flex; align-items: center; gap: 10px; padding: 12px; color: #fff; }
+.sv-head .av { width: 34px; height: 34px; border-radius: 50%; flex: none; font-size: 13px; }
+.sv-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sv-who b { font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-who span { font-size: .74rem; color: rgba(255, 255, 255, .55); }
+.story-view .icon-btn { background: rgba(255, 255, 255, .08); color: #fff; }
+.story-view .icon-btn:hover { background: rgba(255, 255, 255, .18); }
+.sv-stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.sv-tap { position: absolute; top: 0; bottom: 0; width: 35%; z-index: 2; cursor: pointer; }
+.sv-tap--prev { left: 0; } .sv-tap--next { right: 0; }
+.sv-media { max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+.sv-media img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
+.sv-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px calc(14px + var(--safe-b, 0px));
+    background: linear-gradient(to top, rgba(0, 0, 0, .65), transparent); color: #fff; font-size: .92rem; }
+.sv-text { width: min(92vw, 480px); min-height: min(60vh, 480px); border-radius: 18px; display: flex; align-items: center;
+    justify-content: center; padding: 32px; color: #fff; font-size: 1.3rem; font-weight: 700; line-height: 1.4; text-align: center;
+    word-break: break-word; box-shadow: 0 30px 80px rgba(0, 0, 0, .5); }
+.sv-viewers { position: absolute; left: 12px; bottom: calc(14px + var(--safe-b, 0px)); z-index: 3; display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 999px; background: rgba(255, 255, 255, .12); color: #fff; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; }
+.sv-viewers:hover { background: rgba(255, 255, 255, .2); }
+.sv-viewerlist { position: absolute; left: 0; right: 0; bottom: 0; max-height: 50%; overflow-y: auto; z-index: 4;
+    background: #150c17; border-radius: 18px 18px 0 0; padding: 14px 16px calc(14px + var(--safe-b, 0px)); box-shadow: 0 -20px 50px rgba(0, 0, 0, .5); }
+.sv-viewer { display: flex; align-items: center; gap: 10px; padding: 7px 0; color: #fff; font-size: .88rem; }
+.sv-viewer .av { width: 28px; height: 28px; border-radius: 50%; font-size: 11px; flex: none; }
+.sv-viewer-empty { color: rgba(255, 255, 255, .5); font-size: .86rem; padding: 8px 0; }
+
+/* ── Публикация истории ── */
+.sn-tabs { display: flex; gap: 4px; margin-bottom: 12px; padding: 4px; border-radius: 12px; background: var(--ch-inset); }
+.sn-tabs button { flex: 1; padding: 8px; border: 0; border-radius: 9px; background: none; color: var(--ch-muted); font: inherit; font-size: .84rem; font-weight: 600; cursor: pointer; }
+.sn-tabs button.on { background: var(--ch-panel-2); color: var(--ch-text); }
+.sn-pick { width: 100%; padding: 26px 12px; border: 1px dashed rgba(255, 255, 255, .2); border-radius: 14px;
+    background: none; color: var(--ch-text); font: inherit; font-size: .9rem; cursor: pointer; }
+.sn-pick:hover { border-color: var(--ch-accent); }
+.sn-preview { position: relative; margin-top: 10px; border-radius: 14px; overflow: hidden; max-height: 260px; display: flex; justify-content: center; background: var(--ch-inset); }
+.sn-preview img { max-width: 100%; max-height: 260px; object-fit: contain; }
+.sn-preview-x { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; border: 0;
+    background: rgba(0, 0, 0, .55); color: #fff; font-size: 16px; cursor: pointer; }
+#snCaption { width: 100%; margin-top: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ch-panel-line);
+    background: var(--ch-inset); color: var(--ch-text); font: inherit; font-size: .88rem; outline: none; }
+#snCaption:focus { border-color: var(--ch-accent); }
+#snTextInput { width: 100%; min-height: 110px; padding: 12px; border-radius: 14px; border: 1px solid var(--ch-panel-line);
+    background: var(--ch-inset); color: var(--ch-text); font: inherit; font-size: .95rem; resize: vertical; outline: none; }
+#snTextInput:focus { border-color: var(--ch-accent); }
+.sn-bg { display: flex; gap: 8px; margin-top: 10px; }
+.sn-swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.sn-swatch.on { border-color: #fff; }
+.sn-card .wp-foot { margin-top: 14px; }
 .lb-dl { position: absolute; right: 20px; top: 18px; padding: 8px 16px; border-radius: 999px; background: rgba(255, 255, 255, .1);
     color: #fff; font-size: .85rem; font-weight: 600; text-decoration: none; }
 .lb-dl:hover { background: rgba(255, 255, 255, .18); }
@@ -515,6 +621,8 @@ body.moonlight-theme .modal-card { background: #0c1426; }
     background: none; border: 0; color: var(--ch-text); font: inherit; font-size: .92rem; outline: none;
 }
 .composer textarea::placeholder { color: var(--ch-dim); }
+.composer textarea:disabled { opacity: .5; cursor: default; }
+.attach:disabled { opacity: .3; cursor: default; pointer-events: none; }
 .send {
     flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%;
     background: var(--ch-grad); color: #fff; cursor: pointer; display: grid; place-items: center;

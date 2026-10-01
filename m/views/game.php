@@ -57,10 +57,28 @@ $features     = json_decode((string)($game['features'] ?? ''), true) ?: [];
 $requirements = json_decode((string)($game['requirements'] ?? ''), true) ?: [];
 $achievements = json_decode((string)($game['achievements'] ?? ''), true) ?: [];
 $badges       = array_values(array_filter(array_map('trim', explode(',', (string)($game['badges'] ?? '')))));
-$trailer      = trailer_embed($game['trailer_url'] ?? '');
+$trailer      = trailer_facade_html($game['trailer_url'] ?? '', $hero);
 $size         = (int)($game['game_zip_size'] ?? 0);
 $sizeLabel    = $size > 0 ? ($size >= 1073741824 ? number_format($size / 1073741824, 1, ',', '') . ' ГБ' : max(1, round($size / 1048576)) . ' МБ') : null;
 $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk.php');
+
+/* ── хаб игры (Fid Core): DustHunt, статистика, модераторы, стена и обсуждения — те же куски, что на /g/N (FxPages::game*) ── */
+m_fx($db);
+$fxRole  = FxAuth::gameRole($gid, $uid);                          // admin | owner | staff | mod | null
+$fxOwner = in_array($fxRole, ['admin', 'owner'], true);           // шестерёнки в консоль видит только владелец
+$fxTeam  = in_array($fxRole, ['admin', 'owner', 'staff'], true);  // пишет на стене от имени студии
+$fxHunt  = FxHunt::current($gid, $uid);
+$fxStats = FxStats::game($gid);
+$fxMods  = FxMods::list($gid);
+if (!$fxOwner) FxStats::bump('game', $gid);
+$fxWall  = FxFeed::wall('game', $gid, 'wall', $uid);
+$fxForum = FxFeed::wall('game', $gid, 'forum', $uid);
+FxPosts::view(array_merge(array_column($fxWall['posts'], 'id'), array_column($fxForum['posts'], 'id')));
+$fxTabs  = ['feed' => ['chat', 'Лента'], 'forum' => ['branch', 'Обсуждения'], 'about' => ['gamepad', 'Об игре'], 'reviews' => ['star', 'Отзывы']];
+$fxTab   = (string)($_GET['tab'] ?? '');
+if (!isset($fxTabs[$fxTab])) $fxTab = ($fxWall['posts'] || $fxForum['posts'] || $fxTeam) ? 'feed' : 'about';   // пустой хаб → сначала «Об игре»
+$headExtra .= m_fx_head();
+$footExtra .= m_fx_scripts();
 ?>
 <article class="gp">
   <div class="gp-hero<?= $heroDupe ? ' dupe' : '' ?>">
@@ -81,6 +99,8 @@ $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk
     </div>
   </header>
 
+  <?php if ($short && $short !== $desc): ?><p class="gp-lead"><?= h($short) ?></p><?php endif; ?>
+
   <div class="gp-stats">
     <div><b><?= $avg !== null ? number_format($avg, 1, '.', '') : '—' ?></b><small><?= $reviews ? count($reviews) . ' ' . m_plural(count($reviews), 'отзыв', 'отзыва', 'отзывов') : 'нет оценок' ?></small></div>
     <div><b><?= $downloads ?></b><small><?= m_plural($downloads, 'игрок', 'игрока', 'игроков') ?></small></div>
@@ -94,6 +114,7 @@ $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk
   </div>
   <?php endif; ?>
 
+  <?= m_fx_top() ?>
   <?php if ($railShots): ?>
   <div class="shots" id="shots">
     <?php foreach ($railShots as $i => $s): ?>
@@ -102,8 +123,37 @@ $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk
   </div>
   <?php endif; ?>
 
-  <?php if ($short && $short !== $desc): ?><p class="gp-lead"><?= h($short) ?></p><?php endif; ?>
+  <div class="fx fx-hub fx-m fx-gp" data-game="<?= $gid ?>">
+    <div class="fx-cols">
 
+      <!-- маленький блок: DustHunt, статистика, модераторы — на телефоне это лента карточек, которая листается вбок -->
+      <aside class="fx-side">
+        <?= FxRenderHub::huntWidget($fxHunt, $fxOwner ? ['assign_url' => FxPage::console('coop', ['game' => $gid], 'hunt')] : []) ?>
+        <?= FxPages::gameStats($fxStats, $fxOwner, $gid) ?>
+        <?= FxPages::gameMods($fxMods, $fxOwner, $gid) ?>
+      </aside>
+
+      <div class="fx-main">
+        <nav class="fx-tabs" role="tablist">
+          <?php foreach ($fxTabs as $k => [$ic_, $label_]): ?>
+            <button type="button" class="fx-tab<?= $fxTab === $k ? ' on' : '' ?>" role="tab" data-fx="tab" data-pane="<?= $k ?>">
+              <?= fx_icon($ic_, 'ic--sm') ?><?= h($label_) ?><?php if ($k === 'reviews' && $reviews): ?><span class="fx-tab__n"><?= count($reviews) ?></span><?php endif; ?>
+            </button>
+          <?php endforeach; ?>
+        </nav>
+
+        <!-- Лента: стена игры — пишет любой игрок -->
+        <div class="fx-pane" data-pane="feed"<?= $fxTab === 'feed' ? '' : ' hidden' ?>>
+          <?= FxPages::gameFeed($game, $gid, 'wall', $fxWall, $uid, $fxTeam) ?>
+        </div>
+
+        <!-- Обсуждения: ветки, закреплённые модераторами игры, идут наверху -->
+        <div class="fx-pane" data-pane="forum"<?= $fxTab === 'forum' ? '' : ' hidden' ?>>
+          <?= FxPages::gameFeed($game, $gid, 'forum', $fxForum, $uid, $fxTeam) ?>
+        </div>
+
+        <!-- Об игре: витрина -->
+        <div class="fx-pane" data-pane="about"<?= $fxTab === 'about' ? '' : ' hidden' ?>>
   <?php if ($desc): ?>
   <section class="gp-sec">
     <h2>Об игре</h2>
@@ -162,6 +212,10 @@ $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk
   </section>
   <?php endif; ?>
 
+        </div>
+
+        <!-- Отзывы -->
+        <div class="fx-pane" data-pane="reviews"<?= $fxTab === 'reviews' ? '' : ' hidden' ?>>
   <section class="gp-sec">
     <h2>Отзывы<?= $reviews ? ' <small>' . count($reviews) . '</small>' : '' ?></h2>
     <?php if (!$reviews): ?>
@@ -170,7 +224,7 @@ $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk
     <?php foreach (array_slice($reviews, 0, 8) as $r): $rt = (int)$r['rating'];
       // Автор — ссылка на его профиль. Раньше имя было просто текстом.
       $author = trim((string)($r['username'] ?? ''));
-      $authorHref = $author !== '' ? '/player/' . rawurlencode($author) : null; ?>
+      $authorHref = $author !== '' ? '/m/player/' . rawurlencode($author) : null; ?>
       <div class="rev">
         <div class="rev-h">
           <?php if ($authorHref): ?><a class="rev-who" href="<?= h($authorHref) ?>"><?php else: ?><span class="rev-who"><?php endif; ?>
@@ -186,6 +240,10 @@ $isApk        = $cta['href'] && str_contains((string)$cta['href'], 'download_apk
     <?php endforeach; ?>
     <?php if (count($reviews) > 8): ?><a class="link-btn" href="/g/<?= $gid ?>#reviews" data-desktop>Все отзывы на сайте</a><?php endif; ?>
   </section>
+        </div>
+      </div>
+    </div>
+  </div>
 </article>
 
 <div class="buybar">

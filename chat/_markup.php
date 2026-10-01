@@ -3,7 +3,8 @@
  * chat/_markup.php — разметка мессенджера. Общая для /chat/ (десктоп) и /m/chat
  * (мобильное PWA): chat.js один на оба, значит и DOM должен быть один.
  * Ожидает $hasStudio. Необязательно: $mobileUI — мобильное PWA (кнопка «новый чат», фильтры,
- * «Недавние», быстрые ответы); на десктопе этих блоков в DOM нет.
+ * быстрые ответы); на десктопе этих блоков в DOM нет. «Истории» (#stories) — общий блок,
+ * есть и на десктопе, и на мобильном (см. chat/_stories.php, chat.js paintStories()).
  */
 ?>
 <div class="app" id="app">
@@ -27,6 +28,8 @@
       </div>
     </div>
 
+    <div class="stories" id="stories" hidden aria-label="Истории"></div>
+
     <div class="search-top" id="searchWrap">
       <span class="si"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
       <input id="searchInput" placeholder="Поиск или новый чат…" autocomplete="off" enterkeyhint="search">
@@ -35,7 +38,6 @@
 
     <?php if (!empty($mobileUI)): ?>
     <div class="chips" id="chips" role="tablist" aria-label="Фильтр чатов"></div>
-    <div class="recent" id="recent" hidden aria-label="Недавние"></div>
     <?php endif; ?>
     <div class="list" id="list"><div class="empty">Загрузка…</div></div>
     <div class="search-results" id="searchResults" hidden></div>
@@ -77,6 +79,7 @@
         <div class="menu" id="menu" hidden>
           <button id="markRead">Отметить прочитанным</button>
           <button id="wpOpen">Обои чата</button>
+          <button id="blockUser">Заблокировать</button>
           <button class="danger" id="delConv">Удалить переписку</button>
         </div>
       </div>
@@ -164,4 +167,51 @@
 
 <div class="lightbox" id="lightbox" hidden><img alt=""><a class="lb-dl" id="lbDl" href="#" download>Скачать</a></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- просмотр историй на весь экран -->
+<div class="story-view" id="storyView" hidden>
+  <div class="sv-bars" id="svBars"></div>
+  <div class="sv-head">
+    <div class="av" id="svAv"></div>
+    <div class="sv-who"><b id="svName"></b><span id="svTime"></span></div>
+    <button type="button" class="icon-btn" id="svDel" aria-label="Удалить" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="svClose" aria-label="Закрыть">&times;</button>
+  </div>
+  <div class="sv-stage" id="svStage">
+    <div class="sv-tap sv-tap--prev" id="svPrev"></div>
+    <div class="sv-tap sv-tap--next" id="svNext"></div>
+    <div class="sv-media" id="svMedia"></div>
+  </div>
+  <button type="button" class="sv-viewers" id="svViewersBtn" hidden>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span id="svViewersN"></span>
+  </button>
+  <div class="sv-viewerlist" id="svViewerList" hidden></div>
+</div>
+
+<!-- публикация истории -->
+<div class="modal" id="storyNew" hidden>
+  <div class="modal-card sn-card" role="dialog" aria-modal="true" aria-labelledby="snTitle">
+    <div class="modal-head"><b id="snTitle">Новая история</b><button type="button" class="icon-btn" id="snClose" aria-label="Закрыть">&times;</button></div>
+    <div class="sn-tabs" role="tablist">
+      <button type="button" class="on" data-sn="photo">Фото</button>
+      <button type="button" data-sn="text">Текст</button>
+    </div>
+    <div class="sn-photo" id="snPhoto">
+      <button type="button" class="sn-pick" id="snPick">Выбрать фото</button>
+      <input type="file" id="snFile" accept="image/jpeg,image/png,image/webp" hidden>
+      <div class="sn-preview" id="snPreview" hidden><img id="snImg" alt=""><button type="button" class="sn-preview-x" id="snPreviewX" aria-label="Убрать">&times;</button></div>
+      <input id="snCaption" maxlength="280" placeholder="Подпись (необязательно)">
+    </div>
+    <div class="sn-text" id="snText" hidden>
+      <textarea id="snTextInput" maxlength="280" placeholder="О чём расскажете?"></textarea>
+      <div class="sn-bg" id="snBg"></div>
+    </div>
+    <div class="wp-foot">
+      <button type="button" class="st-btn" id="snSubmit" disabled>Опубликовать</button>
+    </div>
+  </div>
+</div>
 

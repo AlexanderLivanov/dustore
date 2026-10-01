@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../swad/config.php');
+require_once(__DIR__ . '/_schema.php');
 
 if (empty($_SESSION['USERDATA']['id'])) {
     header('Location: /login');
@@ -9,6 +10,7 @@ if (empty($_SESSION['USERDATA']['id'])) {
 
 $db  = new Database();
 $pdo = $db->connect();
+AssetSchema::ensure($pdo);
 $user_id = (int)$_SESSION['USERDATA']['id'];
 
 $page = $_GET['tab'] ?? 'library'; // library | wishlist
@@ -17,9 +19,10 @@ $page = $_GET['tab'] ?? 'library'; // library | wishlist
 $library = [];
 try {
     $stmt = $pdo->prepare("
-        SELECT a.*, al.date AS obtained_date
+        SELECT a.*, al.date AS obtained_date, al.tier_id, alt.label AS tier_label
         FROM asset_library al
         JOIN assets a ON a.id = al.asset_id
+        LEFT JOIN asset_license_tiers alt ON alt.id = al.tier_id
         WHERE al.player_id = ?
         ORDER BY al.date DESC
     ");
@@ -67,7 +70,7 @@ $CATS = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page === 'library' ? 'Моя библиотека' : 'Список желаний' ?> — Dustore</title>
     <link rel="stylesheet" href="../swad/css/pages.css">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --pr: #c32178;
@@ -540,6 +543,14 @@ $CATS = [
                 grid-template-columns: 1fr
             }
         }
+
+        /* ── Fid Core convergence (точечный проход) ── */
+        :root { --pix: 6px; }
+        .btn-dl:not(.outline) {
+            border-radius: 0;
+            clip-path: polygon(var(--pix) 0, 100% 0, 100% calc(100% - var(--pix)), calc(100% - var(--pix)) 100%, 0 100%, 0 var(--pix));
+        }
+        .ac-price { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
 
@@ -559,6 +570,12 @@ $CATS = [
                     </a>
                     <a href="?tab=wishlist" class="<?= $page === 'wishlist' ? 'active' : '' ?>">
                         ♡ Список желаний <span class="cnt"><?= count($wishlist) ?></span>
+                    </a>
+                    <a href="/assetstore/bundles.php">
+                        📦 Наборы
+                    </a>
+                    <a href="/assetstore/my_bundles.php">
+                        🧩 Мои наборы
                     </a>
                 </nav>
             </div>
@@ -615,7 +632,12 @@ $CATS = [
                                     <div class="ac-body">
                                         <div class="ac-name"><?= htmlspecialchars($a['name']) ?></div>
                                         <div class="ac-author">by <?= htmlspecialchars($a['studio_name']) ?></div>
-                                        <div class="ac-date"><?= $dateLabel ?></div>
+                                        <div class="ac-date">
+                                            <?= $dateLabel ?>
+                                            <?php if ($page === 'library' && !empty($a['tier_label'])): ?>
+                                                · лицензия «<?= htmlspecialchars($a['tier_label']) ?>»
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </a>
                                 <div class="ac-foot">

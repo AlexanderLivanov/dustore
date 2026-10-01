@@ -1,11 +1,28 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
+/* Живое превью трейлера при вводе ссылки. Раньше это была JS-эвристика
+   (val.includes('embed') || val.includes('player.vimeo')) — не ловила самый
+   частый случай, когда просто вставляют youtube.com/watch?v=... из адресной
+   строки, так что превью на этом сценарии молча не появлялось никогда.
+   Чинится не второй копией регулярок в JS (это и была причина расхождения),
+   а вызовом той же trailer_embed(), что рендерит саму игровую страницу —
+   единственный источник правды, всегда актуален по построению. Ветка стоит
+   до тяжёлых require ниже, чтобы AJAX не тянул лишнее. */
+if (($_GET['ajax'] ?? '') === 'trailer_preview') {
+    header('Content-Type: application/json; charset=utf-8');
+    if (empty($_SESSION['studio_id'])) { echo json_encode(['success' => false]); exit(); }
+    require_once(__DIR__ . '/../swad/controllers/trailer_embed.php');
+    echo json_encode(['success' => true, 'html' => trailer_embed($_GET['url'] ?? '')]);
+    exit();
+}
+
 require_once(__DIR__ . '/../swad/config.php');
 require_once(__DIR__ . '/../swad/controllers/s3.php');
 require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
 require_once(__DIR__ . '/../swad/controllers/deplex_web.php');
 require_once(__DIR__ . '/../swad/controllers/game_changelog.php');
+require_once(__DIR__ . '/../swad/controllers/trailer_embed.php');
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: /devs/projects'); exit(); }
@@ -556,7 +573,7 @@ if (in_array($mod_status, ['pending','rejected'])):
         <input type="hidden" name="action" value="save">
         <div style="display:flex;flex-direction:column;gap:14px;">
 
-            <div class="card">
+            <div class="card" id="c-basic">
                 <div class="card-title"><span class="material-icons">info</span>Основная информация</div>
                 <div class="grid-2">
                     <div class="field col-full">
@@ -602,7 +619,7 @@ if (in_array($mod_status, ['pending','rejected'])):
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card" id="c-platforms">
                 <div class="card-title"><span class="material-icons">devices</span>Платформы и языки</div>
                 <div class="field">
                     <label>Платформы</label>
@@ -648,7 +665,7 @@ if (in_array($mod_status, ['pending','rejected'])):
 
             <!-- Файл игры вынесён из формы save (ниже, вне <form>) — иначе вложенный <form> Deplex ломал сохранение -->
 
-            <div class="card">
+            <div class="card" id="c-trailer">
                 <div class="card-title"><span class="material-icons">movie</span>Трейлер</div>
                 <div class="field">
                     <label>Ссылка на трейлер</label>
@@ -658,10 +675,10 @@ if (in_array($mod_status, ['pending','rejected'])):
                         Видео на YouTube могут не загружаться у пользователей без VPN
                     </div>
                 </div>
-                <div id="trailer-preview" style="<?= empty($game['trailer_url']) ? 'display:none;' : '' ?>margin-top:10px;">
-                    <iframe id="trailer-iframe" src="<?= ev($game,'trailer_url') ?>"
-                            style="width:100%;aspect-ratio:16/9;border-radius:10px;border:1px solid var(--elev);"
-                            allowfullscreen allow="autoplay; encrypted-media; fullscreen"></iframe>
+                <?php $trailerPreviewHtml = trailer_embed($game['trailer_url'] ?? ''); ?>
+                <style>#trailer-embed-box iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}</style>
+                <div id="trailer-preview" style="<?= $trailerPreviewHtml === '' ? 'display:none;' : '' ?>margin-top:10px;position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid var(--elev);">
+                    <div id="trailer-embed-box" style="position:absolute;inset:0;"><?= $trailerPreviewHtml ?></div>
                 </div>
             </div>
 
@@ -848,7 +865,7 @@ if (in_array($mod_status, ['pending','rejected'])):
     <div style="display:flex;flex-direction:column;gap:14px;">
 
         <!-- Обложка + Иконка -->
-        <div class="card">
+        <div class="card" id="c-media">
             <div class="card-title"><span class="material-icons">image</span>Медиа</div>
 
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:8px;">
@@ -1359,16 +1376,31 @@ document.getElementById('icon_art').addEventListener('change', function () {
 });
 
 // ── Трейлер preview ───────────────────────────────────────────────────────
-document.getElementById('trailer-url-input').addEventListener('input', function () {
-    var val = this.value.trim();
+// Раньше здесь была эвристика по подстрокам ('embed', 'player.vimeo') — не
+// понимала обычную youtube.com/watch?v=... ссылку, самый частый способ её
+// вставить. Теперь просто спрашиваем сервер (trailer_embed() — та же функция,
+// что рендерит саму карточку игры), с debounce, чтобы не долбить его на
+// каждый символ.
+(function () {
+    var input = document.getElementById('trailer-url-input');
     var wrap = document.getElementById('trailer-preview');
-    var iframe = document.getElementById('trailer-iframe');
-    if (val.includes('embed') || val.includes('player.vimeo')) {
-        iframe.src = val; wrap.style.display = '';
-    } else {
-        wrap.style.display = 'none';
-    }
-});
+    var box = document.getElementById('trailer-embed-box');
+    var timer = null;
+    input.addEventListener('input', function () {
+        var val = this.value.trim();
+        clearTimeout(timer);
+        if (!val) { wrap.style.display = 'none'; box.innerHTML = ''; return; }
+        timer = setTimeout(function () {
+            fetch('/devs/edit.php?ajax=trailer_preview&url=' + encodeURIComponent(val))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    box.innerHTML = data.html || '';
+                    wrap.style.display = data.html ? '' : 'none';
+                })
+                .catch(function () {});
+        }, 350);
+    });
+})();
 
 // ── Скриншоты ─────────────────────────────────────────────────────────────
 var SCR_PID = {$project_id};
@@ -1493,5 +1525,25 @@ if (IS_LOCKED) {
 </script>
 JS;
 
+?>
+<style>
+    /* переход с публичной страницы игры по шестерёнке: подсвечиваем нужное поле */
+    @keyframes fxFlash { 0% { box-shadow: 0 0 0 3px var(--p, #c32178); } 100% { box-shadow: 0 0 0 3px transparent; } }
+    .fx-flash { animation: fxFlash 1.8s ease-out; border-radius: 10px; }
+</style>
+<script>
+(function () {
+    var h = decodeURIComponent(location.hash.replace('#', ''));
+    if (!h) return;
+    var el = document.getElementById(h) || document.querySelector('[name="' + h.replace(/"/g, '') + '"]');
+    if (!el) return;
+    var box = el.closest('.field') || el.closest('.card') || el;
+    box.scrollIntoView({ block: 'center' });
+    box.classList.add('fx-flash');
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) try { el.focus({ preventScroll: true }); } catch (e) { }
+    setTimeout(function () { box.classList.remove('fx-flash'); }, 2200);
+})();
+</script>
+<?php
 require_once(__DIR__ . '/includes/footer.php');
 ?>

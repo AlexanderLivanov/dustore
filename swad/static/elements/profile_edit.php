@@ -49,20 +49,32 @@ $pe_name = trim(($pe_user['first_name'] ?? '') . ' ' . ($pe_user['last_name'] ??
             <?php endif; ?>
 
             <div class="pe-avatar-row">
-                <button type="button" class="pe-avatar" id="peAvatarBtn" aria-label="Сменить аватарку" aria-describedby="peAvatarHint">
-                    <img id="peAvatarImg" alt=""
-                         src="<?= !empty($pe_user['profile_picture']) ? $pe_h($pe_user['profile_picture']) : '/swad/static/img/logo.svg' ?>">
-                    <span class="pe-avatar-cam" aria-hidden="true">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9.4 4h5.2l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.9l1.5-2zM12 17.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0-2a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
-                        </svg>
-                    </span>
-                    <span class="pe-avatar-spin" aria-hidden="true"></span>
-                </button>
+                <div class="pe-avatar-wrap">
+                    <button type="button" class="pe-avatar-nav pe-avatar-prev" id="peAvatarPrev" aria-label="Более старая аватарка" hidden>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+                    </button>
+                    <button type="button" class="pe-avatar" id="peAvatarBtn" aria-label="Сменить аватарку" aria-describedby="peAvatarHint">
+                        <img id="peAvatarImg" alt=""
+                             src="<?= !empty($pe_user['profile_picture']) ? $pe_h($pe_user['profile_picture']) : '/swad/static/img/logo.svg' ?>">
+                        <span class="pe-avatar-cam" aria-hidden="true">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9.4 4h5.2l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.9l1.5-2zM12 17.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0-2a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                            </svg>
+                        </span>
+                        <span class="pe-avatar-spin" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" class="pe-avatar-nav pe-avatar-next" id="peAvatarNext" aria-label="Более новая аватарка" hidden>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                    </button>
+                </div>
                 <input type="file" id="peAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
                 <div class="pe-avatar-text">
                     <div class="pe-name"><?= $pe_h($pe_name !== '' ? $pe_name : 'Игрок Dustore') ?></div>
                     <div class="us-hint" id="peAvatarHint">Нажмите на аватарку, чтобы сменить: JPEG, PNG или WebP. Сохраняется сразу.</div>
+                    <div class="pe-avatar-tools" id="peAvatarTools" hidden>
+                        <span class="pe-avatar-count" id="peAvatarCount"></span>
+                        <button type="button" class="pe-avatar-del" id="peAvatarDel">Удалить эту</button>
+                    </div>
                 </div>
             </div>
 
@@ -136,6 +148,76 @@ $pe_name = trim(($pe_user['first_name'] ?? '') . ' ' . ($pe_user['last_name'] ??
         align-items: center;
         gap: 16px;
         margin: 6px 0 16px;
+    }
+
+    /* Листалка истории: стрелки слева/справа от круга аватарки, сама
+       аватарка ничего не знает про историю — просто меняется её src */
+    .pe-avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .pe-avatar-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .08);
+        color: #fff;
+        cursor: pointer;
+        transition: background .15s, opacity .15s;
+    }
+
+    .pe-avatar-nav:hover {
+        background: rgba(255, 255, 255, .18);
+    }
+
+    .pe-avatar-nav:disabled {
+        opacity: .25;
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .pe-avatar-tools {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .pe-avatar-count {
+        font-size: .78rem;
+        color: rgba(255, 255, 255, .45);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pe-avatar-del {
+        border: 0;
+        background: none;
+        padding: 0;
+        font-size: .78rem;
+        color: #ff6b6b;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .pe-avatar-del:hover {
+        color: #ff8f8f;
+    }
+
+    .pe-avatar-del:disabled {
+        opacity: .4;
+        cursor: default;
+        pointer-events: none;
     }
 
     .pe-avatar {
@@ -424,11 +506,103 @@ $pe_name = trim(($pe_user['first_name'] ?? '') . ' ' . ($pe_user['last_name'] ??
                 document.querySelectorAll('.user-avatar, .header-avatar, .user-chip__ava img').forEach((img) => { img.src = src; });
                 avatarHint.textContent = 'Аватарка обновлена ✓';
                 setTimeout(() => { avatarHint.textContent = AVATAR_HINT; }, 2500);
+
+                // Новая загрузка — всегда новая текущая, независимо от того,
+                // что было открыто в листалке в этот момент (как в Телеге)
+                avatarHistory.forEach((a) => { a.is_current = false; });
+                avatarHistory.unshift({ id: data.avatar_id, url: data.url, is_current: true });
+                avatarIndex = 0;
+                renderAvatarNav();
             } catch (err) {
                 avatarHint.textContent = err.message === 'decode' ? 'Не удалось прочитать изображение' : err.message;
                 avatarHint.classList.add('is-error');
             } finally {
                 avatarBtn.classList.remove('is-busy');
+            }
+        });
+
+        /* ── Аватарка: листаем историю, удаляем ── */
+        const avatarPrev = document.getElementById('peAvatarPrev');
+        const avatarNext = document.getElementById('peAvatarNext');
+        const avatarTools = document.getElementById('peAvatarTools');
+        const avatarCount = document.getElementById('peAvatarCount');
+        const avatarDel = document.getElementById('peAvatarDel');
+
+        let avatarHistory = [];  // новые сверху (id DESC, как отдаёт сервер)
+        let avatarIndex = 0;     // какую из avatarHistory сейчас показываем
+
+        function renderAvatarNav() {
+            const many = avatarHistory.length > 1;
+            avatarPrev.hidden = !many;
+            avatarNext.hidden = !many;
+            if (many) {
+                avatarPrev.disabled = avatarIndex >= avatarHistory.length - 1; // старше некуда
+                avatarNext.disabled = avatarIndex <= 0;                        // новее некуда
+            }
+            avatarTools.hidden = avatarHistory.length === 0;
+            if (avatarHistory.length) {
+                avatarCount.textContent = (avatarIndex + 1) + ' из ' + avatarHistory.length;
+                avatarImg.src = avatarHistory[avatarIndex].url;
+            }
+        }
+
+        async function loadAvatarHistory() {
+            try {
+                const res = await fetch('/swad/controllers/avatar_history.php');
+                const data = await res.json();
+                if (!data.success) return;
+                avatarHistory = data.avatars || [];
+                const cur = avatarHistory.findIndex((a) => a.is_current);
+                avatarIndex = cur >= 0 ? cur : 0;
+                renderAvatarNav();
+            } catch (err) { /* листалка — необязательная часть окна, тихо молчим */ }
+        }
+        loadAvatarHistory();
+
+        avatarPrev.addEventListener('click', () => {
+            if (avatarIndex >= avatarHistory.length - 1) return;
+            avatarIndex++;
+            renderAvatarNav();
+        });
+        avatarNext.addEventListener('click', () => {
+            if (avatarIndex <= 0) return;
+            avatarIndex--;
+            renderAvatarNav();
+        });
+
+        avatarDel.addEventListener('click', async () => {
+            if (!avatarHistory.length) return;
+            const target = avatarHistory[avatarIndex];
+            if (!confirm('Удалить эту аватарку' + (target.is_current ? ' (она сейчас текущая)' : '') + '?')) return;
+
+            avatarDel.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('avatar_id', target.id);
+                const res = await fetch('/swad/controllers/delete_avatar.php', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': CSRF },
+                    body: fd,
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Не удалось удалить');
+
+                avatarHistory.splice(avatarIndex, 1);
+                if (data.promoted) {
+                    const src = (data.new_url || '/swad/static/img/logo.svg') + '?v=' + Date.now();
+                    document.querySelectorAll('.user-avatar, .header-avatar, .user-chip__ava img').forEach((img) => { img.src = src; });
+                    avatarHistory.forEach((a) => { a.is_current = a.url === data.new_url; });
+                }
+                avatarIndex = Math.min(avatarIndex, Math.max(0, avatarHistory.length - 1));
+                if (!avatarHistory.length) avatarImg.src = '/swad/static/img/logo.svg';
+                renderAvatarNav();
+                avatarHint.textContent = 'Аватарка удалена ✓';
+                setTimeout(() => { avatarHint.textContent = AVATAR_HINT; }, 2000);
+            } catch (err) {
+                avatarHint.textContent = err.message;
+                avatarHint.classList.add('is-error');
+            } finally {
+                avatarDel.disabled = false;
             }
         });
     })();
