@@ -403,6 +403,7 @@ require_once('../swad/static/elements/header.php');
         <?php if ($awardsCfg && $revealed): ?>
         <?php if (!$resultsOut): ?>
         <div class="jv-timer" id="jvTimer" data-left="<?= max(0, $awardsCfg['reveal_ts'] - $now) ?>">
+            <div class="jv-online" id="jvOnline" hidden title="Сейчас на этой странице"><i></i><span></span></div>
             <div class="jv-timer-title">Победителей объявим <?= date('d.m в H:i', $awardsCfg['reveal_ts']) ?> (МСК)</div>
             <div class="jv-timer-clock" aria-live="off">
                 <span><b data-u="d">0</b><small>дн</small></span>
@@ -653,6 +654,36 @@ require_once('../swad/static/elements/header.php');
             setTimeout(tick, 250);
         }
         tick();
+    })();
+
+    /* «Сейчас ждут итогов»: heartbeat раз в 20 с, только пока вкладка видна.
+       sid живёт в localStorage — одна вкладка и десять вкладок одного браузера = 1 человек. */
+    (function () {
+        const box = document.getElementById('jvOnline');
+        if (!box) return;
+        let sid = '';
+        try { sid = localStorage.getItem('dsPresenceSid') || ''; } catch (e) {}
+        if (!/^[a-f0-9]{32}$/.test(sid)) {
+            sid = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+            try { localStorage.setItem('dsPresenceSid', sid); } catch (e) {}
+        }
+        let timer = 0;
+        async function beat() {
+            clearTimeout(timer);
+            if (document.visibilityState !== 'visible') return;
+            try {
+                const r = await fetch('/swad/controllers/jams/presence.php', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+                    body: JSON.stringify({ sprint_id: SPRINT_ID, sid })
+                });
+                const j = await r.json();
+                if (j.ok) { box.hidden = false; box.querySelector('span').textContent = 'ждут итогов: ' + j.online; }
+            } catch (e) {}
+            timer = setTimeout(beat, 20000);
+        }
+        document.addEventListener('visibilitychange', beat);
+        beat();
     })();
 
     const rules = document.getElementById('rules');
