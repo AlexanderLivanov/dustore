@@ -5,82 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/api/fx.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/_bundles.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/_licensing.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/_schema.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/_versions.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/bundle.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/bundles.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assetstore/my_bundles.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chat/_blocks.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chat/_reactions.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chat/_stories.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/devs/coop.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/devs/goto.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/devs/mobile_analytics.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/m/css/fx-m.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/m/views/media.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/m/views/player.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/_avatar_schema.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/_avatars.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/avatar_history.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/buy_bundle.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/controllers/delete_avatar.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/css/fx.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/boot.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/core.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/feed.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/hub.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/icons.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/page.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/pages.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/posts.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/render.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/render_hub.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/fx/schema.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/js/fx-editor.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/js/fx-player.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/swad/js/fx.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.htaccess" beforeDir="false" afterPath="$PROJECT_DIR$/.htaccess" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/_acl.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/_acl.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/api_admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/api_admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/edit_asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/edit_asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/manage.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/manage.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/my_assets.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/my_assets.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/upload_asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/upload_asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat/_markup.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/_markup.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat/api.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/api.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat/chat.js" beforeDir="false" afterPath="$PROJECT_DIR$/chat/chat.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev.php" beforeDir="false" afterPath="$PROJECT_DIR$/dev.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/edit.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/giveach.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/giveach.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/includes/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/includes/header.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/monetization.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/monetization.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fid/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/fid/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game.php" beforeDir="false" afterPath="$PROJECT_DIR$/game.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/vote.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/vote.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/css/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/m/css/app.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/js/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/m/js/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/layout/shell.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/layout/shell.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/lib.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/lib.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/views/developer.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/views/developer.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/views/game.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/views/game.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/player.php" beforeDir="false" afterPath="$PROJECT_DIR$/player.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/activity.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/activity.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/analytics.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/analytics.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/buy_asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/buy_asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/download_game.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/download_game.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/payment_success.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/payment_success.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/trailer_embed.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/trailer_embed.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/controllers/upload_avatar.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/controllers/upload_avatar.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/chat.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/chat.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/static/elements/profile_edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/profile_edit.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +33,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "Merging main",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "C:/xampp/htdocs/swad/controllers",
     "settings.editor.selected.configurable": "preferences.pluginManager"
   }
