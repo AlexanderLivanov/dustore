@@ -147,6 +147,8 @@ mobile_redirect_if_needed();
     z-index: 2;
 }
 
+.promo-strip--off { visibility: hidden; pointer-events: none; }
+
 .promo-row {
     max-width: 1200px;
     margin: 0 auto;
@@ -830,6 +832,10 @@ body.moonlight-theme .promo-tile:hover .promo-tile__cta {
         ?>
 
 <!-- ===== PROMO TILES — три баннера новых сервисов ===== -->
+<?php /* Баннеры временно скрыты. visibility:hidden, а не удаление: блок остаётся
+         в потоке с тем же размером и отрицательным margin-top, поэтому всё, что
+         под ним, стоит ровно там же. Вернуть — убрать класс promo-strip--off. */ ?>
+<section class="promo-strip promo-strip--off" aria-hidden="true">
     <div class="promo-row">
 
         <a class="promo-tile" href="/live">
