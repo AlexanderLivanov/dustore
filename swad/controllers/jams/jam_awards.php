@@ -10,7 +10,8 @@
  *   reveal_at — момент (Europe/Moscow): до него идёт обратный отсчёт, с него
  *               голосование закрыто, победители видны, работы по убыванию баллов.
  *   Джем подбирается по sprints.voting_end: конфиг подходит, если voting_end
- *   отличается от reveal_at не более чем на сутки (или не задан).
+ *   отличается от reveal_at не более чем на сутки (если voting_end не задан —
+ *   джем не подходит: иначе итоги показались бы на любом джеме без даты).
  *   awards    — номинации по порядку:
  *     by = 'votes' — побеждает максимум баллов сообщества (без оценок жюри),
  *                    при равенстве — больше голосовавших, при полном равенстве
@@ -43,7 +44,7 @@ function jam_awards_for(?int $votingEnd): ?array
     try {
         foreach (jam_awards_config() as $cfg) {
             $at = strtotime($cfg['reveal_at']);
-            if (!$votingEnd || abs($votingEnd - $at) <= 86400) {
+            if ($votingEnd && abs($votingEnd - $at) <= 86400) {
                 $cfg['reveal_ts'] = $at;
                 return $cfg;
             }
