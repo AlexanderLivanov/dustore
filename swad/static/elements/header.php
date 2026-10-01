@@ -128,6 +128,7 @@ $stmt->execute([
     <link rel="shortcut icon" href="../img/logo.svg" type="image/x-icon">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/style.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/notifications.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/scrollbar.css') ?>">
     <link rel="shortcut icon" href="/swad/static/img/logo.svg" type="image/x-icon">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-capable" content="yes">

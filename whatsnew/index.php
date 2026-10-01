@@ -135,6 +135,7 @@ if ($latest) {
     <link rel="stylesheet" href="style.css">
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 <body>
 
