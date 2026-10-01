@@ -620,8 +620,9 @@
         if (d.kind === 'incoming') {
             html += '<div class="l4x-sep l4x-row" style="flex-wrap:wrap">' +
                 (d.who ? '<a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="/l4t/' + encodeURIComponent(d.who.handle) + '">' + icon('user') + 'Профиль' + (d.l4trole ? ' · ' + esc(d.l4trole) : '') + '</a>' : '') +
-                (d.tg ? '<a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="https://t.me/' + esc(d.tg) + '" target="_blank" rel="noopener">' + icon('telegram') + '@' + esc(d.tg) + '</a>' : '') +
-                (!d.who && !d.tg ? '<span class="l4x-muted">Контакты не указаны</span>' : '') + '</div>';
+                (d.uid ? '<a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="/chat/?to=' + encodeURIComponent(d.uid) + '">' + icon('chat') + 'В чат Dustore</a>' : '') +
+                (d.tg ? '<a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="https://t.me/' + esc(d.tg) + '" target="_blank" rel="noopener">' + icon('telegram') + '@' + esc(d.tg) + '</a>' : '') +
+                (!d.who && !d.tg && !d.uid ? '<span class="l4x-muted">Контакты не указаны</span>' : '') + '</div>';
             html += '<div class="l4x-sep"><div class="l4x-field__label" style="margin-bottom:8px">Решение — автор отклика получит уведомление</div><div class="l4x-seg" id="respStatus">' +
                 (C.statuses || []).map(function (s) {
                     return '<button data-s="' + esc(s) + '" class="' + (s === d.status ? 'is-on' : '') + '">' + esc(s) + '</button>';

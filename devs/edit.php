@@ -310,6 +310,8 @@ $only_android    = $platforms_saved === ['Android'];
 // games.game_zip_url/game_zip_size (выше) остаются «текущим активным билдом» для
 // download_game.php/download_apk.php/webplayer.php — см. комментарий в build_upload.php.
 $builds_by_platform = [];
+require_once(__DIR__ . '/../swad/controllers/game_builds_schema.php');
+ensure_game_builds_table($conn);
 $gb_stmt = $conn->prepare("SELECT * FROM game_builds WHERE game_id = ?");
 $gb_stmt->execute([$project_id]);
 foreach ($gb_stmt->fetchAll(PDO::FETCH_ASSOC) as $b) { $builds_by_platform[$b['platform']] = $b; }

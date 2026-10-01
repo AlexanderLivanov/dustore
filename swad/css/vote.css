@@ -344,3 +344,49 @@ html { scrollbar-width: thin; scrollbar-color: var(--jv-sb) transparent; scrollb
 @media (prefers-reduced-motion: reduce) {
     .jv-card, .jv-jam, .jv-toast, .jv-meter i { transition: none; }
 }
+
+/* ── Таймер итогов сообщества ─────────────────────────────────────────────── */
+.jv-timer { position: relative; margin-bottom: 12px; padding: 18px 16px; border-radius: var(--jv-radius); text-align: center;
+    background: radial-gradient(120% 140% at 50% 0%, var(--jv-accent-soft), transparent 70%), var(--jv-panel);
+    box-shadow: inset 0 0 0 1px var(--jv-panel-line); }
+.jv-timer.done { background: radial-gradient(120% 140% at 50% 0%, var(--jv-gold-soft), transparent 70%), var(--jv-panel); }
+.jv-timer-tag { display: inline-block; margin-bottom: 8px; padding: 3px 11px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--jv-gold); background: var(--jv-gold-soft); }
+.jv-online { position: absolute; top: 10px; right: 12px; display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--jv-muted); font-variant-numeric: tabular-nums; }
+.jv-online[hidden] { display: none; }
+.jv-online i { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 0 0 rgba(61,220,132,.6); animation: jvPulse 2s infinite; }
+@keyframes jvPulse { 70% { box-shadow: 0 0 0 7px rgba(61,220,132,0); } 100% { box-shadow: 0 0 0 0 rgba(61,220,132,0); } }
+.jv-timer-title { font-size: 0.95rem; font-weight: 600; color: var(--jv-text); }
+.jv-timer-sub { margin-top: 10px; font-size: 0.8rem; color: var(--jv-muted); }
+.jv-timer-clock { display: flex; justify-content: center; gap: 10px; margin-top: 12px; }
+.jv-timer-clock span { min-width: 62px; padding: 9px 6px; border-radius: var(--jv-radius-sm); background: var(--jv-chip); box-shadow: inset 0 0 0 1px var(--jv-chip-line); }
+.jv-timer-clock b { display: block; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--jv-text); }
+.jv-timer-clock small { font-size: 0.68rem; color: var(--jv-muted); text-transform: uppercase; letter-spacing: .05em; }
+.jv-winners { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 12px; }
+.jv-winner { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: var(--jv-radius); text-align: left; text-decoration: none;
+    background: var(--jv-gold-soft); box-shadow: inset 0 0 0 1px rgba(251, 191, 36, .35); color: var(--jv-text); }
+.jv-winner img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; background: var(--jv-cover); }
+.jv-winner b { display: block; font-size: 1rem; }
+.jv-winner small { color: var(--jv-gold); font-size: 0.78rem; }
+/* призы под часами — до объявления итогов */
+.jv-prizes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.jv-prizes span { display: flex; align-items: baseline; gap: 8px; padding: 7px 14px; border-radius: 999px; font-size: 0.82rem; color: var(--jv-muted);
+    background: var(--jv-chip); box-shadow: inset 0 0 0 1px var(--jv-chip-line); }
+.jv-prizes b { font-size: 0.95rem; color: var(--jv-gold); font-variant-numeric: tabular-nums; }
+
+/* итоги: по карточке на номинацию */
+.jv-awards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.jv-award { padding: 18px 16px; border-radius: var(--jv-radius); text-align: center;
+    background: radial-gradient(120% 140% at 50% 0%, var(--jv-gold-soft), transparent 70%), var(--jv-panel);
+    box-shadow: inset 0 0 0 1px var(--jv-panel-line); }
+.jv-award-prize { font-size: 1.7rem; font-weight: 800; line-height: 1.1; color: var(--jv-gold); font-variant-numeric: tabular-nums; }
+.jv-award-title { margin-top: 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--jv-muted); }
+.jv-award .jv-winners { margin-top: 14px; }
+.jv-award-note { margin-top: 10px; font-size: 0.8rem; color: var(--jv-muted); }
+.jv-tag.rank { background: rgba(0, 0, 0, .55); color: #fff; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 480px) { .jv-timer-clock { gap: 6px; } .jv-timer-clock span { min-width: 54px; } }
+
+@media (max-width: 560px) {
+    .jv-online { position: static; justify-content: center; margin-bottom: 8px; }
+}

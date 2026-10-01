@@ -49,6 +49,8 @@ $gname = preg_replace('/[^a-z0-9]/i', '-', $game['name']);
  * возвращает её.
  */
 function um_ensure_build_row(PDO $db, int $gameId, string $platform): array {
+    require_once(__DIR__ . '/../swad/controllers/game_builds_schema.php');
+    ensure_game_builds_table($db);
     $stmt = $db->prepare("SELECT * FROM game_builds WHERE game_id = ? AND platform = ? LIMIT 1");
     $stmt->execute([$gameId, $platform]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);

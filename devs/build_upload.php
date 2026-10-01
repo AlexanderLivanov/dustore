@@ -123,6 +123,8 @@ bu_rmdir($dir);
 if (!$url) bu_out(['success' => false, 'message' => 'S3 не принял файл — проверьте error_log Apache']);
 
 // Старый билд ЭТОЙ платформы с S3 удалим (если был и отличается).
+require_once(__DIR__ . '/../swad/controllers/game_builds_schema.php');
+ensure_game_builds_table($conn);
 $oldBuild = $conn->prepare("SELECT build_url FROM game_builds WHERE game_id = ? AND platform = ? LIMIT 1");
 $oldBuild->execute([$project_id, $platform]);
 $oldPlatformUrl = $oldBuild->fetchColumn();

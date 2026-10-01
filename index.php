@@ -134,6 +134,218 @@ mobile_redirect_if_needed();
             animation: none;
         }
     }
+
+/* ===== PROMO TILES — три баннера новых сервисов =====
+   Идут сразу под hero-текстом, читаются как «продолжение» той же связки.
+   Отрицательный margin-top подтягивает блок ближе, чтобы между h1/p и
+   баннерами не зияла дырка: .hero имеет min-height:100vh, но контент
+   внутри по центру, поэтому внизу остаётся пустое место. */
+.promo-strip {
+    padding: 0 0 60px;
+    margin-top: -360px;
+    position: relative;
+    z-index: 2;
+}
+
+.promo-strip--off { visibility: hidden; pointer-events: none; }
+
+.promo-row {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.promo-tile {
+    position: relative;
+    display: block;
+    padding: 28px 26px 24px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.08);
+    text-decoration: none;
+    color: var(--light);
+    overflow: hidden;
+    cursor: pointer;
+    isolation: isolate;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform .3s ease, background .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+
+/* Мягкое цветное свечение сверху — проявляется на hover */
+.promo-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 55% at 50% -10%,
+        rgba(var(--brand-rgb, 195, 33, 120), 0.35) 0%,
+        rgba(var(--brand-rgb, 195, 33, 120), 0.08) 45%,
+        transparent 70%);
+    opacity: 0;
+    transition: opacity .4s ease;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.promo-tile:hover {
+    transform: translateY(-6px);
+    background: linear-gradient(180deg,
+        rgba(var(--brand-deep-rgb, 116, 21, 93), 0.55),
+        rgba(20, 4, 29, 0.85));
+    border-color: rgba(var(--brand-rgb, 195, 33, 120), 0.45);
+    box-shadow: 0 20px 40px -20px rgba(var(--brand-rgb, 195, 33, 120), 0.4);
+}
+
+.promo-tile:hover::before {
+    opacity: 1;
+}
+
+.promo-tile__badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.22);
+    border: 1px solid rgba(var(--brand-rgb, 195, 33, 120), 0.55);
+    pointer-events: none;
+}
+
+.promo-tile__icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.15);
+    color: rgb(var(--brand-rgb, 195, 33, 120));
+    margin-bottom: 18px;
+    transition: background .3s ease, color .3s ease, transform .3s ease;
+}
+
+.promo-tile__icon svg {
+    width: 26px;
+    height: 26px;
+}
+
+.promo-tile:hover .promo-tile__icon {
+    background: rgba(var(--brand-rgb, 195, 33, 120), 0.3);
+    color: rgb(var(--brand-hi-rgb, 230, 46, 138));
+    transform: scale(1.06);
+}
+
+.promo-tile h3 {
+    font-family: 'PixelizerBold', 'Gill Sans', sans-serif;
+    font-size: 1.35rem;
+    line-height: 1.15;
+    margin: 0 0 10px;
+    color: var(--light);
+    transition: color .3s ease;
+}
+
+.promo-tile:hover h3 {
+    color: rgb(var(--brand-hi-rgb, 230, 46, 138));
+}
+
+.promo-tile p {
+    font-size: .95rem;
+    line-height: 1.55;
+    color: rgba(248, 249, 250, 0.72);
+    margin: 0 0 18px;
+    max-width: none;
+}
+
+.promo-tile__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: rgb(var(--brand-rgb, 195, 33, 120));
+    transition: color .3s ease, gap .3s ease;
+}
+
+.promo-tile:hover .promo-tile__cta {
+    color: rgb(var(--brand-hi-rgb, 230, 46, 138));
+    gap: 10px;
+}
+
+/* ── Moonlight ── */
+body.moonlight-theme .promo-tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border-color: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.14);
+}
+
+body.moonlight-theme .promo-tile::before {
+    background: radial-gradient(120% 55% at 50% -10%,
+        rgba(var(--moon-accent-rgb, 62, 122, 217), 0.35) 0%,
+        rgba(var(--moon-accent-rgb, 62, 122, 217), 0.08) 45%,
+        transparent 70%);
+}
+
+body.moonlight-theme .promo-tile:hover {
+    background: linear-gradient(180deg,
+        rgba(var(--moon-raised-rgb, 24, 34, 56), 0.75),
+        rgba(10, 15, 28, 0.9));
+    border-color: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.45);
+    box-shadow: 0 20px 40px -20px rgba(var(--moon-accent-rgb, 62, 122, 217), 0.4);
+}
+
+body.moonlight-theme .promo-tile__badge {
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.22);
+    border-color: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.55);
+}
+
+body.moonlight-theme .promo-tile__icon {
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.15);
+    color: rgb(var(--moon-accent-rgb, 62, 122, 217));
+}
+
+body.moonlight-theme .promo-tile:hover .promo-tile__icon {
+    background: rgba(var(--moon-accent-rgb, 62, 122, 217), 0.3);
+    color: rgb(var(--moon-hi-rgb, 86, 144, 240));
+}
+
+body.moonlight-theme .promo-tile:hover h3 {
+    color: rgb(var(--moon-hi-rgb, 86, 144, 240));
+}
+
+body.moonlight-theme .promo-tile__cta {
+    color: rgb(var(--moon-accent-rgb, 62, 122, 217));
+}
+
+body.moonlight-theme .promo-tile:hover .promo-tile__cta {
+    color: rgb(var(--moon-hi-rgb, 86, 144, 240));
+}
+
+/* ── Адаптив ── */
+@media (max-width: 900px) {
+    .promo-strip {
+        margin-top: -20px;
+        padding-bottom: 40px;
+    }
+    .promo-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .promo-tile {
+        padding: 22px 20px 20px;
+    }
+    .promo-tile h3 {
+        font-size: 1.2rem;
+    }
+}
 </style>
 
 <div class="hellfire-bg" aria-hidden="true">
@@ -618,6 +830,59 @@ mobile_redirect_if_needed();
         $count_games = $row[0]['count_games'];
         $published_games = $row[0]['published_games'];
         ?>
+
+<!-- ===== PROMO TILES — три баннера новых сервисов ===== -->
+<?php /* Баннеры временно скрыты. visibility:hidden, а не удаление: блок остаётся
+         в потоке с тем же размером и отрицательным margin-top, поэтому всё, что
+         под ним, стоит ровно там же. Вернуть — убрать класс promo-strip--off. */ ?>
+<section class="promo-strip promo-strip--off" aria-hidden="true">
+    <div class="promo-row">
+
+        <a class="promo-tile" href="/live">
+            <span class="promo-tile__badge">скоро</span>
+            <div class="promo-tile__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>
+                    <path d="M2.5 2.5a13.5 13.5 0 0 0 0 19M21.5 2.5a13.5 13.5 0 0 1 0 19"/>
+                </svg>
+            </div>
+            <h3>Dustore.Live</h3>
+            <p>Стримы разработчиков, презентации проектов и девлоги — в реальном времени.</p>
+            <span class="promo-tile__cta">Узнать больше <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="promo-tile" href="/crew">
+            <span class="promo-tile__badge">скоро</span>
+            <div class="promo-tile__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="8" r="3"/>
+                    <circle cx="17" cy="10" r="2.4"/>
+                    <path d="M3 20a6 6 0 0 1 12 0"/>
+                    <path d="M14 20a5 5 0 0 1 7-4.58"/>
+                </svg>
+            </div>
+            <h3>Dustore.Crew</h3>
+            <p>Расширенный подбор команды: навыки, проекты, часовые пояса — всё в одном месте.</p>
+            <span class="promo-tile__cta">Узнать больше <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="promo-tile" href="/play">
+            <span class="promo-tile__badge">скоро</span>
+            <div class="promo-tile__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 10.5A3.5 3.5 0 0 0 7 18z"/>
+                    <path d="M10 14l2 2 2-2M12 12v4"/>
+                </svg>
+            </div>
+            <h3>Dustore.Play</h3>
+            <p>Облачный запуск игр прямо в браузере — без установки и мощного железа.</p>
+            <span class="promo-tile__cta">Узнать больше <span aria-hidden="true">→</span></span>
+        </a>
+
+    </div>
+</section>
+<!-- ===== /PROMO TILES ===== -->
 
         <section class="slider-section" style="padding: 0">
             <div class="slider-container">
@@ -1263,6 +1528,7 @@ mobile_redirect_if_needed();
                баннер голосования: его наклон гасится на время драга (см. ниже). */
             if (window.Float3D) {
                 Float3D.register('.platform-card:not(.in-development)', { float: 'h3', card: true });
+                Float3D.register('.promo-tile', { float: 'h3', card: true });
             }
 
             var GROUPS = [
@@ -1375,13 +1641,49 @@ mobile_redirect_if_needed();
         })();
     </script>
 
-    <div id="vote-banner" data-collapsed="false">
+    <?php
+    // Окошко джема: до момента итогов — «Ждём итогов» + отсчёт, после — победители определены.
+    // Момент итогов берётся из jam_awards.php (джем №12), тот же, что на странице голосования.
+    require_once __DIR__ . '/swad/controllers/jams/jam_awards.php';
+    $vbCfg  = jam_awards_for(null, 12);
+    $vbLeft = $vbCfg ? max(0, $vbCfg['reveal_ts'] - time()) : 0;
+    $vbOut  = $vbCfg !== null && $vbLeft === 0;
+    ?>
+    <div id="vote-banner" data-collapsed="false" data-left="<?= (int)$vbLeft ?>" data-out="<?= $vbOut ? '1' : '0' ?>">
         <button id="vote-toggle-btn" class="vote-toggle" aria-label="Свернуть">✕</button>
-        <div class="vote-label">Голосование завершено/проверка результатов:</div>
-        <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
+        <div class="vote-label" data-vb="head"><?= $vbOut ? 'Победители джема определены!' : 'Ждём итогов' ?></div>
+        <div class="vote-title pixel-title" data-vb="head"><?= $vbOut ? 'Победители определены!' : 'Ждём итогов' ?></div>
         <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
-        <a href="/jams/vote?id=12" class="vote-btn pixel-title">Посмотреть оценки</a>
+        <div class="vote-sub" id="vote-sub" data-vb="sub"><?= $vbOut ? 'Ознакомьтесь с результатами' : '<span id="vote-count">…</span>' ?></div>
+        <a href="/jams/vote?id=12" class="vote-btn pixel-title" data-vb="btn"><?= $vbOut ? 'Посмотреть' : 'Посмотреть оценки' ?></a>
     </div>
+
+    <script>
+        // Отсчёт до итогов; в ноль — окошко переключается на «победители определены» без перезагрузки.
+        (function() {
+            var b = document.getElementById('vote-banner');
+            if (!b || b.dataset.out === '1') return;
+            var end = Date.now() + (+b.dataset.left || 0) * 1000;
+            var cnt = document.getElementById('vote-count');
+            function p(n) { return n < 10 ? '0' + n : '' + n; }
+            function tick() {
+                var t = Math.max(0, Math.round((end - Date.now()) / 1000));
+                if (t === 0) {
+                    b.dataset.out = '1';
+                    b.querySelectorAll('[data-vb=head]').forEach(function(e) {
+                        e.textContent = e.classList.contains('vote-title') ? 'Победители определены!' : 'Победители джема определены!';
+                    });
+                    b.querySelector('[data-vb=sub]').textContent = 'Ознакомьтесь с результатами';
+                    b.querySelector('[data-vb=btn]').textContent = 'Посмотреть';
+                    return;
+                }
+                var d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+                cnt.textContent = (d ? d + 'д ' : '') + p(h) + ':' + p(m) + ':' + p(s);
+                setTimeout(tick, 1000);
+            }
+            tick();
+        })();
+    </script>
 
     <script>
         (function() {
