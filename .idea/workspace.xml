@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/float3d.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/float3d.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,21 +29,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;claude/determined-rubin-otet61&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/xampp/htdocs/swad/controllers&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "claude/fid-hubs-mobile-pwa",
+    "last_opened_file_path": "C:/xampp/htdocs/swad/controllers/jams",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\xampp\htdocs\swad\controllers\jams" />
       <recent name="C:\xampp\htdocs\swad\controllers" />
       <recent name="C:\xampp\htdocs\l4t\api" />
       <recent name="C:\xampp\htdocs\l4t" />
       <recent name="C:\xampp\htdocs\swad\controllers\l4t" />
-      <recent name="C:\xampp\htdocs\swad\css" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\xampp\htdocs\swad\static\img" />

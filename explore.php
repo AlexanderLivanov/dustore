@@ -93,6 +93,7 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     в соответствии с законодательством РФ.
                 </div>
 
+<<<<<<< HEAD
                 <?php /* Шапка витрины в языке профилей игрока/студии. Режим «Веб-игры»
                          открывается из меню сайта (?web=1) — отдельной плитки здесь нет. */ ?>
                 <header class="ex-hero">
@@ -105,6 +106,8 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     </div>
                 </header>
 
+=======
+>>>>>>> 40d4ff1981de74b860f5394dd974868b7b730448
                 <div class="search-wrapper">
                     <div class="sort-buttons" id="sortButtons">
                         <button type="button" class="sort-btn" data-sort="popularity" data-dir="desc">
