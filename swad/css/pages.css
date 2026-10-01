@@ -633,6 +633,16 @@ body.moonlight-theme .btn-secondary:hover {
     margin-bottom: 10px;
 }
 
+.vote-sub {
+    font-size: 12px;
+    line-height: 1.3;
+    color: #fff;
+    opacity: .85;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .5px;
+}
+
 .vote-title {
     font-size: 15px;
     color: #ffffffa1;
@@ -726,6 +736,7 @@ body.moonlight-theme .vote-btn:hover {
 }
 
 #vote-banner.collapsed .vote-label,
+#vote-banner.collapsed .vote-sub,
 #vote-banner.collapsed .vote-image,
 #vote-banner.collapsed .vote-btn {
     display: none;

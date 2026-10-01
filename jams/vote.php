@@ -182,7 +182,7 @@ $votingOver = $vEnd && $now > $vEnd;
 /* Итоги джема (см. swad/controllers/jams/jam_awards.php): с момента reveal_at
    голосование закрыто для всех, включая жюри, видны победители и баллы. */
 require_once('../swad/controllers/jams/jam_awards.php');
-$awardsCfg  = jam_awards_for($vEnd);
+$awardsCfg  = jam_awards_for($vEnd, (int)$sprint_id);
 $resultsOut = jam_awards_out($awardsCfg, $now);
 if ($resultsOut) { $votingOpen = false; $votingOver = true; }
 

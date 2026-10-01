@@ -9,7 +9,8 @@
  * КАК ДОБАВИТЬ ИТОГИ ДЛЯ НОВОГО ДЖЕМА — допишите элемент в jam_awards_config().
  *   reveal_at — момент (Europe/Moscow): до него идёт обратный отсчёт, с него
  *               голосование закрыто, победители видны, работы по убыванию баллов.
- *   Джем подбирается по sprints.voting_end: конфиг подходит, если voting_end
+ *   sprint_id (необязательно) — id джема; если задан, джем подбирается по нему.
+ *   Иначе — по sprints.voting_end: конфиг подходит, если voting_end
  *   отличается от reveal_at не более чем на сутки (если voting_end не задан —
  *   джем не подходит: иначе итоги показались бы на любом джеме без даты).
  *   awards    — номинации по порядку:
@@ -26,6 +27,7 @@ function jam_awards_config(): array
     return [
         [
             'reveal_at' => '2026-10-01 12:00:00',
+            'sprint_id' => 12,
             'awards' => [
                 ['key' => 'community', 'title' => 'Выбор сообщества Dustore', 'prize' => '70 000 ₽',
                  'by' => 'votes'],
@@ -37,14 +39,18 @@ function jam_awards_config(): array
 }
 
 /** Конфиг итогов для джема с таким voting_end (unix или null) либо null. */
-function jam_awards_for(?int $votingEnd): ?array
+function jam_awards_for(?int $votingEnd, ?int $sprintId = null): ?array
 {
     $tz = date_default_timezone_get();
     date_default_timezone_set('Europe/Moscow');
     try {
         foreach (jam_awards_config() as $cfg) {
             $at = strtotime($cfg['reveal_at']);
-            if ($votingEnd && abs($votingEnd - $at) <= 86400) {
+            // sprint_id в конфиге (если задан) важнее даты voting_end
+            $match = isset($cfg['sprint_id'])
+                ? ($sprintId !== null && (int)$cfg['sprint_id'] === $sprintId)
+                : ($votingEnd && abs($votingEnd - $at) <= 86400);
+            if ($match) {
                 $cfg['reveal_ts'] = $at;
                 return $cfg;
             }

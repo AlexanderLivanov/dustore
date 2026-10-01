@@ -1641,13 +1641,49 @@ body.moonlight-theme .promo-tile:hover .promo-tile__cta {
         })();
     </script>
 
-    <div id="vote-banner" data-collapsed="false">
+    <?php
+    // Окошко джема: до момента итогов — «Ждём итогов» + отсчёт, после — победители определены.
+    // Момент итогов берётся из jam_awards.php (джем №12), тот же, что на странице голосования.
+    require_once __DIR__ . '/swad/controllers/jams/jam_awards.php';
+    $vbCfg  = jam_awards_for(null, 12);
+    $vbLeft = $vbCfg ? max(0, $vbCfg['reveal_ts'] - time()) : 0;
+    $vbOut  = $vbCfg !== null && $vbLeft === 0;
+    ?>
+    <div id="vote-banner" data-collapsed="false" data-left="<?= (int)$vbLeft ?>" data-out="<?= $vbOut ? '1' : '0' ?>">
         <button id="vote-toggle-btn" class="vote-toggle" aria-label="Свернуть">✕</button>
-        <div class="vote-label">Голосование завершено/проверка результатов:</div>
-        <div class="vote-title pixel-title">Джем: DUSTORE X К.О.Н.Т.У.Р.</div>
+        <div class="vote-label" data-vb="head"><?= $vbOut ? 'Победители джема определены!' : 'Ждём итогов' ?></div>
+        <div class="vote-title pixel-title" data-vb="head"><?= $vbOut ? 'Победители определены!' : 'Ждём итогов' ?></div>
         <img src="/swad/static/img/KNTR_X_DSTRmini.jpg" alt="Джем" class="vote-image" loading="lazy">
-        <a href="/jams/vote?id=12" class="vote-btn pixel-title">Посмотреть оценки</a>
+        <div class="vote-sub" id="vote-sub" data-vb="sub"><?= $vbOut ? 'Ознакомьтесь с результатами' : '<span id="vote-count">…</span>' ?></div>
+        <a href="/jams/vote?id=12" class="vote-btn pixel-title" data-vb="btn"><?= $vbOut ? 'Посмотреть' : 'Посмотреть оценки' ?></a>
     </div>
+
+    <script>
+        // Отсчёт до итогов; в ноль — окошко переключается на «победители определены» без перезагрузки.
+        (function() {
+            var b = document.getElementById('vote-banner');
+            if (!b || b.dataset.out === '1') return;
+            var end = Date.now() + (+b.dataset.left || 0) * 1000;
+            var cnt = document.getElementById('vote-count');
+            function p(n) { return n < 10 ? '0' + n : '' + n; }
+            function tick() {
+                var t = Math.max(0, Math.round((end - Date.now()) / 1000));
+                if (t === 0) {
+                    b.dataset.out = '1';
+                    b.querySelectorAll('[data-vb=head]').forEach(function(e) {
+                        e.textContent = e.classList.contains('vote-title') ? 'Победители определены!' : 'Победители джема определены!';
+                    });
+                    b.querySelector('[data-vb=sub]').textContent = 'Ознакомьтесь с результатами';
+                    b.querySelector('[data-vb=btn]').textContent = 'Посмотреть';
+                    return;
+                }
+                var d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+                cnt.textContent = (d ? d + 'д ' : '') + p(h) + ':' + p(m) + ':' + p(s);
+                setTimeout(tick, 1000);
+            }
+            tick();
+        })();
+    </script>
 
     <script>
         (function() {
