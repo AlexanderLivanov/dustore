@@ -29,6 +29,7 @@ h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
 .qrow .src{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px;display:block}
 .qrow .src:hover{color:var(--amber)}
 </style>
+<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 <body>
 <nav>
