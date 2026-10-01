@@ -93,6 +93,21 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     в соответствии с законодательством РФ.
                 </div>
 
+<<<<<<< HEAD
+                <?php /* Шапка витрины в языке профилей игрока/студии. Режим «Веб-игры»
+                         открывается из меню сайта (?web=1) — отдельной плитки здесь нет. */ ?>
+                <header class="ex-hero">
+                    <span class="ex-hero__mark" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r=".9" fill="currentColor" stroke="none"/><circle cx="17.8" cy="13.6" r=".9" fill="currentColor" stroke="none"/></svg>
+                    </span>
+                    <div class="ex-hero__text">
+                        <h1 class="ex-hero__title">Каталог игр</h1>
+                        <p class="ex-hero__sub">Ищите по названию и жанру, фильтруйте по цене.</p>
+                    </div>
+                </header>
+
+=======
+>>>>>>> 40d4ff1981de74b860f5394dd974868b7b730448
                 <div class="search-wrapper">
                     <div class="sort-buttons" id="sortButtons">
                         <button type="button" class="sort-btn" data-sort="popularity" data-dir="desc">
