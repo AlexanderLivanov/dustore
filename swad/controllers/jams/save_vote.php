@@ -78,6 +78,12 @@ $expertWindow = $isExpert && $eEnd
              && (!$vStart || $vStart <= $now)
              && $now <= $eEnd;
 
+/* Итоги объявлены — голосование закрыто для всех (см. jam_awards.php). */
+require_once __DIR__ . '/jam_awards.php';
+if (!$forceOpen && jam_awards_out(jam_awards_for($vEnd), $now)) {
+    v_out(['success' => false, 'message' => 'Голосование завершено, итоги подведены'], 409);
+}
+
 if (!$votingOpen && !$expertWindow) {
     $msg = ($vStart && $now < $vStart)
         ? 'Голосование ещё не началось'

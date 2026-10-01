@@ -243,10 +243,11 @@
     /* Кнопки под кандидатом — зависят от того, на каком шаге диалог. */
     function candActions(c, full) {
         var k = ' data-k="' + c.key + '"';
-        var tg = c.tg ? '<a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="https://t.me/' + esc(c.tg) + '" target="_blank" rel="noopener">' + icon('telegram') + 'Написать</a>' : '';
+        var tg = c.tg ? '<a class="l4x-btn l4x-btn--ghost l4x-btn--sm" href="https://t.me/' + esc(c.tg) + '" target="_blank" rel="noopener">' + icon('telegram') + 'Написать</a>' : '';
+        var chat = c.uid ? '<a class="l4x-btn l4x-btn--acc l4x-btn--sm" href="/chat/?to=' + encodeURIComponent(c.uid) + '">' + icon('chat') + 'В чат Dustore</a>' : '';
         var more = full ? '' : '<button class="l4x-btn l4x-btn--ghost l4x-btn--sm" data-act="cand-open"' + k + '>Подробнее</button>';
         switch (c.bucket) {
-            case 'deal': return '<span class="l4x-verified">' + icon('check') + 'договорились</span>' + tg + more;
+            case 'deal': return '<span class="l4x-verified">' + icon('check') + 'договорились</span>' + chat + tg + more;
             case 'wait': return '<span class="ws-state">' + icon('clock') + (c.src === 'need' ? 'Вы предложили себя' : 'Вы пригласили') + ' — ждём ответ</span>' + more;
             case 'gone': return '<span class="ws-state">' + (c.state === 'declined' ? 'Отказался(ась)' : 'Отклонено') + '</span>' + more;
             case 'todo':

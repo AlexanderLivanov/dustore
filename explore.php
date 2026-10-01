@@ -93,26 +93,17 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     в соответствии с законодательством РФ.
                 </div>
 
-                <?php /* Отдельный крупный переключатель, а не ещё один чип в общем списке
-                         жанров слева — веб-игры это отдельный режим просмотра («играть сейчас,
-                         без скачивания»), а не жанр. У него свой набор жанров-чипов ниже,
-                         который пересчитывается под выбранный режим (см. Game::collectGenres). */ ?>
-                <a href="#" id="webGamesTile" class="web-tile<?= $webSection ? ' active' : '' ?>">
-                    <span class="web-tile-icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="4" width="20" height="16" rx="2.4"/>
-                            <line x1="2" y1="8.5" x2="22" y2="8.5"/>
-                            <circle cx="5.2" cy="6.4" r="0.6" fill="currentColor" stroke="none"/>
-                            <circle cx="7.4" cy="6.4" r="0.6" fill="currentColor" stroke="none"/>
-                            <path d="M10.5 12.3v5.2l4.4-2.6z" fill="currentColor" stroke="none"/>
-                        </svg>
+                <?php /* Шапка витрины в языке профилей игрока/студии. Режим «Веб-игры»
+                         открывается из меню сайта (?web=1) — отдельной плитки здесь нет. */ ?>
+                <header class="ex-hero">
+                    <span class="ex-hero__mark" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r=".9" fill="currentColor" stroke="none"/><circle cx="17.8" cy="13.6" r=".9" fill="currentColor" stroke="none"/></svg>
                     </span>
-                    <span class="web-tile-text">
-                        <span class="web-tile-title">Веб-игры</span>
-                        <span class="web-tile-sub">Играть прямо в браузере — без скачивания</span>
-                    </span>
-                    <span class="web-tile-check" aria-hidden="true"></span>
-                </a>
+                    <div class="ex-hero__text">
+                        <h1 class="ex-hero__title">Каталог игр</h1>
+                        <p class="ex-hero__sub">Ищите по названию и жанру, фильтруйте по цене.</p>
+                    </div>
+                </header>
 
                 <div class="search-wrapper">
                     <div class="sort-buttons" id="sortButtons">
@@ -323,12 +314,11 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
 
         const DEFAULTS = { adult: 0, web: 0, genre: null, sort: 'popularity', dir: 'desc', priceType: 'all', priceMax: 5000, q: '', offset: 0 };
         const state = Object.assign({}, DEFAULTS, {
-            genre: <?= $selectedGenre ? json_encode($selectedGenre) : 'null' ?>,
+            genre: <?= $selectedGenre ? json_encode($selectedGenre, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : 'null' ?>,
             adult: <?= $adultSection ? 1 : 0 ?>,
             web: <?= $webSection ? 1 : 0 ?>
         });
 
-        const webTile = document.getElementById('webGamesTile');
 
         try {
             const s = JSON.parse(localStorage.getItem('explore_filter') || '{}');
@@ -565,7 +555,6 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                     : !data.has_more;
 
                 adultWarning.classList.toggle('visible', !!state.adult);
-                webTile.classList.toggle('active', !!state.web);
 
                 localStorage.setItem('explore_sort', JSON.stringify({ sort: state.sort, dir: state.dir }));
                 localStorage.setItem('explore_filter', JSON.stringify({ priceType: state.priceType, priceMax: state.priceMax }));
@@ -627,18 +616,6 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
                страницу отматывала фильтры по одному. */
             window.history.replaceState({}, '', url);
         }
-
-        /* ── Веб-игры — отдельный крупный переключатель ─────────────────────
-           Сбрасывает жанр по той же причине, что и переключение 18+ ниже:
-           набор жанров у веб-игр свой (см. Game::collectGenres), старый
-           выбранный жанр может просто не существовать в новом режиме. */
-        webTile.addEventListener('click', async e => {
-            e.preventDefault();
-            state.web = state.web ? 0 : 1;
-            state.genre = null;
-            updateURL();
-            await updateUI();
-        });
 
         /* ── Фильтры по жанру и 18+ ──────────────────────────────────────── */
         filterPanel.addEventListener('click', async e => {

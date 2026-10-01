@@ -179,6 +179,13 @@ $votingOpen = (!$vStart || $vStart <= $now) && (!$vEnd || $now <= $vEnd);
 $revealed   = !$vStart || $vStart <= $now;
 $votingOver = $vEnd && $now > $vEnd;
 
+/* Итоги джема (см. swad/controllers/jams/jam_awards.php): с момента reveal_at
+   голосование закрыто для всех, включая жюри, видны победители и баллы. */
+require_once('../swad/controllers/jams/jam_awards.php');
+$awardsCfg  = jam_awards_for($vEnd);
+$resultsOut = jam_awards_out($awardsCfg, $now);
+if ($resultsOut) { $votingOpen = false; $votingOver = true; }
+
 $showTotals = SHOW_TOTALS_DURING_VOTING || !$votingOpen;
 $showNames  = SHOW_VOTER_NAMES === 'always'
            || (SHOW_VOTER_NAMES === 'after_close' && !$votingOpen);
@@ -201,7 +208,7 @@ $expertWindow = $iAmExpert && $eEnd
              && (!$vStart || $vStart <= $now)
              && $now <= $eEnd;
 
-$canVote = !$isHost && ($votingOpen || $expertWindow);
+$canVote = !$isHost && !$resultsOut && ($votingOpen || $expertWindow);
 
 /* Свои студии — чтобы автор не голосовал за собственную работу.
    Покрывает владельца студии; участники команды через staff сюда не попадают,
@@ -241,6 +248,12 @@ $q->bindValue(':uid',  $userId,    PDO::PARAM_INT);
 $q->bindValue(':seed', $orderSeed, PDO::PARAM_INT);
 $q->execute();
 $games = $q->fetchAll(PDO::FETCH_ASSOC);
+
+/* После итогов — строго по убыванию баллов (при равенстве — больше голосовавших);
+   до итогов порядок случайный и свой у каждого, чтобы позиция не давала голосов. */
+if ($resultsOut) {
+    usort($games, fn($a, $b) => [(int)$b['total_points'], (int)$b['voters']] <=> [(int)$a['total_points'], (int)$a['voters']]);
+}
 
 $gamesLive = $gamesPending = [];
 foreach ($games as $g) {
@@ -297,6 +310,51 @@ $ratedCount = 0;
 foreach ($gamesLive as $g) if ((int)$g['my_points'] > 0) $ratedCount++;
 $liveCount = count($gamesLive);
 
+/* ── Победители по номинациям (только после reveal_at) ─────────────────────
+   Считаются на сервере — часы посетителя ни при чём. 'votes': максимум баллов
+   сообщества (is_expert = 0), затем число голосовавших, при полном равенстве
+   победу делят. 'game': выбор организаторов по названию/id, баллы не нужны. */
+$awardWinners = [];   // key => [строки игр (+ c_pts, c_n для 'votes')]
+$winTags      = [];   // game_id => [названия номинаций] — плашки на карточках
+$rank         = [];   // game_id => место (одинаковые баллы — одно место)
+if ($resultsOut && $gamesLive) {
+    $liveById = [];
+    foreach ($gamesLive as $g) $liveById[(int)$g['id']] = $g;
+
+    $prevPts = null; $place = 0; $i = 0;
+    foreach ($gamesLive as $g) {
+        $i++;
+        if ($prevPts !== (int)$g['total_points']) { $place = $i; $prevPts = (int)$g['total_points']; }
+        $rank[(int)$g['id']] = $place;
+    }
+
+    foreach ($awardsCfg['awards'] as $aw) {
+        $list = [];
+        if ($aw['by'] === 'votes') {
+            $cv = $pdo->prepare("SELECT game_id, SUM(points) AS pts, COUNT(*) AS n
+                                   FROM jam_votes WHERE sprint_id = ? AND is_expert = 0 AND points > 0
+                                  GROUP BY game_id");
+            $cv->execute([$sprint_id]);
+            $best = null;
+            foreach ($cv->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $gid = (int)$row['game_id'];
+                if (!isset($liveById[$gid])) continue;
+                $key = [(int)$row['pts'], (int)$row['n']];
+                if ($best === null || $key > $best) { $best = $key; $list = []; }
+                if ($key === $best) $list[] = $liveById[$gid] + ['c_pts' => $key[0], 'c_n' => $key[1]];
+            }
+        } else {
+            foreach ($gamesLive as $g) {
+                $byId   = !empty($aw['game_id']) && (int)$g['id'] === (int)$aw['game_id'];
+                $byName = !empty($aw['game_name']) && jam_awards_norm($g['name']) === jam_awards_norm($aw['game_name']);
+                if ($byId || $byName) { $list[] = $g; break; }
+            }
+        }
+        $awardWinners[$aw['key']] = $list;
+        foreach ($list as $w) $winTags[(int)$w['id']][] = $aw['title'];
+    }
+}
+
 require_once('../swad/static/elements/header.php');
 ?>
 <!DOCTYPE html>
@@ -313,15 +371,17 @@ require_once('../swad/static/elements/header.php');
 
         <div class="jv-head">
             <div>
-                <h1 class="jv-title">Оцените работы</h1>
+                <h1 class="jv-title"><?= $resultsOut ? 'Итоги голосования' : 'Оцените работы' ?></h1>
                 <div class="jv-sub"><?= h($sprint['title']) ?><?php
                     if (!$votingOpen && $expertWindow) echo ' · оценка жюри до ' . date('d.m.Y H:i', $eEnd);
+                    elseif ($resultsOut)               echo ' · голосование завершено';
                     elseif ($vEnd)                     echo ' · голосование до ' . date('d.m.Y H:i', $vEnd);
                 ?></div>
             </div>
             <a href="/jams/participant.php?sprint_id=<?= (int)$sprint_id ?>" class="jv-back">← К странице джема</a>
         </div>
 
+        <?php if (!$resultsOut): ?>
         <div class="jv-rules" id="rules">
             <button type="button" class="jv-rules-btn" id="rulesBtn" aria-expanded="false">
                 Как устроено голосование
@@ -338,6 +398,50 @@ require_once('../swad/static/elements/header.php');
                 <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
+
+        <?php if ($awardsCfg && $revealed): ?>
+        <?php if (!$resultsOut): ?>
+        <div class="jv-timer" id="jvTimer" data-left="<?= max(0, $awardsCfg['reveal_ts'] - $now) ?>">
+            <div class="jv-timer-title">Победителей объявим <?= date('d.m в H:i', $awardsCfg['reveal_ts']) ?> (МСК)</div>
+            <div class="jv-timer-clock" aria-live="off">
+                <span><b data-u="d">0</b><small>дн</small></span>
+                <span><b data-u="h">00</b><small>час</small></span>
+                <span><b data-u="m">00</b><small>мин</small></span>
+                <span><b data-u="s">00</b><small>сек</small></span>
+            </div>
+            <div class="jv-prizes">
+                <?php foreach ($awardsCfg['awards'] as $aw): ?>
+                    <span><b><?= h($aw['prize']) ?></b><?= h($aw['title']) ?></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="jv-awards">
+            <?php foreach ($awardsCfg['awards'] as $aw): $ws = $awardWinners[$aw['key']] ?? []; ?>
+            <section class="jv-award">
+                <div class="jv-award-prize"><?= h($aw['prize']) ?></div>
+                <div class="jv-award-title"><?= h($aw['title']) ?></div>
+                <?php if ($ws): ?>
+                <div class="jv-winners">
+                    <?php foreach ($ws as $w): ?>
+                    <a class="jv-winner" href="/g/<?= (int)$w['id'] ?>">
+                        <img src="<?= h($w['icon_url'] ?: ($w['path_to_cover'] ?: $COVER_FALLBACK)) ?>" alt="" loading="lazy" decoding="async">
+                        <span><b><?= h($w['name']) ?></b><small><?= $aw['by'] === 'votes'
+                            ? (int)$w['c_pts'] . ' баллов · ' . (int)$w['c_n'] . ' голосовавших'
+                            : 'выбор команды' ?></small></span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (count($ws) > 1): ?><div class="jv-award-note">Победу делят</div><?php endif; ?>
+                <?php else: ?>
+                <div class="jv-award-note">Победитель не определён</div>
+                <?php endif; ?>
+            </section>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php endif; ?>
 
         <?php if (!$revealed): ?>
             <div class="jv-empty" style="padding:80px 20px;">
@@ -350,6 +454,8 @@ require_once('../swad/static/elements/header.php');
             <div class="jv-stats">
                 <?php if ($isHost): ?>
                     <div class="jv-note">Вы организатор джема — голосовать нельзя, результаты видны.</div>
+                <?php elseif ($resultsOut): ?>
+                    <div class="jv-note">Итоги подведены. Работы расположены по убыванию баллов.</div>
                 <?php elseif (!$canVote): ?>
                     <div class="jv-note"><?= $votingOver ? 'Голосование завершено.' : 'Голосование ещё не открыто.' ?> Результаты ниже.</div>
                 <?php else: ?>
@@ -371,12 +477,14 @@ require_once('../swad/static/elements/header.php');
             </div>
 
             <div class="jv-controls">
+                <?php if (!$resultsOut): ?>
                 <div class="jv-seg" id="filters">
                     <button type="button" class="jv-chip-btn active" data-filter="all">Все<span class="jv-n" data-n="all"></span></button>
                     <button type="button" class="jv-chip-btn" data-filter="unrated">Не оценённые<span class="jv-n" data-n="unrated"></span></button>
                     <button type="button" class="jv-chip-btn" data-filter="rated">Оценённые<span class="jv-n" data-n="rated"></span></button>
                     <button type="button" class="jv-chip-btn" data-filter="unopened">Не открытые<span class="jv-n" data-n="unopened"></span></button>
                 </div>
+                <?php endif; ?>
                 <div class="jv-search" id="searchBar">
                     <span class="jv-search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                     <input type="text" id="gameSearch" placeholder="Поиск работы..." autocomplete="off">
@@ -407,6 +515,8 @@ require_once('../swad/static/elements/header.php');
                 <a class="jv-cover" href="/g/<?= $gid ?>" target="_blank" rel="noopener" data-open="<?= $gid ?>">
                     <img src="<?= h($cover) ?>" alt="" loading="lazy" decoding="async">
                     <div class="jv-tags">
+                        <?php if ($resultsOut && isset($rank[$gid])): ?><span class="jv-tag rank">№<?= (int)$rank[$gid] ?></span><?php endif; ?>
+                        <?php foreach ($winTags[$gid] ?? [] as $wt): ?><span class="jv-tag gold">🏆 <?= h($wt) ?></span><?php endforeach; ?>
                         <?php if ($isMine): ?><span class="jv-tag mine">ваша работа</span><?php endif; ?>
                         <?php if (!empty($g['vt_report_url'])): ?>
                             <span class="jv-tag ok">проверено</span>
@@ -425,7 +535,7 @@ require_once('../swad/static/elements/header.php');
                         <div class="jv-desc" style="color:var(--jv-gold)">Выбор экспертов: <?= h(implode(', ', $picks[$gid])) ?></div>
                     <?php endif; ?>
 
-                    <?php if ($iAmExpert && !$isMine): $mine = isset($myPicks[$gid]); ?>
+                    <?php if ($iAmExpert && !$isMine && !$resultsOut): $mine = isset($myPicks[$gid]); ?>
                         <button type="button" class="jv-chip-btn <?= $mine ? 'active' : '' ?>" id="pick-<?= $gid ?>"
                                 data-pick="<?= $gid ?>" style="align-self:flex-start"><?= $mine ? '★ ваш выбор' : '☆ отметить как выбор' ?></button>
                     <?php endif; ?>
@@ -447,9 +557,9 @@ require_once('../swad/static/elements/header.php');
                     <?php endif; ?>
 
                     <div class="jv-rate">
-                        <a class="jv-play<?= $opened ? ' done' : '' ?>" id="play-<?= $gid ?>"
+                        <a class="jv-play<?= ($opened && !$resultsOut) ? ' done' : '' ?>" id="play-<?= $gid ?>"
                            href="/g/<?= $gid ?>" target="_blank" rel="noopener" data-open="<?= $gid ?>">
-                            <?= $opened ? 'Открыть ещё раз ↗' : 'Открыть работу ↗' ?>
+                            <?= $resultsOut ? 'Открыть игру ↗' : ($opened ? 'Открыть ещё раз ↗' : 'Открыть работу ↗') ?>
                         </a>
 
                         <?php if ($isMine): ?>
@@ -509,6 +619,7 @@ require_once('../swad/static/elements/header.php');
     const MY_EXPERT_ID = <?= (int)($myExpertId ?? 0) ?>;
     const LIVE_COUNT   = <?= (int)$liveCount ?>;
     const BUDGET       = <?= (int)$budget ?>;
+    const RESULTS_OUT  = <?= $resultsOut ? 'true' : 'false' ?>;   // итоги объявлены — голосования нет
 
     const grid  = document.getElementById('gamesGrid');
     const toast = document.getElementById('toast');
@@ -522,6 +633,27 @@ require_once('../swad/static/elements/header.php');
         toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
     }
 
+
+    /* Обратный отсчёт. Остаток приходит с сервера (data-left), а не из
+       часов браузера — их часто сбивают. На нуле один раз перезагружаем
+       страницу: победителя рисует сервер. */
+    (function () {
+        const t = document.getElementById('jvTimer');
+        if (!t || t.classList.contains('done')) return;
+        const end = Date.now() + (+t.dataset.left) * 1000;
+        const el  = u => t.querySelector('[data-u="' + u + '"]');
+        const pad = n => String(n).padStart(2, '0');
+        function tick() {
+            const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+            el('d').textContent = Math.floor(left / 86400);
+            el('h').textContent = pad(Math.floor(left % 86400 / 3600));
+            el('m').textContent = pad(Math.floor(left % 3600 / 60));
+            el('s').textContent = pad(left % 60);
+            if (left <= 0) { setTimeout(() => location.reload(), 1500); return; }
+            setTimeout(tick, 250);
+        }
+        tick();
+    })();
 
     const rules = document.getElementById('rules');
     const rulesBtn = document.getElementById('rulesBtn');
@@ -610,7 +742,7 @@ require_once('../swad/static/elements/header.php');
        оценивать, жал на балл — и получал отказ «сначала скачайте игру». */
     document.addEventListener('click', e => {
         const link = e.target.closest('[data-open]');
-        if (!link) return;
+        if (!link || RESULTS_OUT) return;
         const gid = parseInt(link.dataset.open, 10);
         fetch('/swad/controllers/jams/jam_play.php', {
             method: 'POST',
