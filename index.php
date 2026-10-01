@@ -830,7 +830,6 @@ body.moonlight-theme .promo-tile:hover .promo-tile__cta {
         ?>
 
 <!-- ===== PROMO TILES — три баннера новых сервисов ===== -->
-<section class="promo-strip" aria-label="Скоро в Dustore">
     <div class="promo-row">
 
         <a class="promo-tile" href="/live">

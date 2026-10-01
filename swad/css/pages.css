@@ -58,10 +58,8 @@ body.moonlight-theme {
 
 .container {
     max-width: 1200px;
-    margin: 0px auto;
+    margin: 0 auto;
     padding: 0 20px;
-    align-self: start;
-    margin-top: 100px;
 }
 
 section { padding: 80px 0; }
