@@ -389,7 +389,7 @@ $stmt->execute([
                 </button>
 
                 <!-- Бейдж версии (чуть левее от кнопок) -->
-                <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.0.0-beta</span>
+                <span class="version-badge" onclick="window.location.href = '/whatsnew'">1.1.2-beta</span>
 
                 <div class="buttons-right">
                     <?php
