@@ -364,4 +364,21 @@ html { scrollbar-width: thin; scrollbar-color: var(--jv-sb) transparent; scrollb
 .jv-winner img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; background: var(--jv-cover); }
 .jv-winner b { display: block; font-size: 1rem; }
 .jv-winner small { color: var(--jv-gold); font-size: 0.78rem; }
+/* призы под часами — до объявления итогов */
+.jv-prizes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.jv-prizes span { display: flex; align-items: baseline; gap: 8px; padding: 7px 14px; border-radius: 999px; font-size: 0.82rem; color: var(--jv-muted);
+    background: var(--jv-chip); box-shadow: inset 0 0 0 1px var(--jv-chip-line); }
+.jv-prizes b { font-size: 0.95rem; color: var(--jv-gold); font-variant-numeric: tabular-nums; }
+
+/* итоги: по карточке на номинацию */
+.jv-awards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.jv-award { padding: 18px 16px; border-radius: var(--jv-radius); text-align: center;
+    background: radial-gradient(120% 140% at 50% 0%, var(--jv-gold-soft), transparent 70%), var(--jv-panel);
+    box-shadow: inset 0 0 0 1px var(--jv-panel-line); }
+.jv-award-prize { font-size: 1.7rem; font-weight: 800; line-height: 1.1; color: var(--jv-gold); font-variant-numeric: tabular-nums; }
+.jv-award-title { margin-top: 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--jv-muted); }
+.jv-award .jv-winners { margin-top: 14px; }
+.jv-award-note { margin-top: 10px; font-size: 0.8rem; color: var(--jv-muted); }
+.jv-tag.rank { background: rgba(0, 0, 0, .55); color: #fff; font-variant-numeric: tabular-nums; }
+
 @media (max-width: 480px) { .jv-timer-clock { gap: 6px; } .jv-timer-clock span { min-width: 54px; } }

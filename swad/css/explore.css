@@ -1014,6 +1014,823 @@ html {
 .ex-hero__title { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; color: var(--ex-text); }
 .ex-hero__sub { margin-top: 6px; font-size: 0.92rem; line-height: 1.5; color: var(--ex-muted); max-width: 52ch; }
 
+/* ── Тулбар: сортировка + цена + поиск ────────────────────────────────────── */
+/* Был margin-right:45vh на .price-switch — горизонтальный отступ в единицах
+   ВЫСОТЫ окна. На 1080px это 486px пустоты, на низком окне — почти ноль,
+   поэтому тулбар разъезжался по-разному на каждом экране. Теперь обычный flex. */
+.search-wrapper {
+    position: sticky;
+    /* +20px — «монобровь» хедера свисает ниже его высоты и перекрывала тулбар */
+    top: calc(var(--ex-header) + 28px);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    margin: -10px -10px 12px;
+    border-radius: var(--ex-radius);
+    background: var(--ex-panel);
+    box-shadow: inset 0 0 0 1px var(--ex-panel-line);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.sort-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.price-switch { display: flex; gap: 6px; }
+
+.search-bar {
+    flex: 1 1 240px;
+    min-width: 200px;
+    position: relative;
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 0.001s ease-out, scale 0.05s ease;
+}
+.search-bar:hover { scale: 1.03; }
+
+.search-bar input {
+    width: 100%;
+    padding: 9px 34px 9px 40px;
+    background: var(--ex-chip);
+    border: 1px solid var(--ex-chip-line);
+    border-radius: var(--ex-radius-sm);
+    color: var(--ex-text);
+    font-size: 0.92rem;
+    outline: none;
+    transition: border-color 0.18s ease, background 0.18s ease;
+}
+.search-bar input:focus { border-color: var(--ex-accent); background: var(--ex-accent-soft); }
+.search-bar input::placeholder { color: var(--ex-dim); }
+
+.search-icon {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--ex-muted);
+    pointer-events: none;
+    display: flex;
+}
+.search-icon svg { width: 18px; height: 18px; }
+
+/* Крестик очистки — появляется только когда есть что чистить */
+.search-clear {
+    position: absolute;
+    right: 8px; top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    width: 20px; height: 20px;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--ex-dim);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.search-clear:hover { color: var(--ex-text); background: var(--ex-chip); }
+.search-bar.has-value .search-clear { display: flex; }
+
+/* ── Кнопки тулбара ───────────────────────────────────────────────────────── */
+.sort-btn,
+.price-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 13px;
+    background: var(--ex-chip);
+    border: 1px solid var(--ex-chip-line);
+    border-radius: var(--ex-radius-sm);
+    color: var(--ex-muted);
+    font-size: 0.84rem;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.sort-btn:hover, .price-btn:hover,
+.sort-btn:focus-visible, .price-btn:focus-visible {
+    color: var(--ex-text);
+    border-color: var(--ex-card-line-hi);
+    outline: none;
+}
+.sort-btn.active, .price-btn.active {
+    background: var(--ex-accent-soft);
+    border-color: var(--ex-accent);
+    color: var(--ex-text);
+}
+.sort-arrow { font-size: 0.72rem; opacity: 0.8; }
+
+/* ── Раскладка: рельса фильтров + грид ────────────────────────────────────── */
+.games-body {
+    display: grid;
+    grid-template-columns: 196px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+/* Высоту держит контейнер, а не сам список: тогда ползунок цены остаётся внизу,
+   а жанры забирают весь остаток через flex:1 и не выталкивают его за экран.
+   98px = 28px отступ хедера + ~58px тулбар + 12px зазор. */
+.games-controls {
+    position: sticky;
+    top: calc(var(--ex-header) + 98px);
+    height: calc(100vh - var(--ex-header) - 98px - 20px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.controls-left {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px;
+    overflow-y: auto;
+    border-radius: var(--ex-radius);
+    background: var(--ex-panel);
+    box-shadow: inset 0 0 0 1px var(--ex-panel-line);
+}
+
+.btn-filter {
+    display: block;
+    padding: 8px 11px;
+    border-radius: var(--ex-radius-sm);
+    color: var(--ex-muted);
+    text-decoration: none;
+    font-size: 0.86rem;
+    border: 1px solid transparent;
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.btn-filter:hover, .btn-filter:focus-visible {
+    background: var(--ex-chip);
+    color: var(--ex-text);
+    outline: none;
+}
+.btn-filter.active {
+    background: var(--ex-accent-soft);
+    border-color: var(--ex-accent);
+    color: var(--ex-text);
+}
+
+.price-filters { flex: 0 0 auto; padding: 0 2px; }
+.price-slider-container {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: var(--ex-radius);
+    background: var(--ex-panel);
+    box-shadow: inset 0 0 0 1px var(--ex-panel-line);
+}
+.price-slider-container.visible { display: flex; }
+
+#priceSlider {
+    flex: 1;
+    min-width: 0;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--ex-chip-line);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+#priceSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--ex-accent);
+    cursor: pointer;
+    border: none;
+}
+#priceSlider::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--ex-accent);
+    border: none;
+    cursor: pointer;
+}
+#priceSliderValue { font-size: 0.78rem; color: var(--ex-muted); white-space: nowrap; }
+
+/* ── Строка результата ────────────────────────────────────────────────────── */
+.results-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+    color: var(--ex-muted);
+    min-height: 22px;
+}
+.results-reset {
+    background: none;
+    border: none;
+    color: var(--ex-accent-hi);
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.results-reset:hover { color: var(--ex-text); }
+
+/* ── Грид ─────────────────────────────────────────────────────────────────── */
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 16px;
+    transition: opacity 0.16s ease;
+}
+.games-grid[aria-busy="true"] { opacity: 0.45; pointer-events: none; }
+
+/* ── Карточка ─────────────────────────────────────────────────────────────── */
+/* Была <div onclick>. Стала <a href> — работает средний клик, «открыть в новой
+   вкладке», Tab с клавиатуры, и ссылки видит поисковик. */
+/* ── Карточка ────────────────────────────────────────────────────────────
+   Сама .game-card — только «место в сетке»: она НИКОГДА не меняет размер,
+   поэтому раскрытие карточки физически не может сдвинуть соседей.
+   Всё видимое живёт во внутреннем слое .gc-inner, который и растёт.
+
+   Раз .gc-inner абсолютный, у карточки нет содержимого, задающего высоту —
+   поэтому пропорция задана явно. Обложка внутри держит 16/9, а подпись
+   забирает остаток. */
+.game-card {
+    position: relative;
+    display: block;
+    aspect-ratio: 20 / 19;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.001s ease-out;
+}
+/* Наклон — Float3D (.f3d-on, пока карточка «живая»): поверх соседей */
+.game-card.f3d-on { z-index: 2; }
+.game-card:focus-visible { outline: 2px solid var(--ex-accent-hi); outline-offset: 2px; }
+.game-card[hidden] { display: none; }
+
+.gc-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--ex-radius);
+    overflow: hidden;
+    background: var(--ex-card);
+    box-shadow: inset 0 0 0 1px var(--ex-card-line);
+    transition: inset 0.26s cubic-bezier(.2, .7, .3, 1),
+                box-shadow 0.2s ease;
+}
+.game-card:hover .gc-inner { box-shadow: inset 0 0 0 1px var(--ex-card-line-hi), 0 10px 28px rgba(0, 0, 0, 0.42); }
+
+/* ── Раскрытие по задержке курсора ───────────────────────────────────────
+   --gc-l / --gc-r ставит JS: у карточки с краю прирост перекидывается
+   внутрь сетки, чтобы она не вылезала за контейнер. */
+.game-card.gc-open { z-index: 20; }
+.game-card.gc-open .gc-inner {
+    /* Растём в основном ВНИЗ. Симметричный рост на 13% вверх и вниз не давал
+       нужной высоты, а карточка первого ряда лезла бы на панель фильтров. */
+    inset: -10% var(--gc-r, -25%) -46% var(--gc-l, -25%);
+    /* Раньше рамка была акцентной по всему контуру — карточка выглядела
+       «выбранной», а не «раскрытой», и спорила за внимание с ценой.
+       Достаточно тени: она сама поднимает карточку над сеткой. */
+    box-shadow: inset 0 0 0 1px var(--ex-card-line-hi), 0 26px 60px rgba(0, 0, 0, 0.65);
+}
+
+/* Вот из-за чего блок со студией, рейтингом и описанием исчезал.
+   У обложки aspect-ratio 16/9 — её высота считается от ШИРИНЫ. При росте
+   карточки ширина увеличивалась в 1.5 раза, а высота всего в 1.26 —
+   обложка съедала прирост целиком и подпись становилась ДАЖЕ МЕНЬШЕ,
+   чем в закрытом виде (82px против 90px). Свободного места под текст
+   не оставалось вовсе, и он схлопывался в ноль.
+   У раскрытой карточки обложка занимает фиксированную долю высоты,
+   а не привязывается к ширине. */
+.game-card.gc-open .game-image {
+    aspect-ratio: auto;
+    flex: 0 0 50%;
+}
+
+/* Пока одна карточка раскрыта, соседние приглушаются — взгляд не разбегается */
+.games-grid:has(.game-card.gc-open) .game-card:not(.gc-open) .gc-inner {
+    opacity: 0.45;
+    transition: opacity 0.22s ease, inset 0.26s cubic-bezier(.2, .7, .3, 1), box-shadow 0.2s ease;
+}
+
+
+/* Блик за курсором теперь рисует Float3D (.f3d-glare внутри .gc-inner),
+   его яркость — общая настройка --f3d-glare в swad/css/float3d.css. */
+
+.game-image {
+    position: relative;
+    flex: 0 0 auto;
+    aspect-ratio: 16 / 9;
+    background: var(--ex-cover);
+    overflow: hidden;
+}
+.game-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.game-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    background: rgba(0, 0, 0, 0.62);
+    color: var(--ex-text);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.game-badge.soon { background: rgba(0, 0, 0, 0.62); color: #ffd479; }
+/* top-right, а не top-left как .soon/«Новинка» — игра может быть одновременно
+   и веб, и новинкой, бейджи не должны залезать друг на друга */
+.game-badge.web {
+    left: auto; right: 8px;
+    background: var(--ex-accent);
+    color: var(--ex-text);
+}
+
+/* ── Содержимое, которое появляется только при раскрытии ──────────────── */
+/* Блок появляется через flex-basis: закрыт — нулевая высота, открыт —
+   занимает весь остаток подписи. Раньше я пробовал flex-grow, но у
+   .game-meta стоит margin-top:auto, и свободное место уходило туда;
+   с flex-basis: 100% и flex-shrink блок забирает своё гарантированно. */
+.gc-more {
+    flex: 0 1 0;
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: flex-basis 0.26s cubic-bezier(.2, .7, .3, 1),
+                opacity 0.18s ease;
+}
+.game-card.gc-open .gc-more { flex-basis: 100%; opacity: 1; }
+
+.gc-block {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    height: 100%;
+    min-height: 0;
+    padding-top: 2px;
+}
+
+.gc-line {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    /* Разделительной линии тут больше нет: она превращала строку в
+       подобие заголовка секции и добавляла ей веса, которого у неё
+       быть не должно. */
+    margin-bottom: 1px;
+}
+
+/* Студия — служебная подпись, а не второе название. Раньше шла тем же
+   кеглем и цветом, что и рейтинг, и спорила с названием игры за внимание.
+   Мельче, тусклее, капителью — читается как источник, а не как заголовок. */
+.gc-studio {
+    font-size: 0.68rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--ex-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Рейтинг, наоборот, остаётся заметным — за ним и тянутся глазами */
+.gc-rating { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: 0.78rem; }
+.gc-stars { color: #f5b942; letter-spacing: 0.5px; }
+.gc-rnum { color: var(--ex-text); font-weight: 600; }
+
+.gc-desc {
+    flex: 1;
+    min-height: 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    /* было var(--ex-muted) — на тёмной карточке описание почти сливалось */
+    color: rgba(244, 236, 247, 0.72);
+    display: -webkit-box;
+    /* потолок высокий: реальную высоту ограничивает flex-контейнер,
+       а не число строк — иначе снова получилась бы дырка снизу */
+    -webkit-line-clamp: 7;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+
+/* ── Перелистывание скриншотов ───────────────────────────────────────────
+   Лежат поверх обложки и проявляются по очереди. Обложка остаётся снизу:
+   если скриншот не догрузился, дырки не будет. */
+.gc-shots { position: absolute; inset: 0; pointer-events: none; }
+.gc-shots img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+.gc-shots img.on { opacity: 1; }
+
+/* Скриншоты бывают светлыми, а поверх обложки лежат бейджи «Новинка»/«Скоро».
+   Лёгкое затемнение снизу держит их читаемыми на любом кадре. */
+.game-card.gc-open .game-image::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 42%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent);
+    pointer-events: none;
+}
+
+.game-info {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 11px 12px 12px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Было -webkit-line-clamp: 1 — длинное название обрезалось многоточием,
+   хотя свободное место на раскрытой карточке есть. */
+.game-card.gc-open .game-title {
+    font-size: 1.05rem;
+    -webkit-line-clamp: 2;
+}
+.game-card.gc-open .game-info { gap: 8px; padding: 13px 14px 14px; }
+
+/* flex: 0 0 auto здесь принципиально.
+   .game-info — флекс-колонка, а у .gc-more стоит flex-basis: 100%, то есть
+   он запрашивает всю высоту контейнера. Сумма запросов превышает реальную
+   высоту, и flex-shrink (по умолчанию 1 У ВСЕХ) ужимает КАЖДЫЙ элемент
+   пропорционально — включая название. Оно теряло около 12px, а
+   overflow:hidden от line-clamp срезал то, что не поместилось.
+   Запрещаем сжимать название и строку с жанром: пусть ужимается только
+   блок описания, он для этого и растягивался. */
+.game-title {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ex-text);
+    /* две строки вместо обрезки в одну: длинные названия читаемы */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.game-meta {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+}
+.game-genre {
+    font-size: 0.75rem;
+    color: var(--ex-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.game-price {
+    flex-shrink: 0;
+    padding: 2px 9px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--ex-chip);
+    border: 1px solid var(--ex-chip-line);
+    color: var(--ex-text);
+    white-space: nowrap;
+}
+.game-price.free { color: var(--ex-free); }
+
+/* ── Скелетоны на время запроса ───────────────────────────────────────────── */
+.skeleton-card {
+    border-radius: var(--ex-radius);
+    overflow: hidden;
+    background: var(--ex-card);
+    box-shadow: inset 0 0 0 1px var(--ex-card-line);
+}
+.skeleton-card .sk-cover { aspect-ratio: 16 / 9; background: var(--ex-cover); }
+.skeleton-card .sk-line {
+    height: 10px;
+    margin: 12px 12px 0;
+    border-radius: 4px;
+    background: var(--ex-chip);
+}
+.skeleton-card .sk-line.short { width: 55%; margin-bottom: 14px; }
+
+/* ── Пустое состояние ─────────────────────────────────────────────────────── */
+.no-games-message {
+    grid-column: 1 / -1;
+    padding: 56px 20px;
+    text-align: center;
+    color: var(--ex-muted);
+    font-size: 0.95rem;
+}
+.no-games-message strong { display: block; color: var(--ex-text); margin-bottom: 6px; font-weight: 500; }
+
+/* ── 18+ ──────────────────────────────────────────────────────────────────── */
+.warning-adult {
+    display: none;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: var(--ex-radius-sm);
+    background: var(--ex-accent-soft);
+    border: 1px solid var(--ex-accent);
+    font-size: 0.84rem;
+    color: var(--ex-text);
+}
+.warning-adult.visible { display: block; }
+
+.blur-adult img { filter: blur(16px); }
+.blur-adult::after {
+    content: "18+";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ex-text);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.adult-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(6, 1, 10, 0.84);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+.adult-modal.visible { display: flex; }
+.adult-modal-content {
+    max-width: 440px;
+    padding: 24px;
+    border-radius: var(--ex-radius);
+    background: var(--ex-card);
+    box-shadow: inset 0 0 0 1px var(--ex-card-line), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.adult-modal-content h2 { font-size: 1.15rem; margin-bottom: 12px; color: var(--ex-text); }
+.adult-modal-content p { font-size: 0.9rem; line-height: 1.6; color: var(--ex-muted); margin-bottom: 18px; }
+.adult-modal-content button {
+    width: 100%;
+    padding: 11px;
+    border-radius: var(--ex-radius-sm);
+    border: 1px solid var(--ex-accent);
+    background: var(--ex-accent-soft);
+    color: var(--ex-text);
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+.adult-modal-content button:hover { background: var(--ex-accent); }
+
+/* ── Скроллбары ───────────────────────────────────────────────────────────── */
+/* Firefox умеет только thin/auto — ширину там не задать, только цвет. */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ex-sb) transparent;
+    /* Резервируем место под полосу заранее: иначе при смене фильтра
+       (много игр -> мало) страница дёргается на ширину скроллбара. */
+    scrollbar-gutter: stable;
+}
+
+/* Без селектора — правило ловит и документ, и все внутренние скроллеры сразу. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; }
+
+/* Приём ради минимализма: сама полоса 10px, но 3px по краям отдаются
+   прозрачной рамке, а фон обрезается по padding-box. Видно 4px, а хватать
+   мышью можно все 10 — тонко на вид и при этом не мучительно попадать. */
+::-webkit-scrollbar-thumb {
+    background: var(--ex-sb);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ex-sb-hover);
+    background-clip: padding-box;
+}
+
+.controls-left { scrollbar-width: thin; scrollbar-color: var(--ex-sb) transparent; }
+
+/* ── Мобильный переключатель фильтров ─────────────────────────────────────── */
+.mobile-filter-toggle { display: none; }
+
+@media (max-width: 900px) {
+    :root { --ex-header: 64px; }
+}
+
+@media (max-width: 860px) {
+    .container { padding: 0 10px; }
+    .games-list { padding: 10px 0 28px; }
+    .games-list .container { padding: 10px; border-radius: 14px; }
+
+    .games-body { grid-template-columns: minmax(0, 1fr); }
+
+    .games-controls {
+        position: relative;
+        top: auto;
+        height: auto;
+        z-index: 6;
+    }
+
+    .mobile-filter-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 9px 14px;
+        background: var(--ex-chip);
+        border: 1px solid var(--ex-chip-line);
+        border-radius: var(--ex-radius-sm);
+        color: var(--ex-muted);
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+    .mobile-filter-toggle.open { color: var(--ex-text); border-color: var(--ex-accent); }
+    .mobile-filter-toggle .filter-label { flex: 1; text-align: left; }
+    .mobile-filter-toggle .active-badge {
+        padding: 1px 7px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        background: var(--ex-accent);
+        color: #fff;
+    }
+    .mobile-filter-toggle .chevron { transition: transform 0.2s ease; }
+    .mobile-filter-toggle.open .chevron { transform: rotate(180deg); }
+
+    .controls-left {
+        display: none;
+        flex: 0 0 auto;
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0; right: 0;
+        z-index: 20;
+        max-height: 52vh;
+        background: var(--ex-card);
+        box-shadow: inset 0 0 0 1px var(--ex-card-line), 0 12px 30px rgba(0, 0, 0, 0.6);
+    }
+    .controls-left.open { display: flex; }
+
+    .search-wrapper { top: calc(var(--ex-header) + 24px); }
+    .sort-buttons, .price-switch { width: 100%; }
+    .sort-btn, .price-btn { flex: 1; justify-content: center; padding: 8px 6px; font-size: 0.78rem; }
+    .search-bar { flex: 1 1 100%; }
+
+    .games-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .game-card { aspect-ratio: 10 / 11; }
+    /* Раскрытие по наведению — приём для мыши. На тач-устройствах курсор
+       не «задерживается», а тап должен открывать игру, а не превью. */
+    .game-card.gc-open .gc-inner { inset: 0; box-shadow: inset 0 0 0 1px var(--ex-card-line); }
+    .game-card.gc-open .gc-more { grid-template-rows: 0fr; opacity: 0; }
+    .game-title { font-size: 0.85rem; }
+    .game-info { padding: 9px 10px 10px; gap: 5px; }
+}
+
+@media (max-width: 480px) {
+    :root { --ex-header: 58px; }
+    .games-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .game-genre { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .games-grid, .game-card, .search-bar, .gc-inner, .gc-more, .gc-shots img { transition: none; }
+    .shake-it { animation: none; }
+}
+
+/* ── Тряска поля поиска при вводе ──────────────────────────────────────────── */
+@keyframes shakeSearch {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    20%      { transform: translateX(-3px) rotate(-1deg); }
+    40%      { transform: translateX(3px)  rotate(1deg); }
+    60%      { transform: translateX(-2px) rotate(-0.5deg); }
+    80%      { transform: translateX(2px)  rotate(0.5deg); }
+}
+.shake-it { animation: shakeSearch 0.3s ease-in-out; }
+
+
+/* ── Маячок подгрузки ─────────────────────────────────────────────────────
+   Место, по появлению которого в зоне видимости грузится следующая порция.
+   Пока порция едет — крутится индикатор; в остальное время блок занимает
+   немного высоты, чтобы наблюдателю было что пересекать. */
+.grid-sentinel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 18px 0 6px;
+    font-size: 0.84rem;
+    color: var(--ex-muted);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.grid-sentinel[hidden] { display: none; }
+.grid-sentinel.is-loading { opacity: 1; }
+
+.gs-spinner {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    border: 2px solid var(--ex-chip-line);
+    border-top-color: var(--ex-accent);
+    animation: exSpin 0.8s linear infinite;
+}
+@keyframes exSpin { to { transform: rotate(360deg); } }
+
+/* Запасной вариант для браузеров без IntersectionObserver — обычная кнопка */
+.grid-sentinel.is-manual {
+    opacity: 1;
+    cursor: pointer;
+    border-radius: var(--ex-radius-sm);
+    background: var(--ex-chip);
+    border: 1px solid var(--ex-chip-line);
+    margin-top: 12px;
+}
+.grid-sentinel.is-manual .gs-spinner { display: none; }
+.grid-sentinel.is-manual .gs-text::before { content: "Показать ещё"; }
+.grid-sentinel.is-manual .gs-text { font-size: 0; }
+.grid-sentinel.is-manual .gs-text::before { font-size: 0.86rem; color: var(--ex-text); }
+
+@media (prefers-reduced-motion: reduce) {
+    .gs-spinner { animation: none; }
+}
+
+/* =============================================================================
+   ВИТРИНА v2 — в языке профилей игрока и студии (Fid-хабы)
+   -----------------------------------------------------------------------------
+   Только «покраска»: цвета, скругления, типографика, капсулы. Раскладка,
+   размеры и механика карточек (раскрытие по задержке, слайдшоу скриншотов,
+   sticky-панели, мобильное меню жанров) выше НЕ тронуты — все их правила
+   выстраданы, см. комментарии. Блок целиком откатывается удалением от этой
+   шапки до конца файла (плюс <header class="ex-hero"> в explore.php).
+   Всё на токенах --ex-*, поэтому лунная тема продолжает работать.
+   ============================================================================= */
+
+.games-list { font-family: 'Onest', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; }
+.games-list button, .games-list input { font-family: inherit; }
+
+/* Общая «скорлупа» больше не нужна: профили строятся из отдельных панелей */
+.games-list .container {
+    padding: 0 20px;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 0;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.ex-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 26px 30px;
+    margin-bottom: 14px;
+    border-radius: 20px;
+    background:
+        radial-gradient(90% 160% at 0% 0%, var(--ex-accent-soft), transparent 62%),
+        radial-gradient(60% 140% at 100% 100%, rgba(255, 255, 255, 0.04), transparent 70%),
+        var(--ex-card);
+    box-shadow: inset 0 0 0 1px var(--ex-card-line);
+    overflow: hidden;
+}
+.ex-hero__mark {
+    flex: 0 0 auto;
+    display: grid; place-items: center;
+    width: 64px; height: 64px;
+    border-radius: 24%;
+    color: #fff;
+    background: linear-gradient(135deg, var(--ex-accent), rgba(116, 21, 93, 1));
+    box-shadow: 0 8px 24px rgba(195, 33, 120, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+.ex-hero__text { flex: 1 1 280px; min-width: 0; }
+.ex-hero__title { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; color: var(--ex-text); }
+.ex-hero__sub { margin-top: 6px; font-size: 0.92rem; line-height: 1.5; color: var(--ex-muted); max-width: 52ch; }
+
 /* «Веб-игры» внутри hero — капсула с состоянием, а не отдельный баннер */
 .ex-hero .web-tile {
     flex: 0 1 330px;
@@ -1075,6 +1892,13 @@ html {
 
 /* ── Карточки игр ────────────────────────────────────────────────────────── */
 .gc-inner { border-radius: 16px; }
+
+/* Цена и жанр прижимались к нижнему краю (а то и обрезались) у карточек с
+   названием в две строки: обложка 16/9 забирает высоту от ширины, на подпись
+   оставалось ~90px, а ей нужно ~100 (отступы + 2 строки + цена). Подпись
+   считается от того же ширины, поэтому добавляем карточке высоты пропорцией —
+   на любой ширине сетки запас сохраняется. Механику раскрытия не трогаем. */
+.game-card { aspect-ratio: 100 / 103; }
 .game-card:hover .gc-inner { box-shadow: inset 0 0 0 1px rgba(195, 33, 120, 0.45), 0 12px 30px rgba(0, 0, 0, 0.45); }
 
 /* тёмная вуаль снизу обложки — название и бейджи читаются на любом кадре */
@@ -1090,16 +1914,8 @@ html {
 .game-title { font-weight: 700; font-size: 0.98rem; letter-spacing: -0.005em; }
 .game-card.gc-open .game-title { font-weight: 800; }
 
-/* жанр и цена — капсулы, как чипы в шапке профиля */
-.game-genre {
-    min-width: 0;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--ex-chip);
-    box-shadow: inset 0 0 0 1px var(--ex-chip-line);
-    font-size: 0.72rem;
-    font-weight: 600;
-}
+/* жанр — просто текст, без плашки; цена — капсула */
+.game-genre { min-width: 0; font-size: 0.75rem; font-weight: 500; }
 .game-price { border-radius: 999px; padding: 3px 11px; font-weight: 700; }
 .game-price.free { background: rgba(70, 209, 138, 0.14); border-color: rgba(70, 209, 138, 0.3); }
 
@@ -1113,8 +1929,8 @@ html {
     .ex-hero { padding: 18px 16px; gap: 14px; border-radius: 16px; }
     .ex-hero__mark { width: 48px; height: 48px; }
     .ex-hero__mark svg { width: 22px; height: 22px; }
-    .ex-hero .web-tile { flex: 1 1 100%; }
     .search-wrapper { margin-bottom: 12px; border-radius: 14px; }
+    .game-card { aspect-ratio: 10 / 12; }
     /* на телефоне список жанров — выпадающая карточка, заголовок ей не нужен */
     .controls-left::before { display: none; }
 }

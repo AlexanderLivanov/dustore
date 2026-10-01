@@ -2,6 +2,15 @@
 session_start();
 require_once('../swad/config.php');
 
+/* header.php ставит куку temp_id через setcookie(), но подключён он ниже, уже в
+   <body> — после вывода страницы, отсюда «headers already sent». Ставим её
+   здесь, до любого вывода, и дублируем в $_COOKIE: header.php увидит, что
+   кука есть, и повторно ставить не станет. */
+if (empty($_COOKIE['temp_id'])) {
+    $_COOKIE['temp_id'] = (string)rand(-10 ** 5, -10 ** 2);
+    setcookie('temp_id', $_COOKIE['temp_id']);
+}
+
 $db  = new Database();
 $pdo = $db->connect();
 
