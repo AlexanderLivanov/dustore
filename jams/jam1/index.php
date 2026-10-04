@@ -1125,7 +1125,6 @@ $sprintData = [
             }
         }
     </style>
-<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 
 <body>

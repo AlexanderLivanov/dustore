@@ -25,8 +25,7 @@ final class FxPage
 
     public static function head(): string
     {
-        return '<link rel="stylesheet" href="' . self::asset('/swad/css/fx.css') . '">'
-            . '<link rel="stylesheet" href="' . self::asset('/swad/css/scrollbar.css') . '">';
+        return '<link rel="stylesheet" href="' . self::asset('/swad/css/fx.css') . '">';
     }
 
     public static function body(): string

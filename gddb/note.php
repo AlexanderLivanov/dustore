@@ -30,7 +30,6 @@ if (!$art) { http_response_code(404); $art = null; }
 .ql b{color:var(--amber);font-family:var(--mono);font-size:11px;flex:none;padding-top:2px}
 @media(max-width:900px){.wrap{grid-template-columns:1fr;padding:24px 18px 80px}.aside{position:static}}
 </style>
-<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 <body>
 <nav>
