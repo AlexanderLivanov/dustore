@@ -773,11 +773,33 @@ if (in_array($mod_status, ['pending','rejected'])):
             ?>
             <div class="plat-pane" data-plat="<?= htmlspecialchars($pl) ?>" <?= $i === 0 ? '' : 'hidden' ?>>
 
-                <?php if ($pl === 'iOS'): ?>
+                <?php if ($pl === 'iOS'):
+                    $iosVers = [];
+                    try {
+                        require_once(__DIR__ . '/../swad/controllers/ios_source.php');
+                        ios_ensure_tables($conn);
+                        $iv = $conn->prepare("SELECT bundle_id, version, build, created_at FROM ios_app_versions WHERE game_id = ?");
+                        $iv->execute([$project_id]);
+                        $iosVers = $iv->fetchAll(PDO::FETCH_ASSOC);
+                        usort($iosVers, fn($x, $y) => ios_is_newer($x['version'], $x['build'], $y['version'], $y['build']) ? -1 : 1);
+                    } catch (\Throwable $e) { error_log('edit.php ios: ' . $e->getMessage()); }
+                ?>
                 <div style="font-size:11px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
-                    Apple не позволяет ставить .ipa напрямую, без TestFlight/App Store — файл здесь просто хранится
-                    на случай, если он вам нужен для дистрибуции другим путём.
+                    Дистрибуция через AltStore: загрузите <b>неподписанный</b> .ipa — bundle id, версия и minOS
+                    прочитаются из самого файла, а приложение появится в источнике
+                    <code>https://dustore.ru/source.json</code>. Для обновления загрузите .ipa с бо́льшей версией
+                    или номером сборки. Приложение видно в источнике, когда игра опубликована.
                 </div>
+                <?php if ($iosVers): ?>
+                <div style="font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7;">
+                    <b><?= htmlspecialchars($iosVers[0]['bundle_id']) ?></b>
+                    <?php foreach (array_slice($iosVers, 0, 5) as $k => $iv2): ?>
+                    <div style="<?= $k ? 'color:var(--tm);' : '' ?>">
+                        v<?= htmlspecialchars($iv2['version']) ?> (<?= htmlspecialchars($iv2['build']) ?>) · <?= htmlspecialchars(substr($iv2['created_at'], 0, 10)) ?><?= $k ? '' : ' · текущая' ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <?php if ($hasBuild): ?>
@@ -1264,7 +1286,8 @@ async function uploadPlatformBuild(file, platform) {
         if (data.done) {
             bar.style.width = '100%'; pct.textContent = '100%';
             bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
-            stat.textContent = '✓ Билд загружен · ' + data.size_mb + ' МБ';
+            stat.textContent = '✓ Билд загружен · ' + data.size_mb + ' МБ' +
+                (data.ios ? ' · ' + data.ios.bundle_id + ' v' + data.ios.version + ' (' + data.ios.build + ') добавлен в source.json' : '');
             setTimeout(function () { location.reload(); }, 1500);
             return;
         }
