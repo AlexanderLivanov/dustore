@@ -292,6 +292,9 @@ i.row-side { color: var(--dim); font-size: 18px; }
 .shot { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; scroll-snap-align: start; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--line); }
 /* absolute: высота кнопки-ячейки грида не «definite», и height:100% давал полосу снизу */
 .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* вертикальные (мобильные) скриншоты: 9:16, уже по ширине */
+.shots.v { grid-auto-columns: 46%; }
+.shots.v .shot { aspect-ratio: 9 / 16; }
 .gp-hero-open { position: absolute; inset: 0; z-index: 1; aspect-ratio: auto; border-radius: 0; background: none; box-shadow: none; }
 .gp-lead { margin: 16px var(--gut) 0; font-size: 16px; line-height: 1.5; color: var(--text); }
 .gp-sec { margin: 26px var(--gut) 0; }

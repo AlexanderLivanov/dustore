@@ -147,7 +147,7 @@ function m_games(array $filters): array {
  * ПК-игр вместо «Скачать» — честное «Только для ПК» и вишлист/поделиться.
  * Возвращает ['label','href','kind' => primary|ghost|off,'icon','note'].
  */
-function m_cta(array $g, bool $owned): array {
+function m_cta(array $g, bool $owned, ?array $iosApp = null): array {
     $id   = (int)$g['id'];
     $plat = m_platforms($g['platforms'] ?? '');
     $file = !empty($g['game_zip_url']);
@@ -161,10 +161,20 @@ function m_cta(array $g, bool $owned): array {
         return ['label' => 'Играть в браузере', 'href' => '/webplayer?id=' . $id, 'kind' => 'primary', 'icon' => 'player-play-filled', 'note' => null];
     // iPhone не ставит APK: не даём скачать бесполезный файл
     $ios = (bool)preg_match('/iPhone|iPad|iPod/i', $_SERVER['HTTP_USER_AGENT'] ?? '');
+    // iOS ставится через AltStore (sideloading); .ipa напрямую не отдаём
+    if ($ios && in_array('ios', $plat, true)) {
+        return $iosApp
+            ? ['label' => 'Установить через AltStore', 'href' => 'altstore://source?url=' . urlencode('https://dustore.ru/source.json'), 'kind' => 'primary', 'icon' => 'brand-apple',
+               'note' => 'Нужен AltStore (altstore.io). Источник: dustore.ru/source.json']
+            : ['label' => 'iOS-билд ещё не загружен', 'href' => null, 'kind' => 'off', 'icon' => 'clock', 'note' => null];
+    }
     if ($file && in_array('android', $plat, true) && $ios && !in_array('ios', $plat, true))
         return ['label' => 'Только для Android', 'href' => null, 'kind' => 'off', 'icon' => 'brand-android', 'note' => 'Добавьте в вишлист — скачаете с Android'];
     if ($file && in_array('android', $plat, true))
         return ['label' => 'Скачать APK', 'href' => '/swad/controllers/download_apk.php?game_id=' . $id, 'kind' => 'primary', 'icon' => 'brand-android', 'note' => 'Перед установкой разрешите установку из браузера'];
+    // Только iOS (без десктопа/Android/веба): ни APK, ни ПК-файла нет — не врём про «Файл не загружен»
+    if (in_array('ios', $plat, true) && !array_intersect($plat, ['windows', 'macos', 'linux', 'android', 'web']))
+        return ['label' => 'Только для iPhone', 'href' => null, 'kind' => 'off', 'icon' => 'brand-apple', 'note' => 'Добавьте в вишлист — установите с iPhone'];
     if (!$file)
         return ['label' => 'Файл ещё не загружен', 'href' => null, 'kind' => 'off', 'icon' => 'clock', 'note' => null];
     return ['label' => 'Только для ПК', 'href' => null, 'kind' => 'off', 'icon' => 'device-desktop',

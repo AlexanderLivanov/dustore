@@ -32,6 +32,28 @@ try { $reviews = (new Game())->getReviewsArray($gid); } catch (Throwable $e) { $
 $avg = $reviews ? array_sum(array_column($reviews, 'rating')) / count($reviews) : null;
 
 $shots  = m_shots($game['screenshots'] ?? '', 10);
+/* Мобильные (вертикальные) скриншоты лежат в game_builds по платформам — раньше их тут не читали вовсе.
+   Сперва — платформа устройства посетителя (iPhone → iOS, иначе Android), затем остальные. */
+$mobShots = []; $iosApp = null;
+try {
+    $bs = $db->prepare("SELECT platform, screenshots FROM game_builds WHERE game_id = ? AND platform IN ('iOS','Android')");
+    $bs->execute([$gid]);
+    $byPl = [];
+    foreach ($bs->fetchAll(PDO::FETCH_ASSOC) as $r) $byPl[$r['platform']] = m_shots($r['screenshots'] ?? '', 10);
+    $prefer = preg_match('/iPhone|iPad|iPod/i', $_SERVER['HTTP_USER_AGENT'] ?? '') ? ['iOS', 'Android'] : ['Android', 'iOS'];
+    foreach ($prefer as $pl_) foreach ($byPl[$pl_] ?? [] as $u_) if (!in_array($u_, $mobShots, true)) $mobShots[] = $u_;
+} catch (Throwable $e) { }
+if (in_array('ios', m_platforms($game['platforms'] ?? ''), true)) {
+    try {
+        require_once __DIR__ . '/../../swad/controllers/ios_source.php';
+        ios_ensure_tables($db);
+        $iq = $db->prepare("SELECT version, build, size FROM ios_app_versions WHERE game_id = ?");
+        $iq->execute([$gid]);
+        $iv_ = $iq->fetchAll(PDO::FETCH_ASSOC);
+        usort($iv_, fn($a, $b) => ios_is_newer($a['version'], $a['build'], $b['version'], $b['build']) ? -1 : 1);
+        $iosApp = $iv_[0] ?? null;
+    } catch (Throwable $e) { }
+}
 $icon   = trim((string)($game['icon_url'] ?? '')) ?: m_cover($game);
 /* Фон шапки: баннер → первый скриншот → обложка. Раньше фоном шёл первый
    скриншот, и он же открывал ленту скриншотов, а без скриншотов за иконкой
@@ -45,7 +67,7 @@ $heroDupe  = $hero === $icon;
 $railShots = $heroShot ? array_slice($shots, 1, null, true) : $shots;   // ключи сохраняем: data-i = индекс в просмотре
 $genres = m_genres($game['genre'] ?? '');
 $plats  = m_platforms($game['platforms'] ?? '');
-$cta    = m_cta($game, $owned);
+$cta    = m_cta($game, $owned, $iosApp);
 $studioHref = !empty($game['studio_slug']) ? '/m/dev/' . rawurlencode($game['studio_slug']) : '/m/developer/' . (int)$game['developer'];
 $desc   = trim((string)($game['description'] ?? '')) ?: trim((string)($game['short_description'] ?? ''));
 $short  = trim((string)($game['short_description'] ?? ''));
@@ -74,9 +96,9 @@ if (!$fxOwner) FxStats::bump('game', $gid);
 $fxWall  = FxFeed::wall('game', $gid, 'wall', $uid);
 $fxForum = FxFeed::wall('game', $gid, 'forum', $uid);
 FxPosts::view(array_merge(array_column($fxWall['posts'], 'id'), array_column($fxForum['posts'], 'id')));
-$fxTabs  = ['feed' => ['chat', 'Лента'], 'forum' => ['branch', 'Обсуждения'], 'about' => ['gamepad', 'Об игре'], 'reviews' => ['star', 'Отзывы']];
+$fxTabs  = ['about' => ['gamepad', 'Об игре'], 'feed' => ['chat', 'Лента'], 'forum' => ['branch', 'Обсуждения'], 'reviews' => ['star', 'Отзывы']];
 $fxTab   = (string)($_GET['tab'] ?? '');
-if (!isset($fxTabs[$fxTab])) $fxTab = ($fxWall['posts'] || $fxForum['posts'] || $fxTeam) ? 'feed' : 'about';   // пустой хаб → сначала «Об игре»
+if (!isset($fxTabs[$fxTab])) $fxTab = 'about';   // «Об игре» — главная вкладка; лента — по ?tab=feed
 $headExtra .= m_fx_head();
 $footExtra .= m_fx_scripts();
 ?>
@@ -115,13 +137,6 @@ $footExtra .= m_fx_scripts();
   <?php endif; ?>
 
   <?= m_fx_top() ?>
-  <?php if ($railShots): ?>
-  <div class="shots" id="shots">
-    <?php foreach ($railShots as $i => $s): ?>
-      <button type="button" class="shot" data-i="<?= $i ?>"><img src="<?= h($s) ?>" alt="" loading="lazy" decoding="async" draggable="false"></button>
-    <?php endforeach; ?>
-  </div>
-  <?php endif; ?>
 
   <div class="fx fx-hub fx-m fx-gp" data-game="<?= $gid ?>">
     <div class="fx-cols">
@@ -154,6 +169,20 @@ $footExtra .= m_fx_scripts();
 
         <!-- Об игре: витрина -->
         <div class="fx-pane" data-pane="about"<?= $fxTab === 'about' ? '' : ' hidden' ?>>
+  <?php if ($railShots): ?>
+  <div class="shots" id="shots">
+    <?php foreach ($railShots as $i => $s): ?>
+      <button type="button" class="shot" data-i="<?= $i ?>"><img src="<?= h($s) ?>" alt="" loading="lazy" decoding="async" draggable="false"></button>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+  <?php if ($mobShots): ?>
+  <div class="shots v" id="shotsMob">
+    <?php foreach ($mobShots as $i => $s): ?>
+      <button type="button" class="shot" data-i="<?= count($shots) + $i ?>"><img src="<?= h($s) ?>" alt="" loading="lazy" decoding="async" draggable="false"></button>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
   <?php if ($desc): ?>
   <section class="gp-sec">
     <h2>Об игре</h2>
@@ -261,6 +290,6 @@ $footExtra .= m_fx_scripts();
 </div>
 
 <div class="viewer" id="viewer" hidden>
-  <div class="viewer-track"><?php foreach ($shots as $s): ?><img src="<?= h($s) ?>" alt="" loading="lazy" draggable="false"><?php endforeach; ?></div>
+  <div class="viewer-track"><?php foreach (array_merge($shots, $mobShots) as $s): ?><img src="<?= h($s) ?>" alt="" loading="lazy" draggable="false"><?php endforeach; ?></div>
   <button type="button" class="ic-btn glass viewer-x" aria-label="Закрыть"><i class="ti ti-x"></i></button>
 </div>

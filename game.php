@@ -132,6 +132,17 @@ if (!empty($_SESSION['USERDATA']['id'])) {
 }
 
 $screenshots  = json_decode($game['screenshots'],  true) ?: [];
+/* Вертикальные скриншоты мобильных билдов (game_builds, iOS/Android) — раньше нигде не выводились. */
+$mobShots = [];   // [['path'=>..., 'platform'=>...], ...]
+try {
+    $mb = $pdo->prepare("SELECT platform, screenshots FROM game_builds WHERE game_id = ? AND platform IN ('Android','iOS') ORDER BY platform");
+    $mb->execute([$game_id]);
+    foreach ($mb->fetchAll(PDO::FETCH_ASSOC) as $r_) {
+        foreach (json_decode((string)($r_['screenshots'] ?? ''), true) ?: [] as $x_) {
+            if (!empty($x_['path'])) $mobShots[] = ['path' => $x_['path'], 'platform' => $r_['platform']];
+        }
+    }
+} catch (\Throwable $e) { }
 $features     = json_decode($game['features'],     true) ?: [];
 $requirements = json_decode($game['requirements'], true) ?: [];
 $achievements = json_decode($game['achievements'], true) ?: [];
@@ -923,6 +934,20 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                 </div>
                 <?php endif; ?>
 
+                <?php if ($mobShots): ?>
+                <div class="gp-section">
+                    <h2 class="gp-section-title">Скриншоты · мобильная версия</h2>
+                    <div class="gp-screenshots" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));">
+                        <?php foreach ($mobShots as $mi => $ms): ?>
+                            <div class="gp-screenshot" title="<?= htmlspecialchars($ms['platform']) ?>"
+                                style="aspect-ratio:9/16;background-image:url('<?= htmlspecialchars($ms['path']) ?>')"
+                                data-fullsize="<?= htmlspecialchars($ms['path']) ?>"
+                                data-index="<?= count($screenshots) + $mi ?>"></div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="gp-section">
                     <?php if ($fxOwner): ?><div class="fx-gear-wrap--in"><?= $fxGear('edit', 'Описание', 'description') ?></div><?php endif; ?>
                     <div class="gp-description"><?= nl2br(htmlspecialchars($game['description'])) ?></div>
@@ -1120,7 +1145,7 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
     </script>
     <script>
     // ── Screenshots data ──
-    const SCREENSHOTS = <?= json_encode(array_values(array_column($screenshots, 'path'))) ?>;
+    const SCREENSHOTS = <?= json_encode(array_merge(array_values(array_column($screenshots, 'path')), array_column($mobShots, 'path'))) ?>;
     let lbIndex = 0;
     let lb = null;
 
