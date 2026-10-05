@@ -188,7 +188,13 @@ $isWeb      = in_array('web', $platformsNorm) && count(array_filter($platformsNo
    вообще, играть в браузере можно, даже если игра ещё и на Windows. */
 $hasWeb     = in_array('web', $platformsNorm);
 $hasAndroid = in_array('android', $platformsNorm);
-$onlyAndroid = count($platforms) === 1 && $hasAndroid;
+$hasIos     = in_array('ios', $platformsNorm);
+/* Десктоп — только если он реально заявлен. Без этого игра «только iOS/Android»
+   получала кнопку «Скачать для Windows» (ОС выбиралась по User-Agent, а не по тегам игры).
+   Игра вообще без распознанных тегов — старое поведение (считаем десктопной). */
+$hasDesktop  = (bool)array_intersect($platformsNorm, ['windows', 'macos', 'linux']);
+$showDesktop = $hasDesktop || (!$hasAndroid && !$hasIos && !$hasWeb);
+$onlyAndroid = $hasAndroid && !$hasDesktop && !$hasWeb;   // Android(+iOS) без десктопа и веба
 
 /* Review access: logged in AND (owns game OR web-only) */
 $userCanReview = !empty($_SESSION['USERDATA']['id']) && ($isWeb || $userHasGame);
@@ -215,7 +221,7 @@ function formatFileSize($bytes) {
     return round($bytes / 1073741824, 2) . ' ГБ';
 }
 
-$platformLabels = ['windows'=>'Windows','linux'=>'Linux','macos'=>'macOS','android'=>'Android','web'=>'Web'];
+$platformLabels = ['windows'=>'Windows','linux'=>'Linux','macos'=>'macOS','android'=>'Android','ios'=>'iOS','web'=>'Web'];
 $platformStr = implode(', ', array_map(fn($p) => $platformLabels[$p] ?? ucfirst($p), $platformsNorm));
 
 $isPaid = ($game['price'] ?? 0) > 0;
@@ -246,9 +252,9 @@ if (!$isOwnerView) FxStats::bump('game', $fxId);
 $fxWall    = FxFeed::wall('game', $fxId, 'wall',  $fxViewer);
 $fxForum   = FxFeed::wall('game', $fxId, 'forum', $fxViewer);
 FxPosts::view(array_merge(array_column($fxWall['posts'], 'id'), array_column($fxForum['posts'], 'id')));
-$fxTabs    = ['feed' => ['chat', 'Лента'], 'forum' => ['branch', 'Обсуждения'], 'about' => ['gamepad', 'Об игре'], 'reviews' => ['star', 'Отзывы']];
+$fxTabs    = ['about' => ['gamepad', 'Об игре'], 'feed' => ['chat', 'Лента'], 'forum' => ['branch', 'Обсуждения'], 'reviews' => ['star', 'Отзывы']];
 $fxTab     = (string)($_GET['tab'] ?? '');
-if (!isset($fxTabs[$fxTab])) $fxTab = ($fxWall['posts'] || $fxForum['posts'] || $fxTeam) ? 'feed' : 'about';   // пустой хаб → сначала «Об игре»
+if (!isset($fxTabs[$fxTab])) $fxTab = 'about';   // «Об игре» — главная вкладка (скриншоты, трейлер, описание); лента — по ?tab=feed
 $fxCtx     = ['viewer' => $fxViewer, 'show_reason' => false, 'wall' => ['type' => 'game', 'id' => $fxId, 'channel' => 'wall'], 'wall_game' => $fxId];
 $fxGear    = static fn(string $to, string $label, string $anchor = '', string $cls = 'fx-gear--icon') =>
     $fxOwner ? FxRenderHub::gear(FxPage::console($to, ['game' => $fxId], $anchor), $label, $cls) : '';
@@ -643,7 +649,26 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                             } elseif (stripos($ua, 'Linux') !== false && stripos($ua, 'Android') === false) {
                                 $dpxOs = 'linux';
                             }
+                            /* Посетитель на Windows, а игра только под macOS/Linux → предлагаем
+                               первую заявленную ОС, а не «Скачать для Windows». */
+                            if ($hasDesktop && !in_array($dpxOs, $platformsNorm, true)) {
+                                foreach (['windows', 'macos', 'linux'] as $o_) {
+                                    if (in_array($o_, $platformsNorm, true)) { $dpxOs = $o_; break; }
+                                }
+                            }
                             $distMode = deplex_dist_mode($pdo, (int)$game['id'], $game);
+                            $iosApp = null;
+                            if ($hasIos) {
+                                try {
+                                    require_once __DIR__ . '/swad/controllers/ios_source.php';
+                                    ios_ensure_tables($pdo);
+                                    $iq = $pdo->prepare("SELECT bundle_id, version, build, size FROM ios_app_versions WHERE game_id = ?");
+                                    $iq->execute([(int)$game['id']]);
+                                    $iv_ = $iq->fetchAll(PDO::FETCH_ASSOC);
+                                    usort($iv_, fn($a, $b) => ios_is_newer($a['version'], $a['build'], $b['version'], $b['build']) ? -1 : 1);
+                                    $iosApp = $iv_[0] ?? null;
+                                } catch (\Throwable $e) { error_log('game.php ios: ' . $e->getMessage()); }
+                            }
                             $osLabels = ['windows' => 'Windows', 'macos' => 'macOS', 'linux' => 'Linux'];
                             $osIcons  = ['windows' => '🪟', 'macos' => '🍎', 'linux' => '🐧'];
                             /* Другие заявленные десктоп-теги игры, кроме той ОС, что
@@ -662,7 +687,7 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                                      помеченная антивирусом, спокойно отдавала кнопку. */ ?>
                             <?php if (($game['vt_status'] ?? '') === 'flagged'): ?>
                                 <div class="gp-no-file" style="color:#ff5f57;">⚠ Скачивание заблокировано антивирусом</div>
-                            <?php elseif ($distMode === 'deplex'): ?>
+                            <?php elseif ($showDesktop && $distMode === 'deplex'): ?>
                                 <?php /* Ведём через свой контроллер, а не напрямую на
                                          api.dustore.ru. Прямая ссылка минует сайт, поэтому
                                          строка в `library` не создавалась — а именно её
@@ -691,7 +716,7 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                                 <?php if ($hasAndroid && !empty($game['game_zip_url'])): ?>
                                     <?php include(__DIR__ . '/swad/static/elements/gp_android_secondary.php'); ?>
                                 <?php endif; ?>
-                            <?php elseif (!empty($game['game_zip_url'])): ?>
+                            <?php elseif (!empty($game['game_zip_url']) && ($showDesktop || $hasWeb || $hasAndroid)): ?>
                                 <?php if ($hasWeb): ?>
                                     <button class="gp-btn gp-btn-primary" onclick="location.href='/webplayer?id=<?= $game_id ?>'">▶ Играть в браузере</button>
                                     <?php if ($hasAndroid): ?>
@@ -733,8 +758,22 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                                     echo '<button onclick="location.href=\'' . $hidl_url . '\'">Установить через HidL</button>';
                                     ?> -->
                                 <?php endif; ?>
-                            <?php else: ?>
+                            <?php elseif (!$hasIos): ?>
                                 <p class="gp-no-file">Файл игры пока не загружен</p>
+                            <?php endif; ?>
+
+                            <?php if ($hasIos && ($game['vt_status'] ?? '') !== 'flagged'): ?>
+                                <?php /* iOS: ставится через AltStore (sideloading), сам .ipa напрямую не отдаём. */ ?>
+                                <?php if ($iosApp): ?>
+                                    <a class="gp-btn gp-btn-primary" href="altstore://source?url=<?= urlencode('https://dustore.ru/source.json') ?>">📲 Установить через AltStore</a>
+                                    <div class="gp-meta-row">
+                                        iOS · v<?= htmlspecialchars($iosApp['version']) ?> (<?= htmlspecialchars($iosApp['build']) ?>) · <?= formatFileSize((int)$iosApp['size']) ?><br>
+                                        Нужен <a href="https://altstore.io" target="_blank" rel="noopener">AltStore</a>. Не открылось — добавьте источник вручную:
+                                        <code style="user-select:all;">https://dustore.ru/source.json</code>
+                                    </div>
+                                <?php elseif (!$hasDesktop && !$hasAndroid && !$hasWeb): ?>
+                                    <p class="gp-no-file">iOS-билд пока не загружен</p>
+                                <?php endif; ?>
                             <?php endif; ?>
 
                             <?php if (!$isPaid || $isOwned): ?>
