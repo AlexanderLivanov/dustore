@@ -119,7 +119,6 @@ function qs(array $over): string
   border-radius:var(--r);padding:10px;margin-bottom:20px}
 @media(max-width:900px){.wrap{grid-template-columns:1fr;padding:20px 18px 80px}.side{position:static}}
 </style>
-<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 <body>
 
