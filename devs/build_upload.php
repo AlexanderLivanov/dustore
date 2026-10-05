@@ -101,7 +101,8 @@ for ($i = 0; $i < $total_chunks; $i++) {
     }
 }
 $ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION)) ?: 'zip';
-if (!in_array($ext, ['zip', 'rar', '7z', 'apk'], true)) $ext = 'zip';
+if (!in_array($ext, ['zip', 'rar', '7z', 'apk', 'ipa'], true)) $ext = 'zip';
+if ($platform === 'iOS') $ext = 'ipa';   // iOS-билд — всегда .ipa (раньше он молча превращался в .zip)
 
 $assembled = $dir . '/assembled.' . $ext;
 $out = fopen($assembled, 'wb');
@@ -114,21 +115,51 @@ for ($i = 0; $i < $total_chunks; $i++) {
 fclose($out);
 $real_size = filesize($assembled);
 
+// iOS: до отправки на S3 читаем Info.plist — bundle id, версия, сборка, minOS
+// попадут в source.json для AltStore. Не .ipa → отказ сразу, мусор на S3 не льём.
+$iosMeta = null;
+if ($platform === 'iOS') {
+    require_once(__DIR__ . '/../swad/controllers/ios_source.php');
+    $iosMeta = ios_read_ipa_meta($assembled);
+    if (is_string($iosMeta)) { bu_rmdir($dir); bu_out(['success' => false, 'message' => $iosMeta]); }
+}
+
 // Один объект в S3, путь включает платформу.
 $key = 'builds/studio-' . (int)$game['developer'] . '/game-' . (int)$game['id'] . '/' . strtolower($platform) . '/build-' . bin2hex(random_bytes(6)) . '.' . $ext;
+if ($iosMeta) {   // у iOS имя читаемое: AltStore показывает его и по нему же кэширует
+    $key = 'builds/studio-' . (int)$game['developer'] . '/game-' . (int)$game['id'] . '/ios/'
+         . preg_replace('/[^A-Za-z0-9._-]/', '_', $iosMeta['bundle_id']) . '-' . preg_replace('/[^A-Za-z0-9._-]/', '_', $iosMeta['version'] . '-' . $iosMeta['build']) . '-' . bin2hex(random_bytes(3)) . '.ipa';
+}
 $s3  = new S3Uploader();
 $url = $s3->uploadFile($assembled, $key);
 bu_rmdir($dir);
 
 if (!$url) bu_out(['success' => false, 'message' => 'S3 не принял файл — проверьте error_log Apache']);
 
-// Старый билд ЭТОЙ платформы с S3 удалим (если был и отличается).
 require_once(__DIR__ . '/../swad/controllers/game_builds_schema.php');
 ensure_game_builds_table($conn);
+
+// iOS: версия → ios_app_versions (из неё собирается /source.json). Не прошла проверки
+// (чужой bundle id, версия не новее) — убираем только что залитый файл.
+if ($iosMeta) {
+    try {
+        $err = ios_register_version($conn, (int)$project_id, $iosMeta, $url, $real_size);
+    } catch (\Throwable $e) {
+        error_log('ios_register_version: ' . $e->getMessage());
+        $err = 'Не удалось записать версию в базу';
+    }
+    if ($err !== null) {
+        try { $s3->deleteFile($url); } catch (\Throwable $e) {}
+        bu_out(['success' => false, 'message' => $err]);
+    }
+}
+
+// Старый билд ЭТОЙ платформы с S3 удалим (если был и отличается).
+// iOS не трогаем: старые .ipa — это история версий в source.json.
 $oldBuild = $conn->prepare("SELECT build_url FROM game_builds WHERE game_id = ? AND platform = ? LIMIT 1");
 $oldBuild->execute([$project_id, $platform]);
 $oldPlatformUrl = $oldBuild->fetchColumn();
-if ($oldPlatformUrl && $oldPlatformUrl !== $url) {
+if (!$iosMeta && $oldPlatformUrl && $oldPlatformUrl !== $url) {
     try { $s3->deleteFile($oldPlatformUrl); } catch (\Throwable $e) { error_log('old build delete: ' . $e->getMessage()); }
 }
 
@@ -138,6 +169,14 @@ $conn->prepare("
     VALUES (:gid, :pl, :url, :sz)
     ON DUPLICATE KEY UPDATE build_url = VALUES(build_url), build_size = VALUES(build_size), updated_at = NOW()
 ")->execute(['gid' => $project_id, 'pl' => $platform, 'url' => $url, 'sz' => $real_size]);
+
+// iOS в games не зеркалим: .ipa — не game_zip, он затёр бы активный билд для скачивания,
+// веб-плеера и VT-скана. iOS-билд раздаёт только source.json.
+if ($iosMeta) {
+    bu_out(['success' => true, 'done' => true, 'url' => $url, 'platform' => $platform,
+            'size_mb' => round($real_size / 1048576, 1),
+            'ios' => ['bundle_id' => $iosMeta['bundle_id'], 'version' => $iosMeta['version'], 'build' => $iosMeta['build']]]);
+}
 
 // Зеркалим в games — это то, что реально отдают download_game.php / download_apk.php /
 // webplayer.php, они про платформы ничего не знают. Последний загруженный билд (с

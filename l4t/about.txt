@@ -1,0 +1,7 @@
+/api -
+/core -
+/css - 
+/fonts - шрифты
+/js
+/lib
+/views - представления-виды 

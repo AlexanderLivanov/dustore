@@ -6,6 +6,9 @@ RewriteBase /
 # закрывает только .ht*, а .env отдаёт как обычный текст. .well-known нужен Let's Encrypt.
 RedirectMatch 404 "/\.(?!well-known/)"
 
+# AltStore-источник собирается из БД (ios/source.php); физический source.json больше не используется
+RewriteRule ^source\.json$ ios/source.php [L]
+
 # Перенаправляем все запросы /d/имя_разработчика на обработчик
 RewriteRule ^d/([a-zA-Z0-9_-]+)/?$ dev?name=$1 [L,QSA]
 # То же самое для /g/id (игры)
