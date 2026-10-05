@@ -5,31 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assetstore/asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/asset.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/devs/includes/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/includes/header.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/expert/admin/moderation-game.php" beforeDir="false" afterPath="$PROJECT_DIR$/expert/admin/moderation-game.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/explore.php" beforeDir="false" afterPath="$PROJECT_DIR$/explore.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/jam1/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/jam1/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jams/participant.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/participant.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/m/layout/shell.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/layout/shell.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/player.php" beforeDir="false" afterPath="$PROJECT_DIR$/player.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search.php" beforeDir="false" afterPath="$PROJECT_DIR$/search.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/chat.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/chat.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/explore.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/explore.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/gamepage.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/gamepage.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/header.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/header.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/l4t.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/l4t.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/player.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/player.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/scrollbar.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/scrollbar.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/theme-madness.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/theme-madness.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/css/vote.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/vote.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/static/elements/footer.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/footer.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,75 +21,75 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "Eshward-WilliamsDGS"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Eshward-WilliamsDGS&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/alexanderlivanov/dustore",
-    "accountId": "f3e41652-2832-416e-8c50-d9f5395823d5"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/AlexanderLivanov/dustore.git&quot;,
+    &quot;accountId&quot;: &quot;f3e41652-2832-416e-8c50-d9f5395823d5&quot;
   }
-}]]></component>
+}</component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.4273354534842642" />
-      <entry key="MS500" value="3.324341181715304" />
-      <entry key="S2" value="7.7403722775135755" />
-      <entry key="S5" value="13.766381659963619" />
-      <entry key="S10" value="18.316575493068974" />
-      <entry key="S30" value="23.300969245834853" />
-      <entry key="S60" value="26.906680414666898" />
-      <entry key="M2" value="31.941083256709213" />
-      <entry key="M5" value="38.102000038325606" />
-      <entry key="M10" value="41.249088967663184" />
-      <entry key="M15" value="42.82877571538739" />
-      <entry key="M30" value="46.446229863390634" />
-      <entry key="H1" value="51.20607268667668" />
-      <entry key="H2" value="55.475242992997636" />
-      <entry key="H4" value="58.38829065999913" />
-      <entry key="D1" value="61.34246701698454" />
-      <entry key="W1" value="61.90460266375812" />
+      <entry key="MS100" value="1.708657844014748" />
+      <entry key="MS500" value="3.128303784423684" />
+      <entry key="S2" value="3.74607296368349" />
+      <entry key="S5" value="3.895128034742633" />
+      <entry key="S10" value="3.9469963695833674" />
+      <entry key="S30" value="3.98220431622144" />
+      <entry key="S60" value="3.991106770710894" />
+      <entry key="M2" value="4.025939369584396" />
+      <entry key="M5" value="6.575011158203947" />
+      <entry key="M10" value="15.531262789583367" />
+      <entry key="M15" value="23.189993785688433" />
+      <entry key="M30" value="37.16736808997425" />
+      <entry key="H1" value="49.85242948779041" />
+      <entry key="H2" value="59.45028515100131" />
+      <entry key="H4" value="65.60238524750937" />
+      <entry key="D1" value="71.66646953652753" />
+      <entry key="W1" value="72.80682174325194" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="0.0" />
-      <entry key="S60" value="0.0" />
-      <entry key="M2" value="0.0" />
-      <entry key="M5" value="0.0" />
-      <entry key="M10" value="0.0" />
-      <entry key="M15" value="0.0" />
-      <entry key="M30" value="0.0" />
-      <entry key="H1" value="0.0" />
-      <entry key="H2" value="0.0" />
-      <entry key="H4" value="0.0" />
-      <entry key="D1" value="0.0" />
-      <entry key="W1" value="0.0" />
+      <entry key="S2" value="6.292925712234973E-115" />
+      <entry key="S5" value="2.087089350065958E-46" />
+      <entry key="S10" value="1.4446762094206298E-23" />
+      <entry key="S30" value="2.4355114388646025E-8" />
+      <entry key="S60" value="1.5606125204113298E-4" />
+      <entry key="M2" value="0.012492447800216456" />
+      <entry key="M5" value="0.17324432504913304" />
+      <entry key="M10" value="0.41622629067507616" />
+      <entry key="M15" value="0.5574676528643037" />
+      <entry key="M30" value="0.746637564594967" />
+      <entry key="H1" value="0.8640819200717992" />
+      <entry key="H2" value="0.9295600680277736" />
+      <entry key="H4" value="0.9641369550161294" />
+      <entry key="D1" value="0.9939315006862839" />
+      <entry key="W1" value="0.9991308083246004" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.3537065018460612" />
-      <entry key="MS500" value="3.292720786172434" />
-      <entry key="S2" value="7.723306520001569" />
-      <entry key="S5" value="13.754548746120276" />
-      <entry key="S10" value="18.308731671448847" />
-      <entry key="S30" value="23.297581367211635" />
-      <entry key="S60" value="26.904546226579157" />
-      <entry key="M2" value="31.9396562012435" />
-      <entry key="M5" value="38.101242238306654" />
-      <entry key="M10" value="41.24865763553737" />
-      <entry key="M15" value="42.82846309544637" />
-      <entry key="M30" value="46.44603062748096" />
-      <entry key="H1" value="51.20593978472447" />
-      <entry key="H2" value="55.47516092027823" />
-      <entry key="H4" value="58.38824420481725" />
-      <entry key="D1" value="61.342458350570055" />
-      <entry key="W1" value="61.904601400480054" />
+      <entry key="MS100" value="1.1918414893549345" />
+      <entry key="MS500" value="2.986682669499516" />
+      <entry key="S2" value="3.7079347956451465" />
+      <entry key="S5" value="3.8796299208166793" />
+      <entry key="S10" value="3.939205822305437" />
+      <entry key="S30" value="3.979598173384053" />
+      <entry key="S60" value="3.9899555669678293" />
+      <entry key="M2" value="4.037656466444877" />
+      <entry key="M5" value="6.747253995739032" />
+      <entry key="M10" value="15.946395801999424" />
+      <entry key="M15" value="23.746477086943404" />
+      <entry key="M30" value="37.91331071182152" />
+      <entry key="H1" value="50.71607706665813" />
+      <entry key="H2" value="60.379595170185546" />
+      <entry key="H4" value="66.56638654905007" />
+      <entry key="D1" value="72.66037666848388" />
+      <entry key="W1" value="73.80594902283607" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -123,24 +100,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "C:/xampp/htdocs/swad/controllers/jams",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/xampp/htdocs/swad/controllers/jams&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;python.packages.toolwindow.project.migrated.to.right.top.v2&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\xampp\htdocs\swad\controllers\jams" />
@@ -199,7 +177,10 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1772248419699</updated>
-      <workItem from="1791171664588" duration="400000" />
+      <workItem from="1791171664588" duration="1167000" />
+      <workItem from="1791178253432" duration="267000" />
+      <workItem from="1791178531276" duration="1525000" />
+      <workItem from="1791180090454" duration="634000" />
     </task>
     <servers />
   </component>
