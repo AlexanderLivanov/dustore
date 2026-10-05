@@ -138,3 +138,18 @@ $info = getLastCommitInfo();
         to { opacity: 0; transform: translateX(30px); }
     }
 </style>
+<style>
+/* Единый скроллбар — inline, максимальный приоритет. */
+html { --_sb: rgb(49 49 49 / 55%); --_sb-h: #c32178; --_bg: #0f0a20; }
+html:has(body.moonlight-theme) { --_sb: rgba(184,200,255,0.22); --_sb-h: rgb(62,122,217); --_bg: #000000; }
+html, body { scrollbar-width: thin !important; scrollbar-color: var(--_sb) var(--_bg) !important; }
+html::-webkit-scrollbar, body::-webkit-scrollbar, ::-webkit-scrollbar { width: 10px !important; height: 10px !important; background: var(--_bg) !important; }
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track, ::-webkit-scrollbar-track,
+html::-webkit-scrollbar-corner, body::-webkit-scrollbar-corner, ::-webkit-scrollbar-corner { background: var(--_bg) !important; }
+html::-webkit-scrollbar-button, body::-webkit-scrollbar-button, ::-webkit-scrollbar-button { display: none !important; background: var(--_bg) !important; }
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb { background: var(--_sb) !important; background-clip: padding-box !important; border: 3px solid var(--_bg) !important; border-radius: 4px !important; }
+html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:hover { background: var(--_sb-h) !important; background-clip: padding-box !important; }
+/* Скрытые скроллбары. */
+.stories,.fx-tabs,.fx-side,.fx-ed__tools,.chips,.tabs-scroll,.tabs,.carousel,.ed__toolbar,.hero-track,.rail,.shots,.viewer-track,.recent,.quick { scrollbar-width: none !important; }
+.stories::-webkit-scrollbar,.fx-tabs::-webkit-scrollbar,.fx-side::-webkit-scrollbar,.fx-ed__tools::-webkit-scrollbar,.chips::-webkit-scrollbar,.tabs-scroll::-webkit-scrollbar,.tabs::-webkit-scrollbar,.carousel::-webkit-scrollbar,.ed__toolbar::-webkit-scrollbar,.hero-track::-webkit-scrollbar,.rail::-webkit-scrollbar,.shots::-webkit-scrollbar,.viewer-track::-webkit-scrollbar,.recent::-webkit-scrollbar,.quick::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+</style>

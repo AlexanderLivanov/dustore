@@ -50,5 +50,8 @@ window.VAPID_PUBLIC = <?= json_encode($VAPID_PUBLIC) ?>;
 </script>
 <script src="/pwa/push-client.js?v=<?= (int)@filemtime(__DIR__ . '/../pwa/push-client.js') ?>"></script>
 <script src="/chat/chat.js?v=<?= (int)@filemtime(__DIR__ . '/chat.js') ?>"></script>
+<script>
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/swad/css/scrollbar.css';document.head.appendChild(l);})();
+</script>
 </body>
 </html>

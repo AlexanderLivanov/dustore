@@ -81,9 +81,6 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { min-height: 100vh; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background: linear-gradient(180deg, #0f0a20, #240038, rgb(var(--brand-deep-rgb, 120, 0, 102))); }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(var(--brand-rgb, 195, 33, 120), .35); border-radius: 4px; }
 
         .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; color: #e8ddf0; letter-spacing: -.3px; }
         .logo .brand { color: rgb(var(--brand-rgb, 195, 33, 120)); }
@@ -1295,6 +1292,8 @@ $isLoggedIn      = !empty($_SESSION['USERDATA']['id']);
 }
 .shake-it { animation: shakeSearch .3s ease-in-out; }
 </style>
-
+<script>
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/swad/css/scrollbar.css';document.head.appendChild(l);})();
+</script>
 </body>
 </html>

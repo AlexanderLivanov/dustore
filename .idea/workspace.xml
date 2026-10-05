@@ -6,6 +6,30 @@
   <component name="ChangeListManager">
     <list default="true" id="5040296d-708e-4bbf-9524-373eb4e3a58b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assetstore/asset.php" beforeDir="false" afterPath="$PROJECT_DIR$/assetstore/asset.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chat/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/chat/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/devs/includes/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/devs/includes/header.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/expert/admin/moderation-game.php" beforeDir="false" afterPath="$PROJECT_DIR$/expert/admin/moderation-game.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/explore.php" beforeDir="false" afterPath="$PROJECT_DIR$/explore.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/admin.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/jam1/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/jam1/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jams/participant.php" beforeDir="false" afterPath="$PROJECT_DIR$/jams/participant.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/m/layout/shell.php" beforeDir="false" afterPath="$PROJECT_DIR$/m/layout/shell.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/player.php" beforeDir="false" afterPath="$PROJECT_DIR$/player.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search.php" beforeDir="false" afterPath="$PROJECT_DIR$/search.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/chat.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/chat.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/explore.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/explore.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/gamepage.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/gamepage.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/header.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/header.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/l4t.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/l4t.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/pages.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/pages.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/player.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/player.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/scrollbar.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/scrollbar.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/theme-madness.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/theme-madness.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/css/vote.css" beforeDir="false" afterPath="$PROJECT_DIR$/swad/css/vote.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/static/elements/footer.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/footer.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/swad/static/elements/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/swad/static/elements/header.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -15,16 +39,86 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="what!" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "Eshward-WilliamsDGS"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/alexanderlivanov/dustore",
+    "accountId": "f3e41652-2832-416e-8c50-d9f5395823d5"
+  }
+}]]></component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.4273354534842642" />
+      <entry key="MS500" value="3.324341181715304" />
+      <entry key="S2" value="7.7403722775135755" />
+      <entry key="S5" value="13.766381659963619" />
+      <entry key="S10" value="18.316575493068974" />
+      <entry key="S30" value="23.300969245834853" />
+      <entry key="S60" value="26.906680414666898" />
+      <entry key="M2" value="31.941083256709213" />
+      <entry key="M5" value="38.102000038325606" />
+      <entry key="M10" value="41.249088967663184" />
+      <entry key="M15" value="42.82877571538739" />
+      <entry key="M30" value="46.446229863390634" />
+      <entry key="H1" value="51.20607268667668" />
+      <entry key="H2" value="55.475242992997636" />
+      <entry key="H4" value="58.38829065999913" />
+      <entry key="D1" value="61.34246701698454" />
+      <entry key="W1" value="61.90460266375812" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.3537065018460612" />
+      <entry key="MS500" value="3.292720786172434" />
+      <entry key="S2" value="7.723306520001569" />
+      <entry key="S5" value="13.754548746120276" />
+      <entry key="S10" value="18.308731671448847" />
+      <entry key="S30" value="23.297581367211635" />
+      <entry key="S60" value="26.904546226579157" />
+      <entry key="M2" value="31.9396562012435" />
+      <entry key="M5" value="38.101242238306654" />
+      <entry key="M10" value="41.24865763553737" />
+      <entry key="M15" value="42.82846309544637" />
+      <entry key="M30" value="46.44603062748096" />
+      <entry key="H1" value="51.20593978472447" />
+      <entry key="H2" value="55.47516092027823" />
+      <entry key="H4" value="58.38824420481725" />
+      <entry key="D1" value="61.342458350570055" />
+      <entry key="W1" value="61.904601400480054" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
 }</component>
   <component name="ProjectId" id="3AHTItLRkZZZ2PcSA9Fz5SR7byZ" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -32,9 +126,19 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "claude/fid-hubs-mobile-pwa",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "C:/xampp/htdocs/swad/controllers/jams",
-    "settings.editor.selected.configurable": "preferences.pluginManager"
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "to.speed.mode.migration.done": "true"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -67,6 +171,9 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
@@ -80,7 +187,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-98f27166c754-ba05f1cad1b1-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.21829.153" />
+        <option value="bundled-python-sdk-73a66231627c-5bd6d13a2a75-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-262.10968.92" />
       </set>
     </attachedChunks>
   </component>
@@ -92,8 +199,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1772248419699</updated>
+      <workItem from="1791171664588" duration="400000" />
     </task>
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
   <component name="UnknownFeatures">
     <option featureType="com.intellij.fileTypeFactory" implementationName=".htaccess" />

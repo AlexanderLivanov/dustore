@@ -814,19 +814,6 @@ body.moonlight-theme {
             max-height: calc(100vh - 80px);
         }
 
-        .right-content-view::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .right-content-view::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .right-content-view::-webkit-scrollbar-thumb {
-            background: rgba(var(--l4t-accent-rgb), .3);
-            border-radius: 4px;
-        }
-
         /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
 @media screen and (max-width: 768px) {
     /* Основной контейнер – в колонку */

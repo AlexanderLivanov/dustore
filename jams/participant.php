@@ -215,8 +215,6 @@ require_once('../swad/static/elements/header.php');
             color: #e8ddf0;
             background: linear-gradient(180deg, #0f0a20, #240038, rgb(var(--brand-deep-rgb, 120, 0, 102)));
         }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(var(--brand-rgb, 195, 33, 120), .3); border-radius: 4px; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
         .logo .brand { color: rgb(var(--brand-rgb, 195, 33, 120)); }
         .nav-btn { padding: 7px 15px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .001s; text-decoration: none; display: inline-block; }

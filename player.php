@@ -72,6 +72,9 @@ if (!$page) {
 
     <?= FxPage::scripts() ?>
     <script src="<?= FxPage::asset('/swad/js/fx-player.js') ?>" defer></script>
+    <script>
+    (function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/swad/css/scrollbar.css';document.head.appendChild(l);})();
+    </script>
 </body>
 
 </html>

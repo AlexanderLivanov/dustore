@@ -165,8 +165,6 @@ require_once('../swad/static/elements/header.php');
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { min-height: 100vh; background: #0d0414; font-family: 'Manrope', system-ui, sans-serif; color: #e8ddf0; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(var(--brand-rgb, 195, 33, 120), .1) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(var(--brand-deep-rgb, 120, 20, 80), .08) 0%, transparent 55%); }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(var(--brand-rgb, 195, 33, 120), .3); border-radius: 4px; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #e8ddf0; }
         .logo .brand { color: rgb(var(--brand-rgb, 195, 33, 120)); }
         .nav-btn { padding: 7px 15px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); transition: .15s; text-decoration: none; display: inline-block; }

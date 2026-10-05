@@ -226,14 +226,6 @@ if ($is_moder) {
             overflow-y: auto;
         }
 
-        .ds-sidebar::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .ds-sidebar::-webkit-scrollbar-thumb {
-            background: var(--p);
-            border-radius: 2px;
-        }
 
         .sb-logo {
             padding: 16px 18px;
@@ -549,14 +541,6 @@ if ($is_moder) {
             padding: 20px;
         }
 
-        .ds-content::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .ds-content::-webkit-scrollbar-thumb {
-            background: rgba(var(--brand-rgb, 195, 33, 120), .3);
-            border-radius: 3px;
-        }
 
         /* ── Cards / shared UI ── */
         .card {

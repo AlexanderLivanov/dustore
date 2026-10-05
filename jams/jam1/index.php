@@ -180,28 +180,6 @@ $sprintData = [
             background: #008080;
         }
 
-        ::-webkit-scrollbar {
-            width: 16px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--c-bg);
-            border: 1px solid var(--c-bg-dark);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--c-bg);
-            border: var(--b-raise);
-            border-color: var(--b-raise-color);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--c-bg-light);
-        }
-        ::-webkit-scrollbar-button {
-            display: block;
-            height: 16px;
-            background: var(--c-bg);
-            border: var(--b-raise);
-            border-color: var(--b-raise-color);
-        }
 
         /* ============================================================
            APP LAYOUT

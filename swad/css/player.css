@@ -24,30 +24,6 @@ body {
     margin-top: -19px;
 }
 
-/* ÃÂ¡Ã‘â€šÃÂ¸ÃÂ»ÃÂ¸ÃÂ·ÃÂ°Ã‘â€ ÃÂ¸Ã‘Â Ã‘ÂÃÂºÃ‘â‚¬ÃÂ¾ÃÂ»ÃÂ»ÃÂ±ÃÂ°Ã‘â‚¬ÃÂ° ÃÂ´ÃÂ»Ã‘Â ÃÂ¿Ã‘â‚¬ÃÂ°ÃÂ²ÃÂ¾ÃÂ¹ ÃÂºÃÂ¾ÃÂ»ÃÂ¾ÃÂ½ÃÂºÃÂ¸ */
-.profile-right::-webkit-scrollbar {
-    width: 2px;
-    height: 2px;
-}
-
-.profile-right::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.profile-right::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-}
-
-.profile-right::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* Ãâ€ÃÂ»Ã‘Â Firefox */
-.profile-right {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
 
 
 .profile-header {
@@ -1179,25 +1155,6 @@ h2 {
     overflow-y: auto;
     overflow-x: visible;
     padding: 50px 12px 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-.showcase-shelves::-webkit-scrollbar {
-    width: 2px;
-}
-
-.showcase-shelves::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.showcase-shelves::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-}
-
-.showcase-shelves::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
 }
 
 /* ÃÅ¾ÃÂ´ÃÂ¸ÃÂ½ Ã‘â‚¬Ã‘ÂÃÂ´ ÃÂºÃÂ°Ã‘â‚¬Ã‘â€šÃÂ¾Ã‘â€¡ÃÂµÃÂº ÃÂ½ÃÂ° ÃÂ¿ÃÂ¾ÃÂ»ÃÂºÃÂµ */
@@ -1352,14 +1309,8 @@ h2 {
     padding: 18px 16px;
     overflow-y: auto;
     height: 100%;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.15) transparent;
     box-shadow: 0px 0px 0px 1px #fdfdfd12;
 }
-
-.pf-wrap::-webkit-scrollbar { width: 2px; }
-.pf-wrap::-webkit-scrollbar-track { background: transparent; }
-.pf-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 6px; }
 
 /* Ã¢â€â‚¬Ã¢â€â‚¬ ÃÂ¡Ã‘â€šÃ‘â‚¬ÃÂ¾ÃÂºÃÂ° Ã‘ÂÃ‘â€šÃÂ°Ã‘â€šÃÂ¸Ã‘ÂÃ‘â€šÃÂ¸ÃÂºÃÂ¸ Ã¢â€â‚¬Ã¢â€â‚¬ */
 .pf-stats-row {
@@ -1490,10 +1441,7 @@ h2 {
     gap: 10px;
     overflow-x: auto;
     padding-bottom: 6px;
-    scrollbar-width: none;
 }
-
-.pf-games-scroll::-webkit-scrollbar { display: none; }
 
 .pf-game-thumb {
     flex: 0 0 auto;
@@ -1993,14 +1941,6 @@ h2 {
     width: 100%;
     overflow-y: auto;
     padding: 16px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.2) transparent;
-}
-
-.showcase-achievements-body::-webkit-scrollbar { width: 2px; }
-.showcase-achievements-body::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.2);
-    border-radius: 6px;
 }
 
 .achievements-grid {
@@ -2138,25 +2078,6 @@ body.moonlight-theme .container {
     box-shadow: 0px 1px 1px 1px #ffffff17;
     backdrop-filter: blur(40px);
     margin-top: -19px;
-}
-
-body.moonlight-theme .profile-right::-webkit-scrollbar {
-    width: 2px;
-    height: 2px;
-}
-body.moonlight-theme .profile-right::-webkit-scrollbar-track {
-    background: transparent;
-}
-body.moonlight-theme .profile-right::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-}
-body.moonlight-theme .profile-right::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-body.moonlight-theme .profile-right {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 body.moonlight-theme .profile-header {
@@ -3085,21 +3006,6 @@ body.moonlight-theme .showcase-shelves {
     overflow-y: auto;
     overflow-x: visible;
     padding: 50px 12px 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-body.moonlight-theme .showcase-shelves::-webkit-scrollbar {
-    width: 2px;
-}
-body.moonlight-theme .showcase-shelves::-webkit-scrollbar-track {
-    background: transparent;
-}
-body.moonlight-theme .showcase-shelves::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-}
-body.moonlight-theme .showcase-shelves::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
 }
 body.moonlight-theme .showcase-shelf-row {
     display: flex;
@@ -3226,13 +3132,8 @@ body.moonlight-theme .pf-wrap {
     padding: 18px 16px;
     overflow-y: auto;
     height: 100%;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.15) transparent;
     box-shadow: 0px 0px 0px 1px #fdfdfd12;
 }
-body.moonlight-theme .pf-wrap::-webkit-scrollbar { width: 2px; }
-body.moonlight-theme .pf-wrap::-webkit-scrollbar-track { background: transparent; }
-body.moonlight-theme .pf-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 6px; }
 body.moonlight-theme .pf-stats-row {
     display: flex;
     align-items: center;
@@ -3341,9 +3242,7 @@ body.moonlight-theme .pf-games-scroll {
     gap: 10px;
     overflow-x: auto;
     padding-bottom: 6px;
-    scrollbar-width: none;
 }
-body.moonlight-theme .pf-games-scroll::-webkit-scrollbar { display: none; }
 body.moonlight-theme .pf-game-thumb {
     flex: 0 0 auto;
     display: flex;
@@ -3753,13 +3652,6 @@ body.moonlight-theme .showcase-achievements-body {
     width: 100%;
     overflow-y: auto;
     padding: 16px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.2) transparent;
-}
-body.moonlight-theme .showcase-achievements-body::-webkit-scrollbar { width: 2px; }
-body.moonlight-theme .showcase-achievements-body::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.2);
-    border-radius: 6px;
 }
 body.moonlight-theme .achievements-grid {
     display: grid;

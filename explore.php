@@ -938,6 +938,9 @@ $COVER_FALLBACK = 'data:image/svg+xml;utf8,' . rawurlencode(
         }
     })();
     </script>
+    <script>
+    (function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/swad/css/scrollbar.css';document.head.appendChild(l);})();
+    </script>
 </body>
 
 </html>

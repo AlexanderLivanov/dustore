@@ -45,6 +45,7 @@ $initial = mb_strtoupper(mb_substr(trim((string)($user['username'] ?? $user['fir
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.8.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="<?= m_asset('/m/css/app.css') ?>">
+<link rel="stylesheet" href="/swad/css/scrollbar.css">
 <?= $headExtra ?>
 <title><?= h($title) ?></title>
 <?php /* Chrome: предзагрузка страниц /m/* по началу касания — переход ощущается мгновенным.
