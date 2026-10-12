@@ -15,6 +15,8 @@ declare(strict_types=1);
 // S3-ключ — подставь сюда публичный префикс бакета.
 if (!defined('AVATAR_BASE')) define('AVATAR_BASE', '/');
 
+require_once __DIR__ . '/../swad/controllers/premium.php';
+
 function avatar_url($raw): ?string {
     $raw = trim((string)$raw);
     if ($raw === '') return null;
@@ -68,12 +70,12 @@ function get_studios_meta(PDO $db, array $ids): array {
     return $out;
 }
 
-/** Мета пользователей: [id => ['id','username'(display),'avatar']] */
+/** Мета пользователей: [id => ['id','username'(display),'avatar','premium']] */
 function get_users_meta(PDO $db, array $ids): array {
     $ids = array_values(array_unique(array_map('intval', $ids)));
     if (!$ids) return [];
     $in  = implode(',', array_fill(0, count($ids), '?'));
-    $st  = $db->prepare("SELECT id, username, first_name, last_name, profile_picture
+    $st  = $db->prepare("SELECT id, username, first_name, last_name, profile_picture, premium_until
                            FROM users WHERE id IN ($in)");
     $st->execute($ids);
     $out = [];
@@ -90,6 +92,7 @@ function user_card_from_row(array $r): array {
         'id'       => (int)$r['id'],
         'username' => $name,
         'avatar'   => avatar_url($r['profile_picture'] ?? ''),
+        'premium'  => dp_is_premium($r['premium_until'] ?? null),
     ];
 }
 

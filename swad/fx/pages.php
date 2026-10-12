@@ -541,7 +541,7 @@ $stmt = $pdo->prepare("
     SELECT
         u.id, u.username, u.telegram_id, u.profile_picture, u.added,
         u.telegram_username, u.city, u.country, u.vk, u.website,
-        u.first_name, u.last_name,
+        u.first_name, u.last_name, u.premium_until,
         COUNT(DISTINCT g.id) as games_count,
         COUNT(DISTINCT r.id) as reviews_count
     FROM users u
@@ -730,9 +730,10 @@ $h = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
                 <?php endif; ?>
                 <div class="fx-banner__in">
                     <div class="fx-banner__id">
-                        <div class="fx-icon fx-icon--round" role="img" aria-label="<?= $h($fxName) ?>" style="background-image:url('<?= $h($fxAvatar) ?>')"></div>
+                        <?php $fxPrem = dp_is_premium($user['premium_until'] ?? null); ?>
+                        <div class="fx-icon fx-icon--round<?= $fxPrem ? ' dp-ring' : '' ?>" role="img" aria-label="<?= $h($fxName) ?>" style="background-image:url('<?= $h($fxAvatar) ?>')"></div>
                         <div class="fx-banner__t">
-                            <h1><?= $h($fxName) ?></h1>
+                            <h1><?= $h($fxName) ?><?= $fxPrem ? FxRender::verified('premium') : '' ?></h1>
                             <div class="fx-banner__by">
                                 <span class="fx-tick" style="text-transform:none;letter-spacing:0">@<?= $h($user['username']) ?></span>
                                 <?php if ($presence['text'] !== ''): ?>

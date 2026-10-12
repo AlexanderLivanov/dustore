@@ -122,6 +122,7 @@ $stmt->execute([
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/header_mobile.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('/swad/css/float3d.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('/swad/css/premium.css') ?>">
     <script src="<?= asset_url('/swad/js/float3d.js') ?>"></script>
     <link rel="stylesheet" href="<?= asset_url('/swad/css/theme-madness.css') ?>">
     <script src="<?= asset_url('/swad/js/hell.js') ?>" defer></script>
@@ -546,10 +547,12 @@ $stmt->execute([
                         $__hdrNick    = (string)($_SESSION['USERDATA']['username'] ?? '');
                         $__hdrProfile = $__hdrNick !== '' ? '/player/' . rawurlencode($__hdrNick) : '/me';
                         $__hdrLabel   = $__hdrNick !== '' ? $__hdrNick : ($_SESSION['USERDATA']['first_name'] ?? 'Профиль');
+                        require_once __DIR__ . '/../../controllers/premium.php';
+                        $__hdrPremium = $_SESSION['USERDATA']['premium_until'] ?? null;
                         ?>
                         <button class="button" data-profile-btn onclick="location.href='<?= htmlspecialchars($__hdrProfile) ?>'">
                             <?php if ($__hdrAvatar !== ''): ?>
-                                <img class="header-avatar" src="<?= htmlspecialchars($__hdrAvatar) ?>" alt="" width="22" height="22">
+                                <img class="header-avatar<?= dp_ring($__hdrPremium) ?>" src="<?= htmlspecialchars($__hdrAvatar) ?>" alt="" width="22" height="22">
                             <?php else: ?>
                                 <svg class="btn-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -557,7 +560,7 @@ $stmt->execute([
                                     <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
                                 </svg>
                             <?php endif; ?>
-                            <span class="header-profile-label"><?= htmlspecialchars((string)$__hdrLabel) ?></span>
+                            <span class="header-profile-label"><?= htmlspecialchars((string)$__hdrLabel) ?></span><?= dp_badge($__hdrPremium) ?>
                         </button>
                     <?php endif; ?>
                 </div>

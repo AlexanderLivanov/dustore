@@ -1,0 +1,16 @@
+/* Dustore Premium: синяя галочка и рамка аватара (шапка, чат). Хелперы — swad/controllers/premium.php.
+   Версия для ленты/профиля (Fx) — в конце swad/css/fx.css: движок подключает свой css сам. */
+
+/* галочка рядом с ником */
+.dp-badge {
+    display: inline-block; flex: 0 0 auto;
+    width: 1.05em; height: 1.05em; min-width: 14px; min-height: 14px;
+    margin-left: .3em; vertical-align: -.18em;
+    filter: drop-shadow(0 0 3px rgba(42, 171, 238, .45));
+}
+
+/* рамка: обычный аватар (img, .av, .big-av) — outline не обрезается overflow:hidden и повторяет border-radius */
+.dp-ring {
+    outline: 2px solid #2aabee; outline-offset: 2px;
+    box-shadow: 0 0 10px rgba(42, 171, 238, .5);
+}

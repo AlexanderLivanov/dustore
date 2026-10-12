@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/schema.php';
+require_once __DIR__ . '/../controllers/premium.php';
 
 final class Fx
 {
@@ -254,7 +255,7 @@ final class FxPeople
         $need = array_diff(array_map('intval', $userIds), array_keys(self::$users), [0]);
         if ($need) {
             [$in, $p] = Fx::in($need);
-            $st = $pdo->prepare("SELECT id, username, first_name, last_name, profile_picture, global_role FROM users WHERE id IN ($in)");
+            $st = $pdo->prepare("SELECT id, username, first_name, last_name, profile_picture, global_role, premium_until FROM users WHERE id IN ($in)");
             $st->execute($p);
             foreach ($st->fetchAll() as $r) self::$users[(int)$r['id']] = self::mapUser($r);
             foreach ($need as $id) self::$users[$id] ??= null;
@@ -280,11 +281,12 @@ final class FxPeople
     private static function mapUser(array $r): array
     {
         $name = trim((string)($r['username'] ?? '')) ?: trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
+        $prem = dp_is_premium($r['premium_until'] ?? null);
         return [
             'type' => 'user', 'id' => (int)$r['id'], 'name' => $name !== '' ? $name : 'user#' . $r['id'],
             'img' => (string)($r['profile_picture'] ?? ''),
             'url' => $r['username'] ? Fx::urlUser((string)$r['username']) : '#',
-            'verified' => null, 'frame' => null, 'admin' => (int)($r['global_role'] ?? 0) === -1,
+            'verified' => $prem ? 'premium' : null, 'frame' => $prem ? 'premium' : null, 'admin' => (int)($r['global_role'] ?? 0) === -1,
         ];
     }
 

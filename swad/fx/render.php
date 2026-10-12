@@ -97,7 +97,7 @@ final class FxRender
 
     public static function verified(?string $v): string
     {
-        $map = ['official' => ['check', 'Официальный аккаунт'], 'dev' => ['wrench', 'Подтверждённая студия'], 'partner' => ['star', 'Партнёр Dustore']];
+        $map = ['official' => ['check', 'Официальный аккаунт'], 'dev' => ['wrench', 'Подтверждённая студия'], 'partner' => ['star', 'Партнёр Dustore'], 'premium' => ['check', 'Dustore Premium']];
         if (!$v || !isset($map[$v])) return '';
         return '<span class="fx-vf fx-vf--' . self::e($v) . '" title="' . self::e($map[$v][1]) . '">' . self::i($map[$v][0]) . '</span>';
     }
@@ -317,7 +317,7 @@ final class FxRender
     {
         $a = $c['author'];
         $h = '<div class="fx-cmt" data-id="' . $c['id'] . '"><div class="fx-cmt__av">' . self::avatar($a, 32) . '</div><div class="fx-cmt__b">';
-        $h .= '<div class="fx-cmt__top"><a class="fx-cmt__name" href="' . self::e($a['url']) . '">' . self::e($a['name']) . '</a>';
+        $h .= '<div class="fx-cmt__top"><a class="fx-cmt__name" href="' . self::e($a['url']) . '">' . self::e($a['name']) . '</a>' . self::verified($a['verified'] ?? null);
         if ($c['op']) $h .= '<span class="fx-cmt__op">автор</span>';
         $h .= '<span class="fx-cmt__time">' . self::e($c['time']) . '</span></div>';
         $h .= '<div class="fx-cmt__txt">' . self::rich($c['body']) . '</div><div class="fx-cmt__acts">';
