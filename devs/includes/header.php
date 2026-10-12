@@ -158,6 +158,7 @@ if ($is_moder) {
     $nav_items[] = ['id' => 'assets-mod', 'href' => '/assetstore/manage.php', 'icon' => 'inventory_2', 'label' => 'Модерация ассетов', 'badge' => $sb['assets'] ?? 0];
     if ($is_admin) {
         $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
+        $nav_items[] = ['id' => 'premium', 'href' => '/devs/premium', 'icon' => 'verified', 'label' => 'Dustore Premium'];
         $nav_items[] = ['id' => 'notifications', 'href' => '/devs/notifications', 'icon' => 'campaign', 'label' => 'Уведомления'];
     }
 }

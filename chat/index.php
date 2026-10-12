@@ -35,6 +35,7 @@ require __DIR__ . '/../swad/static/elements/header.php';
 <meta name="theme-color" content="#0d0118">
 <title>Чаты · Dustore</title>
 <link rel="stylesheet" href="/swad/css/chat.css?v=<?= (int)@filemtime(__DIR__ . '/../swad/css/chat.css') ?>">
+<link rel="stylesheet" href="/swad/css/premium.css?v=<?= (int)@filemtime(__DIR__ . '/../swad/css/premium.css') ?>">
 </head>
 <body class="chat-page">
 
