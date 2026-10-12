@@ -34,7 +34,7 @@ $footExtra = '<script>window.VAPID_PUBLIC = ' . json_encode(vapid_public_key()) 
 <section class="prof">
   <div class="prof-av<?= dp_ring($u['premium_until'] ?? null) ?>"><?php if ($ava): ?><img src="<?= h($ava) ?>" alt="" draggable="false"><?php else: ?><?= h(mb_strtoupper(mb_substr($name, 0, 1))) ?><?php endif; ?></div>
   <h1><?= h($name) ?><?= dp_badge($u['premium_until'] ?? null) ?></h1>
-  <?php if (!empty($u['username'])): ?><a class="prof-handle" href="/player/<?= h(rawurlencode($u['username'])) ?>">@<?= h($u['username']) ?></a><?php endif; ?>
+  <?php if (!empty($u['username'])): ?><a class="prof-handle" href="/m/player/<?= h(rawurlencode($u['username'])) ?>">@<?= h($u['username']) ?></a><?php endif; ?>
   <div class="prof-stats">
     <a href="/m/library"><b><?= $nGames ?></b><small><?= m_plural($nGames, 'игра', 'игры', 'игр') ?></small></a>
     <a href="/m/library?tab=wishlist"><b><?= $nWish ?></b><small>в вишлисте</small></a>
