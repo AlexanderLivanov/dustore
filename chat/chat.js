@@ -35,7 +35,7 @@
     ? `<img src="${esc(p.avatar)}" alt="" draggable="false" data-fb="${esc(initials(p.name))}" onerror="this.outerHTML=this.dataset.fb">`
     : esc(initials(p.name));
   /* Dustore Premium: тот же значок, что dp_badge() в swad/controllers/premium.php; рамка — .dp-ring (premium.css) */
-  const DP_BADGE = '<svg class="dp-badge" viewBox="0 0 24 24" role="img" aria-label="Dustore Premium"><title>Dustore Premium</title><circle cx="12" cy="12" r="11" fill="#2aabee"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const DP_BADGE = '<svg class="dp-badge" width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Dustore Premium"><title>Dustore Premium</title><circle cx="12" cy="12" r="11" fill="#2aabee"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const dpBadge = p => (p && p.premium ? DP_BADGE : '');
   const dpRing = p => (p && p.premium ? ' dp-ring' : '');
   const BELL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';

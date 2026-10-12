@@ -36,7 +36,7 @@ function dp_is_premium($until): bool
 function dp_badge($until): string
 {
     if (!dp_is_premium($until)) return '';
-    return '<svg class="dp-badge" viewBox="0 0 24 24" role="img" aria-label="Dustore Premium">'
+    return '<svg class="dp-badge" width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Dustore Premium">'
         . '<title>Dustore Premium</title><circle cx="12" cy="12" r="11" fill="#2aabee"/>'
         . '<path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" '
         . 'stroke-linecap="round" stroke-linejoin="round"/></svg>';
