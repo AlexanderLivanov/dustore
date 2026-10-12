@@ -6,8 +6,9 @@ if (!$uid) {
     return;
 }
 require_once __DIR__ . '/../../chat/_vapid.php';
+require_once __DIR__ . '/../../swad/controllers/premium.php';
 
-$st = $db->prepare("SELECT username, first_name, last_name, profile_picture FROM users WHERE id = ?");
+$st = $db->prepare("SELECT username, first_name, last_name, profile_picture, premium_until FROM users WHERE id = ?");
 $st->execute([$uid]);
 $u = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
@@ -31,8 +32,8 @@ $footExtra = '<script>window.VAPID_PUBLIC = ' . json_encode(vapid_public_key()) 
            . '<script src="' . m_asset('/m/js/auth.js') . '" defer></script>';
 ?>
 <section class="prof">
-  <div class="prof-av"><?php if ($ava): ?><img src="<?= h($ava) ?>" alt="" draggable="false"><?php else: ?><?= h(mb_strtoupper(mb_substr($name, 0, 1))) ?><?php endif; ?></div>
-  <h1><?= h($name) ?></h1>
+  <div class="prof-av<?= dp_ring($u['premium_until'] ?? null) ?>"><?php if ($ava): ?><img src="<?= h($ava) ?>" alt="" draggable="false"><?php else: ?><?= h(mb_strtoupper(mb_substr($name, 0, 1))) ?><?php endif; ?></div>
+  <h1><?= h($name) ?><?= dp_badge($u['premium_until'] ?? null) ?></h1>
   <?php if (!empty($u['username'])): ?><a class="prof-handle" href="/player/<?= h(rawurlencode($u['username'])) ?>">@<?= h($u['username']) ?></a><?php endif; ?>
   <div class="prof-stats">
     <a href="/m/library"><b><?= $nGames ?></b><small><?= m_plural($nGames, 'игра', 'игры', 'игр') ?></small></a>
