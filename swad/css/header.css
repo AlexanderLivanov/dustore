@@ -988,28 +988,6 @@ body.dusty-open {
 /* ── Скроллбары ─────────────────────────────────────────────────────────── */
 .dust-layout__dialogue,
 .dust-layout__actions {
-    scrollbar-width: thin;
-    scrollbar-color: var(--d-line) transparent;
-}
-
-.dust-layout__dialogue::-webkit-scrollbar,
-.dust-layout__actions::-webkit-scrollbar {
-    width: 6px;
-}
-
-.dust-layout__dialogue::-webkit-scrollbar-track,
-.dust-layout__actions::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.dust-layout__dialogue::-webkit-scrollbar-thumb,
-.dust-layout__actions::-webkit-scrollbar-thumb {
-    background: var(--d-line);
-}
-
-.dust-layout__dialogue::-webkit-scrollbar-thumb:hover,
-.dust-layout__actions::-webkit-scrollbar-thumb:hover {
-    background: var(--d-accent);
 }
 
 /* ── Появление ──────────────────────────────────────────────────────────── */

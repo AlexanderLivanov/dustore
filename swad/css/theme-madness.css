@@ -73,19 +73,6 @@ body.madness-theme ::selection {
     color: #fff;
 }
 
-/* Скроллбар тлеет */
-body.madness-theme {
-    scrollbar-color: #6e1419 #0a0404;
-}
-
-body.madness-theme ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #b52a30, #4a0a0e);
-    border-radius: 8px;
-}
-
-body.madness-theme ::-webkit-scrollbar-track {
-    background: #0a0404;
-}
 
 /* ── Хедер: серый ────────────────────────────────────────────────────────────
    Остальной сайт — в адской палитре, а хедер нейтрально-серый. Делается теми же

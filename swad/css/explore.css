@@ -785,37 +785,6 @@ main { display: block; }
 }
 .adult-modal-content button:hover { background: var(--ex-accent); }
 
-/* ── Скроллбары ───────────────────────────────────────────────────────────── */
-/* Firefox умеет только thin/auto — ширину там не задать, только цвет. */
-html {
-    scrollbar-width: thin;
-    scrollbar-color: var(--ex-sb) transparent;
-    /* Резервируем место под полосу заранее: иначе при смене фильтра
-       (много игр -> мало) страница дёргается на ширину скроллбара. */
-    scrollbar-gutter: stable;
-}
-
-/* Без селектора — правило ловит и документ, и все внутренние скроллеры сразу. */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-corner { background: transparent; }
-::-webkit-scrollbar-button { display: none; }
-
-/* Приём ради минимализма: сама полоса 10px, но 3px по краям отдаются
-   прозрачной рамке, а фон обрезается по padding-box. Видно 4px, а хватать
-   мышью можно все 10 — тонко на вид и при этом не мучительно попадать. */
-::-webkit-scrollbar-thumb {
-    background: var(--ex-sb);
-    background-clip: padding-box;
-    border: 3px solid transparent;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: var(--ex-sb-hover);
-    background-clip: padding-box;
-}
-
-.controls-left { scrollbar-width: thin; scrollbar-color: var(--ex-sb) transparent; }
 
 /* ── Мобильный переключатель фильтров ─────────────────────────────────────── */
 .mobile-filter-toggle { display: none; }
@@ -1602,37 +1571,6 @@ html {
 }
 .adult-modal-content button:hover { background: var(--ex-accent); }
 
-/* ── Скроллбары ───────────────────────────────────────────────────────────── */
-/* Firefox умеет только thin/auto — ширину там не задать, только цвет. */
-html {
-    scrollbar-width: thin;
-    scrollbar-color: var(--ex-sb) transparent;
-    /* Резервируем место под полосу заранее: иначе при смене фильтра
-       (много игр -> мало) страница дёргается на ширину скроллбара. */
-    scrollbar-gutter: stable;
-}
-
-/* Без селектора — правило ловит и документ, и все внутренние скроллеры сразу. */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-corner { background: transparent; }
-::-webkit-scrollbar-button { display: none; }
-
-/* Приём ради минимализма: сама полоса 10px, но 3px по краям отдаются
-   прозрачной рамке, а фон обрезается по padding-box. Видно 4px, а хватать
-   мышью можно все 10 — тонко на вид и при этом не мучительно попадать. */
-::-webkit-scrollbar-thumb {
-    background: var(--ex-sb);
-    background-clip: padding-box;
-    border: 3px solid transparent;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: var(--ex-sb-hover);
-    background-clip: padding-box;
-}
-
-.controls-left { scrollbar-width: thin; scrollbar-color: var(--ex-sb) transparent; }
 
 /* ── Мобильный переключатель фильтров ─────────────────────────────────────── */
 .mobile-filter-toggle { display: none; }

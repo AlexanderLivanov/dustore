@@ -522,9 +522,7 @@ body.moonlight-theme {
     padding-bottom: 2px;
     border-bottom: 1px solid var(--ac-line);
     overflow-x: auto;
-    scrollbar-width: none;
 }
-.tabs::-webkit-scrollbar { display: none; }
 
 .tab {
     flex-shrink: 0;

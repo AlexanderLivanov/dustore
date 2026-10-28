@@ -1,30 +1,75 @@
 /* Единый скроллбар сайта: только тонкий ползунок, дорожки нет.
-   Тот же вид, что на витрине в лунной теме. Подключать ПОСЛЕДНИМ в <head>,
-   чтобы перебить локальные правила страниц.
-   Цвет ползунка задают --sb / --sb-hover на <html>: скроллбар документа
-   рисуется по <html>, поэтому тему (body.moonlight-theme) пробрасываем через :has(). */
+   Подключать ПОСЛЕДНИМ, чтобы перебить локальные правила страниц.
+   Цвет ползунка задают --sb / --sb-hover на <html>. */
 html {
-    --sb:       rgba(255, 255, 255, 0.16);
+    --sb: rgb(50 50 50 / 0.55);
     --sb-hover: #c32178;
+    --sb-bg: rgb(15 10 32 / 0);
 }
 html:has(body.moonlight-theme) {
     --sb:       rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22);
     --sb-hover: rgb(var(--moon-accent-rgb, 62, 122, 217));
+    --sb-bg:    rgb(var(--moon-deep-rgb, 7, 12, 24));
 }
 
-/* Firefox и новый Chrome: тонкий + цвет, дорожка прозрачная. Селектор * —
-   чтобы поймать и внутренние скроллеры; классовые «скрыть» (.chips и т.п.)
-   специфичнее и остаются скрытыми. */
-* { scrollbar-width: thin; scrollbar-color: var(--sb) transparent; }
+/* Firefox: тонкий скроллбар — только для html и body. */
+html, body {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--sb) var(--sb-bg) !important;
+}
 
-/* Старый WebKit/Safari: полоса 10px, видимых 4px (3px прозрачной рамки по краям),
-   хвататься мышью удобно, выглядит тонко. */
-::-webkit-scrollbar { display: block; width: 10px; height: 10px; }
+/* WebKit: полоса 10px, видимых 4px (3px рамки по краям). */
+::-webkit-scrollbar { width: 10px !important; height: 10px !important; background: var(--sb-bg) !important; }
+html::-webkit-scrollbar { width: 10px !important; height: 10px !important; background: var(--sb-bg) !important; }
+body::-webkit-scrollbar { width: 10px !important; height: 10px !important; background: var(--sb-bg) !important; }
 ::-webkit-scrollbar-track,
-::-webkit-scrollbar-corner { background: transparent; }
-::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-corner { background: var(--sb-bg) !important; }
+::-webkit-scrollbar-button { display: none !important; background: var(--sb-bg) !important; }
 ::-webkit-scrollbar-thumb {
-    background: var(--sb); background-clip: padding-box;
-    border: 3px solid transparent; border-radius: 4px;
+    background: var(--sb) !important;
+    background-clip: padding-box !important;
+    border: 3px solid var(--sb-bg) !important;
+    border-radius: 4px !important;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--sb-hover); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover {
+    background: var(--sb-hover) !important;
+    background-clip: padding-box !important;
+}
+
+/* Элементы, где скроллбар намеренно скрыт. */
+.stories,
+.fx-tabs,
+.fx-side,
+.fx-ed__tools,
+.chips,
+.tabs-scroll,
+.tabs,
+.carousel,
+.ed__toolbar,
+.hero-track,
+.rail,
+.shots,
+.viewer-track,
+.recent,
+.quick {
+    scrollbar-width: none !important;
+}
+.stories::-webkit-scrollbar,
+.fx-tabs::-webkit-scrollbar,
+.fx-side::-webkit-scrollbar,
+.fx-ed__tools::-webkit-scrollbar,
+.chips::-webkit-scrollbar,
+.tabs-scroll::-webkit-scrollbar,
+.tabs::-webkit-scrollbar,
+.carousel::-webkit-scrollbar,
+.ed__toolbar::-webkit-scrollbar,
+.hero-track::-webkit-scrollbar,
+.rail::-webkit-scrollbar,
+.shots::-webkit-scrollbar,
+.viewer-track::-webkit-scrollbar,
+.recent::-webkit-scrollbar,
+.quick::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}

@@ -101,7 +101,6 @@ $modes = array_intersect_key(L4TX::WORK_MODES, array_flip($pr['work_modes']));
     @media (max-width: 820px) { .page { width: auto; min-height: 0; margin: 0; padding: 20px; } .cols { grid-template-columns: 1fr; } header { grid-template-columns: 64px 1fr; } .qr { display: none; } .ava { width: 64px; height: 64px; } }
     @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; width: auto; min-height: 0; } .bar { display: none; } @page { size: A4; margin: 0; } }
 </style>
-<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 <body>
 <div class="bar"><button onclick="print()">Сохранить в PDF / печать</button><a href="<?= $h($url) ?>">Полный профиль</a></div>

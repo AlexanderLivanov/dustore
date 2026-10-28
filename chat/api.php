@@ -250,6 +250,7 @@ if ($action === 'list') {
                 'id'     => $cust,
                 'name'   => $users[$cust]['username'] ?? ('user#' . $cust),
                 'avatar' => $users[$cust]['avatar'] ?? null,
+                'premium'=> $users[$cust]['premium'] ?? false,
                 'tag'    => $studios[(int)$r['studio_id']]['name'] ?? null,
             ], $myId, $unreadOf[$cid] ?? 0, $ptrOf[$cid] ?? [0, 0]);
         }
@@ -332,6 +333,7 @@ if ($action === 'list') {
                 $peer = ['kind' => 'user', 'id' => $pid,
                          'name' => $users[$pid]['username'] ?? ('user#' . $pid),
                          'avatar' => $users[$pid]['avatar'] ?? null,
+                         'premium' => $users[$pid]['premium'] ?? false,
                          'seen' => $seenOf[$pid] ?? null];
             }
             // «Уведомления» живут в таблице notifications, а не в messages
@@ -424,7 +426,7 @@ if ($action === 'search_users') {
     // % и _ — метасимволы LIKE. Без экранирования запрос «%» матчил всех.
     $esc = addcslashes($q, '%_\\');
     $like='%'.$esc.'%'; $starts=$esc.'%';
-    $st=$db->prepare("SELECT id, username, first_name, last_name, profile_picture FROM users
+    $st=$db->prepare("SELECT id, username, first_name, last_name, profile_picture, premium_until FROM users
                        WHERE id<>? AND ( username LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR telegram_username LIKE ? )
                        ORDER BY (username LIKE ?) DESC, username ASC LIMIT 12");
     $st->execute([$myId,$like,$like,$like,$like,$starts]);
@@ -442,12 +444,12 @@ if ($action === 'resolve_handle') {
 /* =================== ACTION: user_profile =================== */
 if ($action === 'user_profile') {
     $uid=(int)($_GET['user_id'] ?? 0); if($uid<=0) out(['ok'=>false,'error'=>'bad_id']);
-    $st=$db->prepare("SELECT id, username, first_name, last_name, profile_picture, country, city,
+    $st=$db->prepare("SELECT id, username, first_name, last_name, profile_picture, premium_until, country, city,
                              votes_up, votes_down, profile_views, last_activity FROM users WHERE id=? LIMIT 1");
     $st->execute([$uid]); $u=$st->fetch(PDO::FETCH_ASSOC); if(!$u) out(['ok'=>false,'error'=>'not_found']);
     $card=user_card_from_row($u); $handle=trim((string)($u['username'] ?? ''));
     out(['ok'=>true,'profile'=>[
-        'id'=>(int)$u['id'],'name'=>$card['username'],'handle'=>$handle,'avatar'=>$card['avatar'],
+        'id'=>(int)$u['id'],'name'=>$card['username'],'handle'=>$handle,'avatar'=>$card['avatar'],'premium'=>$card['premium'],
         'location'=>trim(trim((string)($u['city']??'')).' '.trim((string)($u['country']??''))),
         'votes_up'=>(int)$u['votes_up'],'votes_down'=>(int)$u['votes_down'],'views'=>(int)$u['profile_views'],
         'last_seen'=>$u['last_activity'],
@@ -558,7 +560,7 @@ function thread_header(PDO $db, array $c, int $myId): array {
             $cust=customer_of($db,$cid); $u=(get_users_meta($db,[$cust]))[$cust] ?? [];
             $la=$db->prepare("SELECT last_activity FROM users WHERE id=?"); $la->execute([$cust]); $seen=$la->fetchColumn() ?: null;
             [$dlv,$rd]=peer_ptrs($db,$cid,$cust);
-            return ['kind'=>'user','peer_id'=>$cust,'studio'=>true,'name'=>$u['username'] ?? ('user#'.$cust),'avatar'=>$u['avatar'] ?? null,'tag'=>$s['name'] ?? null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
+            return ['kind'=>'user','peer_id'=>$cust,'studio'=>true,'name'=>$u['username'] ?? ('user#'.$cust),'avatar'=>$u['avatar'] ?? null,'premium'=>$u['premium'] ?? false,'tag'=>$s['name'] ?? null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv];
         }
         $rd=(int)($c['studio_last_read_id'] ?? 0);
         $dlv=max($rd,(int)($c['studio_last_delivered_id'] ?? 0));
@@ -574,7 +576,7 @@ function thread_header(PDO $db, array $c, int $myId): array {
     // чтобы правильно показать и композер, и подпись «вы заблокировали» /
     // «вас заблокировали» без лишнего запроса.
     $blk = chat_block_status($db, $myId, $peer);
-    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv,
+    return ['kind'=>'user','peer_id'=>$peer,'studio'=>false,'name'=>$u['username'] ?? ('user#'.$peer),'avatar'=>$u['avatar'] ?? null,'premium'=>$u['premium'] ?? false,'tag'=>null,'last_seen'=>$seen,'peer_last_read_id'=>$rd,'peer_last_delivered_id'=>$dlv,
             'blocked_by_me'=>$blk['a_blocked_b'],'blocked_me'=>$blk['b_blocked_a']];
 }
 

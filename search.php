@@ -241,22 +241,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 24px;
             padding: 8px 4px 20px 4px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-        }
-
-        .grid-container::-webkit-scrollbar {
-            width: 4px;
-        }
-        .grid-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .grid-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-        }
-        .grid-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
         }
 
         /* --------------------------------------------- */

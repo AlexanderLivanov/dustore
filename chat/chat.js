@@ -34,6 +34,10 @@
   const avatarHTML = p => p.avatar
     ? `<img src="${esc(p.avatar)}" alt="" draggable="false" data-fb="${esc(initials(p.name))}" onerror="this.outerHTML=this.dataset.fb">`
     : esc(initials(p.name));
+  /* Dustore Premium: тот же значок, что dp_badge() в swad/controllers/premium.php; рамка — .dp-ring (premium.css) */
+  const DP_BADGE = '<svg class="dp-badge" width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Dustore Premium"><title>Dustore Premium</title><circle cx="12" cy="12" r="11" fill="#2aabee"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const dpBadge = p => (p && p.premium ? DP_BADGE : '');
+  const dpRing = p => (p && p.premium ? ' dp-ring' : '');
   const BELL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
   const ICON = {
     reply: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>',
@@ -266,7 +270,7 @@
         : (c.last ? (c.last.mine ? '<span class="me">Вы: </span>' : '') + esc(c.last.body) : '<i>нет сообщений</i>');
       /* точка «в сети» и плашка «студия» — теперь на обеих платформах (десктоп
          был обделён при мобильном редизайне); закреп у «Уведомлений» — только телефон */
-      const av = `<div class="av ${avShape(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>`;
+      const av = `<div class="av ${avShape(c.peer)}${dpRing(c.peer)}">${isSys ? BELL : avatarHTML(c.peer)}</div>`;
       const avCell = `<div class="av-w">${av}${isOnline(c.peer) ? '<i class="on" title="в сети"></i>' : ''}</div>`;
       const pill = c.peer.kind === 'studio' ? '<span class="c-pill">студия</span>' : '';
       const time = `<span class="c-time">${c.last?.state ? `<span class="ticks ${c.last.state === 'delivered' ? 'dlv' : c.last.state}">${TICK_SVG}</span>` : ''}${c.ts ? fmtTime(c.ts) : ''}</span>`;
@@ -276,7 +280,7 @@
               data-peer='${esc(JSON.stringify(c.peer))}' data-studio="${c.type === 'studio' ? 1 : 0}" data-system="${isSys ? 1 : 0}">
       ${avCell}
       <div class="c-main">
-        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span>${pill}${MOBILE ? '' : time}</div>
+        <div class="c-top"><span class="c-name">${esc(c.peer.name)}</span>${dpBadge(c.peer)}${pill}${MOBILE ? '' : time}</div>
         <div class="c-last">${last}</div>
         ${c.peer.tag ? `<div class="c-tag">→ ${esc(c.peer.tag)}</div>` : ''}
       </div>
@@ -516,9 +520,9 @@
 
     const th = $('#thread');
     th.innerHTML = ''; th.dataset.lastDay = '';
-    $('#rhAv').className = 'av ' + avShape(isSystem ? { kind: 'system' } : peer);
+    $('#rhAv').className = 'av ' + avShape(isSystem ? { kind: 'system' } : peer) + (isSystem ? '' : dpRing(peer));
     $('#rhAv').innerHTML = isSystem ? BELL : avatarHTML(peer);
-    $('#rhName').textContent = peer.name;
+    $('#rhName').innerHTML = esc(peer.name) + (isSystem ? '' : dpBadge(peer));
     $('#rhSub').innerHTML = '<span class="live off"></span>загрузка…';
     document.querySelectorAll('.card').forEach(c => c.classList.toggle('active', +c.dataset.id === id));
 
@@ -532,9 +536,9 @@
     if (!h) return;
     state.header = { ...state.header, peer_id: h.peer_id, kind: h.kind, last_seen: h.last_seen, studio: h.studio, tag: h.tag };
     if (state.header.peer && state.header.peer.name === '…' && h.name) {
-      state.header.peer = { kind: h.kind, id: h.peer_id, name: h.name, avatar: h.avatar };
-      $('#rhName').textContent = h.name;
-      $('#rhAv').className = 'av ' + avShape(state.header.peer); $('#rhAv').innerHTML = avatarHTML(state.header.peer);
+      state.header.peer = { kind: h.kind, id: h.peer_id, name: h.name, avatar: h.avatar, premium: h.premium };
+      $('#rhName').innerHTML = esc(h.name) + dpBadge(h);
+      $('#rhAv').className = 'av ' + avShape(state.header.peer) + dpRing(h); $('#rhAv').innerHTML = avatarHTML(state.header.peer);
       $('#room').classList.toggle('is-studio', !!h.studio);
     }
     state.peerLastRead = h.peer_last_read_id || 0;
@@ -1531,8 +1535,8 @@
     const p = r.profile, handle = p.handle || '', ls = lastSeen(p.last_seen);
     const link = handle ? `/player/${encodeURIComponent(handle)}` : null;
     $('#profileBody').innerHTML = `
-    <div class="big-av">${avatarHTML({ name: p.name, avatar: p.avatar })}</div>
-    <div class="p-name">${esc(p.name)}</div>
+    <div class="big-av${dpRing(p)}">${avatarHTML({ name: p.name, avatar: p.avatar })}</div>
+    <div class="p-name">${esc(p.name)}${dpBadge(p)}</div>
     ${handle ? `<div class="p-handle">@${esc(handle)}</div>` : ''}
     ${ls ? `<div class="p-meta">${esc(ls)}</div>` : ''}
     ${p.location ? `<div class="p-meta">${esc(p.location)}</div>` : ''}
@@ -1572,15 +1576,15 @@
     const box = $('#searchResults');
     if (!users.length) { box.innerHTML = '<div class="empty">Никого не нашлось</div>'; return; }
     box.innerHTML = users.map(u => `<button type="button" class="result" data-u='${esc(JSON.stringify(u))}'>
-      <div class="av round">${avatarHTML({ name: u.username, avatar: u.avatar })}</div>
-      <div><div class="r-name">${esc(u.username)}</div><div class="r-sub">личный чат</div></div>
+      <div class="av round${dpRing(u)}">${avatarHTML({ name: u.username, avatar: u.avatar })}</div>
+      <div><div class="r-name">${esc(u.username)}${dpBadge(u)}</div><div class="r-sub">личный чат</div></div>
     </button>`).join('');
   }
   $('#searchResults').addEventListener('click', e => {
     const el = e.target.closest('.result'); if (!el) return;
     const u = JSON.parse(el.dataset.u);
     $('#searchClear').click();
-    openConv(0, { kind: 'user', id: u.id, name: u.username, avatar: u.avatar }, false, { to: u.id }, false);
+    openConv(0, { kind: 'user', id: u.id, name: u.username, avatar: u.avatar, premium: u.premium }, false, { to: u.id }, false);
   });
   $('#emptyNew').addEventListener('click', () => { $('#app').classList.remove('show-room'); searchInput.focus(); });
   $('#newChat')?.addEventListener('click', () => { searchInput.focus(); searchInput.scrollIntoView({ block: 'nearest' }); });   // телефон: карандаш в шапке = «новый чат» через поиск

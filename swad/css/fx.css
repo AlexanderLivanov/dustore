@@ -855,3 +855,19 @@
     .fx .fx-act { padding: 8px 7px; gap: 4px }
     .fx .fx-hm__facts { grid-template-columns: 1fr }
 }
+
+/* ── Dustore Premium: галочка и рамка (общие .dp-badge/.dp-ring — в premium.css) ── */
+@property --dp-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes dp-spin { to { --dp-a: 360deg } }
+.fx .fx-vf--premium { background: linear-gradient(135deg, #2aabee, #1d7fe0); box-shadow: 0 0 6px rgba(42, 171, 238, .5); color: #fff }
+.fx .fr-premium .fx-av__frame { background: conic-gradient(from var(--dp-a), #2aabee, #7b61ff, #2aabee); animation: dp-spin 5s linear infinite }
+.fx .fx-icon.dp-ring { outline: 0; box-shadow: none; isolation: isolate }
+.fx .fx-icon.dp-ring::before {
+    content: ''; position: absolute; inset: -6px; border-radius: inherit; z-index: -1; pointer-events: none;
+    background: conic-gradient(from var(--dp-a), #2aabee, #7b61ff, #2aabee);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+            mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+    animation: dp-spin 5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .fx .fx-icon.dp-ring::before, .fx .fr-premium .fx-av__frame { animation: none } }
+.fx .fx-banner__t h1 .fx-vf--premium { width: 22px; height: 22px } .fx .fx-banner__t h1 .fx-vf--premium .ic { width: 14px; height: 14px }

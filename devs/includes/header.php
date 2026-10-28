@@ -116,7 +116,10 @@ if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
     // заявки на монетизацию — только администратору платформы
     $sb_mon = 0;
     if ($is_admin) {
-        try { $sb_mon = (int)$_pdo->query("SELECT COUNT(*) FROM mon_requests WHERE status = 'pending'")->fetchColumn(); } catch (Throwable $e) {}
+        try {
+            $sb_mon = (int)$_pdo->query("SELECT COUNT(*) FROM mon_requests WHERE status = 'pending'")->fetchColumn();
+        } catch (Throwable $e) {
+        }
     }
 
     $_SESSION[$_ck] = [
@@ -214,9 +217,8 @@ if (!$ds_embed) {
             padding: 0;
             box-sizing: border-box;
         }
-<?= $ds_tokens ?>
 
-        html,
+        <?= $ds_tokens ?>html,
         body {
             height: 100%;
             font-family: 'Inter', -apple-system, sans-serif;

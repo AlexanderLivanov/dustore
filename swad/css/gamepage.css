@@ -482,24 +482,6 @@ h2:after {
     animation: slideUp 0.3s ease;
 }
 
-.modal-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modal-content::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 4px;
-}
-
-.modal-content::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
-}
-
 .close {
     color: var(--light);
     float: right;
@@ -1111,24 +1093,6 @@ body.moonlight-theme .modal-content {
     border: 2px solid var(--primary);
     box-shadow: 0 10px 30px rgba(var(--brand-rgb, 195, 33, 120), 0.3);
     animation: slideUp 0.3s ease;
-}
-
-body.moonlight-theme .modal-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-body.moonlight-theme .modal-content::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
-
-body.moonlight-theme .modal-content::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 4px;
-}
-
-body.moonlight-theme .modal-content::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--brand-hi-rgb, 230, 46, 138));
 }
 
 body.moonlight-theme .close {

@@ -64,7 +64,7 @@
 }
 
 html:has(body.moonlight-theme) { --ch-sb: rgba(var(--moon-ink-rgb, 184, 200, 255), 0.22); }
-
+D
 body.moonlight-theme {
     --ch-page:        rgb(var(--moon-deep-rgb, 7, 12, 24));
     --ch-panel:       rgba(255, 255, 255, 0.045);
@@ -667,13 +667,6 @@ body.moonlight-theme .toast { background: rgba(var(--moon-raised-rgb, 16, 23, 40
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.err { box-shadow: inset 0 0 0 1px var(--ch-danger), 0 14px 30px rgba(0, 0, 0, .55); }
 
-/* ── Скроллбары ───────────────────────────────────────────────────────────── */
-html { scrollbar-width: thin; scrollbar-color: var(--ch-sb) transparent; }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-button { display: none; }
-::-webkit-scrollbar-thumb { background: var(--ch-sb); background-clip: padding-box; border: 3px solid transparent; border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: var(--ch-accent); background-clip: padding-box; }
 
 .back { display: none; background: none; border: 0; color: var(--ch-text); font-size: 22px; cursor: pointer; padding: 0 4px; }
 

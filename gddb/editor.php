@@ -143,7 +143,6 @@ body{overflow:hidden}
 @media(max-width:1100px){.ed{grid-template-columns:1fr var(--panel,300px)}.ed-main.split{grid-template-columns:1fr}.ed-main.split .ed-prev{display:none}}
 @media(max-width:720px){.ed{grid-template-columns:1fr}.ed-panel{display:none}.ed-col{padding:0 18px}}
 </style>
-<link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 <body>
 <div class="ed" id="ed">

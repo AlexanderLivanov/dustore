@@ -102,7 +102,6 @@ $active_page = 'moderation';
         body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
         main{flex:1;overflow:auto;}
         .mg-wrap{max-width:1240px;margin:0 auto;padding:28px 34px 60px;}
-        ::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
 
         /* topbar */
         .mg-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap;}
@@ -512,6 +511,9 @@ $active_page = 'moderation';
         if(!ok){e.preventDefault();document.getElementById('score-err').scrollIntoView({behavior:'smooth',block:'center'});}
     });
     checkReady();
+</script>
+<script>
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/swad/css/scrollbar.css';document.head.appendChild(l);})();
 </script>
 </body>
 </html>

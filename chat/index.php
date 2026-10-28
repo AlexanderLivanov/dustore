@@ -35,6 +35,7 @@ require __DIR__ . '/../swad/static/elements/header.php';
 <meta name="theme-color" content="#0d0118">
 <title>Чаты · Dustore</title>
 <link rel="stylesheet" href="/swad/css/chat.css?v=<?= (int)@filemtime(__DIR__ . '/../swad/css/chat.css') ?>">
+<link rel="stylesheet" href="/swad/css/premium.css?v=<?= (int)@filemtime(__DIR__ . '/../swad/css/premium.css') ?>">
 </head>
 <body class="chat-page">
 
@@ -50,5 +51,8 @@ window.VAPID_PUBLIC = <?= json_encode($VAPID_PUBLIC) ?>;
 </script>
 <script src="/pwa/push-client.js?v=<?= (int)@filemtime(__DIR__ . '/../pwa/push-client.js') ?>"></script>
 <script src="/chat/chat.js?v=<?= (int)@filemtime(__DIR__ . '/chat.js') ?>"></script>
+<script>
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/swad/css/scrollbar.css';document.head.appendChild(l);})();
+</script>
 </body>
 </html>
