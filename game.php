@@ -236,6 +236,9 @@ $platformLabels = ['windows'=>'Windows','linux'=>'Linux','macos'=>'macOS','andro
 $platformStr = implode(', ', array_map(fn($p) => $platformLabels[$p] ?? ucfirst($p), $platformsNorm));
 
 $isPaid = ($game['price'] ?? 0) > 0;
+/* Цена для игрока — с инфраструктурным сбором и налоговой надбавкой, если студия их включила */
+require_once __DIR__ . '/swad/controllers/mon/lib.php';
+$gpPrice = $isPaid ? mon_public_price($pdo, $game) : 0;
 
 /* embed=1 — страница грузится в <iframe> (сейчас: правая панель «Моей
    коллекции», library.php). Логика владения/скачивания/цены та же самая —
@@ -630,11 +633,11 @@ $fxShort   = trim((string)($game['short_description'] ?? '')) ?: trim((string)$g
                         ?>
                         <?php if ($isPaid && !$isOwned): ?>
                             <div class="gp-buy-head">
-                                <div class="gp-price-tag" style="margin-bottom:0;"><?= number_format($game['price'], 0, ',', ' ') ?> ₽</div>
+                                <div class="gp-price-tag" style="margin-bottom:0;"><?= number_format($gpPrice, 0, ',', ' ') ?> ₽</div>
                                 <?php if ($showLikeBtn): ?><?php include(__DIR__ . '/swad/static/elements/gp_like_button.php'); ?><?php endif; ?>
                             </div>
                             <button class="gp-btn gp-btn-primary" onclick="openPaymentModal()">
-                                Купить за <?= number_format($game['price'], 0, ',', ' ') ?> ₽
+                                Купить за <?= number_format($gpPrice, 0, ',', ' ') ?> ₽
                             </button>
                             <?php if (!empty($game['in_subscription'])): ?>
                                 <p class="gp-subscription-note">✔ Включена в подписку</p>

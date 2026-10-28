@@ -212,7 +212,7 @@ function ios_build_source(PDO $db): array
     ios_ensure_tables($db);
     $st = $db->query("
         SELECT v.*, g.name AS g_name, g.short_description, g.description, g.icon_url AS g_icon,
-               s.name AS studio_name, b.icon_url AS b_icon
+               s.name AS studio_name, b.icon_url AS b_icon, b.screenshots AS b_shots
         FROM ios_app_versions v
         JOIN games g ON g.id = v.game_id AND g.status = 'published'
         LEFT JOIN studios s ON s.id = g.developer
@@ -223,6 +223,11 @@ function ios_build_source(PDO $db): array
         $id = $r['bundle_id'];
         if (!isset($apps[$id])) {
             $desc = trim((string)($r['short_description'] ?: $r['description']));
+            // скриншоты iOS-билда (game_builds, их грузят в /devs/edit) → AltStore
+            $shots = [];
+            foreach (json_decode((string)($r['b_shots'] ?? ''), true) ?: [] as $sh) {
+                if (!empty($sh['path'])) $shots[] = $sh['path'];
+            }
             $apps[$id] = [
                 'name'                 => $r['g_name'],
                 'bundleIdentifier'     => $id,
@@ -230,6 +235,8 @@ function ios_build_source(PDO $db): array
                 'iconURL'              => $r['b_icon'] ?: $r['g_icon'] ?: 'https://dustore.ru/swad/static/img/dastyframe3.png',
                 'tintColor'            => 'C32178',
                 'localizedDescription' => mb_substr($desc, 0, 500) ?: $r['g_name'],
+                'screenshotURLs'       => $shots,   // формат AltStore 1.x
+                'screenshots'          => array_map(fn($u) => ['imageURL' => $u], $shots),   // AltStore 2.0
                 'versions'             => [],
             ];
         }

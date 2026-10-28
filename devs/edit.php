@@ -23,6 +23,48 @@ require_once(__DIR__ . '/../swad/controllers/tg_bot.php');
 require_once(__DIR__ . '/../swad/controllers/deplex_web.php');
 require_once(__DIR__ . '/../swad/controllers/game_changelog.php');
 require_once(__DIR__ . '/../swad/controllers/trailer_embed.php');
+require_once(__DIR__ . '/../swad/controllers/csrf.php');
+
+/** Ответ автосохранения (fetch из вкладок редактора). */
+function ed_json(array $d, int $code = 200): never
+{
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit();
+}
+
+/* ── Платформы: вкладки редактора ──────────────────────────────────────────
+   Включённые платформы — это по-прежнему games.platforms (CSV): его читают game.php,
+   каталог и раздатчики. Всё остальное по платформе — строка в game_builds. */
+const ED_PLAT = [
+    'Windows' => ['id' => 'windows', 'icon' => 'window',       'accept' => '.zip'],
+    'macOS'   => ['id' => 'macos',   'icon' => 'laptop_mac',   'accept' => '.zip'],
+    'Linux'   => ['id' => 'linux',   'icon' => 'terminal',     'accept' => '.zip'],
+    'Android' => ['id' => 'android', 'icon' => 'android',      'accept' => '.apk'],
+    'iOS'     => ['id' => 'ios',     'icon' => 'phone_iphone', 'accept' => '.ipa'],
+    'Web'     => ['id' => 'web',     'icon' => 'language',     'accept' => '.zip'],
+];
+const ED_MOBILE  = ['Android', 'iOS'];
+const ED_DESKTOP = ['Windows', 'macOS', 'Linux'];
+
+/** Поля требований платформы: key => [подпись, пример]. Хранятся как [{key,label,value}] — формат game.php. */
+function ed_req_fields(string $pl): array
+{
+    $other = ['other' => ['Дополнительно', 'Например: нужен интернет, геймпад']];
+    return match ($pl) {
+        'Android' => ['os' => ['Версия Android', 'Android 8.0 и новее'], 'ram' => ['Оперативная память', '3 ГБ'], 'disk' => ['Место', '500 МБ']] + $other,
+        'iOS'     => ['os' => ['Версия iOS', 'iOS 15 и новее'], 'device' => ['Устройства', 'iPhone XS и новее'], 'disk' => ['Место', '500 МБ']] + $other,
+        'Web'     => ['browser' => ['Браузер', 'Chrome 110+, Firefox 115+, Safari 16+'], 'input' => ['Управление', 'Клавиатура и мышь']] + $other,
+        default   => [
+            'os'   => ['ОС', ['Windows' => 'Windows 10 64-bit', 'macOS' => 'macOS 12 Monterey', 'Linux' => 'Ubuntu 22.04'][$pl] ?? ''],
+            'cpu'  => ['Процессор', 'Intel Core i5-4460 / Ryzen 3 1200'],
+            'ram'  => ['Оперативная память', '8 ГБ'],
+            'gpu'  => ['Видеокарта', 'GTX 960 / RX 470, 2 ГБ'],
+            'disk' => ['Место на диске', '2 ГБ'],
+        ] + $other,
+    };
+}
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: /devs/projects'); exit(); }
@@ -51,15 +93,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (($game['moderation_status'] ?? '') === 'pending'
         && in_array($action, ['save', 'save_announce', 'save_jam'], true)) {
+        if (!empty($_POST['ajax'])) ed_json(['ok' => false, 'error' => 'Игра на модерации — редактирование заблокировано'], 423);
         header('Location: /devs/edit?id=' . $project_id . '&locked=1'); exit();
     }
 
     if ($action === 'save') {
+        $ajax         = !empty($_POST['ajax']);
         $name         = trim($_POST['name']         ?? '');
         $genre        = trim($_POST['genre']        ?? '');
         $short_desc   = trim($_POST['short_description'] ?? '');
         $description  = trim($_POST['description']  ?? '');
-        $platforms    = implode(',', $_POST['platform'] ?? []);
+        $platforms_on = array_values(array_intersect(array_keys(ED_PLAT), (array)($_POST['platform'] ?? [])));
+        $platforms    = implode(',', $platforms_on);
         $release_date = $_POST['release_date']      ?? $game['release_date'];
         $game_website = filter_var($_POST['website']    ?? '', FILTER_SANITIZE_URL);
         $trailer_url  = filter_var($_POST['trailer_url'] ?? '', FILTER_SANITIZE_URL);
@@ -68,6 +113,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $age_rating   = $_POST['age_rating']        ?? '0+';
         $cover_path   = $game['path_to_cover'];
         $icon_path    = $game['icon_url'] ?? '';
+
+        $save_err = !csrf_valid() ? 'Сессия устарела — обновите страницу и повторите.'
+                  : ($name === '' ? 'Укажите название игры.' : '');
+        if ($save_err !== '') {
+            if ($ajax) ed_json(['ok' => false, 'error' => $save_err], 422);
+            $error_msg = $save_err;
+        } else {
 
         // Обложка
         if (!empty($_FILES['cover_art']['name']) && $_FILES['cover_art']['error'] === UPLOAD_ERR_OK) {
@@ -93,6 +145,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Exception $e) { error_log('Icon upload: ' . $e->getMessage()); }
         }
 
+        // Требования и разрешения по платформам (вкладки платформ).
+        // На страницу игры (games.requirements) зеркалим требования первой включённой
+        // платформы — game.php пока показывает один набор, как build_upload зеркалит билд.
+        $plat_data = [];
+        $store_req = [];
+        foreach (array_keys(ED_PLAT) as $pl) {
+            $req = [];
+            foreach (ed_req_fields($pl) as $k => [$label]) {
+                $v = trim(mb_substr((string)($_POST['req'][$pl][$k] ?? ''), 0, 300));
+                if ($v !== '') $req[] = ['key' => $k, 'label' => $label, 'value' => $v];
+            }
+            $perm = in_array($pl, ED_MOBILE, true) ? trim(mb_substr((string)($_POST['perm'][$pl] ?? ''), 0, 4000)) : null;
+            $plat_data[$pl] = [$req ? json_encode($req, JSON_UNESCAPED_UNICODE) : null, $perm];
+            if (!$store_req && $req && in_array($pl, $platforms_on, true)) $store_req = $req;
+        }
+        $requirements = json_encode($store_req, JSON_UNESCAPED_UNICODE);
+
         try {
             $conn->prepare("
                 UPDATE games SET
@@ -109,6 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     game_exec         = :exec,
                     languages         = :languages,
                     age_rating        = :age,
+                    requirements      = :req,
                     moderation_status = 'draft',
                     status            = IF(status='published','draft',status),
                     updated_at        = NOW()
@@ -120,9 +190,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'cover'     => $cover_path,'icon'     => $icon_path,
                 'website'   => $game_website,'trailer' => $trailer_url,
                 'exec'      => $game_exec, 'languages'=> $languages,
-                'age'       => $age_rating,'id'       => $project_id,
-                'dev'       => $studio_id,
+                'age'       => $age_rating,'req'      => $requirements,
+                'id'        => $project_id,'dev'      => $studio_id,
             ]);
+
+            // game_builds: пишем только то, что изменилось, и не плодим пустые строки
+            require_once(__DIR__ . '/../swad/controllers/game_builds_schema.php');
+            ensure_game_builds_table($conn);
+            $gbSel = $conn->prepare("SELECT requirements, permissions FROM game_builds WHERE game_id = ? AND platform = ?");
+            $gbUp  = $conn->prepare("
+                INSERT INTO game_builds (game_id, platform, requirements, permissions) VALUES (:g, :p, :r, :pm)
+                ON DUPLICATE KEY UPDATE requirements = VALUES(requirements), permissions = VALUES(permissions), updated_at = NOW()
+            ");
+            foreach ($plat_data as $pl => [$reqJson, $perm]) {
+                $gbSel->execute([$project_id, $pl]);
+                $row  = $gbSel->fetch(PDO::FETCH_ASSOC);
+                $perm = $perm === null ? ($row['permissions'] ?? null) : ($perm !== '' ? $perm : null);
+                if (!$row && $reqJson === null && $perm === null) continue;
+                if ($row && $row['requirements'] === $reqJson && $row['permissions'] === $perm) continue;
+                $gbUp->execute(['g' => $project_id, 'p' => $pl, 'r' => $reqJson, 'pm' => $perm]);
+            }
+
             $logUser = (int)($_SESSION['USERDATA']['id'] ?? 0);
 log_game_diff($conn, $project_id, $studio_id, $logUser, [
     'name'              => [$game['name']              ?? '', $name],
@@ -136,14 +224,20 @@ log_game_diff($conn, $project_id, $studio_id, $logUser, [
     'game_exec'         => [$game['game_exec']         ?? '', $game_exec],
     'languages'         => [$game['languages']         ?? '', $languages],
     'age_rating'        => [$game['age_rating']        ?? '', $age_rating],
+    'requirements'      => [$game['requirements']      ?? '', $requirements],
     'cover'             => [$game['path_to_cover']     ?? '', $cover_path],
     'icon'              => [$game['icon_url']          ?? '', $icon_path],
 ]);
             $conn->prepare("DELETE FROM moderation_reviews WHERE game_id = ?")->execute([$project_id]);
-            header('Location: /devs/edit?id=' . $project_id . '&saved=1');
+            if ($ajax) ed_json(['ok' => true, 'saved_at' => date('H:i'), 'cover' => $cover_path, 'icon' => $icon_path]);
+            $tab = preg_replace('/[^a-z]/', '', (string)($_POST['tab'] ?? ''));
+            header('Location: /devs/edit?id=' . $project_id . '&saved=1' . ($tab ? '&tab=' . $tab : ''));
             exit();
         } catch (PDOException $e) {
+            error_log('edit.php save: ' . $e->getMessage());
+            if ($ajax) ed_json(['ok' => false, 'error' => 'Ошибка базы данных — изменения не сохранены'], 500);
             $error_msg = 'Ошибка сохранения: ' . $e->getMessage();
+        }
         }
 
     } elseif ($action === 'moderation') {
@@ -371,6 +465,39 @@ $lang_options = [
 $langs_saved  = array_map('trim', explode(',', $game['languages'] ?? ''));
 
 function ev(array $a, string $k): string { return htmlspecialchars($a[$k] ?? ''); }
+
+// Автосохранение — только для черновика: сохранение опубликованной/одобренной игры возвращает её на модерацию
+$ed_autosave = ($game['status'] ?? '') !== 'published' && ($game['moderation_status'] ?? 'draft') === 'draft';
+
+// ── Вкладки: «Общие» + платформы ──
+$ed_tab = (string)($_GET['tab'] ?? '');
+if (!in_array($ed_tab, array_merge(['general'], array_column(ED_PLAT, 'id')), true)) {
+    $ed_tab = 'general';
+    if (isset($_GET['dpxtoken'])) { // токен deplex создаётся из вкладки десктопа — туда и возвращаем
+        $ed_tab = 'windows';
+        foreach (ED_DESKTOP as $pl) if (in_array($pl, $platforms_saved, true)) { $ed_tab = ED_PLAT[$pl]['id']; break; }
+    }
+}
+
+// Требования: сохранённые по платформе; для старых проектов — подхватываем games.requirements
+// в первую включённую платформу (совпавшие подписи — в поля, остальное — в «Дополнительно»).
+$legacy_req = [];
+foreach (json_decode($game['requirements'] ?? '[]', true) ?: [] as $r) {
+    if (is_array($r) && ($r['value'] ?? '') !== '') $legacy_req[(string)($r['label'] ?? '')] = (string)$r['value'];
+}
+$req_vals = [];
+foreach (array_keys(ED_PLAT) as $pl) {
+    $saved = json_decode($builds_by_platform[$pl]['requirements'] ?? '', true) ?: [];
+    $req_vals[$pl] = array_column($saved, 'value', 'key');
+    if (!$saved && $legacy_req && in_array($pl, $platforms_saved, true)) {
+        $rest = $legacy_req;
+        foreach (ed_req_fields($pl) as $k => [$label]) {
+            if (isset($rest[$label])) { $req_vals[$pl][$k] = $rest[$label]; unset($rest[$label]); }
+        }
+        if ($rest) $req_vals[$pl]['other'] = implode('; ', array_map(fn($l, $v) => $l ? "$l: $v" : $v, array_keys($rest), $rest));
+        $legacy_req = [];
+    }
+}
 ?>
 
 <?php if ($success_msg): ?><div class="alert alert-ok"><?= htmlspecialchars($success_msg) ?></div><?php endif; ?>
@@ -541,491 +668,297 @@ if (in_array($mod_status, ['pending','rejected'])):
 <form method="POST" id="form-resubmit" style="display:none;">
     <input type="hidden" name="action" value="resubmit_moderation">
 </form>
-<div class="card" style="margin-bottom:16px;">
-    <div class="card-title"><span class="material-icons">visibility</span>Просмотр страницы</div>
-    <p style="font-size:12px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
-        Открой публичную страницу как её видят игроки. Неопубликованная/скрытая игра доступна тебе всегда,
-        а другим — по временной ссылке (7 дней).
-    </p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <a href="/g/<?= $project_id ?>" target="_blank" class="btn btn-g" style="font-size:12px;">
-            <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть страницу
-        </a>
-        <form method="POST" style="display:inline;">
-            <input type="hidden" name="action" value="make_preview_link">
-            <button type="submit" class="btn btn-g" style="font-size:12px;">
-                <span class="material-icons" style="font-size:15px;">link</span><?= !empty($game['preview_token']) ? 'Обновить ссылку' : 'Ссылка для просмотра' ?>
-            </button>
-        </form>
-    </div>
-    <?php if (!empty($game['preview_token']) && !empty($game['preview_expires']) && strtotime($game['preview_expires']) > time()): ?>
-    <div style="margin-top:12px;padding:10px 12px;background:rgba(195,33,120,.06);border:1px solid rgba(195,33,120,.2);border-radius:8px;">
-        <div style="font-size:11px;color:var(--tm);margin-bottom:6px;">Временная ссылка (до <?= date('d.m.Y H:i', strtotime($game['preview_expires'])) ?>):</div>
-        <input type="text" readonly onclick="this.select()"
-               value="https://dustore.ru/g/<?= $project_id ?>?preview=<?= htmlspecialchars($game['preview_token']) ?>"
-               style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 10px;color:var(--ts);font-size:12px;">
-    </div>
-    <?php endif; ?>
-</div>
-<div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
-  <div style="display:flex;flex-direction:column;gap:14px;" id="left-col">
+<!-- Форма сохранения пустая: поля разбросаны по вкладкам и привязаны к ней атрибутом form="save-form".
+     Так внутри вкладок можно держать свои формы (анонс, джем, токен deplex) без вложенных <form>. -->
+<form method="POST" enctype="multipart/form-data" id="save-form">
+    <input type="hidden" name="action" value="save">
+    <?= csrf_field() ?>
+    <input type="hidden" name="tab" id="ed-tab-input" value="<?= $ed_tab ?>">
+</form>
 
-    <form method="POST" enctype="multipart/form-data" id="save-form">
-        <input type="hidden" name="action" value="save">
-        <div style="display:flex;flex-direction:column;gap:14px;">
+<nav class="ed-tabs" role="tablist">
+    <button type="button" class="ed-tab<?= $ed_tab === 'general' ? ' on' : '' ?>" data-tab="general">
+        <span class="material-icons">tune</span>Общие
+    </button>
+    <span class="ed-tabs-sep"></span>
+    <?php foreach (ED_PLAT as $pl => $m):
+        $on = in_array($pl, $platforms_saved, true);
+        $hasB = !empty($builds_by_platform[$pl]['build_url']); ?>
+    <button type="button" class="ed-tab<?= $ed_tab === $m['id'] ? ' on' : '' ?><?= $on ? '' : ' off' ?>" data-tab="<?= $m['id'] ?>">
+        <span class="material-icons"><?= $m['icon'] ?></span><?= $pl ?>
+        <span class="ed-dot"<?= $hasB ? '' : ' hidden' ?> title="Билд загружен"></span>
+    </button>
+    <?php endforeach; ?>
+</nav>
 
-            <div class="card" id="c-basic">
-                <div class="card-title"><span class="material-icons">info</span>Основная информация</div>
-                <div class="grid-2">
-                    <div class="field col-full">
-                        <label>Название *</label>
-                        <input type="text" name="name" value="<?= ev($game,'name') ?>" required maxlength="64">
-                    </div>
-                    <div class="field">
-                        <label>Жанр</label>
-                        <select name="genre">
-                            <?php foreach (['Платформер','RPG','Аркада','Стратегия','Головоломка','Экшн','Симулятор','Хоррор','Приключение','Визуальная новелла','Файтинг','Гонки','Другое'] as $g): ?>
-                            <option<?= $game['genre'] === $g ? ' selected' : '' ?>><?= $g ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label>Возрастной рейтинг</label>
-                        <select name="age_rating">
-                            <?php foreach (['0+','6+','12+','16+','18+'] as $a): ?>
-                            <option<?= $game['age_rating'] === $a ? ' selected' : '' ?>><?= $a ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="field col-full">
-                        <label>Краткое описание</label>
-                        <input type="text" name="short_description" value="<?= ev($game,'short_description') ?>" maxlength="200">
-                    </div>
-                    <div class="field col-full">
-                        <label>Описание</label>
-                        <textarea name="description" style="min-height:140px;"><?= ev($game,'description') ?></textarea>
-                    </div>
-                    <div class="field">
-                        <label>Дата релиза</label>
-                        <input type="date" name="release_date" value="<?= ev($game,'release_date') ?>">
-                    </div>
-                    <div class="field">
-                        <label>Сайт проекта</label>
-                        <input type="url" name="website" value="<?= ev($game,'game_website') ?>" placeholder="https://...">
-                    </div>
-                    <div class="field">
-                        <label>Исполняемый файл</label>
-                        <input type="text" name="game_exec" value="<?= ev($game,'game_exec') ?>">
-                    </div>
-                </div>
+<!-- ═══════════════ ОБЩИЕ ═══════════════ -->
+<section class="ed-pane" data-tab="general"<?= $ed_tab === 'general' ? '' : ' hidden' ?>>
+<div class="ed-cols">
+  <div class="ed-col">
+
+    <div class="card" id="c-basic">
+        <div class="card-title"><span class="material-icons">info</span>Основная информация</div>
+        <div class="grid-2">
+            <div class="field col-full">
+                <label>Название *</label>
+                <input type="text" name="name" form="save-form" value="<?= ev($game,'name') ?>" required maxlength="64">
             </div>
-
-            <div class="card" id="c-platforms">
-                <div class="card-title"><span class="material-icons">devices</span>Платформы и языки</div>
-                <div class="field">
-                    <label>Платформы</label>
-                    <div style="display:flex;flex-wrap:wrap;gap:12px;">
-                        <?php foreach (['Windows','macOS','Linux','Android','iOS','Web'] as $pl): ?>
-                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);cursor:pointer;">
-                            <input type="checkbox" name="platform[]" value="<?= $pl ?>"
-                                   style="accent-color:var(--p);"
-                                <?= in_array($pl, $platforms_saved) ? 'checked' : '' ?>> <?= $pl ?>
+            <div class="field">
+                <label>Жанр</label>
+                <select name="genre" form="save-form">
+                    <?php foreach (['Платформер','RPG','Аркада','Стратегия','Головоломка','Экшн','Симулятор','Хоррор','Приключение','Визуальная новелла','Файтинг','Гонки','Другое'] as $g): ?>
+                    <option<?= $game['genre'] === $g ? ' selected' : '' ?>><?= $g ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="field">
+                <label>Возрастной рейтинг</label>
+                <select name="age_rating" form="save-form">
+                    <?php foreach (['0+','6+','12+','16+','18+'] as $a): ?>
+                    <option<?= $game['age_rating'] === $a ? ' selected' : '' ?>><?= $a ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="field col-full">
+                <label>Краткое описание</label>
+                <input type="text" name="short_description" form="save-form" value="<?= ev($game,'short_description') ?>" maxlength="200">
+            </div>
+            <div class="field col-full">
+                <label>Описание</label>
+                <textarea name="description" form="save-form" style="min-height:140px;"><?= ev($game,'description') ?></textarea>
+            </div>
+            <div class="field">
+                <label>Дата релиза</label>
+                <input type="date" name="release_date" form="save-form" value="<?= ev($game,'release_date') ?>">
+            </div>
+            <div class="field">
+                <label>Сайт проекта</label>
+                <input type="url" name="website" form="save-form" value="<?= ev($game,'game_website') ?>" placeholder="https://...">
+            </div>
+            <div class="field col-full">
+                <label>Языки интерфейса</label>
+                <div style="position:relative;">
+                    <button type="button" id="lang-trigger" class="ed-select">
+                        <span id="lang-label"><?= !empty(array_filter($langs_saved)) ? htmlspecialchars(implode(', ', array_filter($langs_saved))) : 'Выберите языки...' ?></span>
+                        <span id="lang-arrow" style="font-size:10px;transition:transform .2s;flex-shrink:0;margin-left:8px;">▾</span>
+                    </button>
+                    <div id="lang-menu" class="ed-menu" style="display:none;">
+                        <?php foreach ($lang_options as $lang): ?>
+                        <label>
+                            <input type="checkbox" name="languages_list[]" value="<?= $lang ?>" style="accent-color:var(--p);width:14px;height:14px;flex-shrink:0;"
+                                <?= in_array($lang, $langs_saved) ? 'checked' : '' ?>>
+                            <?= $lang ?>
                         </label>
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <div class="field">
-                    <label>Языки интерфейса</label>
-                    <div style="position:relative;max-width:50%;">
-                        <button type="button" id="lang-trigger"
-                                style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;
-                                       padding:8px 14px;cursor:pointer;font-size:13px;color:var(--ts);
-                                       display:flex;align-items:center;justify-content:space-between;
-                                       text-align:left;min-height:38px;">
-                            <span id="lang-label"><?= !empty(array_filter($langs_saved)) ? htmlspecialchars(implode(', ', array_filter($langs_saved))) : 'Выберите языки...' ?></span>
-                            <span id="lang-arrow" style="font-size:10px;transition:transform .2s;flex-shrink:0;margin-left:8px;">▾</span>
-                        </button>
-                        <div id="lang-menu"
-                             style="display:none;position:absolute;z-index:999;top:calc(100% + 4px);left:0;right:0;
-                                    background:#1a2030;border:1px solid #2a3347;border-radius:10px;
-                                    padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.6);">
-                            <?php foreach ($lang_options as $lang): ?>
-                            <label style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;
-                                          cursor:pointer;font-size:13px;color:var(--ts);transition:background .15s;">
-                                <input type="checkbox" name="languages_list[]" value="<?= $lang ?>"
-                                       style="accent-color:var(--p);width:14px;height:14px;flex-shrink:0;"
-                                    <?= in_array($lang, $langs_saved) ? 'checked' : '' ?>>
-                                <?= $lang ?>
-                            </label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <input type="hidden" name="languages" id="languages-hidden" value="<?= ev($game,'languages') ?>">
-                </div>
+                <input type="hidden" name="languages" form="save-form" id="languages-hidden" value="<?= ev($game,'languages') ?>">
             </div>
+        </div>
+    </div>
 
-            <!-- Файл игры вынесён из формы save (ниже, вне <form>) — иначе вложенный <form> Deplex ломал сохранение -->
-
-            <div class="card" id="c-trailer">
-                <div class="card-title"><span class="material-icons">movie</span>Трейлер</div>
-                <div class="field">
-                    <label>Ссылка на трейлер</label>
-                    <input type="url" name="trailer_url" id="trailer-url-input"
-                           value="<?= ev($game,'trailer_url') ?>" placeholder="https://...">
-                    <div style="font-size:11px;color:var(--tm);margin-top:4px;">
-                        Видео на YouTube могут не загружаться у пользователей без VPN
-                    </div>
-                </div>
-                <?php $trailerPreviewHtml = trailer_embed($game['trailer_url'] ?? ''); ?>
-                <style>#trailer-embed-box iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}</style>
-                <div id="trailer-preview" style="<?= $trailerPreviewHtml === '' ? 'display:none;' : '' ?>margin-top:10px;position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid var(--elev);">
-                    <div id="trailer-embed-box" style="position:absolute;inset:0;"><?= $trailerPreviewHtml ?></div>
-                </div>
+    <div class="card" id="c-trailer">
+        <div class="card-title"><span class="material-icons">movie</span>Трейлер</div>
+        <div class="field">
+            <label>Ссылка на трейлер</label>
+            <input type="url" name="trailer_url" form="save-form" id="trailer-url-input"
+                   value="<?= ev($game,'trailer_url') ?>" placeholder="https://...">
+            <div style="font-size:11px;color:var(--tm);margin-top:4px;">
+                Видео на YouTube могут не загружаться у пользователей без VPN
             </div>
+        </div>
+        <?php $trailerPreviewHtml = trailer_embed($game['trailer_url'] ?? ''); ?>
+        <style>#trailer-embed-box iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}</style>
+        <div id="trailer-preview" style="<?= $trailerPreviewHtml === '' ? 'display:none;' : '' ?>margin-top:10px;position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid var(--elev);">
+            <div id="trailer-embed-box" style="position:absolute;inset:0;"><?= $trailerPreviewHtml ?></div>
+        </div>
+    </div>
 
-            <div class="card" id="screenshots-card">
-                <div class="card-title" style="justify-content:space-between;">
-                    <span style="display:flex;align-items:center;gap:8px;">
-                        <span class="material-icons">photo_library</span>Скриншоты
-                    </span>
-                    <span id="scr-count-lbl" style="font-size:11px;color:var(--tm);"><?= count($screenshots) ?> / 10</span>
-                </div>
-                <div id="scr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px;">
-                    <?php foreach ($screenshots as $scr): ?>
-                    <div class="scr-item" data-url="<?= htmlspecialchars($scr['path'] ?? '') ?>"
-                         style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:16/9;background:var(--elev);">
-                        <img src="<?= htmlspecialchars($scr['path'] ?? '') ?>" style="width:100%;height:100%;object-fit:cover;">
-                        <button type="button" onclick="deleteScreenshot(this)"
-                                style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);
-                                       border:none;border-radius:6px;color:#fff;cursor:pointer;
-                                       width:26px;height:26px;font-size:15px;line-height:1;
-                                       display:flex;align-items:center;justify-content:center;">×</button>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <div id="scr-drop"
-                     style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:24px;
-                            text-align:center;cursor:pointer;transition:border-color .2s;"
-                     onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                    <span class="material-icons" style="font-size:28px;color:var(--p);display:block;margin-bottom:6px;">add_photo_alternate</span>
-                    <span style="font-size:13px;color:var(--ts);">Перетащите сюда скриншоты</span>
-                    <span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">jpg, png, webp, gif · до 15 МБ · максимум 10 штук</span>
-                </div>
-                <input type="file" id="scr-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
-                <div id="scr-progress" style="display:none;margin-top:10px;">
-                    <div style="height:6px;background:var(--elev);border-radius:3px;overflow:hidden;">
-                        <div id="scr-bar" style="height:100%;background:var(--p);width:0%;transition:width .3s;border-radius:3px;"></div>
-                    </div>
-                    <div id="scr-status" style="font-size:11px;color:var(--tm);margin-top:4px;"></div>
-                </div>
+    <div class="card" id="screenshots-card">
+        <div class="card-title" style="justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;">
+                <span class="material-icons">photo_library</span>Скриншоты витрины
+            </span>
+            <span id="scr-count-lbl" style="font-size:11px;color:var(--tm);"><?= count($screenshots) ?> / 10</span>
+        </div>
+        <div style="font-size:11px;color:var(--tm);margin:-6px 0 12px;">Галерея на странице игры. Скриншоты под конкретную платформу — на её вкладке.</div>
+        <div id="scr-grid" class="ed-scr-grid">
+            <?php foreach ($screenshots as $scr): ?>
+            <div class="scr-item ed-scr" data-url="<?= htmlspecialchars($scr['path'] ?? '') ?>">
+                <img src="<?= htmlspecialchars($scr['path'] ?? '') ?>">
+                <button type="button" onclick="deleteScreenshot(this)">×</button>
             </div>
+            <?php endforeach; ?>
+        </div>
+        <div id="scr-drop" class="ed-drop">
+            <span class="material-icons" style="font-size:28px;color:var(--p);display:block;margin-bottom:6px;">add_photo_alternate</span>
+            <span style="font-size:13px;color:var(--ts);">Перетащите сюда скриншоты</span>
+            <span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">jpg, png, webp, gif · до 15 МБ · максимум 10 штук</span>
+        </div>
+        <input type="file" id="scr-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
+        <div id="scr-progress" style="display:none;margin-top:10px;">
+            <div style="height:6px;background:var(--elev);border-radius:3px;overflow:hidden;">
+                <div id="scr-bar" style="height:100%;background:var(--p);width:0%;transition:width .3s;border-radius:3px;"></div>
+            </div>
+            <div id="scr-status" style="font-size:11px;color:var(--tm);margin-top:4px;"></div>
+        </div>
+    </div>
 
-            <div class="card">
-                <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;">
-                    <span class="material-icons">save</span>Сохранить изменения
+  </div>
+
+  <div class="ed-col">
+
+    <div class="card" id="c-media">
+        <div class="card-title"><span class="material-icons">image</span>Медиа</div>
+        <div class="ed-sub">Обложка <span>· 460×215</span></div>
+        <?php if (!empty($game['path_to_cover'])): ?>
+        <img src="<?= ev($game,'path_to_cover') ?>" id="current-cover"
+             style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;max-height:160px;">
+        <?php endif; ?>
+        <label for="cover_art" class="ed-drop ed-drop-sm" style="margin-bottom:16px;">
+            <span class="material-icons" style="font-size:22px;color:var(--p);display:block;margin-bottom:4px;">add_photo_alternate</span>
+            <span style="font-size:12px;color:var(--ts);display:block;"><?= !empty($game['path_to_cover']) ? 'Заменить обложку' : 'Загрузить обложку' ?></span>
+        </label>
+        <input type="file" id="cover_art" name="cover_art" accept="image/*" style="display:none;" form="save-form">
+        <div id="cover_wrap" style="display:none;margin-bottom:16px;">
+            <img id="cover_prev" src="" style="width:100%;border-radius:8px;object-fit:cover;max-height:120px;">
+        </div>
+
+        <div class="ed-sub">Иконка <span>· 512×512 · общая для всех платформ</span></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <div id="icon-preview-wrap" style="<?= empty($game['icon_url']) ? 'display:none;' : '' ?>flex-shrink:0;">
+                <img id="current-icon" src="<?= ev($game,'icon_url') ?>" class="ed-icon">
+            </div>
+            <label for="icon_art" class="ed-drop ed-drop-sm" style="flex:1;">
+                <span class="material-icons" style="font-size:20px;color:var(--p);display:block;margin-bottom:4px;">add_photo_alternate</span>
+                <span style="font-size:11px;color:var(--ts);display:block;" id="icon-label">
+                    <?= !empty($game['icon_url']) ? 'Заменить иконку' : 'Загрузить иконку' ?>
+                </span>
+            </label>
+        </div>
+        <input type="file" id="icon_art" name="icon_art" accept="image/*" style="display:none;" form="save-form">
+    </div>
+
+    <div class="card">
+        <div class="card-title"><span class="material-icons">visibility</span>Просмотр страницы</div>
+        <p style="font-size:12px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
+            Неопубликованная или скрытая игра доступна тебе всегда, другим — по временной ссылке (7 дней).
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <a href="/g/<?= $project_id ?>" target="_blank" class="btn btn-g" style="font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">open_in_new</span>Открыть
+            </a>
+            <form method="POST" style="display:inline;">
+                <input type="hidden" name="action" value="make_preview_link">
+                <button type="submit" class="btn btn-g" style="font-size:12px;">
+                    <span class="material-icons" style="font-size:15px;">link</span><?= !empty($game['preview_token']) ? 'Обновить ссылку' : 'Ссылка для просмотра' ?>
                 </button>
-                <a href="/devs/projects" class="btn btn-g" style="width:100%;justify-content:center;margin-top:8px;">
-                    ← Назад к проектам
-                </a>
-            </div>
+            </form>
+        </div>
+        <?php if (!empty($game['preview_token']) && !empty($game['preview_expires']) && strtotime($game['preview_expires']) > time()): ?>
+        <div style="margin-top:12px;padding:10px 12px;background:rgba(195,33,120,.06);border:1px solid rgba(195,33,120,.2);border-radius:8px;">
+            <div style="font-size:11px;color:var(--tm);margin-bottom:6px;">Временная ссылка (до <?= date('d.m.Y H:i', strtotime($game['preview_expires'])) ?>):</div>
+            <input type="text" readonly onclick="this.select()"
+                   value="https://dustore.ru/g/<?= $project_id ?>?preview=<?= htmlspecialchars($game['preview_token']) ?>"
+                   class="ed-input" style="font-size:12px;">
+        </div>
+        <?php endif; ?>
+    </div>
 
+    <form method="POST" id="announce-form">
+        <input type="hidden" name="action" value="save_announce">
+        <div class="card" style="border-color:rgba(255,170,0,.2);">
+            <div class="card-title">
+                <span class="material-icons" style="color:#ffaa00;">campaign</span>Анонс проекта
+            </div>
+            <p style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
+                Игроки смогут добавить игру в вишлист до её выхода и получат уведомление при публикации.
+            </p>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
+                <input type="checkbox" name="announce_enabled" id="ann-enabled"
+                       style="accent-color:var(--p);width:16px;height:16px;"
+                       <?= !empty($game['announce_enabled']) ? 'checked' : '' ?>>
+                <span style="font-size:13px;font-weight:600;">Включить анонс</span>
+            </label>
+            <div id="ann-fields" style="<?= empty($game['announce_enabled']) ? 'display:none;' : '' ?>">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:10px;">
+                    <input type="checkbox" name="announce_tbd" id="ann-tbd"
+                           style="accent-color:var(--p);width:16px;height:16px;"
+                           <?= !empty($game['announce_tbd']) ? 'checked' : '' ?>>
+                    <span style="font-size:12px;color:var(--ts);">Дата выхода неизвестна (TBD)</span>
+                </label>
+                <div class="field" id="ann-date-wrap" style="<?= !empty($game['announce_tbd']) ? 'display:none;' : '' ?>">
+                    <label>Планируемая дата выхода</label>
+                    <input type="date" name="announce_date" value="<?= htmlspecialchars($game['announce_date'] ?? '') ?>">
+                </div>
+                <?php if ($wl_total > 0): ?>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;
+                            background:rgba(255,170,0,.07);border-radius:8px;border:1px solid rgba(255,170,0,.15);">
+                    <span class="material-icons" style="font-size:16px;color:#ffaa00;">favorite</span>
+                    <span style="font-size:12px;color:var(--ts);">
+                        <strong style="color:#ffaa00;"><?= $wl_total ?></strong>
+                        <?= $wl_total === 1 ? 'игрок' : ($wl_total < 5 ? 'игрока' : 'игроков') ?> добавили в вишлист
+                    </span>
+                </div>
+                <?php endif; ?>
+            </div>
+            <button type="submit" class="btn btn-g" style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
+                <span class="material-icons" style="font-size:15px;">save</span>Сохранить анонс
+            </button>
         </div>
     </form>
 
-    <!-- ═══ ФАЙЛ ИГРЫ (вне формы save: в Deplex-табе свой <form>, вкладывать нельзя) ═══ -->
-    <div class="card">
-        <div class="card-title"><span class="material-icons">folder_zip</span>Файл игры</div>
-        <div style="display:flex;gap:6px;margin-bottom:14px;">
-            <button type="button" class="btn btn-p dpx-tab" data-tab="web" style="padding:6px 14px;font-size:12px;">Загрузить архив</button>
-            <button type="button" class="btn btn-g dpx-tab" data-tab="deplex" style="padding:6px 14px;font-size:12px;">Через deplex (CLI)</button>
-        </div>
-        <div class="dpx-pane" data-pane="web">
-        <div style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
-            У каждой платформы — свой файл. Активная для скачивания/веб-плеера — та, что загружена последней
-            <?php if (count($platforms_list) > 1): ?>(на любой вкладке ниже)<?php endif; ?>.
-        </div>
-
-        <div id="platform-empty-hint" style="<?= !empty($platforms_list) ? 'display:none;' : '' ?>font-size:12px;color:var(--tm);padding:12px 0;">
-            Сначала выберите хотя бы одну платформу выше (раздел «Платформы и языки»).
-        </div>
-
-        <div id="platform-tabs" style="<?= empty($platforms_list) ? 'display:none;' : 'display:flex;' ?>flex-wrap:wrap;gap:6px;margin-bottom:14px;">
-            <?php foreach ($platforms_list as $i => $pl): $b = $builds_by_platform[$pl] ?? null; ?>
-            <button type="button" class="btn <?= $i === 0 ? 'btn-p' : 'btn-g' ?> plat-tab" data-plat="<?= htmlspecialchars($pl) ?>"
-                    style="padding:6px 14px;font-size:12px;position:relative;">
-                <?= htmlspecialchars($pl) ?>
-                <?php if (!empty($b['build_url'])): ?><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-left:6px;"></span><?php endif; ?>
-            </button>
-            <?php endforeach; ?>
-        </div>
-
-        <div id="platform-panes" style="<?= empty($platforms_list) ? 'display:none;' : '' ?>">
-            <?php foreach ($platforms_list as $i => $pl):
-                $b         = $builds_by_platform[$pl] ?? null;
-                $isMobile  = in_array($pl, ['Android', 'iOS'], true);
-                $hasBuild  = !empty($b['build_url']);
-                $buildSize = !empty($b['build_size']) ? round($b['build_size'] / 1048576, 1) . ' МБ' : '';
-                $buildScr  = $b ? (json_decode($b['screenshots'] ?? '[]', true) ?: []) : [];
-                $acceptExt = $pl === 'Android' ? '.apk' : ($pl === 'iOS' ? '.ipa' : '.zip');
-                $iconClr   = $pl === 'Android' ? '#a4c639' : 'var(--p)';
-                $matIcon   = $pl === 'Android' ? 'android' : ($pl === 'iOS' ? 'phone_iphone' : 'upload_file');
-            ?>
-            <div class="plat-pane" data-plat="<?= htmlspecialchars($pl) ?>" <?= $i === 0 ? '' : 'hidden' ?>>
-
-                <?php if ($pl === 'iOS'):
-                    $iosVers = [];
-                    try {
-                        require_once(__DIR__ . '/../swad/controllers/ios_source.php');
-                        ios_ensure_tables($conn);
-                        $iv = $conn->prepare("SELECT bundle_id, version, build, created_at FROM ios_app_versions WHERE game_id = ?");
-                        $iv->execute([$project_id]);
-                        $iosVers = $iv->fetchAll(PDO::FETCH_ASSOC);
-                        usort($iosVers, fn($x, $y) => ios_is_newer($x['version'], $x['build'], $y['version'], $y['build']) ? -1 : 1);
-                    } catch (\Throwable $e) { error_log('edit.php ios: ' . $e->getMessage()); }
-                ?>
-                <div style="font-size:11px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
-                    Дистрибуция через AltStore: загрузите <b>неподписанный</b> .ipa — bundle id, версия и minOS
-                    прочитаются из самого файла, а приложение появится в источнике
-                    <code>https://dustore.ru/source.json</code>. Для обновления загрузите .ipa с бо́льшей версией
-                    или номером сборки. Приложение видно в источнике, когда игра опубликована.
-                </div>
-                <?php if ($iosVers): ?>
-                <div style="font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7;">
-                    <b><?= htmlspecialchars($iosVers[0]['bundle_id']) ?></b>
-                    <?php foreach (array_slice($iosVers, 0, 5) as $k => $iv2): ?>
-                    <div style="<?= $k ? 'color:var(--tm);' : '' ?>">
-                        v<?= htmlspecialchars($iv2['version']) ?> (<?= htmlspecialchars($iv2['build']) ?>) · <?= htmlspecialchars(substr($iv2['created_at'], 0, 10)) ?><?= $k ? '' : ' · текущая' ?>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-                <?php endif; ?>
-
-                <?php if ($hasBuild): ?>
-                <div class="alert alert-ok" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-                    <span class="material-icons" style="font-size:18px;">check_circle</span>
-                    <div>Билд для <?= htmlspecialchars($pl) ?> загружен<?= $buildSize ? " · {$buildSize}" : '' ?></div>
-                </div>
-                <?php endif; ?>
-
-                <div class="plat-drop" data-plat="<?= htmlspecialchars($pl) ?>"
-                     style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;"
-                     onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                    <span class="material-icons" style="font-size:32px;color:<?= $iconClr ?>;display:block;margin-bottom:8px;"><?= $matIcon ?></span>
-                    <span class="plat-drop-label" style="font-size:13px;color:var(--ts);display:block;">
-                        <?= $hasBuild ? 'Заменить билд' : 'Загрузить билд' ?> для <?= htmlspecialchars($pl) ?>
-                    </span>
-                    <span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
-                        <?= $acceptExt ?> · любой размер — собираем в один файл на S3
-                    </span>
-                </div>
-                <input type="file" class="plat-input" data-plat="<?= htmlspecialchars($pl) ?>" accept="<?= $acceptExt ?>" style="display:none;">
-                <div class="plat-progress" data-plat="<?= htmlspecialchars($pl) ?>" style="display:none;margin-top:14px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                        <span class="plat-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
-                        <span class="plat-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
-                    </div>
-                    <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
-                        <div class="plat-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
-                    </div>
-                </div>
-
-                <?php if ($isMobile): ?>
-                <div style="margin-top:20px;padding-top:16px;border-top:1px solid #2a3347;">
-                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:10px;">
-                        Специфично для <?= htmlspecialchars($pl) ?>
-                    </div>
-
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-                        <div class="plat-icon-wrap" data-plat="<?= htmlspecialchars($pl) ?>" style="<?= empty($b['icon_url']) ? 'display:none;' : '' ?>flex-shrink:0;">
-                            <img class="plat-icon-img" src="<?= htmlspecialchars($b['icon_url'] ?? '') ?>" style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid #2a3347;">
-                        </div>
-                        <label style="flex:1;display:block;border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">
-                            <span class="material-icons" style="font-size:18px;color:var(--p);display:block;margin-bottom:2px;">add_photo_alternate</span>
-                            <span style="font-size:11px;color:var(--ts);">Иконка для <?= htmlspecialchars($pl) ?> <span style="color:var(--tm);">· необязательно, иначе общая</span></span>
-                            <input type="file" class="plat-icon-input" data-plat="<?= htmlspecialchars($pl) ?>" accept="image/*" style="display:none;">
-                        </label>
-                    </div>
-
-                    <div style="margin-bottom:16px;">
-                        <div style="font-size:12px;color:var(--ts);margin-bottom:8px;">Вертикальные скриншоты <span style="color:var(--tm);">(9:16)</span></div>
-                        <div class="plat-scr-grid" data-plat="<?= htmlspecialchars($pl) ?>" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:10px;">
-                            <?php foreach ($buildScr as $scr): ?>
-                            <div class="plat-scr-item" data-url="<?= htmlspecialchars($scr['path'] ?? '') ?>" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:9/16;background:var(--elev);">
-                                <img src="<?= htmlspecialchars($scr['path'] ?? '') ?>" style="width:100%;height:100%;object-fit:cover;">
-                                <button type="button" class="plat-scr-del" data-plat="<?= htmlspecialchars($pl) ?>" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;border-radius:5px;color:#fff;cursor:pointer;width:20px;height:20px;font-size:13px;line-height:1;">×</button>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                        <div class="plat-scr-drop" data-plat="<?= htmlspecialchars($pl) ?>" style="border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:11px;color:var(--ts);">
-                            + добавить скриншоты
-                        </div>
-                        <input type="file" class="plat-scr-input" data-plat="<?= htmlspecialchars($pl) ?>" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
-                    </div>
-
-                    <div class="field">
-                        <label style="font-size:12px;">Запрашиваемые разрешения</label>
-                        <textarea class="plat-permissions" data-plat="<?= htmlspecialchars($pl) ?>" rows="3"
-                                  placeholder="По одному на строку: камера, геолокация, микрофон..."
-                                  style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--ts);resize:vertical;"><?= htmlspecialchars($b['permissions'] ?? '') ?></textarea>
-                        <div class="plat-perm-status" data-plat="<?= htmlspecialchars($pl) ?>" style="font-size:10px;color:var(--tm);margin-top:4px;height:12px;"></div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
+    <form method="POST" id="jam-form">
+        <input type="hidden" name="action" value="save_jam">
+        <div class="card" style="border-color:rgba(195,33,120,.25);">
+            <div class="card-title">
+                <span class="material-icons" style="color:var(--p);">sports_esports</span>Участие в джеме
             </div>
-            <?php endforeach; ?>
-        </div>
-        </div><!-- /pane web -->
-
-        <div class="dpx-pane" data-pane="deplex" hidden>
-            <?php include(__DIR__ . '/../swad/controllers/devs_edit_deplex_tab.php'); ?>
-        </div>
-    </div>
-
-  </div><!-- /left-col -->
-
-    <div style="display:flex;flex-direction:column;gap:14px;">
-
-        <!-- Обложка + Иконка -->
-        <div class="card" id="c-media">
-            <div class="card-title"><span class="material-icons">image</span>Медиа</div>
-
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:8px;">
-                Обложка <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--tm);">· 460×215</span>
-            </div>
-            <?php if (!empty($game['path_to_cover'])): ?>
-            <img src="<?= ev($game,'path_to_cover') ?>" id="current-cover"
-                 style="width:100%;border-radius:8px;margin-bottom:8px;object-fit:cover;max-height:160px;">
-            <?php endif; ?>
-            <label for="cover_art"
-                   style="display:block;border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:16px;
-                          text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:16px;"
-                   onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                <span class="material-icons" style="font-size:22px;color:var(--p);display:block;margin-bottom:4px;">add_photo_alternate</span>
-                <span style="font-size:12px;color:var(--ts);display:block;"><?= !empty($game['path_to_cover']) ? 'Заменить обложку' : 'Загрузить обложку' ?></span>
-            </label>
-            <input type="file" id="cover_art" name="cover_art" accept="image/*" style="display:none;" form="save-form">
-            <div id="cover_wrap" style="display:none;margin-bottom:16px;">
-                <img id="cover_prev" src="" style="width:100%;border-radius:8px;object-fit:cover;max-height:120px;">
-            </div>
-
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:8px;">
-                Иконка <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--tm);">· 512×512</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div id="icon-preview-wrap" style="<?= empty($game['icon_url']) ? 'display:none;' : '' ?>flex-shrink:0;">
-                    <img id="current-icon" src="<?= ev($game,'icon_url') ?>"
-                         style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #2a3347;">
+            <?php if ($jam_locked && $current_sprint): ?>
+                <div style="font-size:12px;color:var(--ts);margin-bottom:6px;">
+                    Проект участвует в джеме <strong><?= htmlspecialchars($current_sprint['title']) ?></strong>.
                 </div>
-                <label for="icon_art"
-                       style="flex:1;display:block;border:2px dashed rgba(195,33,120,.3);border-radius:10px;
-                              padding:14px;text-align:center;cursor:pointer;transition:border-color .2s;"
-                       onmouseover="this.style.borderColor='var(--p)'" onmouseout="this.style.borderColor='rgba(195,33,120,.3)'">
-                    <span class="material-icons" style="font-size:20px;color:var(--p);display:block;margin-bottom:4px;">add_photo_alternate</span>
-                    <span style="font-size:11px;color:var(--ts);display:block;" id="icon-label">
-                        <?= !empty($game['icon_url']) ? 'Заменить иконку' : 'Загрузить иконку' ?>
-                    </span>
-                </label>
-            </div>
-            <input type="file" id="icon_art" name="icon_art" accept="image/*" style="display:none;" form="save-form">
-        </div>
-
-        <form method="POST" id="announce-form">
-            <input type="hidden" name="action" value="save_announce">
-            <div class="card" style="border-color:rgba(255,170,0,.2);">
-                <div class="card-title">
-                    <span class="material-icons" style="color:#ffaa00;">campaign</span>Анонс проекта
-                </div>
+                <div style="font-size:11px;color:var(--tm);">Идёт голосование или джем завершён — привязку менять нельзя.</div>
+            <?php else: ?>
                 <p style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
-                    Игроки смогут добавить игру в вишлист до её выхода и получат уведомление при публикации.
+                    Прикрепите проект к джему — после модерации он появится на странице голосования.
                 </p>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
-                    <input type="checkbox" name="announce_enabled" id="ann-enabled"
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+                    <input type="checkbox" name="jam_enabled" id="jam-enabled" value="1"
+                           onchange="document.getElementById('jam-select-wrap').style.display=this.checked?'':'none';"
                            style="accent-color:var(--p);width:16px;height:16px;"
-                           <?= !empty($game['announce_enabled']) ? 'checked' : '' ?>>
-                    <span style="font-size:13px;font-weight:600;">Включить анонс</span>
+                           <?= $current_sprint ? 'checked' : '' ?>>
+                    <span style="font-size:13px;font-weight:600;">Участвует в джеме</span>
                 </label>
-                <div id="ann-fields" style="<?= empty($game['announce_enabled']) ? 'display:none;' : '' ?>">
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:10px;">
-                        <input type="checkbox" name="announce_tbd" id="ann-tbd"
-                               style="accent-color:var(--p);width:16px;height:16px;"
-                               <?= !empty($game['announce_tbd']) ? 'checked' : '' ?>>
-                        <span style="font-size:12px;color:var(--ts);">Дата выхода неизвестна (TBD)</span>
-                    </label>
-                    <div class="field" id="ann-date-wrap" style="<?= !empty($game['announce_tbd']) ? 'display:none;' : '' ?>">
-                        <label>Планируемая дата выхода</label>
-                        <input type="date" name="announce_date" value="<?= htmlspecialchars($game['announce_date'] ?? '') ?>">
-                    </div>
-                    <?php if ($wl_total > 0): ?>
-                    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;
-                                background:rgba(255,170,0,.07);border-radius:8px;border:1px solid rgba(255,170,0,.15);">
-                        <span class="material-icons" style="font-size:16px;color:#ffaa00;">favorite</span>
-                        <span style="font-size:12px;color:var(--ts);">
-                            <strong style="color:#ffaa00;"><?= $wl_total ?></strong>
-                            <?= $wl_total === 1 ? 'игрок' : ($wl_total < 5 ? 'игрока' : 'игроков') ?> добавили в вишлист
-                        </span>
-                    </div>
-                    <?php endif; ?>
+                <div class="field" id="jam-select-wrap" style="<?= $current_sprint ? '' : 'display:none;' ?>">
+                    <label>Джем</label>
+                    <select name="sprint_id" style="width:100%;">
+                        <?php $listed = false; foreach ($open_jams as $j):
+                            $sel = $current_sprint && (int)$current_sprint['id'] === (int)$j['id'];
+                            if ($sel) $listed = true; ?>
+                        <option value="<?= (int)$j['id'] ?>"<?= $sel ? ' selected' : '' ?>><?= htmlspecialchars($j['title']) ?></option>
+                        <?php endforeach; ?>
+                        <?php if ($current_sprint && !$listed): ?>
+                        <option value="<?= (int)$current_sprint['id'] ?>" selected><?= htmlspecialchars($current_sprint['title']) ?> (текущий)</option>
+                        <?php endif; ?>
+                    </select>
                 </div>
-                <button type="submit" class="btn btn-g" style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
-                    <span class="material-icons" style="font-size:15px;">save</span>Сохранить анонс
+                <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
+                    <span class="material-icons" style="font-size:15px;">save</span>Сохранить участие
                 </button>
-            </div>
-        </form>
+            <?php endif; ?>
+        </div>
+    </form>
 
-        <!-- ═══ УЧАСТИЕ В ДЖЕМЕ ═══ -->
-        <form method="POST" id="jam-form">
-            <input type="hidden" name="action" value="save_jam">
-            <div class="card" style="border-color:rgba(195,33,120,.25);">
-                <div class="card-title">
-                    <span class="material-icons" style="color:var(--p);">sports_esports</span>Участие в джеме
-                </div>
-                <?php if ($jam_locked && $current_sprint): ?>
-                    <div style="font-size:12px;color:var(--ts);margin-bottom:6px;">
-                        Проект участвует в джеме <strong><?= htmlspecialchars($current_sprint['title']) ?></strong>.
-                    </div>
-                    <div style="font-size:11px;color:var(--tm);">Идёт голосование или джем завершён — привязку менять нельзя.</div>
-                <?php else: ?>
-                    <p style="font-size:11px;color:var(--tm);margin-bottom:12px;line-height:1.5;">
-                        Прикрепите проект к джему — после модерации он появится на странице голосования.
-                    </p>
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
-                        <input type="checkbox" name="jam_enabled" id="jam-enabled" value="1"
-                               onchange="document.getElementById('jam-select-wrap').style.display=this.checked?'':'none';"
-                               style="accent-color:var(--p);width:16px;height:16px;"
-                               <?= $current_sprint ? 'checked' : '' ?>>
-                        <span style="font-size:13px;font-weight:600;">Участвует в джеме</span>
-                    </label>
-                    <div class="field" id="jam-select-wrap" style="<?= $current_sprint ? '' : 'display:none;' ?>">
-                        <label>Джем</label>
-                        <select name="sprint_id" style="width:100%;">
-                            <?php $listed = false; foreach ($open_jams as $j):
-                                $sel = $current_sprint && (int)$current_sprint['id'] === (int)$j['id'];
-                                if ($sel) $listed = true; ?>
-                            <option value="<?= (int)$j['id'] ?>"<?= $sel ? ' selected' : '' ?>><?= htmlspecialchars($j['title']) ?></option>
-                            <?php endforeach; ?>
-                            <?php if ($current_sprint && !$listed): ?>
-                            <option value="<?= (int)$current_sprint['id'] ?>" selected><?= htmlspecialchars($current_sprint['title']) ?> (текущий)</option>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;margin-top:12px;font-size:12px;">
-                        <span class="material-icons" style="font-size:15px;">save</span>Сохранить участие
-                    </button>
-                <?php endif; ?>
-            </div>
-        </form>
-
-    </div>
+  </div>
 </div>
 
 <?php if ($is_owner): ?>
 <form method="POST" id="delete-form"
       onsubmit="return confirm('Удалить проект «<?= htmlspecialchars(addslashes($game['name'])) ?>»?\n\nЭто действие нельзя отменить.')">
     <input type="hidden" name="action" value="delete">
-    <div class="card" style="border-color:rgba(255,61,113,.25);margin-top:6px;">
+    <div class="card" style="border-color:rgba(255,61,113,.25);margin-top:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
             <div>
                 <div style="font-size:13px;font-weight:600;color:var(--err);">Зона опасности</div>
@@ -1038,535 +971,726 @@ if (in_array($mod_status, ['pending','rejected'])):
     </div>
 </form>
 <?php endif; ?>
+</section>
 
-<?php
-$is_locked = (($game['moderation_status'] ?? '') === 'pending') ? 'true' : 'false';
-$extra_js = <<<JS
-<script>
-const PID = {$project_id};
-const IS_LOCKED = {$is_locked};
-
-// ── Модалка модерации ─────────────────────────────────────────────────────
-var _modalAction = 'first';
-
-function openModerationModal(action) {
-    _modalAction = action;
-    var lbl = action === 'resubmit' ? 'Отправить повторно' : 'Отправить на модерацию';
-    document.getElementById('modal-confirm-label').textContent = lbl;
-    var modal = document.getElementById('moderation-modal');
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModerationModal() {
-    document.getElementById('moderation-modal').style.display = 'none';
-    document.body.style.overflow = '';
-}
-
-document.getElementById('modal-confirm-btn').addEventListener('click', function () {
-    closeModerationModal();
-    if (_modalAction === 'resubmit') {
-        document.getElementById('form-resubmit').submit();
-    } else {
-        document.getElementById('form-moderation').submit();
-    }
-});
-
-document.getElementById('moderation-modal').addEventListener('click', function (e) {
-    if (e.target === this) closeModerationModal();
-});
-
-// ── Анонс ─────────────────────────────────────────────────────────────────
-document.getElementById('ann-enabled').addEventListener('change', function () {
-    document.getElementById('ann-fields').style.display = this.checked ? '' : 'none';
-});
-document.getElementById('ann-tbd').addEventListener('change', function () {
-    document.getElementById('ann-date-wrap').style.display = this.checked ? 'none' : '';
-});
-
-// ── Платформы → вкладки билдов ──────────────────────────────────────────────
-// Вкладки для уже сохранённых платформ отрисованы в PHP (см. #platform-tabs /
-// #platform-panes выше). syncPlatformTabs() держит их в синхроне с чекбоксами
-// ДО сохранения формы — дев ставит галочку и сразу видит вкладку, не дожидаясь
-// перезагрузки страницы. Все клики/дропы/инпуты внутри вкладок — через
-// делегирование на document, поэтому не важно, отрисована вкладка PHP-ом или
-// добавлена этой функцией на лету — обработчики одни и те же.
-var PLATFORM_ORDER   = ['Windows', 'macOS', 'Linux', 'Android', 'iOS', 'Web'];
-var MOBILE_PLATFORMS = ['Android', 'iOS'];
-
-function platIconName(pl) { return pl === 'Android' ? 'android' : (pl === 'iOS' ? 'phone_iphone' : 'upload_file'); }
-function platAccept(pl)   { return pl === 'Android' ? '.apk'    : (pl === 'iOS' ? '.ipa'          : '.zip'); }
-
-function buildPlatMobileBlock(pl) {
-    return '' +
-    '<div style="margin-top:20px;padding-top:16px;border-top:1px solid #2a3347;">' +
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tm);margin-bottom:10px;">Специфично для ' + pl + '</div>' +
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
-            '<div class="plat-icon-wrap" data-plat="' + pl + '" style="display:none;flex-shrink:0;"><img class="plat-icon-img" src="" style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid #2a3347;"></div>' +
-            '<label style="flex:1;display:block;border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">' +
-                '<span class="material-icons" style="font-size:18px;color:var(--p);display:block;margin-bottom:2px;">add_photo_alternate</span>' +
-                '<span style="font-size:11px;color:var(--ts);">Иконка для ' + pl + ' <span style="color:var(--tm);">· необязательно, иначе общая</span></span>' +
-                '<input type="file" class="plat-icon-input" data-plat="' + pl + '" accept="image/*" style="display:none;">' +
-            '</label>' +
-        '</div>' +
-        '<div style="margin-bottom:16px;">' +
-            '<div style="font-size:12px;color:var(--ts);margin-bottom:8px;">Вертикальные скриншоты <span style="color:var(--tm);">(9:16)</span></div>' +
-            '<div class="plat-scr-grid" data-plat="' + pl + '" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:10px;"></div>' +
-            '<div class="plat-scr-drop" data-plat="' + pl + '" style="border:2px dashed rgba(195,33,120,.3);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:11px;color:var(--ts);">+ добавить скриншоты</div>' +
-            '<input type="file" class="plat-scr-input" data-plat="' + pl + '" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">' +
-        '</div>' +
-        '<div class="field">' +
-            '<label style="font-size:12px;">Запрашиваемые разрешения</label>' +
-            '<textarea class="plat-permissions" data-plat="' + pl + '" rows="3" placeholder="По одному на строку: камера, геолокация, микрофон..." style="width:100%;background:var(--bg);border:1px solid #2a3347;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--ts);resize:vertical;"></textarea>' +
-            '<div class="plat-perm-status" data-plat="' + pl + '" style="font-size:10px;color:var(--tm);margin-top:4px;height:12px;"></div>' +
-        '</div>' +
-    '</div>';
-}
-
-function buildPlatPane(pl) {
-    var iconColor = pl === 'Android' ? '#a4c639' : 'var(--p)';
-    var html = '' +
-    '<div class="plat-drop" data-plat="' + pl + '" style="border:2px dashed rgba(195,33,120,.3);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;">' +
-        '<span class="material-icons" style="font-size:32px;color:' + iconColor + ';display:block;margin-bottom:8px;">' + platIconName(pl) + '</span>' +
-        '<span class="plat-drop-label" style="font-size:13px;color:var(--ts);display:block;">Загрузить билд для ' + pl + '</span>' +
-        '<span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">' + platAccept(pl) + ' · любой размер — собираем в один файл на S3</span>' +
-    '</div>' +
-    '<input type="file" class="plat-input" data-plat="' + pl + '" accept="' + platAccept(pl) + '" style="display:none;">' +
-    '<div class="plat-progress" data-plat="' + pl + '" style="display:none;margin-top:14px;">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span class="plat-status" style="font-size:12px;color:var(--ts);">Подготовка...</span><span class="plat-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span></div>' +
-        '<div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;"><div class="plat-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div></div>' +
-    '</div>';
-    if (MOBILE_PLATFORMS.indexOf(pl) !== -1) html += buildPlatMobileBlock(pl);
-    return html;
-}
-
-function activatePlatTab(pl) {
-    document.querySelectorAll('#platform-tabs .plat-tab').forEach(function(t){
-        var on = t.dataset.plat === pl;
-        t.classList.toggle('btn-p', on); t.classList.toggle('btn-g', !on);
-    });
-    document.querySelectorAll('#platform-panes .plat-pane').forEach(function(p){
-        p.hidden = p.dataset.plat !== pl;
-    });
-}
-
-function syncPlatformTabs() {
-    var checkboxes = document.querySelectorAll('input[name="platform[]"]');
-    var checked = PLATFORM_ORDER.filter(function(pl){
-        return Array.from(checkboxes).some(function(c){ return c.checked && c.value === pl; });
-    });
-    var tabsWrap  = document.getElementById('platform-tabs');
-    var panesWrap = document.getElementById('platform-panes');
-    var emptyHint = document.getElementById('platform-empty-hint');
-    if (!tabsWrap || !panesWrap) return;
-
-    if (checked.length === 0) {
-        tabsWrap.style.display = 'none';
-        panesWrap.style.display = 'none';
-        if (emptyHint) emptyHint.style.display = '';
-        return;
-    }
-    if (emptyHint) emptyHint.style.display = 'none';
-    tabsWrap.style.display = 'flex';
-    panesWrap.style.display = '';
-
-    tabsWrap.querySelectorAll('.plat-tab').forEach(function(t){
-        if (checked.indexOf(t.dataset.plat) === -1) t.remove();
-    });
-    panesWrap.querySelectorAll('.plat-pane').forEach(function(p){
-        if (checked.indexOf(p.dataset.plat) === -1) p.remove();
-    });
-
-    checked.forEach(function(pl){
-        if (!tabsWrap.querySelector('.plat-tab[data-plat="' + pl + '"]')) {
-            var btn = document.createElement('button');
-            btn.type = 'button'; btn.className = 'btn btn-g plat-tab'; btn.dataset.plat = pl;
-            btn.style.cssText = 'padding:6px 14px;font-size:12px;position:relative;';
-            btn.textContent = pl;
-            tabsWrap.appendChild(btn);
-        }
-        if (!panesWrap.querySelector('.plat-pane[data-plat="' + pl + '"]')) {
-            var pane = document.createElement('div');
-            pane.className = 'plat-pane'; pane.dataset.plat = pl; pane.hidden = true;
-            pane.innerHTML = buildPlatPane(pl);
-            panesWrap.appendChild(pane);
-        }
-    });
-
-    var activeTab = tabsWrap.querySelector('.plat-tab.btn-p');
-    if (!activeTab || checked.indexOf(activeTab.dataset.plat) === -1) {
-        activatePlatTab(checked[0]);
-    }
-}
-
-document.querySelectorAll('input[name="platform[]"]').forEach(function(cb){
-    cb.addEventListener('change', syncPlatformTabs);
-});
-
-// ── Делегированные обработчики вкладок/дропзон (работают и для PHP-, и для
-// JS-отрисованных вкладок — обработчик один, элементов может быть сколько угодно) ──
-document.addEventListener('click', function (e) {
-    var tab = e.target.closest('.plat-tab');
-    if (tab) { activatePlatTab(tab.dataset.plat); return; }
-
-    var drop = e.target.closest('.plat-drop');
-    if (drop) {
-        var input = document.querySelector('.plat-input[data-plat="' + drop.dataset.plat + '"]');
-        if (input) input.click();
-        return;
-    }
-
-    var scrDrop = e.target.closest('.plat-scr-drop');
-    if (scrDrop) {
-        var si = document.querySelector('.plat-scr-input[data-plat="' + scrDrop.dataset.plat + '"]');
-        if (si) si.click();
-        return;
-    }
-
-    var del = e.target.closest('.plat-scr-del');
-    if (del) deletePlatformScreenshot(del);
-});
-
-document.addEventListener('change', function (e) {
-    if (e.target.classList.contains('plat-input')) {
-        var file = e.target.files[0];
-        if (file) uploadPlatformBuild(file, e.target.dataset.plat);
-    }
-    if (e.target.classList.contains('plat-icon-input')) {
-        var f2 = e.target.files[0];
-        if (f2) uploadPlatformIcon(f2, e.target.dataset.plat);
-    }
-    if (e.target.classList.contains('plat-scr-input')) {
-        if (e.target.files.length) uploadPlatformScreenshots(e.target.files, e.target.dataset.plat);
-        e.target.value = '';
-    }
-});
-
-// Разрешения — автосохранение по уходу с поля, без отдельной кнопки (та же
-// логика, что и у остальных async-виджетов на этой странице: скриншоты/иконка).
-document.addEventListener('blur', function (e) {
-    if (e.target.classList && e.target.classList.contains('plat-permissions')) {
-        savePlatformPermissions(e.target);
-    }
-}, true);
-
-// ── Загрузка билда (чанки → PHP → один объект в S3, без CORS) ──────────────
-async function uploadPlatformBuild(file, platform) {
-    var CHUNK = 5 * 1024 * 1024;               // 5 МБ на чанк
-    var total = Math.ceil(file.size / CHUNK) || 1;
-    var pane  = document.querySelector('.plat-pane[data-plat="' + platform + '"]');
-    if (!pane) return;
-    var prog = pane.querySelector('.plat-progress');
-    var bar  = pane.querySelector('.plat-bar');
-    var pct  = pane.querySelector('.plat-pct');
-    var stat = pane.querySelector('.plat-status');
-    prog.style.display   = 'block';
-    bar.style.background = platform === 'Android' ? '#a4c639' : 'var(--p)';
-    stat.style.color     = '';
-
-    for (var i = 0; i < total; i++) {
-        var fd = new FormData();
-        fd.append('chunk',        file.slice(i * CHUNK, (i + 1) * CHUNK));
-        fd.append('chunk_index',  i);
-        fd.append('total_chunks', total);
-        fd.append('file_name',    file.name);
-        fd.append('file_size',    file.size);
-        fd.append('project_id',   PID);
-        fd.append('platform',     platform);
-        var data;
-        try {
-            var res  = await fetch('/devs/build_upload.php', { method: 'POST', body: fd, credentials: 'include' });
-            var text = await res.text();
-            data = JSON.parse(text);
-        } catch (e) {
-            platErr(bar, stat, 'Сервер вернул не-JSON: ' + String(e).substring(0, 160));
-            return;
-        }
-        if (!data.success) { platErr(bar, stat, data.message || 'Ошибка сервера'); return; }
-        if (data.done) {
-            bar.style.width = '100%'; pct.textContent = '100%';
-            bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
-            stat.textContent = '✓ Билд загружен · ' + data.size_mb + ' МБ' +
-                (data.ios ? ' · ' + data.ios.bundle_id + ' v' + data.ios.version + ' (' + data.ios.build + ') добавлен в source.json' : '');
-            setTimeout(function () { location.reload(); }, 1500);
-            return;
-        }
-        var p = Math.round((i + 1) / total * 100);
-        bar.style.width = p + '%'; pct.textContent = p + '%';
-        stat.textContent = 'Загрузка ' + (i + 1) + ' из ' + total;
-    }
-}
-
-function platErr(bar, stat, msg) {
-    bar.style.background = 'var(--err)';
-    stat.textContent = '✗ ' + msg; stat.style.color = 'var(--err)';
-}
-
-async function uploadPlatformIcon(file, platform) {
-    var pane = document.querySelector('.plat-pane[data-plat="' + platform + '"]');
-    if (!pane) return;
-    var wrap = pane.querySelector('.plat-icon-wrap');
-    var img  = pane.querySelector('.plat-icon-img');
-    var fd = new FormData();
-    fd.append('project_id', PID);
-    fd.append('platform', platform);
-    fd.append('type', 'build_icon');
-    fd.append('file', file);
-    try {
-        var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
-        var data = await res.json();
-        if (data.success) { img.src = data.url; wrap.style.display = ''; }
-        else alert(data.message || 'Ошибка загрузки иконки');
-    } catch (e) { alert('Сетевая ошибка'); }
-}
-
-async function uploadPlatformScreenshots(files, platform) {
-    for (var i = 0; i < files.length; i++) {
-        var fd = new FormData();
-        fd.append('project_id', PID);
-        fd.append('platform', platform);
-        fd.append('type', 'build_screenshot');
-        fd.append('file', files[i]);
-        try {
-            var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
-            var data = await res.json();
-            if (data.success) renderPlatformScreenshots(platform, data.screenshots);
-            else alert(data.message || 'Ошибка загрузки скриншота');
-        } catch (e) { alert('Сетевая ошибка'); }
-    }
-}
-
-function renderPlatformScreenshots(platform, list) {
-    var grid = document.querySelector('.plat-scr-grid[data-plat="' + platform + '"]');
-    if (!grid) return;
-    grid.innerHTML = list.map(function (s) {
-        return '<div class="plat-scr-item" data-url="' + s.path + '" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:9/16;background:var(--elev);"><img src="' + s.path + '" style="width:100%;height:100%;object-fit:cover;"><button type="button" class="plat-scr-del" data-plat="' + platform + '" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;border-radius:5px;color:#fff;cursor:pointer;width:20px;height:20px;font-size:13px;line-height:1;">×</button></div>';
-    }).join('');
-}
-
-async function deletePlatformScreenshot(btn) {
-    var item = btn.closest('.plat-scr-item');
-    var url  = item.dataset.url;
-    var platform = btn.dataset.plat;
-    if (!confirm('Удалить этот скриншот?')) return;
-    item.style.opacity = '.4';
-    var fd = new FormData();
-    fd.append('project_id', PID);
-    fd.append('platform', platform);
-    fd.append('type', 'delete_build_screenshot');
-    fd.append('url', url);
-    try {
-        var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
-        var data = await res.json();
-        if (data.success) renderPlatformScreenshots(platform, data.screenshots);
-        else { item.style.opacity = '1'; alert(data.message || 'Ошибка удаления'); }
-    } catch (e) { item.style.opacity = '1'; alert('Сетевая ошибка'); }
-}
-
-async function savePlatformPermissions(textarea) {
-    var platform = textarea.dataset.plat;
-    var status = document.querySelector('.plat-perm-status[data-plat="' + platform + '"]');
-    var fd = new FormData();
-    fd.append('project_id', PID);
-    fd.append('platform', platform);
-    fd.append('type', 'permissions');
-    fd.append('text', textarea.value);
-    if (status) status.textContent = 'Сохранение...';
-    try {
-        var res  = await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' });
-        var data = await res.json();
-        if (status) status.textContent = data.success ? '✓ Сохранено' : ('✗ ' + (data.message || 'Ошибка'));
-    } catch (e) { if (status) status.textContent = '✗ Сетевая ошибка'; }
-    setTimeout(function () { if (status) status.textContent = ''; }, 2000);
-}
-
-// ── Cover preview ─────────────────────────────────────────────────────────
-document.getElementById('cover_art').addEventListener('change', function () {
-    if (!this.files[0]) return;
-    var cur = document.getElementById('current-cover');
-    if (cur) cur.style.display = 'none';
-    document.getElementById('cover_prev').src = URL.createObjectURL(this.files[0]);
-    document.getElementById('cover_wrap').style.display = 'block';
-});
-
-// ── Icon preview ──────────────────────────────────────────────────────────
-document.getElementById('icon_art').addEventListener('change', function () {
-    if (!this.files[0]) return;
-    var url  = URL.createObjectURL(this.files[0]);
-    var wrap = document.getElementById('icon-preview-wrap');
-    var img  = document.getElementById('current-icon');
-    img.src = url;
-    wrap.style.display = '';
-    document.getElementById('icon-label').textContent = 'Заменить иконку';
-});
-
-// ── Трейлер preview ───────────────────────────────────────────────────────
-// Раньше здесь была эвристика по подстрокам ('embed', 'player.vimeo') — не
-// понимала обычную youtube.com/watch?v=... ссылку, самый частый способ её
-// вставить. Теперь просто спрашиваем сервер (trailer_embed() — та же функция,
-// что рендерит саму карточку игры), с debounce, чтобы не долбить его на
-// каждый символ.
-(function () {
-    var input = document.getElementById('trailer-url-input');
-    var wrap = document.getElementById('trailer-preview');
-    var box = document.getElementById('trailer-embed-box');
-    var timer = null;
-    input.addEventListener('input', function () {
-        var val = this.value.trim();
-        clearTimeout(timer);
-        if (!val) { wrap.style.display = 'none'; box.innerHTML = ''; return; }
-        timer = setTimeout(function () {
-            fetch('/devs/edit.php?ajax=trailer_preview&url=' + encodeURIComponent(val))
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    box.innerHTML = data.html || '';
-                    wrap.style.display = data.html ? '' : 'none';
-                })
-                .catch(function () {});
-        }, 350);
-    });
-})();
-
-// ── Скриншоты ─────────────────────────────────────────────────────────────
-var SCR_PID = {$project_id};
-
-document.getElementById('scr-drop').addEventListener('click', function(){ document.getElementById('scr-input').click(); });
-document.getElementById('scr-drop').addEventListener('dragover', function(e){ e.preventDefault(); e.currentTarget.style.borderColor = 'var(--p)'; });
-document.getElementById('scr-drop').addEventListener('dragleave', function(e){ e.currentTarget.style.borderColor = 'rgba(195,33,120,.3)'; });
-document.getElementById('scr-drop').addEventListener('drop', function(e){ e.preventDefault(); e.currentTarget.style.borderColor = 'rgba(195,33,120,.3)'; uploadScreenshots(e.dataTransfer.files); });
-document.getElementById('scr-input').addEventListener('change', function(){ uploadScreenshots(this.files); this.value = ''; });
-
-async function uploadScreenshots(files) {
-    var bar    = document.getElementById('scr-bar');
-    var status = document.getElementById('scr-status');
-    var prog   = document.getElementById('scr-progress');
-    prog.style.display = ''; bar.style.background = 'var(--p)';
-    for (var i = 0; i < files.length; i++) {
-        var f  = files[i];
-        var fd = new FormData();
-        fd.append('project_id', SCR_PID);
-        fd.append('type', 'screenshot');
-        fd.append('file', f);
-        status.textContent = 'Загружаю ' + (i+1) + '/' + files.length + ': ' + f.name;
-        bar.style.width = Math.round((i / files.length) * 100) + '%';
-        try {
-            var res  = await fetch('/devs/upload_media.php', {method:'POST', body:fd, credentials:'include'});
-            var data = await res.json();
-            if (data.success) { renderScreenshots(data.screenshots); }
-            else {
-                status.textContent = '✗ ' + (data.message || 'Ошибка');
-                status.style.color = 'var(--err)';
-                await new Promise(function(r){ setTimeout(r, 2000); });
-                status.style.color = '';
-            }
-        } catch (e) { status.textContent = '✗ Сетевая ошибка'; }
-    }
-    bar.style.width = '100%'; bar.style.background = 'var(--ok)';
-    status.textContent = '✓ Готово';
-    setTimeout(function(){ prog.style.display = 'none'; bar.style.width = '0%'; }, 2000);
-}
-
-function renderScreenshots(list) {
-    var grid = document.getElementById('scr-grid');
-    grid.innerHTML = list.map(function(s){
-        return '<div class="scr-item" data-url="' + s.path + '" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:16/9;background:var(--elev);"><img src="' + s.path + '" style="width:100%;height:100%;object-fit:cover;"><button type="button" onclick="deleteScreenshot(this)" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;border-radius:6px;color:#fff;cursor:pointer;width:26px;height:26px;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;">×</button></div>';
-    }).join('');
-    document.getElementById('scr-count-lbl').textContent = list.length + ' / 10';
-}
-
-async function deleteScreenshot(btn) {
-    var item = btn.closest('.scr-item');
-    var url  = item.dataset.url;
-    if (!confirm('Удалить этот скриншот?')) return;
-    item.style.opacity = '.4';
-    var fd = new FormData();
-    fd.append('project_id', SCR_PID);
-    fd.append('type', 'delete_screenshot');
-    fd.append('url', url);
-    try {
-        var res  = await fetch('/devs/upload_media.php', {method:'POST', body:fd, credentials:'include'});
-        var data = await res.json();
-        if (data.success) renderScreenshots(data.screenshots);
-        else { item.style.opacity = '1'; alert(data.message || 'Ошибка удаления'); }
-    } catch (e) { item.style.opacity = '1'; alert('Сетевая ошибка'); }
-}
-
-// ── Дропдаун языков ───────────────────────────────────────────────────────
-(function () {
-    var trigger = document.getElementById('lang-trigger');
-    var menu    = document.getElementById('lang-menu');
-    var arrow   = document.getElementById('lang-arrow');
-    var open    = false;
-
-    function openMenu()  { menu.style.display = 'block'; arrow.style.transform = 'rotate(180deg)'; open = true; }
-    function closeMenu() { menu.style.display = 'none';  arrow.style.transform = '';               open = false; }
-
-    trigger.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        open ? closeMenu() : openMenu();
-    });
-    menu.addEventListener('click', function (e) { e.stopPropagation(); });
-    document.addEventListener('click', function () { if (open) closeMenu(); });
-
-    menu.querySelectorAll('label').forEach(function (lbl) {
-        lbl.addEventListener('mouseenter', function () { lbl.style.background = 'rgba(255,255,255,.06)'; });
-        lbl.addEventListener('mouseleave', function () { lbl.style.background = ''; });
-        lbl.querySelector('input').addEventListener('change', syncLangLabel);
-    });
-
-    syncLangLabel();
-})();
-
-function syncLangLabel() {
-    var checked = Array.from(document.querySelectorAll('input[name="languages_list[]"]:checked')).map(function(c){ return c.value; });
-    document.getElementById('lang-label').textContent = checked.length ? checked.join(', ') : 'Выберите языки...';
-    document.getElementById('languages-hidden').value = checked.join(', ');
-}
-
-document.querySelectorAll('.dpx-tab').forEach(function(t){
-  t.addEventListener('click', function(){
-    document.querySelectorAll('.dpx-tab').forEach(function(x){ x.classList.remove('btn-p'); x.classList.add('btn-g'); });
-    t.classList.remove('btn-g'); t.classList.add('btn-p');
-    document.querySelectorAll('.dpx-pane').forEach(function(p){ p.hidden = (p.dataset.pane !== t.dataset.tab); });
-  });
-});
-
-if (IS_LOCKED) {
-    document.querySelectorAll('input, textarea, select, button, .dpx-tab').forEach(function (el) {
-        if (el.closest('#moderation-modal')) return;                     // модалку не трогаем
-        var f = el.closest('form');
-        if (f && f.querySelector('input[name="action"][value="cancel_moderation"]')) return; // кнопку отмены оставляем
-        el.disabled = true; el.style.pointerEvents = 'none';
-    });
-    ['scr-drop'].forEach(function (id) {
-        var e = document.getElementById(id);
-        if (e) { e.style.pointerEvents = 'none'; e.style.opacity = '.5'; }
-    });
-    document.querySelectorAll('.plat-drop, .plat-scr-drop, .plat-tab').forEach(function (e) {
-        e.style.pointerEvents = 'none'; e.style.opacity = '.5';
-    });
-}
-</script>
-JS;
-
+<!-- ═══════════════ ПЛАТФОРМЫ ═══════════════ -->
+<?php foreach (ED_PLAT as $pl => $m):
+    $b         = $builds_by_platform[$pl] ?? null;
+    $on        = in_array($pl, $platforms_saved, true);
+    $isMobile  = in_array($pl, ED_MOBILE, true);
+    $hasBuild  = !empty($b['build_url']);
+    $isActive  = $hasBuild && ($game['game_zip_url'] ?? '') === $b['build_url'];
+    $buildSize = !empty($b['build_size']) ? round($b['build_size'] / 1048576, 1) . ' МБ' : '';
+    $buildScr  = $b ? (json_decode($b['screenshots'] ?? '[]', true) ?: []) : [];
+    $plH       = htmlspecialchars($pl);
 ?>
+<section class="ed-pane" data-tab="<?= $m['id'] ?>" data-plat="<?= $plH ?>"<?= $ed_tab === $m['id'] ? '' : ' hidden' ?>>
+
+    <label class="card ed-switch">
+        <input type="checkbox" class="ed-plat-on" name="platform[]" value="<?= $plH ?>" form="save-form"<?= $on ? ' checked' : '' ?>>
+        <span class="ed-switch-ui"></span>
+        <span class="material-icons ed-switch-ico"><?= $m['icon'] ?></span>
+        <span>
+            <b>Выпускать на <?= $plH ?></b>
+            <small>Игра появится в магазине с этой платформой после «Сохранить» и модерации</small>
+        </span>
+    </label>
+
+    <div class="ed-off card"<?= $on ? ' hidden' : '' ?>>
+        <span class="material-icons"><?= $m['icon'] ?></span>
+        <div>Платформа выключена. Включите её, чтобы загрузить билд, скриншоты, иконку и требования.</div>
+        <?php if ($hasBuild): ?><div style="margin-top:6px;">Загруженный ранее билд<?= $buildSize ? " ({$buildSize})" : '' ?> сохранится.</div><?php endif; ?>
+    </div>
+
+    <div class="ed-plat-body"<?= $on ? '' : ' hidden' ?>>
+    <div class="ed-cols">
+      <div class="ed-col">
+
+        <div class="card">
+            <div class="card-title"><span class="material-icons">folder_zip</span>Билд для <?= $plH ?></div>
+
+            <?php if ($pl === 'iOS'):
+                $iosVers = [];
+                try {
+                    require_once(__DIR__ . '/../swad/controllers/ios_source.php');
+                    ios_ensure_tables($conn);
+                    $iv = $conn->prepare("SELECT bundle_id, version, build, created_at FROM ios_app_versions WHERE game_id = ?");
+                    $iv->execute([$project_id]);
+                    $iosVers = $iv->fetchAll(PDO::FETCH_ASSOC);
+                    usort($iosVers, fn($x, $y) => ios_is_newer($x['version'], $x['build'], $y['version'], $y['build']) ? -1 : 1);
+                } catch (\Throwable $e) { error_log('edit.php ios: ' . $e->getMessage()); }
+            ?>
+            <div style="font-size:11px;color:var(--tm);margin-bottom:10px;line-height:1.5;">
+                Дистрибуция через AltStore: загрузите <b>неподписанный</b> .ipa — bundle id, версия и minOS
+                прочитаются из самого файла, а приложение появится в источнике
+                <code>https://dustore.ru/source.json</code>. Для обновления загрузите .ipa с бо́льшей версией
+                или номером сборки. Приложение видно в источнике, когда игра опубликована.
+            </div>
+            <?php if ($iosVers): ?>
+            <div style="font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7;">
+                <b><?= htmlspecialchars($iosVers[0]['bundle_id']) ?></b>
+                <?php foreach (array_slice($iosVers, 0, 5) as $k => $iv2): ?>
+                <div style="<?= $k ? 'color:var(--tm);' : '' ?>">
+                    v<?= htmlspecialchars($iv2['version']) ?> (<?= htmlspecialchars($iv2['build']) ?>) · <?= htmlspecialchars(substr($iv2['created_at'], 0, 10)) ?><?= $k ? '' : ' · текущая' ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+            <?php endif; ?>
+
+            <div class="alert alert-ok ed-build-state"<?= $hasBuild ? '' : ' hidden' ?> style="margin-bottom:12px;">
+                <span class="material-icons" style="font-size:18px;">check_circle</span>
+                <div><span class="ed-build-text">Билд загружен<?= $buildSize ? " · {$buildSize}" : '' ?></span>
+                    <?php if ($isActive): ?><div style="font-size:11px;opacity:.8;margin-top:2px;">Сейчас раздаётся по кнопке «Скачать»</div><?php endif; ?>
+                </div>
+            </div>
+
+            <div class="ed-drop ed-drop-build" data-plat="<?= $plH ?>" data-accept="<?= $m['accept'] ?>">
+                <span class="material-icons" style="font-size:32px;color:<?= $pl === 'Android' ? '#a4c639' : 'var(--p)' ?>;display:block;margin-bottom:8px;"><?= $m['icon'] ?></span>
+                <span style="font-size:13px;color:var(--ts);display:block;">
+                    Перетащите <?= $m['accept'] ?> сюда или нажмите, чтобы <?= $hasBuild ? 'заменить билд' : 'выбрать файл' ?>
+                </span>
+                <span style="font-size:11px;color:var(--tm);display:block;margin-top:4px;">
+                    любой размер — собираем в один файл на S3
+                </span>
+            </div>
+            <input type="file" class="plat-input" data-plat="<?= $plH ?>" accept="<?= $m['accept'] ?>" style="display:none;">
+            <div class="plat-progress" style="display:none;margin-top:14px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span class="plat-status" style="font-size:12px;color:var(--ts);">Подготовка...</span>
+                    <span class="plat-pct" style="font-size:12px;font-weight:600;color:var(--tm);">0%</span>
+                </div>
+                <div style="height:8px;background:var(--elev);border-radius:4px;overflow:hidden;">
+                    <div class="plat-bar" style="height:100%;background:var(--p);border-radius:4px;width:0%;transition:width .3s;"></div>
+                </div>
+            </div>
+            <?php if (count($platforms_saved) > 1 && $pl !== 'iOS'): ?>
+            <div style="font-size:11px;color:var(--tm);margin-top:10px;line-height:1.5;">
+                Пока кнопка «Скачать» на странице игры отдаёт один файл — тот, что загружен последним на любой вкладке.
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="card">
+            <div class="card-title" style="justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:8px;"><span class="material-icons">photo_library</span>Скриншоты <?= $plH ?></span>
+                <span style="font-size:11px;color:var(--tm);"><?= $isMobile ? 'вертикальные 9:16' : '16:9' ?> · до 10</span>
+            </div>
+            <div class="plat-scr-grid ed-scr-grid<?= $isMobile ? ' v' : '' ?>" data-plat="<?= $plH ?>">
+                <?php foreach ($buildScr as $scr): ?>
+                <div class="plat-scr-item ed-scr" data-url="<?= htmlspecialchars($scr['path'] ?? '') ?>">
+                    <img src="<?= htmlspecialchars($scr['path'] ?? '') ?>">
+                    <button type="button" class="plat-scr-del" data-plat="<?= $plH ?>">×</button>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="ed-drop ed-drop-sm ed-drop-scr" data-plat="<?= $plH ?>">
+                <span class="material-icons" style="font-size:20px;color:var(--p);display:block;margin-bottom:2px;">add_photo_alternate</span>
+                <span style="font-size:12px;color:var(--ts);">Перетащите скриншоты или нажмите</span>
+            </div>
+            <input type="file" class="plat-scr-input" data-plat="<?= $plH ?>" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
+        </div>
+
+      </div>
+      <div class="ed-col">
+
+        <div class="card">
+            <div class="card-title"><span class="material-icons">apps</span>Иконка <?= $plH ?></div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="plat-icon-wrap" style="<?= empty($b['icon_url']) ? 'display:none;' : '' ?>flex-shrink:0;">
+                    <img class="plat-icon-img ed-icon" src="<?= htmlspecialchars($b['icon_url'] ?? '') ?>">
+                </div>
+                <label class="ed-drop ed-drop-sm" style="flex:1;">
+                    <span class="material-icons" style="font-size:18px;color:var(--p);display:block;margin-bottom:2px;">add_photo_alternate</span>
+                    <span style="font-size:11px;color:var(--ts);">Необязательно — иначе общая</span>
+                    <input type="file" class="plat-icon-input" data-plat="<?= $plH ?>" accept="image/*" style="display:none;">
+                </label>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span class="material-icons">memory</span>Системные требования</div>
+            <?php foreach (ed_req_fields($pl) as $k => [$label, $ph]): ?>
+            <div class="field">
+                <label><?= $label ?></label>
+                <input type="text" name="req[<?= $plH ?>][<?= $k ?>]" form="save-form" maxlength="300"
+                       value="<?= htmlspecialchars($req_vals[$pl][$k] ?? '') ?>" placeholder="<?= htmlspecialchars($ph) ?>">
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <?php if ($pl === 'Windows'): ?>
+        <div class="card">
+            <div class="card-title"><span class="material-icons">play_circle</span>Запуск</div>
+            <div class="field">
+                <label>Исполняемый файл</label>
+                <input type="text" name="game_exec" form="save-form" value="<?= ev($game,'game_exec') ?>" placeholder="Game.exe">
+                <div style="font-size:11px;color:var(--tm);margin-top:4px;">Путь внутри архива — по нему игру запускает DustoreX</div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($isMobile): ?>
+        <div class="card">
+            <div class="card-title"><span class="material-icons">admin_panel_settings</span>Разрешения</div>
+            <div class="field">
+                <textarea name="perm[<?= $plH ?>]" form="save-form" rows="4"
+                          placeholder="По одному на строку: камера, геолокация, микрофон..."><?= htmlspecialchars($b['permissions'] ?? '') ?></textarea>
+            </div>
+        </div>
+        <?php endif; ?>
+
+      </div>
+    </div>
+    </div>
+</section>
+<?php endforeach; ?>
+
+<!-- deplex — для десктопных вкладок; один экземпляр, показывается под активной вкладкой -->
+<div class="card" id="ed-deplex" hidden style="margin-bottom:16px;">
+    <div class="card-title"><span class="material-icons">terminal</span>Загрузка через deplex (CLI)</div>
+    <div style="font-size:11px;color:var(--tm);margin:-6px 0 12px;line-height:1.5;">
+        Для больших десктопных билдов и частых обновлений: deplex заливает только изменившиеся куски.
+    </div>
+    <?php include(__DIR__ . '/../swad/controllers/devs_edit_deplex_tab.php'); ?>
+</div>
+
+<div class="ed-savebar" id="ed-savebar">
+    <span id="ed-dirty">Файлы сохраняются сразу, поля — по кнопке</span>
+    <a href="/devs/projects" class="btn btn-g" style="font-size:12px;">← К проектам</a>
+    <button type="submit" form="save-form" class="btn btn-p"><span class="material-icons">save</span>Сохранить</button>
+</div>
+
 <style>
-    /* переход с публичной страницы игры по шестерёнке: подсвечиваем нужное поле */
+    /* редактор проекта — всё под .ed-* */
+    .ed-tabs {
+        position: sticky; top: -20px; z-index: 5;
+        display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+        margin: 0 -20px 16px; padding: 10px 20px;
+        background: rgba(20, 4, 29, .92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--bd);
+    }
+    .ed-tab {
+        display: inline-flex; align-items: center; gap: 6px; flex: none;
+        padding: 7px 12px; border-radius: 8px; border: 1px solid transparent;
+        background: none; color: var(--ts); font: 600 12px 'Inter', sans-serif; cursor: pointer; white-space: nowrap;
+        transition: background .15s, color .15s;
+    }
+    .ed-tab .material-icons { font-size: 16px; }
+    .ed-tab:hover { background: var(--elev); color: #fff; }
+    .ed-tab.on { background: rgba(195, 33, 120, .14); border-color: rgba(195, 33, 120, .35); color: var(--pl); }
+    .ed-tab.off { color: var(--tm); }
+    .ed-tab.off .material-icons { opacity: .5; }
+    .ed-tab.off.on { color: var(--ts); }
+    .ed-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+    .ed-dot[hidden] { display: none; }
+    .ed-tabs-sep { width: 1px; margin: 4px; background: var(--bd); flex: none; }
+
+    .ed-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+    .ed-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    /* hidden должен побеждать display у .alert/.card внутри вкладок */
+    .ed-pane [hidden], #ed-deplex[hidden] { display: none !important; }
+    .ed-pane { padding-bottom: 16px; }
+
+    /* панель сохранения прижата к низу окна даже на короткой вкладке */
+    .ds-content:has(> .ed-savebar) { display: flex; flex-direction: column; }
+    .ds-content:has(> .ed-savebar) > * { flex-shrink: 0; }
+
+    .ed-switch { position: relative; display: flex; align-items: center; gap: 14px; cursor: pointer; margin-bottom: 14px; }
+    .ed-switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .ed-switch-ui {
+        position: relative; flex: none; width: 40px; height: 22px; border-radius: 11px;
+        background: var(--elev); border: 1px solid rgba(255, 255, 255, .12); transition: background .18s, border-color .18s;
+    }
+    .ed-switch-ui::after {
+        content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: var(--tm); transition: transform .18s, background .18s;
+    }
+    .ed-switch input:checked + .ed-switch-ui { background: var(--p); border-color: var(--p); }
+    .ed-switch input:checked + .ed-switch-ui::after { transform: translateX(18px); background: #fff; }
+    .ed-switch input:focus-visible + .ed-switch-ui { outline: 2px solid var(--pl); outline-offset: 2px; }
+    .ed-switch-ico { font-size: 26px; color: var(--tm); }
+    .ed-switch input:checked ~ .ed-switch-ico { color: var(--pl); }
+    .ed-switch b { display: block; font-size: 14px; }
+    .ed-switch small { font-size: 11px; color: var(--tm); }
+
+    .ed-off { text-align: center; padding: 40px 20px; color: var(--tm); font-size: 13px; line-height: 1.5; }
+    .ed-off .material-icons { font-size: 40px; opacity: .4; display: block; margin-bottom: 10px; }
+
+    .ed-drop {
+        display: block; border: 2px dashed rgba(195, 33, 120, .3); border-radius: 12px; padding: 28px;
+        text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    }
+    .ed-drop-sm { padding: 14px; border-radius: 10px; }
+    .ed-drop:hover, .ed-drop.over { border-color: var(--p); background: rgba(195, 33, 120, .06); }
+    .ed-drop.bad { border-color: var(--err); background: rgba(255, 61, 113, .06); }
+
+    .ed-scr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .ed-scr-grid.v { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+    .ed-scr-grid:not(:has(.ed-scr)) { display: none; }
+    .ed-scr { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 16/9; background: var(--elev); }
+    .ed-scr-grid.v .ed-scr { aspect-ratio: 9/16; }
+    .ed-scr img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ed-scr button {
+        position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; border-radius: 6px;
+        background: rgba(0, 0, 0, .7); color: #fff; cursor: pointer; font-size: 15px; line-height: 1;
+    }
+    .ed-icon { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; border: 1px solid var(--bd); display: block; }
+    .ed-sub { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--tm); margin-bottom: 8px; }
+    .ed-sub span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .ed-input { width: 100%; background: var(--elev); border: 1px solid var(--bd); border-radius: 8px; padding: 8px 10px; color: var(--ts); }
+    .ed-select {
+        width: 100%; min-height: 38px; display: flex; align-items: center; justify-content: space-between;
+        background: var(--elev); border: 1px solid var(--bd); border-radius: 8px; padding: 8px 12px;
+        color: var(--tt); font: 13px 'Inter', sans-serif; text-align: left; cursor: pointer;
+    }
+    .ed-menu {
+        position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; max-height: 280px; overflow-y: auto;
+        background: var(--surf); border: 1px solid rgba(255, 255, 255, .1); border-radius: 10px; padding: 4px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .6);
+    }
+    .ed-menu label { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--ts); }
+    .ed-menu label:hover { background: rgba(255, 255, 255, .06); }
+
+    .ed-savebar {
+        position: sticky; bottom: -20px; z-index: 5;
+        display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+        margin: auto -20px -20px; padding: 12px 20px;
+        background: rgba(20, 4, 29, .92); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+        border-top: 1px solid var(--bd);
+    }
+    .ed-savebar[hidden] { display: none; }
+    .ed-savebar span { margin-right: auto; font-size: 12px; color: var(--tm); }
+    .ed-savebar.dirty span { color: var(--warn); }
+
     @keyframes fxFlash { 0% { box-shadow: 0 0 0 3px var(--p, #c32178); } 100% { box-shadow: 0 0 0 3px transparent; } }
     .fx-flash { animation: fxFlash 1.8s ease-out; border-radius: 10px; }
+
+    @media (max-width: 900px) {
+        .ed-cols { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 860px) {
+        .ed-tabs { top: -16px; margin: 0 -16px 14px; padding: 10px 16px; }
+        .ed-savebar { bottom: -16px; margin: auto -16px -16px; padding: 10px 16px; }
+    }
 </style>
+
 <script>
 (function () {
-    var h = decodeURIComponent(location.hash.replace('#', ''));
-    if (!h) return;
-    var el = document.getElementById(h) || document.querySelector('[name="' + h.replace(/"/g, '') + '"]');
-    if (!el) return;
-    var box = el.closest('.field') || el.closest('.card') || el;
-    box.scrollIntoView({ block: 'center' });
-    box.classList.add('fx-flash');
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) try { el.focus({ preventScroll: true }); } catch (e) { }
-    setTimeout(function () { box.classList.remove('fx-flash'); }, 2200);
+    var PID = <?= (int)$project_id ?>;
+    var IS_LOCKED = <?= (($game['moderation_status'] ?? '') === 'pending') ? 'true' : 'false' ?>;
+    var MOBILE = ['Android', 'iOS'], DESKTOP = ['Windows', 'macOS', 'Linux'];
+    var $ = function (s, r) { return (r || document).querySelector(s); };
+    var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+    var paneOf = function (pl) { return $('.ed-pane[data-plat="' + pl + '"]'); };
+
+    // ── Вкладки ────────────────────────────────────────────────────────────
+    function edTab(id) {
+        $$('.ed-tab').forEach(function (t) { t.classList.toggle('on', t.dataset.tab === id); });
+        $$('.ed-pane').forEach(function (p) { p.hidden = p.dataset.tab !== id; });
+        $('#ed-tab-input').value = id;
+        var u = new URL(location.href);
+        u.searchParams.set('tab', id);
+        history.replaceState(null, '', u);
+        syncDeplex();
+    }
+    window.edTab = edTab;
+    $$('.ed-tab').forEach(function (t) { t.addEventListener('click', function () { edTab(t.dataset.tab); }); });
+
+    // невалидное поле на скрытой вкладке: сначала показываем вкладку, иначе браузер не сможет его подсветить
+    document.addEventListener('invalid', function (e) {
+        var p = e.target.closest && e.target.closest('.ed-pane');
+        if (p && p.hidden) edTab(p.dataset.tab);
+    }, true);
+
+    // ── Включение платформы ────────────────────────────────────────────────
+    function syncPlat(pane) {
+        var on = $('.ed-plat-on', pane).checked;
+        $('.ed-plat-body', pane).hidden = !on;
+        $('.ed-off', pane).hidden = on;
+        $('.ed-tab[data-tab="' + pane.dataset.tab + '"]').classList.toggle('off', !on);
+        syncDeplex();
+    }
+    $$('.ed-plat-on').forEach(function (cb) {
+        cb.addEventListener('change', function () { syncPlat(cb.closest('.ed-pane')); });
+    });
+
+    function syncDeplex() {
+        var pane = $('.ed-pane:not([hidden])');
+        var pl = pane && pane.dataset.plat;
+        $('#ed-deplex').hidden = !(pl && DESKTOP.indexOf(pl) !== -1 && $('.ed-plat-on', pane).checked);
+    }
+    syncDeplex();
+
+    // ── Сохранение ─────────────────────────────────────────────────────────
+    // Черновик сохраняется сам через 1.5 с после последней правки. Опубликованную или
+    // одобренную игру — только вручную: сохранение возвращает её на модерацию.
+    // В оболочке консоли состояние показывает индикатор слева от дока (клик или Ctrl+S — сохранить),
+    // без оболочки — панель внизу страницы.
+    var AUTO = <?= $ed_autosave ? 'true' : 'false' ?>;
+    var form = $('#save-form'), dirty = false, seq = 0, inflight = null, timer = null;
+    var wm = window.parent !== window && window.parent.dsWM && window.parent.dsWM.saver ? window.parent.dsWM : null;
+    var LABEL = { saved: 'Все изменения сохранены', dirty: 'Есть изменения — сохраню через секунду', manual: 'Есть несохранённые изменения',
+                  saving: 'Сохраняю…', error: 'Не сохранено' };
+
+    function show(state, msg) {
+        if (wm) wm.saverState(window, state, msg);
+        $('#ed-savebar').classList.toggle('dirty', state !== 'saved');
+        $('#ed-dirty').textContent = msg || LABEL[state];
+    }
+
+    function setDirty() {
+        dirty = true;
+        seq++;
+        if (!AUTO) return show('manual', 'Есть изменения — после сохранения игра уйдёт на повторную модерацию');
+        show('dirty');
+        clearTimeout(timer);
+        timer = setTimeout(function () { save(false); }, 1500);
+    }
+    window.edSetDirty = setDirty;
+
+    function save(manual) {
+        clearTimeout(timer);
+        if (inflight) return inflight.then(function () { if (dirty) return save(manual); });
+        if (!form.checkValidity()) {
+            if (manual) form.reportValidity();   // ручное сохранение показывает поле, автосохранение не дёргает вкладки
+            return Promise.resolve(show('error', 'Заполните обязательные поля'));
+        }
+        if (!dirty && !manual) return Promise.resolve();
+        var my = seq;
+        var fd = new FormData(form);              // берёт и поля из вкладок: они привязаны к форме атрибутом form
+        fd.append('ajax', '1');
+        show('saving');
+        inflight = fetch('/devs/edit.php?id=' + PID, { method: 'POST', body: fd, credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d.ok) return show('error', d.error || 'Ошибка сохранения');
+                ['cover_art', 'icon_art'].forEach(function (id) { $('#' + id).value = ''; }); // файлы уже на S3
+                if (!AUTO) {                       // статус игры сменился — перерисовываем шапку
+                    dirty = false;
+                    location.href = '/devs/edit?id=' + PID + '&saved=1&tab=' + $('#ed-tab-input').value;
+                    return;
+                }
+                if (seq === my) { dirty = false; show('saved', 'Сохранено в ' + d.saved_at); }
+                else setDirty();                   // пока сохраняли, успели ещё что-то поменять
+            })
+            .catch(function () { show('error', 'Нет связи с сервером — нажми, чтобы повторить'); })
+            .finally(function () { inflight = null; });
+        return inflight;
+    }
+
+    ['input', 'change'].forEach(function (ev) {
+        document.addEventListener(ev, function (e) { if (e.target.form === form) setDirty(); });
+    });
+    form.addEventListener('submit', function (e) { e.preventDefault(); save(true); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden && dirty && AUTO) save(false); });
+    window.addEventListener('beforeunload', function (e) { if (dirty || inflight) { e.preventDefault(); e.returnValue = ''; } });
+    if (wm && !IS_LOCKED) {
+        wm.saver(window, { save: function () { return save(true); } });
+        $('#ed-savebar').hidden = true;
+    }
+
+    // ── Drag'n'drop ────────────────────────────────────────────────────────
+    // Файл, брошенный мимо зоны, браузер иначе откроет вместо страницы
+    ['dragover', 'drop'].forEach(function (ev) { window.addEventListener(ev, function (e) { e.preventDefault(); }); });
+
+    function extOk(file, accept) {
+        var ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        return accept.split(',').indexOf(ext) !== -1;
+    }
+    document.addEventListener('dragover', function (e) {
+        var z = e.target.closest && e.target.closest('.ed-drop-build, .ed-drop-scr');
+        if (z) z.classList.add('over');
+    });
+    document.addEventListener('dragleave', function (e) {
+        var z = e.target.closest && e.target.closest('.ed-drop-build, .ed-drop-scr');
+        if (z && !z.contains(e.relatedTarget)) z.classList.remove('over');
+    });
+    document.addEventListener('drop', function (e) {
+        var z = e.target.closest && e.target.closest('.ed-drop-build, .ed-drop-scr');
+        if (!z) return;
+        z.classList.remove('over');
+        var files = e.dataTransfer.files;
+        if (!files.length) return;
+        if (z.classList.contains('ed-drop-scr')) return uploadPlatformScreenshots(files, z.dataset.plat);
+        if (files.length > 1 || !extOk(files[0], z.dataset.accept)) {
+            z.classList.add('bad');
+            setTimeout(function () { z.classList.remove('bad'); }, 1200);
+            return platErr(paneOf(z.dataset.plat), 'Нужен один файл ' + z.dataset.accept);
+        }
+        uploadPlatformBuild(files[0], z.dataset.plat);
+    });
+
+    document.addEventListener('click', function (e) {
+        var z = e.target.closest('.ed-drop-build, .ed-drop-scr');
+        if (z) {
+            var sel = z.classList.contains('ed-drop-build') ? '.plat-input' : '.plat-scr-input';
+            $(sel, paneOf(z.dataset.plat)).click();
+            return;
+        }
+        var del = e.target.closest('.plat-scr-del');
+        if (del) deletePlatformScreenshot(del);
+    });
+
+    document.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t.classList.contains('plat-input') && t.files[0]) uploadPlatformBuild(t.files[0], t.dataset.plat);
+        if (t.classList.contains('plat-icon-input') && t.files[0]) uploadPlatformIcon(t.files[0], t.dataset.plat);
+        if (t.classList.contains('plat-scr-input') && t.files.length) uploadPlatformScreenshots(t.files, t.dataset.plat);
+        if (t.type === 'file' && !t.form) t.value = '';
+    });
+
+    // ── Загрузка билда (механизм прежний: чанки → build_upload.php → один объект в S3) ──
+    var uploading = 0;
+    async function uploadPlatformBuild(file, platform) {
+        var CHUNK = 5 * 1024 * 1024;
+        var total = Math.ceil(file.size / CHUNK) || 1;
+        var pane = paneOf(platform);
+        if (!pane) return;
+        var prog = $('.plat-progress', pane), bar = $('.plat-bar', pane), pct = $('.plat-pct', pane), stat = $('.plat-status', pane);
+        prog.style.display = 'block';
+        bar.style.width = '0%';
+        bar.style.background = platform === 'Android' ? '#a4c639' : 'var(--p)';
+        stat.style.color = '';
+        uploading++;
+        try {
+            for (var i = 0; i < total; i++) {
+                var fd = new FormData();
+                fd.append('chunk', file.slice(i * CHUNK, (i + 1) * CHUNK));
+                fd.append('chunk_index', i);
+                fd.append('total_chunks', total);
+                fd.append('file_name', file.name);
+                fd.append('file_size', file.size);
+                fd.append('project_id', PID);
+                fd.append('platform', platform);
+                var data;
+                try {
+                    var res = await fetch('/devs/build_upload.php', { method: 'POST', body: fd, credentials: 'include' });
+                    data = JSON.parse(await res.text());
+                } catch (err) {
+                    return platErr(pane, 'Сервер вернул не-JSON: ' + String(err).substring(0, 160));
+                }
+                if (!data.success) return platErr(pane, data.message || 'Ошибка сервера');
+                if (data.done) {
+                    bar.style.width = '100%'; pct.textContent = '100%';
+                    bar.style.background = 'var(--ok)'; stat.style.color = 'var(--ok)';
+                    stat.textContent = '✓ Билд загружен · ' + data.size_mb + ' МБ' +
+                        (data.ios ? ' · ' + data.ios.bundle_id + ' v' + data.ios.version + ' (' + data.ios.build + ') добавлен в source.json' : '');
+                    $('.ed-build-state', pane).hidden = false;
+                    $('.ed-build-text', pane).textContent = 'Билд загружен · ' + data.size_mb + ' МБ';
+                    $('.ed-tab[data-tab="' + pane.dataset.tab + '"] .ed-dot').hidden = false;
+                    return;
+                }
+                var p = Math.round((i + 1) / total * 100);
+                bar.style.width = p + '%'; pct.textContent = p + '%';
+                stat.textContent = 'Загрузка ' + (i + 1) + ' из ' + total + ' · не закрывайте окно';
+            }
+        } finally { uploading--; }
+    }
+    window.addEventListener('beforeunload', function (e) { if (uploading) { e.preventDefault(); e.returnValue = ''; } });
+
+    function platErr(pane, msg) {
+        var prog = $('.plat-progress', pane), bar = $('.plat-bar', pane), stat = $('.plat-status', pane);
+        prog.style.display = 'block';
+        bar.style.background = 'var(--err)';
+        stat.textContent = '✗ ' + msg; stat.style.color = 'var(--err)';
+    }
+
+    async function uploadPlatformIcon(file, platform) {
+        var pane = paneOf(platform);
+        var fd = new FormData();
+        fd.append('project_id', PID); fd.append('platform', platform); fd.append('type', 'build_icon'); fd.append('file', file);
+        try {
+            var data = await (await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' })).json();
+            if (data.success) { $('.plat-icon-img', pane).src = data.url; $('.plat-icon-wrap', pane).style.display = ''; }
+            else alert(data.message || 'Ошибка загрузки иконки');
+        } catch (err) { alert('Сетевая ошибка'); }
+    }
+
+    async function uploadPlatformScreenshots(files, platform) {
+        for (var i = 0; i < files.length; i++) {
+            var fd = new FormData();
+            fd.append('project_id', PID); fd.append('platform', platform); fd.append('type', 'build_screenshot'); fd.append('file', files[i]);
+            try {
+                var data = await (await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' })).json();
+                if (data.success) renderPlatformScreenshots(platform, data.screenshots);
+                else { alert(data.message || 'Ошибка загрузки скриншота'); break; }
+            } catch (err) { alert('Сетевая ошибка'); break; }
+        }
+    }
+
+    function scrItem(url, delCls, plat) {
+        var d = document.createElement('div');
+        d.className = (delCls ? 'plat-scr-item' : 'scr-item') + ' ed-scr';
+        d.dataset.url = url;
+        d.innerHTML = '<img><button type="button">×</button>';
+        d.firstChild.src = url;
+        if (delCls) { d.lastChild.className = 'plat-scr-del'; d.lastChild.dataset.plat = plat; }
+        else d.lastChild.setAttribute('onclick', 'deleteScreenshot(this)');
+        return d;
+    }
+
+    function renderPlatformScreenshots(platform, list) {
+        var grid = $('.plat-scr-grid', paneOf(platform));
+        grid.innerHTML = '';
+        list.forEach(function (s) { grid.append(scrItem(s.path, true, platform)); });
+    }
+
+    async function deletePlatformScreenshot(btn) {
+        var item = btn.closest('.plat-scr-item'), platform = btn.dataset.plat;
+        if (!confirm('Удалить этот скриншот?')) return;
+        item.style.opacity = '.4';
+        var fd = new FormData();
+        fd.append('project_id', PID); fd.append('platform', platform); fd.append('type', 'delete_build_screenshot'); fd.append('url', item.dataset.url);
+        try {
+            var data = await (await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' })).json();
+            if (data.success) renderPlatformScreenshots(platform, data.screenshots);
+            else { item.style.opacity = '1'; alert(data.message || 'Ошибка удаления'); }
+        } catch (err) { item.style.opacity = '1'; alert('Сетевая ошибка'); }
+    }
+
+    // ── Модалка модерации ──────────────────────────────────────────────────
+    var modalAction = 'first';
+    window.openModerationModal = function (action) {
+        modalAction = action;
+        $('#modal-confirm-label').textContent = action === 'resubmit' ? 'Отправить повторно' : 'Отправить на модерацию';
+        $('#moderation-modal').style.display = 'flex';
+    };
+    window.closeModerationModal = function () { $('#moderation-modal').style.display = 'none'; };
+    $('#modal-confirm-btn').addEventListener('click', function () {
+        closeModerationModal();
+        $(modalAction === 'resubmit' ? '#form-resubmit' : '#form-moderation').submit();
+    });
+    $('#moderation-modal').addEventListener('click', function (e) { if (e.target === this) closeModerationModal(); });
+
+    // ── Анонс ──────────────────────────────────────────────────────────────
+    $('#ann-enabled').addEventListener('change', function () { $('#ann-fields').style.display = this.checked ? '' : 'none'; });
+    $('#ann-tbd').addEventListener('change', function () { $('#ann-date-wrap').style.display = this.checked ? 'none' : ''; });
+
+    // ── Обложка и иконка: превью ───────────────────────────────────────────
+    $('#cover_art').addEventListener('change', function () {
+        if (!this.files[0]) return;
+        var cur = $('#current-cover');
+        if (cur) cur.style.display = 'none';
+        $('#cover_prev').src = URL.createObjectURL(this.files[0]);
+        $('#cover_wrap').style.display = 'block';
+    });
+    $('#icon_art').addEventListener('change', function () {
+        if (!this.files[0]) return;
+        $('#current-icon').src = URL.createObjectURL(this.files[0]);
+        $('#icon-preview-wrap').style.display = '';
+        $('#icon-label').textContent = 'Заменить иконку';
+    });
+
+    // ── Трейлер: превью через тот же trailer_embed(), что и на странице игры ──
+    (function () {
+        var input = $('#trailer-url-input'), wrap = $('#trailer-preview'), box = $('#trailer-embed-box'), timer = null;
+        input.addEventListener('input', function () {
+            var val = this.value.trim();
+            clearTimeout(timer);
+            if (!val) { wrap.style.display = 'none'; box.innerHTML = ''; return; }
+            timer = setTimeout(function () {
+                fetch('/devs/edit.php?ajax=trailer_preview&url=' + encodeURIComponent(val))
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) { box.innerHTML = data.html || ''; wrap.style.display = data.html ? '' : 'none'; })
+                    .catch(function () {});
+            }, 350);
+        });
+    })();
+
+    // ── Скриншоты витрины ──────────────────────────────────────────────────
+    var drop = $('#scr-drop');
+    drop.addEventListener('click', function () { $('#scr-input').click(); });
+    drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', function () { drop.classList.remove('over'); });
+    drop.addEventListener('drop', function (e) { e.preventDefault(); drop.classList.remove('over'); uploadScreenshots(e.dataTransfer.files); });
+    $('#scr-input').addEventListener('change', function () { uploadScreenshots(this.files); });
+
+    async function uploadScreenshots(files) {
+        var bar = $('#scr-bar'), status = $('#scr-status'), prog = $('#scr-progress');
+        prog.style.display = ''; bar.style.background = 'var(--p)';
+        for (var i = 0; i < files.length; i++) {
+            var fd = new FormData();
+            fd.append('project_id', PID); fd.append('type', 'screenshot'); fd.append('file', files[i]);
+            status.textContent = 'Загружаю ' + (i + 1) + '/' + files.length + ': ' + files[i].name;
+            bar.style.width = Math.round(i / files.length * 100) + '%';
+            try {
+                var data = await (await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' })).json();
+                if (data.success) renderScreenshots(data.screenshots);
+                else {
+                    status.textContent = '✗ ' + (data.message || 'Ошибка'); status.style.color = 'var(--err)';
+                    await new Promise(function (r) { setTimeout(r, 2000); });
+                    status.style.color = '';
+                }
+            } catch (err) { status.textContent = '✗ Сетевая ошибка'; }
+        }
+        bar.style.width = '100%'; bar.style.background = 'var(--ok)';
+        status.textContent = '✓ Готово';
+        setTimeout(function () { prog.style.display = 'none'; bar.style.width = '0%'; }, 2000);
+    }
+
+    function renderScreenshots(list) {
+        var grid = $('#scr-grid');
+        grid.innerHTML = '';
+        list.forEach(function (s) { grid.append(scrItem(s.path, false)); });
+        $('#scr-count-lbl').textContent = list.length + ' / 10';
+    }
+
+    window.deleteScreenshot = async function (btn) {
+        var item = btn.closest('.scr-item');
+        if (!confirm('Удалить этот скриншот?')) return;
+        item.style.opacity = '.4';
+        var fd = new FormData();
+        fd.append('project_id', PID); fd.append('type', 'delete_screenshot'); fd.append('url', item.dataset.url);
+        try {
+            var data = await (await fetch('/devs/upload_media.php', { method: 'POST', body: fd, credentials: 'include' })).json();
+            if (data.success) renderScreenshots(data.screenshots);
+            else { item.style.opacity = '1'; alert(data.message || 'Ошибка удаления'); }
+        } catch (err) { item.style.opacity = '1'; alert('Сетевая ошибка'); }
+    };
+
+    // ── Языки ──────────────────────────────────────────────────────────────
+    (function () {
+        var trigger = $('#lang-trigger'), menu = $('#lang-menu'), arrow = $('#lang-arrow');
+        function show(v) { menu.style.display = v ? 'block' : 'none'; arrow.style.transform = v ? 'rotate(180deg)' : ''; }
+        trigger.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); show(menu.style.display === 'none'); });
+        menu.addEventListener('click', function (e) { e.stopPropagation(); });
+        document.addEventListener('click', function () { show(false); });
+        $$('input', menu).forEach(function (cb) { cb.addEventListener('change', function () { syncLang(); setDirty(); }); });
+        function syncLang() {
+            var checked = $$('input:checked', menu).map(function (c) { return c.value; });
+            $('#lang-label').textContent = checked.length ? checked.join(', ') : 'Выберите языки...';
+            $('#languages-hidden').value = checked.join(', ');
+        }
+        syncLang();
+    })();
+
+    // ── Игра на модерации: смотреть можно, менять нельзя ──────────────────
+    if (IS_LOCKED) {
+        $$('input, textarea, select, button').forEach(function (el) {
+            if (el.closest('#moderation-modal') || el.classList.contains('ed-tab')) return;
+            var f = el.closest('form');
+            if (f && f.querySelector('input[name="action"][value="cancel_moderation"]')) return;
+            el.disabled = true;
+        });
+        $$('.ed-drop, .ed-switch').forEach(function (el) { el.style.pointerEvents = 'none'; el.style.opacity = '.5'; });
+        $('#ed-savebar').hidden = true;
+    }
+
+    // ── Переход с публичной страницы по шестерёнке: открыть вкладку и подсветить поле ──
+    (function () {
+        var h = decodeURIComponent(location.hash.replace('#', ''));
+        if (!h) return;
+        var el = document.getElementById(h) || document.querySelector('[name="' + h.replace(/"/g, '') + '"]');
+        if (!el) return;
+        var pane = el.closest('.ed-pane');
+        if (pane && pane.hidden) edTab(pane.dataset.tab);
+        var box = el.closest('.field') || el.closest('.card') || el;
+        box.scrollIntoView({ block: 'center' });
+        box.classList.add('fx-flash');
+        if (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) try { el.focus({ preventScroll: true }); } catch (err) {}
+        setTimeout(function () { box.classList.remove('fx-flash'); }, 2200);
+    })();
 })();
 </script>
 <?php
