@@ -4,7 +4,12 @@
  * devs/includes/header.php — единый layout консоли разработчика.
  * Переменные до подключения:
  *   $page_title  — заголовок страницы
- *   $active_nav  — id активного пункта меню
+ *   $active_nav  — id приложения (см. $apps)
+ *
+ * Два режима:
+ *   оболочка  — обычный заход в браузере: док + тайловые окна (includes/shell.php), страница дальше не выполняется;
+ *   встроенный — страница грузится в окно-iframe оболочки: отдаём только контент.
+ * Режим определяем по заголовку Sec-Fetch-Dest, который браузер сам ставит навигации внутри iframe.
  */
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -12,18 +17,29 @@ require_once(__DIR__ . '/../../swad/config.php');
 require_once(__DIR__ . '/../../swad/controllers/user.php');
 require_once(__DIR__ . '/../../swad/controllers/organization.php');
 
+$ds_embed = ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '') === 'iframe' || isset($_GET['embed']);
+
+// Из окна уводим на верхний уровень, иначе логин/выбор студии откроются внутри iframe
+function ds_redirect(string $url, bool $embed): void
+{
+    if ($embed) {
+        echo '<script>top.location.href=' . json_encode($url) . '</script>';
+    } else {
+        header('Location: ' . $url);
+    }
+    exit();
+}
+
 $curr_user = new User();
 $db        = new Database();
 $org       = new Organization();
 
 if ($curr_user->checkAuth() > 0) {
-    header('Location: /login?backUrl=' . urlencode($_SERVER['REQUEST_URI']));
-    exit();
+    ds_redirect('/login?backUrl=' . urlencode($_SERVER['REQUEST_URI']), $ds_embed);
 }
 
 if (empty($_SESSION['studio_id'])) {
-    header('Location: /devs/select');
-    exit();
+    ds_redirect('/devs/select', $ds_embed);
 }
 
 $curr_user_data     = $_SESSION['USERDATA'];
@@ -50,13 +66,12 @@ $studio_initials = mb_strtoupper(mb_substr($studio_name, 0, 2));
 $page_title = $page_title ?? 'Консоль';
 $active_nav = $active_nav ?? 'dashboard';
 
-// ── Счётчики сайдбара (кеш 5 минут в сессии) ─────────────────────────────
+// ── Счётчики (кеш 5 минут в сессии) ─────────────────────────────────────
 $_ck    = 'sb_cnt_' . $studio_id;
 $_ck_ts = $_ck . '_ts';
 if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
     $_pdo = $db->connect();
 
-    // IDs игр студии
     $_gs = $_pdo->prepare("SELECT id FROM games WHERE developer=?");
     $_gs->execute([$studio_id]);
     $_pids = $_gs->fetchAll(PDO::FETCH_COLUMN);
@@ -84,10 +99,9 @@ if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
         ")->fetchColumn();
     }
 
-    // Непрочитанные события
     if ($is_moder) {
-        $sb_events = (int)$_pdo->query("SELECT COUNT(*) FROM platform_events WHERE is_read=0")->fetchColumn();
-        $sb_orgs   = (int)$_pdo->query("SELECT COUNT(*) FROM studios WHERE status='pending'")->fetchColumn();
+        $sb_events  = (int)$_pdo->query("SELECT COUNT(*) FROM platform_events WHERE is_read=0")->fetchColumn();
+        $sb_orgs    = (int)$_pdo->query("SELECT COUNT(*) FROM studios WHERE status='pending'")->fetchColumn();
         $sb_experts = (int)$_pdo->query("SELECT COUNT(*) FROM experts WHERE status='new'")->fetchColumn();
         $sb_assets  = (int)$_pdo->query("SELECT COUNT(*) FROM assets WHERE status='pending'")->fetchColumn();
     } else {
@@ -99,7 +113,14 @@ if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
         $sb_assets  = 0;
     }
 
+    // заявки на монетизацию — только администратору платформы
+    $sb_mon = 0;
+    if ($is_admin) {
+        try { $sb_mon = (int)$_pdo->query("SELECT COUNT(*) FROM mon_requests WHERE status = 'pending'")->fetchColumn(); } catch (Throwable $e) {}
+    }
+
     $_SESSION[$_ck] = [
+        'mon'     => $sb_mon,
         'reviews' => $sb_reviews,
         'expert'  => $sb_expert,
         'events'  => $sb_events,
@@ -111,56 +132,68 @@ if (empty($_SESSION[$_ck]) || (time() - ($_SESSION[$_ck_ts] ?? 0)) > 300) {
 }
 $sb = $_SESSION[$_ck];
 
-// ── Nav ───────────────────────────────────────────────────────────────────
-$nav_items = [
-    ['id' => 'dashboard',  'href' => '/devs/',          'icon' => 'dashboard',          'label' => 'Обзор'],
-    ['id' => 'projects',   'href' => '/devs/projects',  'icon' => 'videogame_asset',    'label' => 'Проекты'],
-    ['id' => 'new',        'href' => '/devs/new',       'icon' => 'add_circle_outline', 'label' => 'Новый проект'],
-    [
-        'id' => 'events',
-        'href' => '/devs/events',
-        'icon' => 'notifications',
-        'label' => 'События',
-        'badge' => $sb['events']
-    ],
-    ['id' => 'wishlists',  'href' => '/devs/wishlists', 'icon' => 'favorite',           'label' => 'Вишлисты'],
-    ['divider' => true, 'label' => 'Аудитория'],
-    [
-        'id' => 'replies',
-        'href' => '/devs/replies',
-        'icon' => 'rate_review',
-        'label' => 'Отзывы',
-        'badge' => $sb['reviews']
-    ],
-    [
-        'id' => 'expert_reviews',
-        'href' => '/devs/expert_reviews',
-        'icon' => 'workspace_premium',
-        'label' => 'Рецензии',
-        'badge' => $sb['expert']
-    ],
-    ['id' => 'analytics',  'href' => '/devs/analytics', 'icon' => 'bar_chart',          'label' => 'Аналитика'],
-    ['id' => 'monetization', 'href' => '/devs/monetization', 'icon' => 'currency_ruble',    'label' => 'Монетизация'],
-    ['divider' => true, 'label' => 'Студия'],
-    ['id' => 'studio',     'href' => '/devs/mystudio',  'icon' => 'apartment',          'label' => 'Моя студия'],
-    ['id' => 'staff',      'href' => '/devs/staff',     'icon' => 'groups',             'label' => 'Сотрудники'],
-    ['id' => 'coop',       'href' => '/devs/coop',      'icon' => 'group_work',         'label' => 'Соучастники проектов'],
-    ['id' => 'select',     'href' => '/devs/select',    'icon' => 'swap_horiz',         'label' => 'Сменить студию'],
-    ['id' => 'promotion',  'href' => '/devs/promotion', 'icon' => 'campaign',           'label' => 'Продвижение'],
+// ── Приложения ──────────────────────────────────────────────────────────
+// dock => true  — закреплено в доке по умолчанию; дальше каждый закрепляет своё галочкой в поиске (Ctrl+K)
+// top  => true  — открывается на всю вкладку, а не в окне
+$apps = [
+    ['id' => 'dashboard',      'href' => '/devs/',               'icon' => 'dashboard',          'label' => 'Обзор',        'group' => 'Проекты', 'dock' => true],
+    ['id' => 'projects',       'href' => '/devs/projects',       'icon' => 'videogame_asset',    'label' => 'Проекты',      'group' => 'Проекты', 'dock' => true],
+    ['id' => 'new',            'href' => '/devs/new',            'icon' => 'add_circle_outline', 'label' => 'Новый проект', 'group' => 'Проекты', 'dock' => true],
+    ['id' => 'events',         'href' => '/devs/events',         'icon' => 'notifications',      'label' => 'События',      'group' => 'Проекты', 'dock' => true, 'badge' => $sb['events']],
+    ['id' => 'wishlists',      'href' => '/devs/wishlists',      'icon' => 'favorite',           'label' => 'Вишлисты',     'group' => 'Проекты', 'dock' => false],
+
+    ['id' => 'replies',        'href' => '/devs/replies',        'icon' => 'rate_review',        'label' => 'Отзывы',       'group' => 'Аудитория', 'dock' => true, 'badge' => $sb['reviews']],
+    ['id' => 'expert_reviews', 'href' => '/devs/expert_reviews', 'icon' => 'workspace_premium',  'label' => 'Рецензии',     'group' => 'Аудитория', 'dock' => false, 'badge' => $sb['expert']],
+    ['id' => 'analytics',      'href' => '/devs/analytics',      'icon' => 'bar_chart',          'label' => 'Аналитика',    'group' => 'Аудитория', 'dock' => false],
+    ['id' => 'monetization',   'href' => '/devs/monetization',   'icon' => 'currency_ruble',     'label' => 'Монетизация',  'group' => 'Аудитория', 'dock' => false],
+
+    ['id' => 'studio',         'href' => '/devs/mystudio',       'icon' => 'apartment',          'label' => 'Моя студия',   'group' => 'Студия', 'dock' => true],
+    ['id' => 'staff',          'href' => '/devs/staff',          'icon' => 'groups',             'label' => 'Сотрудники',   'group' => 'Студия', 'dock' => true],
+    ['id' => 'coop',           'href' => '/devs/coop',           'icon' => 'group_work',         'label' => 'Соучастники проектов', 'group' => 'Студия', 'dock' => false],
+    ['id' => 'promotion',      'href' => '/devs/promotion',      'icon' => 'campaign',           'label' => 'Продвижение',  'group' => 'Студия', 'dock' => false],
+    ['id' => 'select',         'href' => '/devs/select',         'icon' => 'swap_horiz',         'label' => 'Сменить студию', 'group' => 'Студия', 'dock' => false, 'top' => true],
 ];
 
 if ($is_moder) {
-    $nav_items[] = ['divider' => true, 'label' => 'Администрирование'];
-    $nav_items[] = ['id' => 'recentorgs', 'href' => '/devs/recentorgs', 'icon' => 'domain_add',   'label' => 'Новые организации', 'badge' => $sb['orgs']];
-    $nav_items[] = ['id' => 'experts',    'href' => '/devs/experts',    'icon' => 'verified_user', 'label' => 'Эксперты',          'badge' => $sb['experts']];
-    $nav_items[] = ['id' => 'scan-reports',    'href' => '/devs/scan-reports',    'icon' => 'security', 'label' => 'Отчёты проверок',          'badge' => 'security'];
-    $nav_items[] = ['id' => 'mobile_analytics', 'href' => '/devs/mobile_analytics', 'icon' => 'smartphone', 'label' => 'Аналитика: мобильная версия'];
-    $nav_items[] = ['id' => 'assets-mod', 'href' => '/assetstore/manage.php', 'icon' => 'inventory_2', 'label' => 'Модерация ассетов', 'badge' => $sb['assets'] ?? 0];
+    $apps[] = ['id' => 'recentorgs',       'href' => '/devs/recentorgs',       'icon' => 'domain_add',    'label' => 'Новые организации', 'group' => 'Администрирование', 'dock' => false, 'badge' => $sb['orgs']];
+    $apps[] = ['id' => 'experts',          'href' => '/devs/experts',          'icon' => 'verified_user', 'label' => 'Эксперты',          'group' => 'Администрирование', 'dock' => false, 'badge' => $sb['experts']];
+    $apps[] = ['id' => 'scan-reports',     'href' => '/devs/scan-reports',     'icon' => 'security',      'label' => 'Отчёты проверок',   'group' => 'Администрирование', 'dock' => false];
+    $apps[] = ['id' => 'mobile_analytics', 'href' => '/devs/mobile_analytics', 'icon' => 'smartphone',    'label' => 'Аналитика: мобильная версия', 'group' => 'Администрирование', 'dock' => false];
+    $apps[] = ['id' => 'assets-mod',       'href' => '/assetstore/manage.php', 'icon' => 'inventory_2',   'label' => 'Модерация ассетов', 'group' => 'Администрирование', 'dock' => false, 'top' => true, 'badge' => $sb['assets'] ?? 0];
     if ($is_admin) {
-        $nav_items[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение'];
-        $nav_items[] = ['id' => 'premium', 'href' => '/devs/premium', 'icon' => 'verified', 'label' => 'Dustore Premium'];
-        $nav_items[] = ['id' => 'notifications', 'href' => '/devs/notifications', 'icon' => 'campaign', 'label' => 'Уведомления'];
+        $apps[] = ['id' => 'mon_review', 'href' => '/devs/mon_review', 'icon' => 'fact_check', 'label' => 'Монетизация: проверка анкет', 'group' => 'Администрирование', 'dock' => false, 'badge' => $sb['mon'] ?? 0];
+        $apps[] = ['id' => 'giveach', 'href' => '/devs/giveach', 'icon' => 'military_tech', 'label' => 'Выдать достижение', 'group' => 'Администрирование', 'dock' => false];
+        if (is_file(__DIR__ . '/../premium.php')) {
+            $apps[] = ['id' => 'premium', 'href' => '/devs/premium', 'icon' => 'verified', 'label' => 'Dustore Premium', 'group' => 'Администрирование', 'dock' => false];
+        }
+        $apps[] = ['id' => 'notifications', 'href' => '/devs/notifications', 'icon' => 'campaign', 'label' => 'Уведомления', 'group' => 'Администрирование', 'dock' => false];
     }
+}
+foreach ($apps as &$_a) $_a['badge'] = (int)($_a['badge'] ?? 0);
+unset($_a);
+
+$ds_tokens = '
+        :root {
+            --p: #c32178;
+            --pd: #9a1a5e;
+            --pl: #ff5ba8;
+            --dark: #14041d;
+            --surf: #1a0a24;
+            --elev: #241030;
+            --tp: #ffffff;
+            --ts: #b0b0c0;
+            --tm: #5a5a6e;
+            --tt: #f0e6ff;
+            --ok: #00d68f;
+            --warn: #ffaa00;
+            --err: #ff3d71;
+            --bd: rgba(255, 255, 255, .07);
+            --r: 10px;
+        }';
+
+if (!$ds_embed) {
+    require __DIR__ . '/shell.php';
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -181,26 +214,7 @@ if ($is_moder) {
             padding: 0;
             box-sizing: border-box;
         }
-
-        :root {
-            --p: #c32178;
-            --pd: #9a1a5e;
-            --pl: #ff5ba8;
-            --dark: #14041d;
-            --surf: #1a0a24;
-            --elev: #241030;
-            --tp: #ffffff;
-            --ts: #b0b0c0;
-            --tm: #5a5a6e;
-            --tt: #f0e6ff;
-            --ok: #00d68f;
-            --warn: #ffaa00;
-            --err: #ff3d71;
-            --bd: rgba(255, 255, 255, .07);
-            --sw: 260px;
-            --hh: 58px;
-            --r: 10px;
-        }
+<?= $ds_tokens ?>
 
         html,
         body {
@@ -211,274 +225,19 @@ if ($is_moder) {
             overflow: hidden;
         }
 
-        .ds-layout {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* ── Sidebar ── */
-        .ds-sidebar {
-            width: var(--sw);
-            background: var(--surf);
-            border-right: 1px solid var(--bd);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
+        .ds-content {
+            height: 100%;
             overflow-y: auto;
+            padding: 20px;
         }
 
-
-        .sb-logo {
-            padding: 16px 18px;
-            border-bottom: 1px solid var(--bd);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
+        .ds-content::-webkit-scrollbar {
+            width: 6px;
         }
 
-        .sb-logo-icon {
-            width: 34px;
-            height: 34px;
-            background: linear-gradient(135deg, var(--p), var(--pl));
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .sb-logo-name {
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .sb-logo-sub {
-            font-size: 10px;
-            color: var(--tm);
-            letter-spacing: .5px;
-            text-transform: uppercase;
-        }
-
-        .sb-studio {
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--bd);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-
-        .sb-ava {
-            width: 36px;
-            height: 36px;
-            border-radius: 9px;
-            flex-shrink: 0;
-            background: linear-gradient(135deg, var(--p), rgb(var(--brand-deep-rgb, 122, 21, 93)));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 700;
-            overflow: hidden;
-        }
-
-        .sb-ava img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .sb-sname {
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .sb-role {
-            font-size: 10px;
-            color: var(--p);
-            background: rgba(var(--brand-rgb, 195, 33, 120), .15);
-            padding: 1px 6px;
-            border-radius: 4px;
-            display: inline-block;
-            margin-top: 2px;
-        }
-
-        .sb-nav {
-            padding: 8px;
-            flex: 1;
-        }
-
-        .sb-section {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--tm);
-            padding: 10px 10px 4px;
-            font-weight: 600;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 9px 10px;
-            border-radius: var(--r);
-            color: var(--ts);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all .15s;
-            position: relative;
-            margin: 1px 0;
-        }
-
-        .nav-item:hover {
-            background: var(--elev);
-            color: #fff;
-        }
-
-        .nav-item.active {
-            background: rgba(var(--brand-rgb, 195, 33, 120), .14);
-            color: var(--pl);
-        }
-
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 25%;
-            bottom: 25%;
-            width: 3px;
-            background: var(--p);
-            border-radius: 0 3px 3px 0;
-        }
-
-        .nav-icon {
-            font-size: 18px;
-            width: 20px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .sb-badge {
-            margin-left: auto;
-            background: var(--p);
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
-            border-radius: 10px;
-            padding: 1px 6px;
-            min-width: 18px;
-            text-align: center;
-            line-height: 1.6;
-            flex-shrink: 0;
-            animation: badge-pop .3s ease;
-        }
-
-        @keyframes badge-pop {
-            0% {
-                transform: scale(0);
-            }
-
-            70% {
-                transform: scale(1.2);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        .sb-user-block {
-            padding: 10px;
-            border-top: 1px solid var(--bd);
-            flex-shrink: 0;
-        }
-
-        .sb-user {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            padding: 8px 10px;
-            border-radius: var(--r);
-            cursor: pointer;
-            transition: background .15s;
-            text-decoration: none;
-        }
-
-        .sb-user:hover {
-            background: var(--elev);
-        }
-
-        .sb-uava {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--elev);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .sb-uava img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .sb-uname {
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .sb-uemail {
-            font-size: 10px;
-            color: var(--tm);
-        }
-
-        /* ── Main ── */
-        .ds-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            min-width: 0;
-        }
-
-        .ds-topbar {
-            height: var(--hh);
-            flex-shrink: 0;
-            background: var(--surf);
-            border-bottom: 1px solid var(--bd);
-            padding: 0 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .topbar-title {
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        .topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .ds-content::-webkit-scrollbar-thumb {
+            background: rgba(var(--brand-rgb, 195, 33, 120), .3);
+            border-radius: 3px;
         }
 
         .btn-primary {
@@ -530,16 +289,6 @@ if ($is_moder) {
 
         .icon-btn .material-icons {
             font-size: 18px;
-        }
-
-        .menu-toggle {
-            display: none;
-        }
-
-        .ds-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
         }
 
 
@@ -777,46 +526,8 @@ if ($is_moder) {
             margin-bottom: 20px;
         }
 
-        /* ── Overlay sidebar mobile ── */
-        .sb-overlay {
-            display: none;
-        }
 
         @media(max-width:860px) {
-            .ds-sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                z-index: 200;
-                transform: translateX(-100%);
-                transition: transform .25s;
-            }
-
-            .ds-sidebar.open {
-                transform: translateX(0);
-            }
-
-            .sb-overlay {
-                display: block;
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, .5);
-                z-index: 199;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity .25s;
-            }
-
-            .sb-overlay.open {
-                opacity: 1;
-                pointer-events: all;
-            }
-
-            .menu-toggle {
-                display: flex;
-            }
-
             .ds-content {
                 padding: 16px;
             }
@@ -831,78 +542,8 @@ if ($is_moder) {
             }
         }
     </style>
+    <link rel="stylesheet" href="/swad/css/scrollbar.css?v=1">
 </head>
 
-<body>
-    <div class="ds-layout">
-        <aside class="ds-sidebar" id="sidebar">
-            <div class="sb-logo">
-                <div class="sb-logo-icon">D</div>
-                <div>
-                    <div class="sb-logo-name">Dustore.Devs</div>
-                    <div class="sb-logo-sub">Developer Console</div>
-                </div>
-            </div>
-            <div class="sb-studio">
-                <div class="sb-ava">
-                    <?php if ($studio_avatar): ?>
-                        <img src="<?= htmlspecialchars($studio_avatar) ?>" alt="">
-                    <?php else: ?>
-                        <?= $studio_initials ?>
-                    <?php endif; ?>
-                </div>
-                <div style="min-width:0;">
-                    <div class="sb-sname"><?= $studio_name ?></div>
-                    <div class="sb-role"><?= htmlspecialchars($role_name) ?></div>
-                </div>
-            </div>
-            <nav class="sb-nav">
-                <?php foreach ($nav_items as $item): ?>
-                    <?php if (!empty($item['divider'])): ?>
-                        <div class="sb-section"><?= $item['label'] ?></div>
-                    <?php else: ?>
-                        <a href="<?= $item['href'] ?>" class="nav-item <?= $active_nav === $item['id'] ? 'active' : '' ?>">
-                            <span class="nav-icon material-icons"><?= $item['icon'] ?></span>
-                            <span style="flex:1;"><?= $item['label'] ?></span>
-                            <?php if (!empty($item['badge'])): ?>
-                                <span class="sb-badge"><?= min((int)$item['badge'], 99) ?><?= $item['badge'] > 99 ? '+' : '' ?></span>
-                            <?php endif; ?>
-                        </a>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </nav>
-            <div class="sb-user-block">
-                <a href="/player/<?= htmlspecialchars($curr_user_data['username'] ?? '') ?>" class="sb-user">
-                    <div class="sb-uava">
-                        <?php if (!empty($curr_user_data['profile_picture'])): ?>
-                            <img src="<?= htmlspecialchars($curr_user_data['profile_picture']) ?>" alt="">
-                        <?php else: ?>
-                            <?= mb_strtoupper(mb_substr($curr_user_data['username'] ?? 'U', 0, 2)) ?>
-                        <?php endif; ?>
-                    </div>
-                    <div style="min-width:0;">
-                        <div class="sb-uname"><?= htmlspecialchars($curr_user_data['username'] ?? '') ?></div>
-                        <div class="sb-uemail">← Назад в профиль</div>
-                    </div>
-                    <span class="material-icons" style="margin-left:auto;font-size:15px;color:var(--tm);">logout</span>
-                </a>
-            </div>
-        </aside>
-
-        <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
-
-        <div class="ds-main">
-            <header class="ds-topbar">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <button class="icon-btn menu-toggle" onclick="openSidebar()">
-                        <span class="material-icons">menu</span>
-                    </button>
-                    <div class="topbar-title"><?= $page_title ?></div>
-                </div>
-                <div class="topbar-right">
-                    <a href="/devs/new" class="btn-primary">
-                        <span class="material-icons">add</span>Новый проект
-                    </a>
-                </div>
-            </header>
-            <main class="ds-content">
+<body class="ds-embed">
+    <main class="ds-content">

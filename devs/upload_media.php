@@ -2,8 +2,8 @@
 /**
  * devs/upload_media.php
  * AJAX-endpoint: загрузка/удаление скриншотов на S3, плюс (с мультиплатформенными
- * билдами) — иконка, вертикальные скриншоты и разрешения для конкретной мобильной
- * платформы (Android/iOS), которые живут в game_builds, а не в games.
+ * билдами) — иконка, скриншоты и разрешения конкретной платформы (вкладки
+ * Windows/macOS/Linux/Android/iOS/Web в edit.php), которые живут в game_builds, а не в games.
  * Структура скриншота в БД: {"id":"uniqid","path":"https://..."}
  */
 ob_start();
@@ -12,7 +12,7 @@ set_time_limit(60);
 if (session_status() === PHP_SESSION_NONE) session_start();
 header('Content-Type: application/json');
 
-const UM_MOBILE_PLATFORMS = ['Android', 'iOS'];
+const UM_PLATFORMS = ['Windows', 'macOS', 'Linux', 'Android', 'iOS', 'Web'];
 
 function resp(bool $ok, array $extra = []): never {
     ob_end_clean();
@@ -25,9 +25,9 @@ if (empty($_SESSION['USERDATA'])) resp(false, ['message' => 'Нет сессии
 $project_id = (int)($_POST['project_id'] ?? 0);
 $type       = $_POST['type'] ?? '';
 $studio_id  = (int)($_SESSION['studio_id'] ?? 0);
-$platform   = (string)($_POST['platform'] ?? ''); // непусто только для мобильных под-загрузок
+$platform   = (string)($_POST['platform'] ?? ''); // непусто только для под-загрузок платформы
 if (!$project_id) resp(false, ['message' => 'project_id не передан']);
-if ($platform !== '' && !in_array($platform, UM_MOBILE_PLATFORMS, true)) {
+if ($platform !== '' && !in_array($platform, UM_PLATFORMS, true)) {
     resp(false, ['message' => 'Некорректная платформа']);
 }
 
@@ -62,7 +62,7 @@ function um_ensure_build_row(PDO $db, int $gameId, string $platform): array {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Платформенные (мобильные) под-ресурсы — скриншоты/иконка/разрешения
+   Платформенные под-ресурсы — скриншоты/иконка/разрешения
    конкретного билда в game_builds. Ветвимся здесь ДО общей логики ниже,
    которая работает с games.screenshots (десктопные/общие скриншоты).
    ═══════════════════════════════════════════════════════════════════════ */
