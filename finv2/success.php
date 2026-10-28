@@ -25,6 +25,15 @@ if (!$order && $paymentId) {
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+/* ── 1b. Оплата через агрегатор студии: спрашиваем статус ключами студии ── */
+if ($order && $order['status'] !== 'succeeded') {
+    require_once __DIR__ . '/../swad/controllers/mon/pay.php';
+    mon_sync_order($pdo, (int)$order['id']);
+    $stmt = $pdo->prepare("SELECT * FROM game_orders WHERE id = ?");
+    $stmt->execute([$order['id']]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC) ?: $order;
+}
+
 /* ── 2. Verify with YooKassa ── */
 $paymentVerified = false;
 

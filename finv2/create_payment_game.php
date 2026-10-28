@@ -1,151 +1,35 @@
 <?php
-
-require_once('../vendor/autoload.php');
-require_once('../swad/config.php');
-
-use YooKassa\Client;
+/**
+ * finv2/create_payment_game.php — покупка игры. POST JSON {game_id} → {payment_id, payment_url, order_id}.
+ * Платёж создаётся через агрегатор разработчика (ИП/ООО) или магазин платформы (самозанятый),
+ * цена считается с инфраструктурным сбором и налоговой надбавкой — см. swad/controllers/mon/pay.php.
+ */
+require_once __DIR__ . '/../swad/config.php';
+require_once __DIR__ . '/../swad/controllers/mon/pay.php';
 
 header('Content-Type: application/json');
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-session_start();
+function cpg_out(array $d, int $code = 200): never { http_response_code($code); echo json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit; }
 
-/* ── Auth ── */
-if (empty($_SESSION['USERDATA']['id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Необходима авторизация']);
-    exit;
-}
+if (empty($_SESSION['USERDATA']['id'])) cpg_out(['error' => 'Необходима авторизация'], 401);
+$userId    = (int)$_SESSION['USERDATA']['id'];
+$userEmail = (string)($_SESSION['USERDATA']['email'] ?? '');
 
-$userId = (int) $_SESSION['USERDATA']['id'];
-$userEmail = $_SESSION['USERDATA']['email'] ?? null;
-
-/* ── Input ── */
 $body   = json_decode(file_get_contents('php://input'), true);
 $gameId = (int)($body['game_id'] ?? 0);
+if ($gameId <= 0) cpg_out(['error' => 'Некорректный game_id'], 400);
 
-if ($gameId <= 0) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Некорректный game_id']);
-    exit;
-}
+$pdo = (new Database())->connect();
 
-/* ── DB ── */
-$db  = new Database();
-$pdo = $db->connect();
-
-/* ── Get game ── */
-$stmt = $pdo->prepare("SELECT id, developer, name, price FROM games WHERE id = ? AND status = 'published'");
-$stmt->execute([$gameId]);
-$game = $stmt->fetch(PDO::FETCH_ASSOC);
-$devID = $game['developer'];
-
-if (!$game) {
-    http_response_code(404);
-    echo json_encode(['error' => 'Игра не найдена']);
-    exit;
-}
-
-if ((float)$game['price'] <= 0) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Игра бесплатная']);
-    exit;
-}
-
-/* ── Check: already owns the game ── */
 $stmt = $pdo->prepare("SELECT id FROM library WHERE player_id = ? AND game_id = ?");
 $stmt->execute([$userId, $gameId]);
-if ($stmt->fetch()) {
-    http_response_code(409);
-    echo json_encode(['error' => 'Игра уже есть в вашей библиотеке']);
-    exit;
-}
+if ($stmt->fetch()) cpg_out(['error' => 'Игра уже есть в вашей библиотеке'], 409);
 
-
-
-/* ── Email required for receipt ── */
-if (empty($userEmail)) {
-    http_response_code(422);
-    echo json_encode(['error' => 'Email обязателен. Укажите его в профиле.']);
-    exit;
-}
-
-$amount = number_format((float)$game['price'], 2, '.', '');
-
-/* ── Create pending order ── */
-$stmt = $pdo->prepare("
-    INSERT INTO game_orders (user_id, game_id, amount, status, created_at)
-    VALUES (?, ?, ?, 'pending', NOW())
-");
-$stmt->execute([$userId, $gameId, $game['price']]);
-$orderId = $pdo->lastInsertId();
-
-// получить платежные данные разработчика
-$stmt = $pdo->prepare("SELECT yookassa_shopid, yookassa_secret FROM studios WHERE id = ?");
-$stmt->execute([$devID]);
-$developerYookassaData = $stmt->fetch(PDO::FETCH_ASSOC);
-$dyd = $developerYookassaData;
-
-/* ── YooKassa ── */
-$client = new Client();
-$client->setAuth($dyd['yookassa_shopid'], $dyd['yookassa_secret']);
-
-$returnUrl = 'https://dustore.ru/finv2/success?order=' . $orderId;
+if ($userEmail === '') cpg_out(['error' => 'Email обязателен. Укажите его в профиле.'], 422);
 
 try {
-    $payment = $client->createPayment(
-        [
-            'amount' => [
-                'value'    => $amount,
-                'currency' => 'RUB',
-            ],
-            'confirmation' => [
-                'type'       => 'redirect',
-                'return_url' => $returnUrl,
-            ],
-            'capture'     => true,
-            'description' => 'Покупка игры: ' . $game['name'],
-            'metadata'    => [
-                'order_id' => $orderId,
-                'game_id'  => $gameId,
-                'user_id'  => $userId,
-                'type'     => 'game_purchase',
-            ],
-            'receipt' => [
-                'customer' => [
-                    'email' => $userEmail,
-                ],
-                'items' => [
-                    [
-                        'description'    => 'Игра: ' . $game['name'],
-                        'quantity'       => 1,
-                        'amount'         => [
-                            'value'    => $amount,
-                            'currency' => 'RUB',
-                        ],
-                        'vat_code'       => 1,
-                        'payment_subject' => 'intellectual_activity',
-                        'payment_mode'   => 'full_payment',
-                    ],
-                ],
-            ],
-        ],
-        uniqid('game_', true)
-    );
-} catch (Exception $e) {
-    error_log('YooKassa create_payment_game error: ' . $e->getMessage());
-    http_response_code(502);
-    echo json_encode(['error' => 'Ошибка платёжной системы. Попробуйте позже.']);
-    exit;
+    cpg_out(mon_game_checkout($pdo, $gameId, $userId, $userEmail));
+} catch (MonPayError $e) {
+    cpg_out(['error' => $e->getMessage()], $e->getCode() ?: 400);
 }
-
-$paymentId = $payment->getId();
-
-/* ── Save payment_id to order ── */
-$pdo->prepare("UPDATE game_orders SET payment_id = ? WHERE id = ?")
-    ->execute([$paymentId, $orderId]);
-
-echo json_encode([
-    'payment_id'  => $paymentId,
-    'payment_url' => $payment->getConfirmation()->getConfirmationUrl(),
-    'order_id'    => $orderId,
-]);

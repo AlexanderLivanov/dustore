@@ -4,7 +4,7 @@
  * Expects: $game_id, $game (price, name, path_to_cover),
  *          $studio_payment_data (donate_link)
  */
-$game_price   = (int)$game['price'];
+$game_price   = (int)($gpPrice ?? $game['price']);   // итог для игрока: со сбором и налоговой надбавкой (game.php)
 $max_platform = max(500, $game_price);
 $default_plat = min(50, (int)round($game_price * 0.08));
 ?>

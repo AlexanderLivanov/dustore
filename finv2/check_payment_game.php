@@ -27,6 +27,17 @@ if (empty($paymentId)) {
 $db  = new Database();
 $pdo = $db->connect();
 
+/* ── Оплата через агрегатор студии (mon_payments): статус спрашиваем ключами студии ── */
+require_once __DIR__ . '/../swad/controllers/mon/pay.php';
+mon_schema($pdo);
+$ms = $pdo->prepare("SELECT * FROM mon_payments WHERE external_id = ? AND user_id = ? AND purpose = 'game' ORDER BY id DESC LIMIT 1");
+$ms->execute([$paymentId, (int)$_SESSION['USERDATA']['id']]);
+if ($mrow = $ms->fetch(PDO::FETCH_ASSOC)) {
+    $s = mon_sync($pdo, $mrow);
+    echo json_encode(['status' => in_array($s, ['succeeded', 'canceled'], true) ? $s : 'pending']);
+    exit;
+}
+
 /* ── Fast path: DB check ── */
 $stmt = $pdo->prepare("
     SELECT id, status 
